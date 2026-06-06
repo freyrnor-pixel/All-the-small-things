@@ -42,3 +42,5 @@ yarn-error.*
 
 # Claude Code internal files
 .claude/
+
+# generated assets are tracked (needed for EAS cloud build)
