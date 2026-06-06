@@ -15,11 +15,11 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import ExpandableCard from '@/components/ExpandableCard';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
-const MEAL_TYPES: { value: MealType; label: string; icon: string }[] = [
-  { value: 'breakfast', label: 'Frokost', icon: '🌅' },
-  { value: 'lunch', label: 'Lunsj', icon: '🥙' },
-  { value: 'dinner', label: 'Middag', icon: '🍽' },
-  { value: 'snack', label: 'Snacks', icon: '🍎' },
+const MEAL_TYPES: { value: MealType; label: string; icon: string; color: string }[] = [
+  { value: 'breakfast', label: 'Frokost', icon: '🌅', color: '#F6C344' },
+  { value: 'lunch', label: 'Lunsj', icon: '🥙', color: '#6BAA75' },
+  { value: 'dinner', label: 'Middag', icon: '🍽', color: '#F4A261' },
+  { value: 'snack', label: 'Snacks', icon: '🍎', color: '#7BC8A4' },
 ];
 
 export default function MealsScreen() {
@@ -183,6 +183,7 @@ export default function MealsScreen() {
             title={dish.name}
             subtitle={MEAL_TYPES.find((m) => m.value === dish.mealType)?.label}
             badge={`${dish.ingredients.length} ingredienser`}
+            accentColor={MEAL_TYPES.find((m) => m.value === dish.mealType)?.color}
             rightAction={
               <Pressable
                 onPress={() => pushDishToShopping(dish)}

@@ -8,29 +8,40 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FontSize } from '@/constants/theme';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { getTheme } from '@/constants/theme';
 
 type BubbleItem = {
-  label: string;
   icon: string;
+  label: string;
   route: string;
   color: string;
 };
 
 const ITEMS: BubbleItem[] = [
-  { label: 'Handleliste', icon: '🛒', route: '/shopping', color: Colors.orange },
-  { label: 'Matretter', icon: '🍽', route: '/meals', color: Colors.green },
-  { label: 'Helse', icon: '💚', route: '/health', color: '#7BC8A4' },
-  { label: 'Skann', icon: '📷', route: '/scan', color: Colors.brownLight },
-  { label: 'Innstillinger', icon: '⚙️', route: '/settings', color: Colors.gray },
+  { icon: '➕', label: 'Ny opp.', route: '/task-form', color: '#F4A261' },
+  { icon: '🛒', label: 'Handle', route: '/shopping', color: '#E8895A' },
+  { icon: '🍽', label: 'Mat', route: '/meals', color: '#6BAA75' },
+  { icon: '💚', label: 'Helse', route: '/health', color: '#7BC8A4' },
+  { icon: '📷', label: 'Skann', route: '/scan', color: '#C49A6C' },
+  { icon: '⚙️', label: 'Sett.', route: '/settings', color: '#9E9E9E' },
 ];
 
-const RADIUS = 110;
+// Bubbles fan from pointing-left to pointing-straight-up (upper-left quadrant).
+// All bubbles are in the upper-left relative to the FAB, so none go off-screen
+// when the FAB is in the lower-right corner.
+const RADIUS = 180;
+const BUBBLE_SIZE = 56;
+const START_ANGLE = -Math.PI;      // pointing left
+const END_ANGLE = -Math.PI / 2;    // pointing straight up
 
 export default function BubbleMenu() {
   const [open, setOpen] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
+  const colorTheme = useSettingsStore((s) => s.colorTheme);
+  const theme = getTheme(colorTheme);
 
   function toggle() {
     const toValue = open ? 0 : 1;
@@ -53,33 +64,19 @@ export default function BubbleMenu() {
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Backdrop */}
       {open && (
         <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
       )}
 
-      {/* Bubble items */}
       {ITEMS.map((item, i) => {
-        const angle = (Math.PI / (ITEMS.length - 1)) * i - Math.PI;
+        const angle = START_ANGLE + (END_ANGLE - START_ANGLE) * (i / (ITEMS.length - 1));
         const x = Math.cos(angle) * RADIUS;
         const y = Math.sin(angle) * RADIUS;
 
-        const translateX = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, x],
-        });
-        const translateY = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, y],
-        });
-        const opacity = anim.interpolate({
-          inputRange: [0, 0.5, 1],
-          outputRange: [0, 0, 1],
-        });
-        const scale = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.3, 1],
-        });
+        const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [0, x] });
+        const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, y] });
+        const opacity = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0, 1] });
+        const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
 
         return (
           <Animated.View
@@ -87,7 +84,7 @@ export default function BubbleMenu() {
             style={[
               styles.bubble,
               {
-                backgroundColor: item.color,
+                backgroundColor: i === 0 ? theme.orange : item.color,
                 opacity,
                 transform: [{ translateX }, { translateY }, { scale }],
               },
@@ -102,11 +99,8 @@ export default function BubbleMenu() {
         );
       })}
 
-      {/* FAB */}
-      <Pressable style={styles.fab} onPress={toggle}>
-        <Animated.Text style={[styles.fabIcon, { transform: [{ rotate }] }]}>
-          +
-        </Animated.Text>
+      <Pressable style={[styles.fab, { backgroundColor: theme.orange }]} onPress={toggle}>
+        <Animated.Text style={[styles.fabIcon, { transform: [{ rotate }] }]}>+</Animated.Text>
       </Pressable>
     </View>
   );
@@ -124,7 +118,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: Radius.full,
-    backgroundColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.fab,
@@ -137,8 +130,8 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    width: 66,
-    height: 66,
+    width: BUBBLE_SIZE,
+    height: BUBBLE_SIZE,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -147,16 +140,16 @@ const styles = StyleSheet.create({
   bubbleInner: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 1,
   },
   bubbleIcon: {
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 20,
+    lineHeight: 24,
   },
   bubbleLabel: {
-    fontSize: FontSize.xs,
+    fontSize: 9,
     color: Colors.white,
     fontWeight: '700',
     textAlign: 'center',
-    marginTop: 1,
   },
 });

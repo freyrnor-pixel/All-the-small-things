@@ -13,22 +13,31 @@ const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 
 export default function TaskItem({ task, onToggle, onPress }: Props) {
   const isTimebox = task.taskType === 'time-box';
+  const isEssential = task.importance === 'essential';
 
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable
+      style={[styles.row, isEssential && styles.rowEssential]}
+      onPress={onPress}
+    >
+      {isEssential && <View style={styles.essentialStripe} />}
+
       <Pressable style={[styles.check, task.done && styles.checkDone]} onPress={onToggle}>
         {task.done && <Text style={styles.checkMark}>✓</Text>}
       </Pressable>
 
       <View style={styles.content}>
-        <Text style={[styles.title, task.done && styles.done]}>{task.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, task.done && styles.done]}>{task.title}</Text>
+          {isEssential && !task.done && (
+            <Text style={styles.essentialStar}>⭐</Text>
+          )}
+        </View>
         <View style={styles.meta}>
           {task.time ? (
             <View style={[styles.tag, isTimebox ? styles.tagTimebox : styles.tagStartAt]}>
               <Text style={styles.tagText}>
-                {isTimebox
-                  ? `⏱ ${task.durationMinutes} min`
-                  : `🕐 ${task.time}`}
+                {isTimebox ? `⏱ ${task.durationMinutes} min` : `🕐 ${task.time}`}
               </Text>
             </View>
           ) : null}
@@ -52,6 +61,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
+  rowEssential: {
+    paddingLeft: 0,
+  },
+  essentialStripe: {
+    width: 3,
+    alignSelf: 'stretch',
+    backgroundColor: Colors.orange,
+    borderRadius: Radius.full,
+    marginRight: Spacing.xs,
+  },
   check: {
     width: 24,
     height: 24,
@@ -72,14 +91,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: { flex: 1 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   title: {
     fontSize: FontSize.md,
     color: Colors.text,
     fontWeight: '500',
+    flex: 1,
   },
   done: {
     color: Colors.gray,
     textDecorationLine: 'line-through',
+  },
+  essentialStar: {
+    fontSize: 12,
   },
   meta: {
     flexDirection: 'row',

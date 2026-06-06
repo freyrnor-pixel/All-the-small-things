@@ -4,6 +4,7 @@ import {
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +13,14 @@ import {
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+
+const FEATURES = [
+  { icon: '✅', text: 'Hold styr på dagens oppgaver — uten å huske alt selv' },
+  { icon: '🛒', text: 'Handlelister som setter seg selv opp hver uke' },
+  { icon: '🍽', text: 'Matretter med ingredienser du kan skyve rett til handlelisten' },
+  { icon: '💚', text: 'Enkel helsedagbok for symptomer og observasjoner' },
+  { icon: '💼', text: 'Jobb-modus som holder privat og jobb atskilt' },
+];
 
 export default function OnboardingWelcome() {
   const router = useRouter();
@@ -29,14 +38,27 @@ export default function OnboardingWelcome() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.top}>
             <Text style={styles.emoji}>🌿</Text>
-            <Text style={styles.heading}>Hei, og velkommen!</Text>
+            <Text style={styles.heading}>Alt det lille</Text>
             <Text style={styles.sub}>
-              Alt det lille hjelper deg å holde styr på hverdagen — uten å tenke for mye.
-              La oss sette opp appen raskt.
+              En enkel hverdagsapp laget for deg som ikke ønsker å bruke energi på å holde styr på ting.
+              Sett den opp én gang — og la appen gjøre resten.
             </Text>
+          </View>
+
+          <View style={styles.featureList}>
+            {FEATURES.map((f, i) => (
+              <View key={i} style={styles.featureRow}>
+                <Text style={styles.featureIcon}>{f.icon}</Text>
+                <Text style={styles.featureText}>{f.text}</Text>
+              </View>
+            ))}
           </View>
 
           <View style={styles.card}>
@@ -45,24 +67,25 @@ export default function OnboardingWelcome() {
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="Fornavn"
+              placeholder="Fornavn (valgfritt)"
               placeholderTextColor={Colors.gray}
               autoFocus
-              returnKeyType="next"
+              returnKeyType="done"
               onSubmitEditing={next}
             />
+            <Text style={styles.hint}>Brukes bare til å si hei — ingen data forlater telefonen din.</Text>
           </View>
 
           <View style={styles.progress}>
-            <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
+            {[0, 1, 2, 3, 4].map((i) => (
+              <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+            ))}
           </View>
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
           <Pressable style={styles.nextBtn} onPress={next}>
-            <Text style={styles.nextBtnText}>Neste →</Text>
+            <Text style={styles.nextBtnText}>Kom i gang →</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -73,7 +96,7 @@ export default function OnboardingWelcome() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   flex: { flex: 1 },
-  content: { flex: 1, padding: Spacing.xl, justifyContent: 'center', gap: Spacing.xl },
+  content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },
   heading: {
@@ -87,6 +110,25 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  featureList: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: Spacing.md,
+    ...Shadow.card,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+  },
+  featureIcon: { fontSize: 20, lineHeight: 26 },
+  featureText: {
+    flex: 1,
+    fontSize: FontSize.md,
+    color: Colors.text,
+    lineHeight: 22,
   },
   card: {
     backgroundColor: Colors.white,
@@ -103,6 +145,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     color: Colors.text,
   },
+  hint: { fontSize: FontSize.xs, color: Colors.textLight, lineHeight: 18 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: {
     width: 8,
@@ -110,8 +153,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     backgroundColor: Colors.grayLight,
   },
-  dotActive: { backgroundColor: Colors.orange },
-  footer: { padding: Spacing.xl },
+  dotActive: { backgroundColor: Colors.orange, width: 20 },
+  footer: { padding: Spacing.xl, paddingTop: Spacing.md },
   nextBtn: {
     backgroundColor: Colors.orange,
     borderRadius: Radius.full,

@@ -1,76 +1,111 @@
 import React from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-
-const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
-const DAY_FULL = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
 export default function OnboardingStep2() {
   const router = useRouter();
   const settings = useSettingsStore();
 
-  function next() {
-    router.push('/onboarding/step3');
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.top}>
-          <Text style={styles.emoji}>🛒</Text>
-          <Text style={styles.heading}>Handleliste</Text>
+          <Text style={styles.emoji}>💼</Text>
+          <Text style={styles.heading}>Jobb-modus</Text>
           <Text style={styles.sub}>
-            Velg hvilken dag du vil nullstille ukeslisten og legge til den månedlige.
+            Når jobb-modus er på, vises bare arbeidsrelaterte oppgaver — perfekt for å holde fokus.
+            Du kan alltid bytte modus direkte fra hjemskjermen.
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hvilken dag handler du vanligvis?</Text>
-          <View style={styles.dayRow}>
-            {DAY_LABELS.map((label, i) => (
-              <Pressable
-                key={i}
-                style={[styles.dayChip, settings.weeklyResetDay === i && styles.dayChipActive]}
-                onPress={() => settings.update({ weeklyResetDay: i })}
-              >
-                <Text
-                  style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
+          <View style={styles.switchRow}>
+            <View style={styles.switchLeft}>
+              <Text style={styles.switchLabel}>Start med jobb-modus aktivert</Text>
+              <Text style={styles.switchHint}>Du kan endre dette når som helst</Text>
+            </View>
+            <Switch
+              value={settings.workModeEnabled}
+              onValueChange={(v) => settings.update({ workModeEnabled: v })}
+              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+              thumbColor={settings.workModeEnabled ? Colors.orange : Colors.gray}
+            />
           </View>
-          <Text style={styles.hint}>
-            Ukeslisten nullstilles på {DAY_FULL[settings.weeklyResetDay]} morgen.
-          </Text>
+
+          <View style={styles.divider} />
+
+          <View style={styles.switchRow}>
+            <View style={styles.switchLeft}>
+              <Text style={styles.switchLabel}>Aktiver automatisk i arbeidstiden</Text>
+              <Text style={styles.switchHint}>Appen bytter modus selv basert på klokkeslett</Text>
+            </View>
+            <Switch
+              value={settings.enforceWorkHours}
+              onValueChange={(v) => settings.update({ enforceWorkHours: v })}
+              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+              thumbColor={settings.enforceWorkHours ? Colors.orange : Colors.gray}
+            />
+          </View>
+
+          {settings.enforceWorkHours && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.fieldLabel}>Arbeidstid (HH:MM)</Text>
+              <View style={styles.hoursRow}>
+                <View style={styles.hourField}>
+                  <Text style={styles.hourLabel}>Fra</Text>
+                  <TextInput
+                    style={styles.hourInput}
+                    value={settings.workHoursStart}
+                    onChangeText={(v) => settings.update({ workHoursStart: v })}
+                    placeholder="09:00"
+                    placeholderTextColor={Colors.gray}
+                    keyboardType="numbers-and-punctuation"
+                  />
+                </View>
+                <Text style={styles.hourSep}>–</Text>
+                <View style={styles.hourField}>
+                  <Text style={styles.hourLabel}>Til</Text>
+                  <TextInput
+                    style={styles.hourInput}
+                    value={settings.workHoursEnd}
+                    onChangeText={(v) => settings.update({ workHoursEnd: v })}
+                    placeholder="17:00"
+                    placeholderTextColor={Colors.gray}
+                    keyboardType="numbers-and-punctuation"
+                  />
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hvilken dato vil du nullstille månedslisten?</Text>
-          <View style={styles.dateRow}>
-            {[1, 5, 10, 15, 20, 25, 28].map((d) => (
-              <Pressable
-                key={d}
-                style={[styles.dateChip, settings.monthlyResetDate === d && styles.dateChipActive]}
-                onPress={() => settings.update({ monthlyResetDate: d })}
-              >
-                <Text
-                  style={[styles.dateText, settings.monthlyResetDate === d && styles.dateTextActive]}
-                >
-                  {d}.
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+        <View style={styles.tipBox}>
+          <Text style={styles.tipText}>
+            💡 Du kan alltid trykke «Bytt modus» på hjemskjermen for å midlertidig
+            gå tilbake til personlig modus — uten å endre innstillingene dine.
+          </Text>
         </View>
 
         <View style={styles.progress}>
-          <View style={styles.dot} />
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={styles.dot} />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <View key={i} style={[styles.dot, i === 1 && styles.dotActive]} />
+          ))}
         </View>
       </ScrollView>
 
@@ -78,7 +113,7 @@ export default function OnboardingStep2() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>← Tilbake</Text>
         </Pressable>
-        <Pressable style={styles.nextBtn} onPress={next}>
+        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step3')}>
           <Text style={styles.nextBtnText}>Neste →</Text>
         </Pressable>
       </View>
@@ -88,7 +123,7 @@ export default function OnboardingStep2() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
-  content: { padding: Spacing.xl, gap: Spacing.xl },
+  content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
@@ -97,38 +132,39 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
-    gap: Spacing.md,
     ...Shadow.card,
   },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  dayRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  dayChip: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
+  switchRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
-  dayChipActive: { backgroundColor: Colors.orange },
-  dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  dayTextActive: { color: Colors.white },
-  hint: { fontSize: FontSize.sm, color: Colors.textLight, fontStyle: 'italic' },
-  dateRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  dateChip: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  switchLeft: { flex: 1, marginRight: Spacing.md },
+  switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
+  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
+  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.md },
+  fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: Spacing.sm },
+  hoursRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  hourField: { flex: 1, gap: 4 },
+  hourLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
+  hourInput: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    fontSize: FontSize.md,
+    color: Colors.text,
+    textAlign: 'center',
   },
-  dateChipActive: { backgroundColor: Colors.orange },
-  dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
-  dateTextActive: { color: Colors.white },
+  hourSep: { fontSize: FontSize.lg, color: Colors.textLight, marginTop: Spacing.lg },
+  tipBox: {
+    backgroundColor: Colors.greenLight,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+  },
+  tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange },
+  dotActive: { backgroundColor: Colors.orange, width: 20 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

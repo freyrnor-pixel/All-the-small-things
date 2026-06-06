@@ -1,99 +1,85 @@
 import React from 'react';
-import {
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { requestPermissions } from '@/lib/notifications';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+
+const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+const DAY_FULL = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
 export default function OnboardingStep3() {
   const router = useRouter();
   const settings = useSettingsStore();
 
-  async function finish() {
-    if (settings.remindersEnabled || settings.taskNotificationsEnabled) {
-      await requestPermissions();
-    }
-    settings.update({ setupComplete: true });
-    router.replace('/');
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.top}>
-          <Text style={styles.emoji}>🔔</Text>
-          <Text style={styles.heading}>Varsler</Text>
+          <Text style={styles.emoji}>🛒</Text>
+          <Text style={styles.heading}>Handleliste</Text>
           <Text style={styles.sub}>
-            Vi kan sende deg varme påminnelser slik at du aldri trenger å huske alt selv.
+            Ukeslisten nullstilles automatisk på en dag du velger — klar for neste uke.
+            Månedslisten er for faste varer som toalettpapir og vaskemiddel.
           </Text>
         </View>
 
         <View style={styles.card}>
-          <View style={styles.switchRow}>
-            <View>
-              <Text style={styles.switchLabel}>Ukentlige påminnelser</Text>
-              <Text style={styles.switchHint}>Planlegg uken din</Text>
-            </View>
-            <Switch
-              value={settings.remindersEnabled}
-              onValueChange={(v) => settings.update({ remindersEnabled: v })}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={settings.remindersEnabled ? Colors.orange : Colors.gray}
-            />
+          <Text style={styles.cardTitle}>Hvilken dag handler du vanligvis?</Text>
+          <View style={styles.dayRow}>
+            {DAY_LABELS.map((label, i) => (
+              <Pressable
+                key={i}
+                style={[styles.dayChip, settings.weeklyResetDay === i && styles.dayChipActive]}
+                onPress={() => settings.update({ weeklyResetDay: i })}
+              >
+                <Text
+                  style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
           </View>
+          <Text style={styles.hint}>
+            Ukeslisten nullstilles {DAY_FULL[settings.weeklyResetDay]} morgen.
+          </Text>
+        </View>
 
-          {settings.remindersEnabled && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.fieldLabel}>Påminnelsestidspunkt</Text>
-              <TextInput
-                style={styles.input}
-                value={settings.reminderTime}
-                onChangeText={(v) => settings.update({ reminderTime: v })}
-                placeholder="08:00"
-                placeholderTextColor={Colors.gray}
-                keyboardType="numbers-and-punctuation"
-              />
-            </>
-          )}
-
-          <View style={styles.divider} />
-
-          <View style={styles.switchRow}>
-            <View>
-              <Text style={styles.switchLabel}>Oppgavevarsler</Text>
-              <Text style={styles.switchHint}>Påminnelse når en oppgave begynner</Text>
-            </View>
-            <Switch
-              value={settings.taskNotificationsEnabled}
-              onValueChange={(v) => settings.update({ taskNotificationsEnabled: v })}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={settings.taskNotificationsEnabled ? Colors.orange : Colors.gray}
-            />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Hvilken dato nullstilles månedslisten?</Text>
+          <View style={styles.dateRow}>
+            {[1, 5, 10, 15, 20, 25, 28].map((d) => (
+              <Pressable
+                key={d}
+                style={[styles.dateChip, settings.monthlyResetDate === d && styles.dateChipActive]}
+                onPress={() => settings.update({ monthlyResetDate: d })}
+              >
+                <Text
+                  style={[styles.dateText, settings.monthlyResetDate === d && styles.dateTextActive]}
+                >
+                  {d}.
+                </Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
         <View style={styles.progress}>
-          <View style={styles.dot} />
-          <View style={styles.dot} />
-          <View style={[styles.dot, styles.dotActive]} />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <View key={i} style={[styles.dot, i === 2 && styles.dotActive]} />
+          ))}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>← Tilbake</Text>
         </Pressable>
-        <Pressable style={styles.doneBtn} onPress={finish}>
-          <Text style={styles.doneBtnText}>Kom i gang!</Text>
+        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step4')}>
+          <Text style={styles.nextBtnText}>Neste →</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -102,7 +88,7 @@ export default function OnboardingStep3() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
-  content: { flex: 1, padding: Spacing.xl, gap: Spacing.xl, justifyContent: 'center' },
+  content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
@@ -111,36 +97,52 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
+    gap: Spacing.md,
     ...Shadow.card,
   },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
-  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.md },
-  fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: 4 },
-  input: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    fontSize: FontSize.md,
-    color: Colors.text,
+  cardTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
+  dayRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+  dayChip: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.grayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  dayChipActive: { backgroundColor: Colors.orange },
+  dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
+  dayTextActive: { color: Colors.white },
+  hint: { fontSize: FontSize.sm, color: Colors.textLight, fontStyle: 'italic' },
+  dateRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+  dateChip: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.grayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateChipActive: { backgroundColor: Colors.orange },
+  dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
+  dateTextActive: { color: Colors.white },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange },
+  dotActive: { backgroundColor: Colors.orange, width: 20 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: Spacing.xl,
+    paddingTop: 0,
   },
   backBtn: { padding: Spacing.md },
   backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
-  doneBtn: {
-    backgroundColor: Colors.green,
+  nextBtn: {
+    backgroundColor: Colors.orange,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    ...Shadow.fab,
+    ...Shadow.card,
   },
-  doneBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
+  nextBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
 });

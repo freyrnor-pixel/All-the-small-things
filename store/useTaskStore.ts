@@ -4,6 +4,7 @@ import { generateId } from '@/lib/id';
 
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
+export type Importance = 'regular' | 'essential';
 
 export type Task = {
   id: string;
@@ -15,6 +16,7 @@ export type Task = {
   done: boolean;
   recurring: Recurring;
   recurringDays: number[]; // 0=Mon … 6=Sun
+  importance: Importance;
 };
 
 type TaskStore = {
@@ -39,6 +41,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     done: row.done === 1,
     recurring: (row.recurring as Recurring) ?? 'none',
     recurringDays: JSON.parse((row.recurring_days as string) || '[]'),
+    importance: (row.importance as Importance) ?? 'regular',
   };
 }
 
@@ -55,8 +58,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   add(t) {
     const id = generateId();
     db.runSync(
-      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days, importance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         t.title,
@@ -67,6 +70,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         0,
         t.recurring,
         JSON.stringify(t.recurringDays),
+        t.importance ?? 'regular',
       ]
     );
     const task: Task = { ...t, id, done: false };
@@ -80,7 +84,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const next = { ...task, ...patch };
     db.runSync(
       `UPDATE tasks SET title=?, task_date=?, task_time=?, task_type=?, duration_minutes=?,
-       done=?, recurring=?, recurring_days=? WHERE id=?`,
+       done=?, recurring=?, recurring_days=?, importance=? WHERE id=?`,
       [
         next.title,
         next.date,
@@ -90,6 +94,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         next.done ? 1 : 0,
         next.recurring,
         JSON.stringify(next.recurringDays),
+        next.importance ?? 'regular',
         id,
       ]
     );

@@ -22,6 +22,7 @@ type Props = {
   children: React.ReactNode;
   rightAction?: React.ReactNode;
   defaultOpen?: boolean;
+  accentColor?: string;
 };
 
 export default function ExpandableCard({
@@ -31,6 +32,7 @@ export default function ExpandableCard({
   children,
   rightAction,
   defaultOpen = false,
+  accentColor,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const rotate = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
@@ -52,24 +54,27 @@ export default function ExpandableCard({
 
   return (
     <View style={styles.card}>
-      <Pressable style={styles.header} onPress={toggle}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        </View>
-        <View style={styles.headerRight}>
-          {badge ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{badge}</Text>
-            </View>
-          ) : null}
-          {rightAction}
-          <Animated.Text style={[styles.arrow, { transform: [{ rotate: arrow }] }]}>
-            ›
-          </Animated.Text>
-        </View>
-      </Pressable>
-      {open ? <View style={styles.body}>{children}</View> : null}
+      {accentColor && <View style={[styles.accent, { backgroundColor: accentColor }]} />}
+      <View style={styles.cardContent}>
+        <Pressable style={styles.header} onPress={toggle}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>{title}</Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          </View>
+          <View style={styles.headerRight}>
+            {badge ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{badge}</Text>
+              </View>
+            ) : null}
+            {rightAction}
+            <Animated.Text style={[styles.arrow, { transform: [{ rotate: arrow }] }]}>
+              ›
+            </Animated.Text>
+          </View>
+        </Pressable>
+        {open ? <View style={styles.body}>{children}</View> : null}
+      </View>
     </View>
   );
 }
@@ -80,7 +85,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     marginBottom: Spacing.sm,
     overflow: 'hidden',
+    flexDirection: 'row',
     ...Shadow.card,
+  },
+  accent: {
+    width: 4,
+    alignSelf: 'stretch',
+  },
+  cardContent: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

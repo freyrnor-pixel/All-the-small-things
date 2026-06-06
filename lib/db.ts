@@ -88,6 +88,20 @@ export function initDb() {
       purchased_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Schema migrations — safe to run repeatedly (errors = column already exists)
+  const migrations = [
+    "ALTER TABLE tasks ADD COLUMN importance TEXT DEFAULT 'regular'",
+    "ALTER TABLE settings ADD COLUMN color_theme TEXT DEFAULT 'warm'",
+    "ALTER TABLE settings ADD COLUMN work_mode_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN work_hours_start TEXT DEFAULT '09:00'",
+    "ALTER TABLE settings ADD COLUMN work_hours_end TEXT DEFAULT '17:00'",
+    "ALTER TABLE settings ADD COLUMN enforce_work_hours INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN essentials_mode_enabled INTEGER DEFAULT 0",
+  ];
+  for (const sql of migrations) {
+    try { db.execSync(sql); } catch { /* column already exists */ }
+  }
 }
 
 export default db;

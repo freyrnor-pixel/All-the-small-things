@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTaskStore, Task, TaskType } from '@/store/useTaskStore';
+import { useTaskStore, Task, TaskType, Importance } from '@/store/useTaskStore';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
@@ -37,6 +37,7 @@ export default function TaskFormScreen() {
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? '30'));
   const [recurring, setRecurring] = useState(existing?.recurring ?? 'none');
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
+  const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
 
   function toggleDay(d: number) {
     setRecurringDays((prev) =>
@@ -55,6 +56,7 @@ export default function TaskFormScreen() {
       done: existing?.done ?? false,
       recurring: recurring as 'none' | 'weekly',
       recurringDays: recurring === 'weekly' ? recurringDays : [],
+      importance,
     };
     if (existing) {
       updateTask(existing.id, payload);
@@ -174,6 +176,29 @@ export default function TaskFormScreen() {
             </View>
           </View>
         )}
+
+        {/* Importance */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Viktighet</Text>
+          <View style={styles.segmented}>
+            <Pressable
+              style={[styles.seg, importance === 'regular' && styles.segActive]}
+              onPress={() => setImportance('regular')}
+            >
+              <Text style={[styles.segText, importance === 'regular' && styles.segActiveText]}>
+                Vanlig
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.seg, importance === 'essential' && styles.segActive]}
+              onPress={() => setImportance('essential')}
+            >
+              <Text style={[styles.segText, importance === 'essential' && styles.segActiveText]}>
+                ⭐ Viktig
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
         {/* Recurring */}
         <View style={styles.field}>

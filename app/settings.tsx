@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
 
 const DAY_LABELS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
@@ -166,6 +166,106 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Color theme */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Fargetema</Text>
+          <View style={styles.card}>
+            <View style={styles.themeGrid}>
+              {(Object.keys(THEMES) as ThemeName[]).map((key) => {
+                const meta = THEME_META[key];
+                const t = THEMES[key];
+                const isActive = settings.colorTheme === key;
+                return (
+                  <Pressable
+                    key={key}
+                    style={[styles.themeOption, isActive && styles.themeOptionActive, { borderColor: t.orange }]}
+                    onPress={() => settings.update({ colorTheme: key })}
+                  >
+                    <View style={styles.themeSwatches}>
+                      <View style={[styles.swatch, { backgroundColor: t.cream }]} />
+                      <View style={[styles.swatch, { backgroundColor: t.orange }]} />
+                      <View style={[styles.swatch, { backgroundColor: t.green }]} />
+                    </View>
+                    <Text style={styles.themeEmoji}>{meta.emoji}</Text>
+                    <Text style={[styles.themeLabel, isActive && { color: t.orange, fontWeight: '700' }]}>
+                      {meta.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Work mode */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Jobb-modus</Text>
+          <View style={styles.card}>
+            <Text style={styles.fieldLabel}>
+              Jobb-modus skjuler private oppgaver og lar deg fokusere.
+            </Text>
+
+            <View style={styles.divider} />
+
+            <View style={styles.switchRow}>
+              <Text style={styles.switchLabel}>Jobb-modus aktiv</Text>
+              <Switch
+                value={settings.workModeEnabled}
+                onValueChange={(v) => settings.update({ workModeEnabled: v })}
+                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+                thumbColor={settings.workModeEnabled ? Colors.orange : Colors.gray}
+              />
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={styles.switchLabel}>Aktiver automatisk</Text>
+                <Text style={styles.switchHint}>Skrur på jobb-modus i arbeidstiden</Text>
+              </View>
+              <Switch
+                value={settings.enforceWorkHours}
+                onValueChange={(v) => settings.update({ enforceWorkHours: v })}
+                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+                thumbColor={settings.enforceWorkHours ? Colors.orange : Colors.gray}
+              />
+            </View>
+
+            {settings.enforceWorkHours && (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.fieldLabel}>Arbeidstid</Text>
+                <View style={styles.hoursRow}>
+                  <View style={styles.hourField}>
+                    <Text style={styles.hourLabel}>Fra</Text>
+                    <TextInput
+                      style={styles.hourInput}
+                      value={settings.workHoursStart}
+                      onChangeText={(v) => settings.update({ workHoursStart: v })}
+                      placeholder="09:00"
+                      placeholderTextColor={Colors.gray}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                  <Text style={styles.hourSep}>–</Text>
+                  <View style={styles.hourField}>
+                    <Text style={styles.hourLabel}>Til</Text>
+                    <TextInput
+                      style={styles.hourInput}
+                      value={settings.workHoursEnd}
+                      onChangeText={(v) => settings.update({ workHoursEnd: v })}
+                      placeholder="17:00"
+                      placeholderTextColor={Colors.gray}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+
         {/* Reset buttons */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nullstill data</Text>
@@ -265,4 +365,32 @@ const styles = StyleSheet.create({
   switchLabel: { fontSize: FontSize.md, color: Colors.text, fontWeight: '500' },
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, color: Colors.danger, fontWeight: '600' },
+  themeGrid: { flexDirection: 'row', gap: Spacing.sm },
+  themeOption: {
+    flex: 1,
+    borderRadius: Radius.md,
+    borderWidth: 2,
+    borderColor: Colors.grayLight,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    gap: 4,
+  },
+  themeOptionActive: { borderWidth: 2 },
+  themeSwatches: { flexDirection: 'row', gap: 3 },
+  swatch: { width: 14, height: 14, borderRadius: Radius.full },
+  themeEmoji: { fontSize: 20 },
+  themeLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
+  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
+  hoursRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.xs },
+  hourField: { flex: 1, gap: 4 },
+  hourLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
+  hourInput: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    fontSize: FontSize.md,
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  hourSep: { fontSize: FontSize.lg, color: Colors.textLight, marginTop: Spacing.md },
 });
