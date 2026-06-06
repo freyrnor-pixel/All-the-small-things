@@ -6,6 +6,7 @@
     "expo": "~56.0.9",
     "expo-camera": "^56.0.7",
     "expo-image-picker": "^56.0.16",
+    "expo-linking": "~56.0.13",
     "expo-notifications": "^56.0.16",
     "expo-router": "^56.2.9",
     "expo-sqlite": "^56.0.4",
@@ -16,10 +17,12 @@
     "react-native-reanimated": "^4.4.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
+    "react-native-worklets": "^0.9.1",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "babel-preset-expo": "~56.0.14",
     "typescript": "~6.0.3"
   },
   "scripts": {
