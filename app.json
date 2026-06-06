@@ -2,6 +2,7 @@
   "expo": {
     "name": "All the Small Things",
     "slug": "all-the-small-things",
+    "owner": "freyrnor-pixel",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
