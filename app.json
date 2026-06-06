@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "All the Small Things",
+    "slug": "all-the-small-things",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "allthesmallthings",
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#F4A261"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow All the Small Things to use your camera to scan receipts."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow All the Small Things to access your photos to scan receipts."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.allthesmallthings.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FDF6EC"
+      },
+      "package": "com.allthesmallthings.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
