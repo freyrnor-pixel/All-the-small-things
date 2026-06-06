@@ -33,18 +33,23 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.allthesmallthings.app"
+      "bundleIdentifier": "com.freyrnorpixel.allthesmallthings"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FDF6EC"
       },
-      "package": "com.allthesmallthings.app"
+      "package": "com.freyrnorpixel.allthesmallthings"
     },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7ccb5393-f6b8-4a0f-8e45-8c86977d581c"
+      }
     }
   }
 }
