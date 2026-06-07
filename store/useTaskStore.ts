@@ -28,6 +28,8 @@ type TaskStore = {
   remove: (id: string) => void;
   clearAll: () => void;
   tasksForDate: (date: string) => Task[];
+  backlogTasks: (today: string) => Task[];
+  completedCount: () => number;
 };
 
 function rowToTask(row: Record<string, unknown>): Task {
@@ -126,5 +128,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       if (t.recurring === 'weekly' && t.recurringDays.includes(mon0)) return true;
       return false;
     });
+  },
+
+  backlogTasks(today) {
+    const { tasks } = get();
+    return tasks
+      .filter((t) => t.date < today && !t.done && t.recurring === 'none')
+      .sort((a, b) => a.date.localeCompare(b.date));
+  },
+
+  completedCount() {
+    return get().tasks.filter((t) => t.done).length;
   },
 }));

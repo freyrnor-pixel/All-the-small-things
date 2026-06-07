@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -15,6 +15,7 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
+import QuickAddSheet from '@/components/QuickAddSheet';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
 
 const DAYS_NO = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
@@ -43,8 +44,11 @@ export default function HomeScreen() {
   const today = todayStr();
   const settings = useSettingsStore();
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
+  const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
+  const completedCountFn = useTaskStore((s) => s.completedCount);
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
   const theme = getTheme(settings.colorTheme);
 
   const isWorkModeActive = useMemo(() => {
@@ -64,6 +68,9 @@ export default function HomeScreen() {
   const todayTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((t) => t.importance === 'essential')
     : allTodayTasks;
+
+  const backlog = backlogTasksFn(today);
+  const completedCount = completedCountFn();
 
   const pendingShopping = shoppingItems
     .filter((i) => i.listType === 'weekly' && !i.checked)
@@ -179,6 +186,31 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* Backlog */}
+        {backlog.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.textLight }]}>
+                Restliste ({backlog.length})
+              </Text>
+            </View>
+            <View style={[styles.card, { backgroundColor: theme.offWhite }]}>
+              {backlog.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggle={() => toggleTask(task.id)}
+                  onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
+                  muted
+                />
+              ))}
+            </View>
+            <Text style={[styles.backlogHint, { color: theme.textLight }]}>
+              Hvert lite steg teller — bare ta ett om gangen.
+            </Text>
+          </View>
+        )}
+
         {/* Shopping preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -210,10 +242,20 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* Gentle points */}
+        {settings.showPoints && completedCount > 0 && (
+          <View style={[styles.pointsCard, { backgroundColor: theme.offWhite }]}>
+            <Text style={[styles.pointsText, { color: theme.textLight }]}>
+              Du har fullført {completedCount} {completedCount === 1 ? 'ting' : 'ting'} — småting teller!
+            </Text>
+          </View>
+        )}
+
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <BubbleMenu />
+      <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
+      <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
   );
 }
@@ -318,5 +360,22 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     marginTop: Spacing.xs,
     textAlign: 'right',
+  },
+  backlogHint: {
+    fontSize: FontSize.xs,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  pointsCard: {
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  pointsText: {
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

@@ -18,6 +18,10 @@ type BubbleItem = {
   color: string;
 };
 
+type Props = {
+  onNewTask?: () => void;
+};
+
 const ITEMS: BubbleItem[] = [
   { icon: '➕', label: 'Ny opp.', route: '/task-form', color: '#F4A261' },
   { icon: '🛒', label: 'Handle', route: '/shopping', color: '#E8895A' },
@@ -35,7 +39,7 @@ const BUBBLE_SIZE = 56;
 const START_ANGLE = -Math.PI;      // pointing left
 const END_ANGLE = -Math.PI / 2;    // pointing straight up
 
-export default function BubbleMenu() {
+export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
@@ -54,7 +58,11 @@ export default function BubbleMenu() {
 
   function navigate(route: string) {
     toggle();
-    setTimeout(() => router.push(route as never), 150);
+    if (route === '/task-form' && onNewTask) {
+      setTimeout(onNewTask, 150);
+    } else {
+      setTimeout(() => router.push(route as never), 150);
+    }
   }
 
   const rotate = rotation.interpolate({

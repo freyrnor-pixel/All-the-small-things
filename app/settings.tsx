@@ -266,6 +266,25 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Motivasjon */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Motivasjon</Text>
+          <View style={styles.card}>
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={styles.switchLabel}>Vis antall fullførte oppgaver</Text>
+                <Text style={styles.switchHint}>Hvert lite steg teller — se totalen på forsiden</Text>
+              </View>
+              <Switch
+                value={settings.showPoints}
+                onValueChange={(v) => settings.update({ showPoints: v })}
+                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+                thumbColor={settings.showPoints ? Colors.orange : Colors.gray}
+              />
+            </View>
+          </View>
+        </View>
+
         {/* Reset buttons */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nullstill data</Text>

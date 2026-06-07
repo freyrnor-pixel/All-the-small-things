@@ -98,6 +98,7 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN work_hours_end TEXT DEFAULT '17:00'",
     "ALTER TABLE settings ADD COLUMN enforce_work_hours INTEGER DEFAULT 0",
     "ALTER TABLE settings ADD COLUMN essentials_mode_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN show_points INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

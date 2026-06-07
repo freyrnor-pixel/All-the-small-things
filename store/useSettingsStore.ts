@@ -18,6 +18,7 @@ export type Settings = {
   workHoursEnd: string;
   enforceWorkHours: boolean;
   essentialsModeEnabled: boolean;
+  showPoints: boolean;
 };
 
 type SettingsStore = Settings & {
@@ -43,6 +44,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   workHoursEnd: '17:00',
   enforceWorkHours: false,
   essentialsModeEnabled: false,
+  showPoints: false,
   workModeSessionOverride: false,
 
   load() {
@@ -61,6 +63,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       work_hours_end: string | null;
       enforce_work_hours: number | null;
       essentials_mode_enabled: number | null;
+      show_points: number | null;
     }>('SELECT * FROM settings WHERE id = 1');
     if (!row) return;
     set({
@@ -78,6 +81,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       workHoursEnd: row.work_hours_end ?? '17:00',
       enforceWorkHours: row.enforce_work_hours === 1,
       essentialsModeEnabled: row.essentials_mode_enabled === 1,
+      showPoints: row.show_points === 1,
     });
   },
 
@@ -90,7 +94,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
           shopping_list_mode = ?, reminders_enabled = ?, reminder_time = ?,
           task_notifications_enabled = ?, setup_complete = ?,
           color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
-          work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?
+          work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
+          show_points = ?
         WHERE id = 1`,
         [
           next.userName,
@@ -107,6 +112,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
           next.workHoursEnd,
           next.enforceWorkHours ? 1 : 0,
           next.essentialsModeEnabled ? 1 : 0,
+          next.showPoints ? 1 : 0,
         ]
       );
       return next;

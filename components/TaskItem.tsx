@@ -7,28 +7,34 @@ type Props = {
   task: Task;
   onToggle: () => void;
   onPress: () => void;
+  muted?: boolean;
 };
 
 const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 
-export default function TaskItem({ task, onToggle, onPress }: Props) {
+export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const isTimebox = task.taskType === 'time-box';
   const isEssential = task.importance === 'essential';
 
   return (
     <Pressable
-      style={[styles.row, isEssential && styles.rowEssential]}
+      style={[styles.row, isEssential && !muted && styles.rowEssential]}
       onPress={onPress}
     >
-      {isEssential && <View style={styles.essentialStripe} />}
+      {isEssential && !muted && <View style={styles.essentialStripe} />}
 
-      <Pressable style={[styles.check, task.done && styles.checkDone]} onPress={onToggle}>
+      <Pressable
+        style={[styles.check, muted && styles.checkMuted, task.done && styles.checkDone]}
+        onPress={onToggle}
+      >
         {task.done && <Text style={styles.checkMark}>✓</Text>}
       </Pressable>
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={[styles.title, task.done && styles.done]}>{task.title}</Text>
+          <Text style={[styles.title, muted && styles.titleMuted, task.done && styles.done]}>
+            {task.title}
+          </Text>
           {isEssential && !task.done && (
             <Text style={styles.essentialStar}>⭐</Text>
           )}
@@ -101,6 +107,13 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '500',
     flex: 1,
+  },
+  titleMuted: {
+    color: Colors.gray,
+    fontWeight: '400',
+  },
+  checkMuted: {
+    borderColor: Colors.gray,
   },
   done: {
     color: Colors.gray,
