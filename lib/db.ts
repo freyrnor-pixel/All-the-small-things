@@ -99,6 +99,8 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN enforce_work_hours INTEGER DEFAULT 0",
     "ALTER TABLE settings ADD COLUMN essentials_mode_enabled INTEGER DEFAULT 0",
     "ALTER TABLE settings ADD COLUMN show_points INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN show_hints INTEGER DEFAULT 1",
+    "ALTER TABLE settings ADD COLUMN language TEXT DEFAULT 'no'",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

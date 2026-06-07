@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -11,9 +13,13 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTaskStore, Task, TaskType, Importance } from '@/store/useTaskStore';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
+import HintCard from '@/components/HintCard';
+import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
 
-const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+const DAY_LABELS_NO = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+const DAY_LABELS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function todayStr() {
   const d = new Date();
@@ -27,8 +33,11 @@ export default function TaskFormScreen() {
   const addTask = useTaskStore((s) => s.add);
   const updateTask = useTaskStore((s) => s.update);
   const removeTask = useTaskStore((s) => s.remove);
+  const settings = useSettingsStore();
+  const t = useT();
+  const theme = getTheme(settings.colorTheme);
 
-  const existing = id ? tasks.find((t) => t.id === id) : undefined;
+  const existing = id ? tasks.find((task) => task.id === id) : undefined;
 
   const [title, setTitle] = useState(existing?.title ?? '');
   const [date, setDate] = useState(existing?.date ?? todayStr());
@@ -39,10 +48,10 @@ export default function TaskFormScreen() {
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
 
+  const dayLabels = settings.language === 'en' ? DAY_LABELS_EN : DAY_LABELS_NO;
+
   function toggleDay(d: number) {
-    setRecurringDays((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
-    );
+    setRecurringDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
   }
 
   function save() {
@@ -72,260 +81,223 @@ export default function TaskFormScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.cancel}>Avbryt</Text>
+          <Text style={[styles.cancel, { color: theme.textLight }]}>{t.cancel}</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>{existing ? 'Rediger' : 'Ny oppgave'}</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>
+          {existing ? t.editTask : t.newTask}
+        </Text>
         <Pressable onPress={save}>
-          <Text style={styles.save}>Lagre</Text>
+          <Text style={[styles.save, { color: theme.orange }]}>{t.save}</Text>
         </Pressable>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Title */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Oppgave</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Hva skal gjøres?"
-            placeholderTextColor={Colors.gray}
-            autoFocus={!existing}
-            returnKeyType="next"
-          />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <HintCard text={t.hints.taskForm.text} example={t.hints.taskForm.example} />
 
-        {/* Date */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Dato (ÅÅÅÅ-MM-DD)</Text>
-          <TextInput
-            style={styles.input}
-            value={date}
-            onChangeText={setDate}
-            placeholder="2025-01-15"
-            placeholderTextColor={Colors.gray}
-            keyboardType="numbers-and-punctuation"
-          />
-        </View>
-
-        {/* Time */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Tidspunkt (HH:MM) – valgfritt</Text>
-          <TextInput
-            style={styles.input}
-            value={time}
-            onChangeText={setTime}
-            placeholder="14:00"
-            placeholderTextColor={Colors.gray}
-            keyboardType="numbers-and-punctuation"
-          />
-        </View>
-
-        {/* Type */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Type</Text>
-          <View style={styles.segmented}>
-            <Pressable
-              style={[styles.seg, taskType === 'start-at' && styles.segActive]}
-              onPress={() => setTaskType('start-at')}
-            >
-              <Text style={[styles.segText, taskType === 'start-at' && styles.segActiveText]}>
-                Start på dette tidspunktet
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.seg, taskType === 'time-box' && styles.segActive]}
-              onPress={() => setTaskType('time-box')}
-            >
-              <Text style={[styles.segText, taskType === 'time-box' && styles.segActiveText]}>
-                Fra da til da (timer)
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Duration (timebox only) */}
-        {taskType === 'time-box' && (
+          {/* Title */}
           <View style={styles.field}>
-            <Text style={styles.label}>Varighet (minutter)</Text>
-            <View style={styles.durationRow}>
-              {[15, 20, 30, 45, 60, 90].map((m) => (
-                <Pressable
-                  key={m}
-                  style={[styles.durationChip, duration === String(m) && styles.durationChipActive]}
-                  onPress={() => setDuration(String(m))}
-                >
-                  <Text
-                    style={[styles.durationText, duration === String(m) && styles.durationTextActive]}
-                  >
-                    {m}m
-                  </Text>
-                </Pressable>
-              ))}
-              <TextInput
-                style={styles.durationInput}
-                value={duration}
-                onChangeText={setDuration}
-                keyboardType="number-pad"
-                placeholder="min"
-                placeholderTextColor={Colors.gray}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Importance */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Viktighet</Text>
-          <View style={styles.segmented}>
-            <Pressable
-              style={[styles.seg, importance === 'regular' && styles.segActive]}
-              onPress={() => setImportance('regular')}
-            >
-              <Text style={[styles.segText, importance === 'regular' && styles.segActiveText]}>
-                Vanlig
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.seg, importance === 'essential' && styles.segActive]}
-              onPress={() => setImportance('essential')}
-            >
-              <Text style={[styles.segText, importance === 'essential' && styles.segActiveText]}>
-                ⭐ Viktig
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Recurring */}
-        <View style={styles.field}>
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Gjentas ukentlig</Text>
-            <Switch
-              value={recurring === 'weekly'}
-              onValueChange={(v) => setRecurring(v ? 'weekly' : 'none')}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={recurring === 'weekly' ? Colors.orange : Colors.gray}
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.taskTitleLabel}</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
+              value={title}
+              onChangeText={setTitle}
+              placeholder={t.taskTitlePlaceholder}
+              placeholderTextColor={theme.gray}
+              autoFocus={!existing}
+              returnKeyType="next"
             />
           </View>
-          {recurring === 'weekly' && (
-            <View style={styles.daysRow}>
-              {DAY_LABELS.map((label, i) => (
+
+          {/* Date */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.dateLabel}</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
+              value={date}
+              onChangeText={setDate}
+              placeholder="2025-01-15"
+              placeholderTextColor={theme.gray}
+              keyboardType="numbers-and-punctuation"
+            />
+          </View>
+
+          {/* Time */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
+              value={time}
+              onChangeText={setTime}
+              placeholder="14:00"
+              placeholderTextColor={theme.gray}
+              keyboardType="numbers-and-punctuation"
+            />
+          </View>
+
+          {/* Type */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.typeLabel}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+              {(['start-at', 'time-box'] as TaskType[]).map((type) => (
                 <Pressable
-                  key={i}
-                  style={[styles.dayChip, recurringDays.includes(i) && styles.dayChipActive]}
-                  onPress={() => toggleDay(i)}
+                  key={type}
+                  style={[styles.seg, taskType === type && styles.segActive]}
+                  onPress={() => setTaskType(type)}
                 >
-                  <Text
-                    style={[styles.dayText, recurringDays.includes(i) && styles.dayTextActive]}
-                  >
-                    {label}
+                  <Text style={[styles.segText, { color: theme.textLight }, taskType === type && { color: theme.text, fontWeight: '600' }]}>
+                    {type === 'start-at' ? t.typeStartAt : t.typeTimeBox}
                   </Text>
                 </Pressable>
               ))}
             </View>
-          )}
-        </View>
+          </View>
 
-        {existing && (
-          <Pressable style={styles.deleteBtn} onPress={del}>
-            <Text style={styles.deleteBtnText}>Slett oppgave</Text>
-          </Pressable>
-        )}
-      </ScrollView>
+          {/* Duration */}
+          {taskType === 'time-box' && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.durationLabel}</Text>
+              <View style={styles.durationRow}>
+                {[15, 20, 30, 45, 60, 90].map((m) => (
+                  <Pressable
+                    key={m}
+                    style={[styles.durationChip, { backgroundColor: theme.grayLight }, duration === String(m) && { backgroundColor: theme.orange }]}
+                    onPress={() => setDuration(String(m))}
+                  >
+                    <Text style={[styles.durationText, { color: theme.text }, duration === String(m) && { color: Colors.white, fontWeight: '700' }]}>
+                      {m}m
+                    </Text>
+                  </Pressable>
+                ))}
+                <TextInput
+                  style={[styles.durationInput, { backgroundColor: theme.white, color: theme.text }]}
+                  value={duration}
+                  onChangeText={setDuration}
+                  keyboardType="number-pad"
+                  placeholder="min"
+                  placeholderTextColor={theme.gray}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Importance */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.importanceLabel}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+              {(['regular', 'essential'] as Importance[]).map((imp) => (
+                <Pressable
+                  key={imp}
+                  style={[styles.seg, importance === imp && styles.segActive]}
+                  onPress={() => setImportance(imp)}
+                >
+                  <Text style={[styles.segText, { color: theme.textLight }, importance === imp && { color: theme.text, fontWeight: '600' }]}>
+                    {imp === 'regular' ? t.importanceRegular : t.importanceEssential}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Recurring */}
+          <View style={styles.field}>
+            <View style={styles.switchRow}>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.repeatWeekly}</Text>
+              <Switch
+                value={recurring === 'weekly'}
+                onValueChange={(v) => setRecurring(v ? 'weekly' : 'none')}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={recurring === 'weekly' ? theme.orange : theme.gray}
+              />
+            </View>
+            {recurring === 'weekly' && (
+              <View style={styles.daysRow}>
+                {dayLabels.map((label, i) => (
+                  <Pressable
+                    key={i}
+                    style={[styles.dayChip, { backgroundColor: theme.grayLight }, recurringDays.includes(i) && { backgroundColor: theme.orange }]}
+                    onPress={() => toggleDay(i)}
+                  >
+                    <Text style={[styles.dayText, { color: theme.text }, recurringDays.includes(i) && { color: Colors.white }]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {existing && (
+            <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={del}>
+              <Text style={[styles.deleteBtnText, { color: theme.danger }]}>{t.deleteTask}</Text>
+            </Pressable>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.grayLight,
-    backgroundColor: Colors.white,
   },
-  headerTitle: { fontSize: FontSize.lg, fontWeight: '600', color: Colors.text },
-  cancel: { fontSize: FontSize.md, color: Colors.textLight },
-  save: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '700' },
+  headerTitle: { fontSize: FontSize.lg, fontWeight: '600' },
+  cancel: { fontSize: FontSize.md },
+  save: { fontSize: FontSize.md, fontWeight: '700' },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
   field: { gap: Spacing.xs },
-  label: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
+  label: { fontSize: FontSize.sm, fontWeight: '600' },
   input: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
     fontSize: FontSize.md,
-    color: Colors.text,
     ...Shadow.card,
   },
   segmented: {
     flexDirection: 'row',
-    backgroundColor: Colors.grayLight,
     borderRadius: Radius.md,
     padding: 3,
     gap: 3,
   },
-  seg: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-  },
+  seg: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
   segActive: { backgroundColor: Colors.white, ...Shadow.card },
-  segText: { fontSize: FontSize.sm, color: Colors.textLight, textAlign: 'center' },
-  segActiveText: { color: Colors.text, fontWeight: '600' },
-  durationRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    alignItems: 'center',
-  },
-  durationChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-  },
-  durationChipActive: { backgroundColor: Colors.orange },
-  durationText: { fontSize: FontSize.sm, color: Colors.text },
-  durationTextActive: { color: Colors.white, fontWeight: '700' },
+  segText: { fontSize: FontSize.sm, textAlign: 'center' },
+  durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, alignItems: 'center' },
+  durationChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.full },
+  durationText: { fontSize: FontSize.sm },
   durationInput: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.sm,
     fontSize: FontSize.md,
-    color: Colors.text,
     width: 60,
     textAlign: 'center',
     ...Shadow.card,
   },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
-  dayChip: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayChipActive: { backgroundColor: Colors.orange },
-  dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  dayTextActive: { color: Colors.white },
-  deleteBtn: {
-    backgroundColor: Colors.dangerLight,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  deleteBtnText: { color: Colors.danger, fontWeight: '700', fontSize: FontSize.md },
+  dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  dayText: { fontSize: FontSize.xs, fontWeight: '600' },
+  deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
+  deleteBtnText: { fontWeight: '700', fontSize: FontSize.md },
 });

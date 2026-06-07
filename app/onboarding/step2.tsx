@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 export default function OnboardingStep2() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const t = useT();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -26,18 +28,15 @@ export default function OnboardingStep2() {
       >
         <View style={styles.top}>
           <Text style={styles.emoji}>💼</Text>
-          <Text style={styles.heading}>Jobb-modus</Text>
-          <Text style={styles.sub}>
-            Når jobb-modus er på, vises bare arbeidsrelaterte oppgaver — perfekt for å holde fokus.
-            Du kan alltid bytte modus direkte fra hjemskjermen.
-          </Text>
+          <Text style={styles.heading}>{t.workModeOnboarding}</Text>
+          <Text style={styles.sub}>{t.workModeOnboardingSub}</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>Start med jobb-modus aktivert</Text>
-              <Text style={styles.switchHint}>Du kan endre dette når som helst</Text>
+              <Text style={styles.switchLabel}>{t.startWithWorkMode}</Text>
+              <Text style={styles.switchHint}>{t.canChangeAnytime}</Text>
             </View>
             <Switch
               value={settings.workModeEnabled}
@@ -51,8 +50,8 @@ export default function OnboardingStep2() {
 
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>Aktiver automatisk i arbeidstiden</Text>
-              <Text style={styles.switchHint}>Appen bytter modus selv basert på klokkeslett</Text>
+              <Text style={styles.switchLabel}>{t.autoActivateWorkHours}</Text>
+              <Text style={styles.switchHint}>{t.appSwitchesItself}</Text>
             </View>
             <Switch
               value={settings.enforceWorkHours}
@@ -65,10 +64,10 @@ export default function OnboardingStep2() {
           {settings.enforceWorkHours && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.fieldLabel}>Arbeidstid (HH:MM)</Text>
+              <Text style={styles.fieldLabel}>{t.workHoursFormat}</Text>
               <View style={styles.hoursRow}>
                 <View style={styles.hourField}>
-                  <Text style={styles.hourLabel}>Fra</Text>
+                  <Text style={styles.hourLabel}>{t.workHoursFrom}</Text>
                   <TextInput
                     style={styles.hourInput}
                     value={settings.workHoursStart}
@@ -80,7 +79,7 @@ export default function OnboardingStep2() {
                 </View>
                 <Text style={styles.hourSep}>–</Text>
                 <View style={styles.hourField}>
-                  <Text style={styles.hourLabel}>Til</Text>
+                  <Text style={styles.hourLabel}>{t.workHoursTo}</Text>
                   <TextInput
                     style={styles.hourInput}
                     value={settings.workHoursEnd}
@@ -96,10 +95,7 @@ export default function OnboardingStep2() {
         </View>
 
         <View style={styles.tipBox}>
-          <Text style={styles.tipText}>
-            💡 Du kan alltid trykke «Bytt modus» på hjemskjermen for å midlertidig
-            gå tilbake til personlig modus — uten å endre innstillingene dine.
-          </Text>
+          <Text style={styles.tipText}>{t.tipWorkMode}</Text>
         </View>
 
         <View style={styles.progress}>
@@ -111,10 +107,10 @@ export default function OnboardingStep2() {
 
       <View style={styles.footer}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Tilbake</Text>
+          <Text style={styles.backBtnText}>{t.previous}</Text>
         </Pressable>
         <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step3')}>
-          <Text style={styles.nextBtnText}>Neste →</Text>
+          <Text style={styles.nextBtnText}>{t.next}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -128,17 +124,8 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.card,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLeft: { flex: 1, marginRight: Spacing.md },
   switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
   switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
@@ -156,21 +143,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   hourSep: { fontSize: FontSize.lg, color: Colors.textLight, marginTop: Spacing.lg },
-  tipBox: {
-    backgroundColor: Colors.greenLight,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-  },
+  tipBox: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.md },
   tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: Spacing.xl,
-    paddingTop: 0,
-  },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: 0 },
   backBtn: { padding: Spacing.md },
   backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
   nextBtn: {

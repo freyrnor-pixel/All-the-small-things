@@ -35,7 +35,7 @@ export default function RootLayout() {
   useEffect(() => {
     const inOnboarding = segments[0] === 'onboarding';
     if (!setupComplete && !inOnboarding) {
-      router.replace('/onboarding');
+      router.replace('/onboarding/language');
     }
   }, [setupComplete, segments]);
 

@@ -14,9 +14,9 @@ import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
+import { useT } from '@/lib/i18n';
+import HintCard from '@/components/HintCard';
 import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
-
-const DAY_LABELS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -24,16 +24,18 @@ export default function SettingsScreen() {
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const clearTasks = useTaskStore((s) => s.clearAll);
-
+  const t = useT();
   const [name, setName] = useState(settings.userName);
+
+  const DAY_LABELS = t.dayFull;
 
   function confirmReset(label: string, action: () => void) {
     Alert.alert(
-      `Nullstill ${label}?`,
-      'Dette kan ikke angres.',
+      t.resetConfirmTitle(label),
+      t.resetConfirmBody,
       [
-        { text: 'Avbryt', style: 'cancel' },
-        { text: 'Nullstill', style: 'destructive', onPress: action },
+        { text: t.cancel, style: 'cancel' },
+        { text: t.resetConfirmBtn, style: 'destructive', onPress: action },
       ]
     );
   }
@@ -42,23 +44,25 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>← Hjem</Text>
+          <Text style={styles.back}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>Innstillinger</Text>
+        <Text style={styles.title}>{t.settingsTitle}</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <HintCard text={t.hints.settings.text} example={t.hints.settings.example} />
+
         {/* Profile */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profil</Text>
+          <Text style={styles.sectionTitle}>{t.sectionProfile}</Text>
           <View style={styles.card}>
-            <Text style={styles.fieldLabel}>Ditt navn</Text>
+            <Text style={styles.fieldLabel}>{t.yourName}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="Navn"
+              placeholder={t.namePlaceholder}
               placeholderTextColor={Colors.gray}
               onBlur={() => settings.update({ userName: name })}
               returnKeyType="done"
@@ -66,11 +70,32 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Language */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t.sectionLanguage}</Text>
+          <View style={styles.card}>
+            <View style={styles.langRow}>
+              {(['no', 'en'] as const).map((lang) => (
+                <Pressable
+                  key={lang}
+                  style={[styles.langChip, settings.language === lang && styles.langChipActive]}
+                  onPress={() => settings.update({ language: lang })}
+                >
+                  <Text style={styles.langFlag}>{lang === 'no' ? '🇳🇴' : '🇬🇧'}</Text>
+                  <Text style={[styles.langText, settings.language === lang && styles.langTextActive]}>
+                    {lang === 'no' ? t.norwegian : t.english}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+
         {/* Shopping list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Handleliste</Text>
+          <Text style={styles.sectionTitle}>{t.sectionShopping}</Text>
           <View style={styles.card}>
-            <Text style={styles.fieldLabel}>Standard listetype</Text>
+            <Text style={styles.fieldLabel}>{t.defaultListType}</Text>
             <View style={styles.segmented}>
               {(['weekly', 'monthly'] as const).map((mode) => (
                 <Pressable
@@ -79,7 +104,7 @@ export default function SettingsScreen() {
                   onPress={() => settings.update({ shoppingListMode: mode })}
                 >
                   <Text style={[styles.segText, settings.shoppingListMode === mode && styles.segActiveText]}>
-                    {mode === 'weekly' ? 'Ukentlig' : 'Månedlig'}
+                    {mode === 'weekly' ? t.weekly : t.monthly}
                   </Text>
                 </Pressable>
               ))}
@@ -87,7 +112,7 @@ export default function SettingsScreen() {
 
             <View style={styles.divider} />
 
-            <Text style={styles.fieldLabel}>Nullstill ukesliste på (ukedag)</Text>
+            <Text style={styles.fieldLabel}>{t.weeklyResetDay}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.xs }}>
               <View style={styles.dayRow}>
                 {DAY_LABELS.map((label, i) => (
@@ -97,7 +122,7 @@ export default function SettingsScreen() {
                     onPress={() => settings.update({ weeklyResetDay: i })}
                   >
                     <Text style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}>
-                      {label}
+                      {label.slice(0, 3)}
                     </Text>
                   </Pressable>
                 ))}
@@ -106,7 +131,7 @@ export default function SettingsScreen() {
 
             <View style={styles.divider} />
 
-            <Text style={styles.fieldLabel}>Nullstill månedsliste på dato</Text>
+            <Text style={styles.fieldLabel}>{t.monthlyResetDate}</Text>
             <View style={styles.dateRow}>
               {[1, 5, 10, 15, 20, 25, 28].map((d) => (
                 <Pressable
@@ -120,15 +145,16 @@ export default function SettingsScreen() {
                 </Pressable>
               ))}
             </View>
+            <Text style={styles.paydayHint}>{t.monthlyResetHint}</Text>
           </View>
         </View>
 
         {/* Notifications */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Varsler</Text>
+          <Text style={styles.sectionTitle}>{t.sectionNotifications}</Text>
           <View style={styles.card}>
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Ukentlige påminnelser</Text>
+              <Text style={styles.switchLabel}>{t.weeklyReminders}</Text>
               <Switch
                 value={settings.remindersEnabled}
                 onValueChange={(v) => settings.update({ remindersEnabled: v })}
@@ -136,26 +162,26 @@ export default function SettingsScreen() {
                 thumbColor={settings.remindersEnabled ? Colors.orange : Colors.gray}
               />
             </View>
-
             {settings.remindersEnabled && (
               <>
                 <View style={styles.divider} />
-                <Text style={styles.fieldLabel}>Påminnelsestidspunkt (HH:MM)</Text>
+                <Text style={styles.fieldLabel}>{t.reminderTimeLabel}</Text>
                 <TextInput
                   style={styles.input}
                   value={settings.reminderTime}
                   onChangeText={(v) => settings.update({ reminderTime: v })}
                   keyboardType="numbers-and-punctuation"
-                  placeholder="08:00"
+                  placeholder={t.reminderTimePlaceholder}
                   placeholderTextColor={Colors.gray}
                 />
               </>
             )}
-
             <View style={styles.divider} />
-
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Oppgavevarsler</Text>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={styles.switchLabel}>{t.taskNotifications}</Text>
+                <Text style={styles.switchHint}>{t.taskNotificationsHint}</Text>
+              </View>
               <Switch
                 value={settings.taskNotificationsEnabled}
                 onValueChange={(v) => settings.update({ taskNotificationsEnabled: v })}
@@ -168,26 +194,26 @@ export default function SettingsScreen() {
 
         {/* Color theme */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Fargetema</Text>
+          <Text style={styles.sectionTitle}>{t.sectionColorTheme}</Text>
           <View style={styles.card}>
             <View style={styles.themeGrid}>
               {(Object.keys(THEMES) as ThemeName[]).map((key) => {
                 const meta = THEME_META[key];
-                const t = THEMES[key];
+                const th = THEMES[key];
                 const isActive = settings.colorTheme === key;
                 return (
                   <Pressable
                     key={key}
-                    style={[styles.themeOption, isActive && styles.themeOptionActive, { borderColor: t.orange }]}
+                    style={[styles.themeOption, isActive && styles.themeOptionActive, { borderColor: th.orange }]}
                     onPress={() => settings.update({ colorTheme: key })}
                   >
                     <View style={styles.themeSwatches}>
-                      <View style={[styles.swatch, { backgroundColor: t.cream }]} />
-                      <View style={[styles.swatch, { backgroundColor: t.orange }]} />
-                      <View style={[styles.swatch, { backgroundColor: t.green }]} />
+                      <View style={[styles.swatch, { backgroundColor: th.cream }]} />
+                      <View style={[styles.swatch, { backgroundColor: th.orange }]} />
+                      <View style={[styles.swatch, { backgroundColor: th.green }]} />
                     </View>
                     <Text style={styles.themeEmoji}>{meta.emoji}</Text>
-                    <Text style={[styles.themeLabel, isActive && { color: t.orange, fontWeight: '700' }]}>
+                    <Text style={[styles.themeLabel, isActive && { color: th.orange, fontWeight: '700' }]}>
                       {meta.label}
                     </Text>
                   </Pressable>
@@ -199,16 +225,12 @@ export default function SettingsScreen() {
 
         {/* Work mode */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Jobb-modus</Text>
+          <Text style={styles.sectionTitle}>{t.sectionWorkMode}</Text>
           <View style={styles.card}>
-            <Text style={styles.fieldLabel}>
-              Jobb-modus skjuler private oppgaver og lar deg fokusere.
-            </Text>
-
+            <Text style={styles.fieldLabel}>{t.workModeDesc}</Text>
             <View style={styles.divider} />
-
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Jobb-modus aktiv</Text>
+              <Text style={styles.switchLabel}>{t.workModeActive}</Text>
               <Switch
                 value={settings.workModeEnabled}
                 onValueChange={(v) => settings.update({ workModeEnabled: v })}
@@ -216,13 +238,11 @@ export default function SettingsScreen() {
                 thumbColor={settings.workModeEnabled ? Colors.orange : Colors.gray}
               />
             </View>
-
             <View style={styles.divider} />
-
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>Aktiver automatisk</Text>
-                <Text style={styles.switchHint}>Skrur på jobb-modus i arbeidstiden</Text>
+                <Text style={styles.switchLabel}>{t.autoActivate}</Text>
+                <Text style={styles.switchHint}>{t.autoActivateHint}</Text>
               </View>
               <Switch
                 value={settings.enforceWorkHours}
@@ -231,14 +251,13 @@ export default function SettingsScreen() {
                 thumbColor={settings.enforceWorkHours ? Colors.orange : Colors.gray}
               />
             </View>
-
             {settings.enforceWorkHours && (
               <>
                 <View style={styles.divider} />
-                <Text style={styles.fieldLabel}>Arbeidstid</Text>
+                <Text style={styles.fieldLabel}>{t.workHoursLabel}</Text>
                 <View style={styles.hoursRow}>
                   <View style={styles.hourField}>
-                    <Text style={styles.hourLabel}>Fra</Text>
+                    <Text style={styles.hourLabel}>{t.workHoursFrom}</Text>
                     <TextInput
                       style={styles.hourInput}
                       value={settings.workHoursStart}
@@ -250,7 +269,7 @@ export default function SettingsScreen() {
                   </View>
                   <Text style={styles.hourSep}>–</Text>
                   <View style={styles.hourField}>
-                    <Text style={styles.hourLabel}>Til</Text>
+                    <Text style={styles.hourLabel}>{t.workHoursTo}</Text>
                     <TextInput
                       style={styles.hourInput}
                       value={settings.workHoursEnd}
@@ -268,12 +287,12 @@ export default function SettingsScreen() {
 
         {/* Motivasjon */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Motivasjon</Text>
+          <Text style={styles.sectionTitle}>{t.sectionMotivation}</Text>
           <View style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>Vis antall fullførte oppgaver</Text>
-                <Text style={styles.switchHint}>Hvert lite steg teller — se totalen på forsiden</Text>
+                <Text style={styles.switchLabel}>{t.showPointsLabel}</Text>
+                <Text style={styles.switchHint}>{t.showPointsHint}</Text>
               </View>
               <Switch
                 value={settings.showPoints}
@@ -282,32 +301,36 @@ export default function SettingsScreen() {
                 thumbColor={settings.showPoints ? Colors.orange : Colors.gray}
               />
             </View>
+            <View style={styles.divider} />
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={styles.switchLabel}>{t.showHintsLabel}</Text>
+                <Text style={styles.switchHint}>{t.showHintsHint}</Text>
+              </View>
+              <Switch
+                value={settings.showHints}
+                onValueChange={(v) => settings.update({ showHints: v })}
+                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+                thumbColor={settings.showHints ? Colors.orange : Colors.gray}
+              />
+            </View>
           </View>
         </View>
 
-        {/* Reset buttons */}
+        {/* Reset data */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Nullstill data</Text>
+          <Text style={styles.sectionTitle}>{t.sectionReset}</Text>
           <View style={styles.card}>
-            <Pressable
-              style={styles.dangerBtn}
-              onPress={() => confirmReset('ukesliste', resetWeekly)}
-            >
-              <Text style={styles.dangerBtnText}>Nullstill ukesliste</Text>
+            <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetWeekly.toLowerCase(), resetWeekly)}>
+              <Text style={styles.dangerBtnText}>{t.resetWeekly}</Text>
             </Pressable>
             <View style={styles.divider} />
-            <Pressable
-              style={styles.dangerBtn}
-              onPress={() => confirmReset('månedsliste', resetMonthly)}
-            >
-              <Text style={styles.dangerBtnText}>Nullstill månedsliste</Text>
+            <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetMonthly.toLowerCase(), resetMonthly)}>
+              <Text style={styles.dangerBtnText}>{t.resetMonthly}</Text>
             </Pressable>
             <View style={styles.divider} />
-            <Pressable
-              style={styles.dangerBtn}
-              onPress={() => confirmReset('alle oppgaver', clearTasks)}
-            >
-              <Text style={styles.dangerBtnText}>Nullstill alle oppgaver</Text>
+            <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetTasks.toLowerCase(), clearTasks)}>
+              <Text style={styles.dangerBtnText}>{t.resetTasks}</Text>
             </Pressable>
           </View>
         </View>
@@ -320,96 +343,54 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
   back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
   title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.lg },
   section: { gap: Spacing.sm },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.card,
-  },
+  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
   fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: Spacing.xs },
-  input: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    fontSize: FontSize.md,
-    color: Colors.text,
-  },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: Colors.grayLight,
-    borderRadius: Radius.md,
-    padding: 3,
-    gap: 3,
-  },
+  input: { backgroundColor: Colors.offWhite, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md, color: Colors.text },
+  segmented: { flexDirection: 'row', backgroundColor: Colors.grayLight, borderRadius: Radius.md, padding: 3, gap: 3 },
   seg: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
   segActive: { backgroundColor: Colors.white, ...Shadow.card },
   segText: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
   segActiveText: { color: Colors.text },
   divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.md },
   dayRow: { flexDirection: 'row', gap: Spacing.xs },
-  dayChip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-  },
+  dayChip: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dayChipActive: { backgroundColor: Colors.orange },
   dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
   dayTextActive: { color: Colors.white },
   dateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
-  dateChip: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  dateChip: { width: 40, height: 40, borderRadius: Radius.full, backgroundColor: Colors.grayLight, alignItems: 'center', justifyContent: 'center' },
   dateChipActive: { backgroundColor: Colors.orange },
   dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
   dateTextActive: { color: Colors.white },
+  paydayHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: Spacing.xs, fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontSize: FontSize.md, color: Colors.text, fontWeight: '500' },
+  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, color: Colors.danger, fontWeight: '600' },
   themeGrid: { flexDirection: 'row', gap: Spacing.sm },
-  themeOption: {
-    flex: 1,
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    borderColor: Colors.grayLight,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    gap: 4,
-  },
+  themeOption: { flex: 1, borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.grayLight, padding: Spacing.sm, alignItems: 'center', gap: 4 },
   themeOptionActive: { borderWidth: 2 },
   themeSwatches: { flexDirection: 'row', gap: 3 },
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
   themeEmoji: { fontSize: 20 },
   themeLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
-  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
   hoursRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.xs },
   hourField: { flex: 1, gap: 4 },
   hourLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
-  hourInput: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    fontSize: FontSize.md,
-    color: Colors.text,
-    textAlign: 'center',
-  },
+  hourInput: { backgroundColor: Colors.offWhite, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md, color: Colors.text, textAlign: 'center' },
   hourSep: { fontSize: FontSize.lg, color: Colors.textLight, marginTop: Spacing.md },
+  langRow: { flexDirection: 'row', gap: Spacing.md },
+  langChip: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: Colors.grayLight, justifyContent: 'center' },
+  langChipActive: { backgroundColor: Colors.orange },
+  langFlag: { fontSize: 24 },
+  langText: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
+  langTextActive: { color: Colors.white },
 });

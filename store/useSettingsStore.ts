@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import db from '@/lib/db';
 
 export type ColorTheme = 'warm' | 'cool' | 'forest' | 'rose';
+export type Language = 'en' | 'no';
 
 export type Settings = {
   userName: string;
@@ -19,6 +20,8 @@ export type Settings = {
   enforceWorkHours: boolean;
   essentialsModeEnabled: boolean;
   showPoints: boolean;
+  showHints: boolean;
+  language: Language;
 };
 
 type SettingsStore = Settings & {
@@ -45,6 +48,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   enforceWorkHours: false,
   essentialsModeEnabled: false,
   showPoints: false,
+  showHints: true,
+  language: 'no' as Language,
   workModeSessionOverride: false,
 
   load() {
@@ -64,6 +69,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       enforce_work_hours: number | null;
       essentials_mode_enabled: number | null;
       show_points: number | null;
+      show_hints: number | null;
+      language: string | null;
     }>('SELECT * FROM settings WHERE id = 1');
     if (!row) return;
     set({
@@ -82,6 +89,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       enforceWorkHours: row.enforce_work_hours === 1,
       essentialsModeEnabled: row.essentials_mode_enabled === 1,
       showPoints: row.show_points === 1,
+      showHints: row.show_hints !== 0,
+      language: (row.language as Language) ?? 'no',
     });
   },
 
@@ -95,7 +104,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
           task_notifications_enabled = ?, setup_complete = ?,
           color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
           work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
-          show_points = ?
+          show_points = ?, show_hints = ?, language = ?
         WHERE id = 1`,
         [
           next.userName,
@@ -113,6 +122,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
           next.enforceWorkHours ? 1 : 0,
           next.essentialsModeEnabled ? 1 : 0,
           next.showPoints ? 1 : 0,
+          next.showHints ? 1 : 0,
+          next.language,
         ]
       );
       return next;

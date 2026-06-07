@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import ShoppingRow from '@/components/ShoppingRow';
+import HintCard from '@/components/HintCard';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 type Tab = 'weekly' | 'monthly';
@@ -31,6 +33,7 @@ export default function ShoppingScreen() {
   const toggle = useShoppingStore((s) => s.toggleCheck);
   const remove = useShoppingStore((s) => s.remove);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
+  const t = useT();
 
   const filtered = items.filter((i) => i.listType === tab);
   const unchecked = filtered.filter((i) => !i.checked);
@@ -80,6 +83,7 @@ export default function ShoppingScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
+          <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
           {/* Summary chip */}
           <View style={styles.summaryChip}>
             <Text style={styles.summaryText}>

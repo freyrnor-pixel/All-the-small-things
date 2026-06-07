@@ -12,19 +12,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-
-const FEATURES = [
-  { icon: '✅', text: 'Hold styr på dagens oppgaver — uten å huske alt selv' },
-  { icon: '🛒', text: 'Handlelister som setter seg selv opp hver uke' },
-  { icon: '🍽', text: 'Matretter med ingredienser du kan skyve rett til handlelisten' },
-  { icon: '💚', text: 'Enkel helsedagbok for symptomer og observasjoner' },
-  { icon: '💼', text: 'Jobb-modus som holder privat og jobb atskilt' },
-];
 
 export default function OnboardingWelcome() {
   const router = useRouter();
   const update = useSettingsStore((s) => s.update);
+  const t = useT();
   const [name, setName] = useState('');
 
   function next() {
@@ -45,15 +39,12 @@ export default function OnboardingWelcome() {
         >
           <View style={styles.top}>
             <Text style={styles.emoji}>🌿</Text>
-            <Text style={styles.heading}>Alt det lille</Text>
-            <Text style={styles.sub}>
-              En enkel hverdagsapp laget for deg som ikke ønsker å bruke energi på å holde styr på ting.
-              Sett den opp én gang — og la appen gjøre resten.
-            </Text>
+            <Text style={styles.heading}>{t.welcomeHeading}</Text>
+            <Text style={styles.sub}>{t.welcomeSub}</Text>
           </View>
 
           <View style={styles.featureList}>
-            {FEATURES.map((f, i) => (
+            {t.features.map((f, i) => (
               <View key={i} style={styles.featureRow}>
                 <Text style={styles.featureIcon}>{f.icon}</Text>
                 <Text style={styles.featureText}>{f.text}</Text>
@@ -62,18 +53,18 @@ export default function OnboardingWelcome() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.label}>Hva heter du?</Text>
+            <Text style={styles.label}>{t.whatsYourName}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="Fornavn (valgfritt)"
+              placeholder={t.namePlaceholder}
               placeholderTextColor={Colors.gray}
               autoFocus
               returnKeyType="done"
               onSubmitEditing={next}
             />
-            <Text style={styles.hint}>Brukes bare til å si hei — ingen data forlater telefonen din.</Text>
+            <Text style={styles.hint}>{t.nameHint}</Text>
           </View>
 
           <View style={styles.progress}>
@@ -85,7 +76,7 @@ export default function OnboardingWelcome() {
 
         <View style={styles.footer}>
           <Pressable style={styles.nextBtn} onPress={next}>
-            <Text style={styles.nextBtnText}>Kom i gang →</Text>
+            <Text style={styles.nextBtnText}>{t.getStarted}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -118,18 +109,9 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.card,
   },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.md,
-  },
+  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   featureIcon: { fontSize: 20, lineHeight: 26 },
-  featureText: {
-    flex: 1,
-    fontSize: FontSize.md,
-    color: Colors.text,
-    lineHeight: 22,
-  },
+  featureText: { flex: 1, fontSize: FontSize.md, color: Colors.text, lineHeight: 22 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: Radius.md,
@@ -147,12 +129,7 @@ const styles = StyleSheet.create({
   },
   hint: { fontSize: FontSize.xs, color: Colors.textLight, lineHeight: 18 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-  },
+  dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },
   footer: { padding: Spacing.xl, paddingTop: Spacing.md },
   nextBtn: {

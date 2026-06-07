@@ -2,54 +2,45 @@ import React from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-
-const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
-const DAY_FULL = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
 export default function OnboardingStep3() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const t = useT();
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
           <Text style={styles.emoji}>🛒</Text>
-          <Text style={styles.heading}>Handleliste</Text>
-          <Text style={styles.sub}>
-            Ukeslisten nullstilles automatisk på en dag du velger — klar for neste uke.
-            Månedslisten er for faste varer som toalettpapir og vaskemiddel.
-          </Text>
+          <Text style={styles.heading}>{t.shoppingOnboarding}</Text>
+          <Text style={styles.sub}>{t.shoppingOnboardingSub}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hvilken dag handler du vanligvis?</Text>
+          <Text style={styles.cardTitle}>{t.shoppingDayQuestion}</Text>
           <View style={styles.dayRow}>
-            {DAY_LABELS.map((label, i) => (
+            {t.dayLabels.map((label, i) => (
               <Pressable
                 key={i}
                 style={[styles.dayChip, settings.weeklyResetDay === i && styles.dayChipActive]}
                 onPress={() => settings.update({ weeklyResetDay: i })}
               >
-                <Text
-                  style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}
-                >
+                <Text style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}>
                   {label}
                 </Text>
               </Pressable>
             ))}
           </View>
           <Text style={styles.hint}>
-            Ukeslisten nullstilles {DAY_FULL[settings.weeklyResetDay]} morgen.
+            {t.weeklyResetsOn(t.dayFull[settings.weeklyResetDay])}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hvilken dato nullstilles månedslisten?</Text>
+          <Text style={styles.cardTitle}>{t.monthlyResetDateQuestion}</Text>
           <View style={styles.dateRow}>
             {[1, 5, 10, 15, 20, 25, 28].map((d) => (
               <Pressable
@@ -57,13 +48,14 @@ export default function OnboardingStep3() {
                 style={[styles.dateChip, settings.monthlyResetDate === d && styles.dateChipActive]}
                 onPress={() => settings.update({ monthlyResetDate: d })}
               >
-                <Text
-                  style={[styles.dateText, settings.monthlyResetDate === d && styles.dateTextActive]}
-                >
+                <Text style={[styles.dateText, settings.monthlyResetDate === d && styles.dateTextActive]}>
                   {d}.
                 </Text>
               </Pressable>
             ))}
+          </View>
+          <View style={styles.tipBox}>
+            <Text style={styles.tipText}>{t.monthlyPaydayHint}</Text>
           </View>
         </View>
 
@@ -76,10 +68,10 @@ export default function OnboardingStep3() {
 
       <View style={styles.footer}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Tilbake</Text>
+          <Text style={styles.backBtnText}>{t.previous}</Text>
         </Pressable>
         <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step4')}>
-          <Text style={styles.nextBtnText}>Neste →</Text>
+          <Text style={styles.nextBtnText}>{t.next}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -103,12 +95,8 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
   dayRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   dayChip: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: Radius.full,
+    backgroundColor: Colors.grayLight, alignItems: 'center', justifyContent: 'center',
   },
   dayChipActive: { backgroundColor: Colors.orange },
   dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
@@ -116,25 +104,18 @@ const styles = StyleSheet.create({
   hint: { fontSize: FontSize.sm, color: Colors.textLight, fontStyle: 'italic' },
   dateRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   dateChip: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 44, height: 44, borderRadius: Radius.full,
+    backgroundColor: Colors.grayLight, alignItems: 'center', justifyContent: 'center',
   },
   dateChipActive: { backgroundColor: Colors.orange },
   dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
   dateTextActive: { color: Colors.white },
+  tipBox: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.sm },
+  tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: Spacing.xl,
-    paddingTop: 0,
-  },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: 0 },
   backBtn: { padding: Spacing.md },
   backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
   nextBtn: {

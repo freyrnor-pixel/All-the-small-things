@@ -1,0 +1,44 @@
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { getTheme } from '@/constants/theme';
+
+type Props = {
+  text: string;
+  example: string;
+};
+
+export default function HintCard({ text, example }: Props) {
+  const showHints = useSettingsStore((s) => s.showHints);
+  const colorTheme = useSettingsStore((s) => s.colorTheme);
+  const theme = getTheme(colorTheme);
+
+  if (!showHints) return null;
+
+  return (
+    <View style={[styles.card, { backgroundColor: theme.greenLight }]}>
+      <Text style={[styles.text, { color: theme.text }]}>{text}</Text>
+      <Text style={[styles.example, { color: theme.textLight }]}>{example}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  text: {
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  example: {
+    fontSize: FontSize.xs,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+});

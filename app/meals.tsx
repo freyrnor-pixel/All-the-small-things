@@ -13,6 +13,8 @@ import { useRouter } from 'expo-router';
 import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import ExpandableCard from '@/components/ExpandableCard';
+import HintCard from '@/components/HintCard';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 const MEAL_TYPES: { value: MealType; label: string; icon: string; color: string }[] = [
@@ -30,6 +32,7 @@ export default function MealsScreen() {
   const addIngredient = useMealStore((s) => s.addIngredient);
   const removeIngredient = useMealStore((s) => s.removeIngredient);
   const randomDish = useMealStore((s) => s.randomDish);
+  const t = useT();
   const addToShopping = useShoppingStore((s) => s.add);
 
   const [filterType, setFilterType] = useState<MealType | 'all'>('all');
@@ -135,6 +138,7 @@ export default function MealsScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
         {/* Add dish */}
         {addingDish ? (
           <View style={styles.addCard}>

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
-  FlatList,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -13,20 +12,16 @@ import { useRouter } from 'expo-router';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
 import QuickAddSheet from '@/components/QuickAddSheet';
+import HintCard from '@/components/HintCard';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
-
-const DAYS_NO = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
-const MONTHS_NO = [
-  'januar','februar','mars','april','mai','juni',
-  'juli','august','september','oktober','november','desember',
-];
 
 function todayStr() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function isWithinWorkHours(start: string, end: string): boolean {
@@ -34,22 +29,22 @@ function isWithinWorkHours(start: string, end: string): boolean {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   const nowMins = now.getHours() * 60 + now.getMinutes();
-  const startMins = sh * 60 + sm;
-  const endMins = eh * 60 + em;
-  return nowMins >= startMins && nowMins < endMins;
+  return nowMins >= sh * 60 + sm && nowMins < eh * 60 + em;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
   const today = todayStr();
   const settings = useSettingsStore();
+  const t = useT();
+  const theme = getTheme(settings.colorTheme);
+
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
   const completedCountFn = useTaskStore((s) => s.completedCount);
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
-  const theme = getTheme(settings.colorTheme);
 
   const isWorkModeActive = useMemo(() => {
     if (settings.workModeSessionOverride) return false;
@@ -66,103 +61,91 @@ export default function HomeScreen() {
 
   const allTodayTasks = tasksForDate(today);
   const todayTasks = settings.essentialsModeEnabled
-    ? allTodayTasks.filter((t) => t.importance === 'essential')
+    ? allTodayTasks.filter((task) => task.importance === 'essential')
     : allTodayTasks;
 
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
 
-  const pendingShopping = shoppingItems
-    .filter((i) => i.listType === 'weekly' && !i.checked)
-    .slice(0, 5);
+  const pendingShopping = shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).slice(0, 5);
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 10) return 'God morgen';
-    if (h < 17) return 'God dag';
-    return 'God kveld';
+    if (h < 10) return t.greeting.morning;
+    if (h < 17) return t.greeting.day;
+    return t.greeting.evening;
   };
 
+  const dateLabel = (() => {
+    const d = new Date();
+    return `${t.days[d.getDay()]} ${d.getDate()}. ${t.months[d.getMonth()]}`;
+  })();
+
   function handleWorkModeOverride() {
-    Alert.alert(
-      'Bytt til personlig modus?',
-      'Husk å fokusere på det som er foran deg! Jobb-modus vil deaktiveres frem til du åpner appen på nytt.',
-      [
-        { text: 'Avbryt', style: 'cancel' },
-        {
-          text: 'Bytt likevel',
-          onPress: () => settings.setWorkModeSessionOverride(true),
-        },
-      ]
-    );
+    Alert.alert(t.switchModeTitle, t.switchModeBody, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.switchModeConfirm, onPress: () => settings.setWorkModeSessionOverride(true) },
+    ]);
   }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
-      {/* Work mode banner */}
       {isWorkModeActive && (
         <View style={[styles.workBanner, { backgroundColor: theme.orange }]}>
-          <Text style={styles.workBannerText}>💼 Jobb-modus aktiv</Text>
+          <Text style={styles.workBannerText}>{t.workBanner}</Text>
           <Pressable style={styles.overrideBtn} onPress={handleWorkModeOverride}>
-            <Text style={styles.overrideBtnText}>Bytt modus</Text>
+            <Text style={styles.overrideBtnText}>{t.switchMode}</Text>
           </Pressable>
         </View>
       )}
 
-      {/* Essentials mode banner */}
       {settings.essentialsModeEnabled && (
         <Pressable
           style={styles.essentialsBanner}
           onPress={() => settings.update({ essentialsModeEnabled: false })}
         >
-          <Text style={styles.essentialsBannerText}>⭐ Kun viktige oppgaver — trykk for å se alle</Text>
+          <Text style={styles.essentialsBannerText}>{t.focusBanner}</Text>
         </Pressable>
       )}
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: theme.text }]}>
               {greeting()}{settings.userName ? `, ${settings.userName}` : ''}!
             </Text>
-            <Text style={[styles.dateLabel, { color: theme.textLight }]}>
-              {DAYS_NO[new Date().getDay()]} {new Date().getDate()}. {MONTHS_NO[new Date().getMonth()]}
-            </Text>
+            <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
           <Pressable
-            style={[styles.essentialsBtn, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
+            style={[styles.essentialsBtn, { backgroundColor: Colors.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
             onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
           >
-            <Text style={[styles.essentialsBtnText, settings.essentialsModeEnabled && { color: Colors.white }]}>
-              {settings.essentialsModeEnabled ? '⭐ Fokus' : '⭐'}
+            <Text style={[styles.essentialsBtnText, { color: Colors.textLight }, settings.essentialsModeEnabled && { color: Colors.white }]}>
+              {settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
             </Text>
           </Pressable>
         </View>
+
+        <HintCard text={t.hints.home.text} example={t.hints.home.example} />
 
         {/* Today's tasks */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {settings.essentialsModeEnabled ? '⭐ Viktige oppgaver i dag' : 'Oppgaver i dag'}
+              {settings.essentialsModeEnabled ? t.essentialTasksToday : t.tasksToday}
             </Text>
             <Pressable
               style={[styles.addBtn, { backgroundColor: theme.orange }]}
               onPress={() => router.push('/task-form')}
             >
-              <Text style={styles.addBtnText}>+ Ny</Text>
+              <Text style={styles.addBtnText}>{t.addNew}</Text>
             </Pressable>
           </View>
           {todayTasks.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>
-                {settings.essentialsModeEnabled
-                  ? 'Ingen viktige oppgaver i dag — bra!'
-                  : 'Ingen oppgaver i dag! Nyt dagen 🌿'}
+                {settings.essentialsModeEnabled ? t.noEssentialTasks : t.noTasks}
               </Text>
             </View>
           ) : (
@@ -180,7 +163,7 @@ export default function HomeScreen() {
           {settings.essentialsModeEnabled && allTodayTasks.length > todayTasks.length && (
             <Pressable onPress={() => settings.update({ essentialsModeEnabled: false })}>
               <Text style={[styles.seeAll, { color: theme.orange }]}>
-                + {allTodayTasks.length - todayTasks.length} vanlige oppgaver skjult →
+                {t.essentialsHidden(allTodayTasks.length - todayTasks.length)}
               </Text>
             </Pressable>
           )}
@@ -191,7 +174,7 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.textLight }]}>
-                Restliste ({backlog.length})
+                {t.backlog} ({backlog.length})
               </Text>
             </View>
             <View style={[styles.card, { backgroundColor: theme.offWhite }]}>
@@ -205,23 +188,21 @@ export default function HomeScreen() {
                 />
               ))}
             </View>
-            <Text style={[styles.backlogHint, { color: theme.textLight }]}>
-              Hvert lite steg teller — bare ta ett om gangen.
-            </Text>
+            <Text style={[styles.backlogHint, { color: theme.textLight }]}>{t.backlogHint}</Text>
           </View>
         )}
 
         {/* Shopping preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Handle snart</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.shoppingPreview}</Text>
             <Pressable onPress={() => router.push('/shopping')}>
-              <Text style={[styles.seeAll, { color: theme.orange }]}>Se alt →</Text>
+              <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
             </Pressable>
           </View>
           {pendingShopping.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
-              <Text style={[styles.emptyText, { color: theme.textLight }]}>Handlelisten er tom — bra jobbet!</Text>
+              <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
             </View>
           ) : (
             <View style={[styles.card, { backgroundColor: theme.white }]}>
@@ -246,7 +227,7 @@ export default function HomeScreen() {
         {settings.showPoints && completedCount > 0 && (
           <View style={[styles.pointsCard, { backgroundColor: theme.offWhite }]}>
             <Text style={[styles.pointsText, { color: theme.textLight }]}>
-              Du har fullført {completedCount} {completedCount === 1 ? 'ting' : 'ting'} — småting teller!
+              {t.smallThingsCount(completedCount)}
             </Text>
           </View>
         )}
@@ -263,119 +244,50 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   workBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
   },
   workBannerText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
   overrideBtn: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 4,
   },
   overrideBtnText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
   essentialsBanner: {
-    backgroundColor: '#FFF8E6',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F6C344',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    alignItems: 'center',
+    backgroundColor: '#FFF8E6', borderBottomWidth: 1, borderBottomColor: '#F6C344',
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, alignItems: 'center',
   },
   essentialsBannerText: { fontSize: FontSize.xs, color: '#8A6A00', fontWeight: '600' },
   scroll: { flex: 1 },
   content: { padding: Spacing.md },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
     marginBottom: Spacing.lg,
   },
-  greeting: {
-    fontSize: FontSize.xxl,
-    fontWeight: '700',
-  },
-  dateLabel: {
-    fontSize: FontSize.md,
-    marginTop: 2,
-    textTransform: 'capitalize',
-  },
+  greeting: { fontSize: FontSize.xxl, fontWeight: '700' },
+  dateLabel: { fontSize: FontSize.md, marginTop: 2, textTransform: 'capitalize' },
   essentialsBtn: {
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    backgroundColor: Colors.grayLight,
-    marginTop: 4,
+    borderRadius: Radius.full, paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs, marginTop: 4,
   },
-  essentialsBtnText: {
-    fontSize: FontSize.sm,
-    fontWeight: '700',
-    color: Colors.textLight,
-  },
+  essentialsBtnText: { fontSize: FontSize.sm, fontWeight: '700' },
   section: { marginBottom: Spacing.lg },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: Spacing.sm,
   },
-  sectionTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
-  },
-  addBtn: {
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-  },
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
+  addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
-  card: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.card,
-  },
-  emptyCard: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
+  card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
+  emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm },
-  shoppingPreviewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    gap: Spacing.sm,
-  },
-  shoppingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: Radius.full,
-  },
+  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, gap: Spacing.sm },
+  shoppingDot: { width: 8, height: 8, borderRadius: Radius.full },
   shoppingPreviewName: { fontSize: FontSize.md },
-  moreText: {
-    fontSize: FontSize.sm,
-    marginTop: Spacing.xs,
-    textAlign: 'right',
-  },
-  backlogHint: {
-    fontSize: FontSize.xs,
-    marginTop: Spacing.xs,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  pointsCard: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  pointsText: {
-    fontSize: FontSize.sm,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
+  moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
+  backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
+  pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
+  pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
 });

@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
 import { requestPermissions } from '@/lib/notifications';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 export default function OnboardingStep4() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const t = useT();
 
   async function next() {
     if (settings.remindersEnabled || settings.taskNotificationsEnabled) {
@@ -29,17 +31,15 @@ export default function OnboardingStep4() {
       <View style={styles.content}>
         <View style={styles.top}>
           <Text style={styles.emoji}>🔔</Text>
-          <Text style={styles.heading}>Varsler</Text>
-          <Text style={styles.sub}>
-            Vi kan sende deg varme påminnelser slik at du aldri trenger å huske alt selv.
-          </Text>
+          <Text style={styles.heading}>{t.notificationsOnboarding}</Text>
+          <Text style={styles.sub}>{t.notificationsSub}</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>Ukentlige påminnelser</Text>
-              <Text style={styles.switchHint}>Planlegg uken din</Text>
+              <Text style={styles.switchLabel}>{t.weeklyRemindersOnboarding}</Text>
+              <Text style={styles.switchHint}>{t.weeklyRemindersHint}</Text>
             </View>
             <Switch
               value={settings.remindersEnabled}
@@ -52,12 +52,12 @@ export default function OnboardingStep4() {
           {settings.remindersEnabled && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.fieldLabel}>Tidspunkt (HH:MM)</Text>
+              <Text style={styles.fieldLabel}>{t.timeLabelOnboarding}</Text>
               <TextInput
                 style={styles.input}
                 value={settings.reminderTime}
                 onChangeText={(v) => settings.update({ reminderTime: v })}
-                placeholder="08:00"
+                placeholder={t.timePlaceholder}
                 placeholderTextColor={Colors.gray}
                 keyboardType="numbers-and-punctuation"
               />
@@ -68,8 +68,8 @@ export default function OnboardingStep4() {
 
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>Oppgavevarsler</Text>
-              <Text style={styles.switchHint}>Påminnelse når en oppgave begynner</Text>
+              <Text style={styles.switchLabel}>{t.taskNotifications}</Text>
+              <Text style={styles.switchHint}>{t.taskNotificationsHintOnboarding}</Text>
             </View>
             <Switch
               value={settings.taskNotificationsEnabled}
@@ -89,10 +89,10 @@ export default function OnboardingStep4() {
 
       <View style={styles.footer}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>← Tilbake</Text>
+          <Text style={styles.backBtnText}>{t.previous}</Text>
         </Pressable>
         <Pressable style={styles.nextBtn} onPress={next}>
-          <Text style={styles.nextBtnText}>Neste →</Text>
+          <Text style={styles.nextBtnText}>{t.next}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -106,12 +106,7 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.card,
-  },
+  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLeft: { flex: 1, marginRight: Spacing.md },
   switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
@@ -128,11 +123,7 @@ const styles = StyleSheet.create({
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: Spacing.xl,
-  },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl },
   backBtn: { padding: Spacing.md },
   backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
   nextBtn: {

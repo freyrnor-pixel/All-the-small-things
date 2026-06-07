@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useHealthStore } from '@/store/useHealthStore';
+import HintCard from '@/components/HintCard';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 function todayStr() {
@@ -36,6 +38,7 @@ export default function HealthScreen() {
   const [notes, setNotes] = useState('');
   const [severity, setSeverity] = useState(2);
   const [date, setDate] = useState(todayStr());
+  const t = useT();
 
   function save() {
     if (!ailment.trim()) return;
@@ -74,6 +77,7 @@ export default function HealthScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        <HintCard text={t.hints.health.text} example={t.hints.health.example} />
         {/* Overview */}
         {topAilments.length > 0 && (
           <View style={styles.overviewCard}>
