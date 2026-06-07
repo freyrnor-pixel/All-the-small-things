@@ -79,12 +79,7 @@ export default function ScanScreen() {
   async function takePhoto() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        settings.language === 'en' ? 'Permission needed' : 'Tilgang nødvendig',
-        settings.language === 'en'
-          ? 'Camera access is required to scan receipts.'
-          : 'Kameraet trenger tilgang for å skanne kvitteringer.'
-      );
+      Alert.alert(t.permissionTitle, t.permissionBody);
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });

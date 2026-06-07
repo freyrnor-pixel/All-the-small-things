@@ -17,12 +17,8 @@ import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
+import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
-
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 function isWithinWorkHours(start: string, end: string): boolean {
   const now = new Date();

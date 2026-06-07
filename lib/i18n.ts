@@ -158,6 +158,13 @@ const en = {
   norwegian: 'Norwegian',
   dayLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   dayFull: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+  dayShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  whatToDo: 'What needs to be done?',
+  addTime: '+ Add time',
+  permissionTitle: 'Permission needed',
+  permissionBody: 'Camera access is required to scan receipts.',
   // Hints (one per screen)
   hints: {
     home: {
@@ -340,6 +347,13 @@ const no: typeof en = {
   norwegian: 'Norsk',
   dayLabels: ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'],
   dayFull: ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'],
+  dayShort: ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'],
+  today: 'I dag',
+  tomorrow: 'Imorgen',
+  whatToDo: 'Hva må gjøres?',
+  addTime: '+ Legg til tidspunkt',
+  permissionTitle: 'Tilgang nødvendig',
+  permissionBody: 'Kameraet trenger tilgang for å skanne kvitteringer.',
   hints: {
     home: {
       text: 'Din daglige oversikt. De viktigste oppgavene er øverst — trykk ⭐ for å fokusere kun på viktige.',

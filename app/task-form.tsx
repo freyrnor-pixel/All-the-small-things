@@ -15,16 +15,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTaskStore, Task, TaskType, Importance } from '@/store/useTaskStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
+import { todayStr } from '@/lib/date';
 import HintCard from '@/components/HintCard';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
-
-const DAY_LABELS_NO = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
-const DAY_LABELS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export default function TaskFormScreen() {
   const router = useRouter();
@@ -48,7 +41,7 @@ export default function TaskFormScreen() {
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
 
-  const dayLabels = settings.language === 'en' ? DAY_LABELS_EN : DAY_LABELS_NO;
+  const { dayLabels } = t;
 
   function toggleDay(d: number) {
     setRecurringDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -16,13 +16,14 @@ type BubbleItem = {
   label: string;
   route: string;
   color: string;
+  onPress?: () => void;
 };
 
 type Props = {
   onNewTask?: () => void;
 };
 
-const ITEMS: BubbleItem[] = [
+const BASE_ITEMS: Omit<BubbleItem, 'onPress'>[] = [
   { icon: '➕', label: 'Ny opp.', route: '/task-form', color: '#F4A261' },
   { icon: '🛒', label: 'Handle', route: '/shopping', color: '#E8895A' },
   { icon: '🍽', label: 'Mat', route: '/meals', color: '#6BAA75' },
@@ -47,6 +48,15 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const colorTheme = useSettingsStore((s) => s.colorTheme);
   const theme = getTheme(colorTheme);
 
+  const items = useMemo((): BubbleItem[] =>
+    BASE_ITEMS.map((item) =>
+      item.route === '/task-form' && onNewTask
+        ? { ...item, onPress: onNewTask }
+        : item
+    ),
+    [onNewTask]
+  );
+
   function toggle() {
     const toValue = open ? 0 : 1;
     Animated.parallel([
@@ -56,13 +66,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
     setOpen((v) => !v);
   }
 
-  function navigate(route: string) {
+  function navigate(item: BubbleItem) {
     toggle();
-    if (route === '/task-form' && onNewTask) {
-      setTimeout(onNewTask, 150);
-    } else {
-      setTimeout(() => router.push(route as never), 150);
-    }
+    const action = item.onPress ?? (() => router.push(item.route as never));
+    setTimeout(action, 150);
   }
 
   const rotate = rotation.interpolate({
@@ -76,8 +83,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
         <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
       )}
 
-      {ITEMS.map((item, i) => {
-        const angle = START_ANGLE + (END_ANGLE - START_ANGLE) * (i / (ITEMS.length - 1));
+      {items.map((item, i) => {
+        const angle = START_ANGLE + (END_ANGLE - START_ANGLE) * (i / (BASE_ITEMS.length - 1));
         const x = Math.cos(angle) * RADIUS;
         const y = Math.sin(angle) * RADIUS;
 
@@ -99,7 +106,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
             ]}
             pointerEvents={open ? 'auto' : 'none'}
           >
-            <Pressable style={styles.bubbleInner} onPress={() => navigate(item.route)}>
+            <Pressable style={styles.bubbleInner} onPress={() => navigate(item)}>
               <Text style={styles.bubbleIcon}>{item.icon}</Text>
               <Text style={styles.bubbleLabel}>{item.label}</Text>
             </Pressable>

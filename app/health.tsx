@@ -12,12 +12,8 @@ import { useRouter } from 'expo-router';
 import { useHealthStore } from '@/store/useHealthStore';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
+import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 const SEVERITIES = [
   { value: 1, label: 'Mild', color: Colors.greenLight },

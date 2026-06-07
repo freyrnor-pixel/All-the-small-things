@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import type { Language } from '@/store/useSettingsStore';
 
@@ -20,6 +21,7 @@ const OPTIONS: LangOption[] = [
 export default function LanguageScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const t = useT();
 
   function choose(lang: Language) {
     settings.update({ language: lang });
@@ -31,14 +33,8 @@ export default function LanguageScreen() {
       <View style={styles.content}>
         <View style={styles.top}>
           <Text style={styles.emoji}>🌐</Text>
-          <Text style={styles.heading}>
-            {settings.language === 'en' ? 'Choose language' : 'Velg språk'}
-          </Text>
-          <Text style={styles.sub}>
-            {settings.language === 'en'
-              ? 'You can change this in Settings at any time.'
-              : 'Du kan endre dette i innstillingene når som helst.'}
-          </Text>
+          <Text style={styles.heading}>{t.chooseLanguage}</Text>
+          <Text style={styles.sub}>{t.chooseLanguageSub}</Text>
         </View>
 
         <View style={styles.optionsRow}>

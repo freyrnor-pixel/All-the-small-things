@@ -1,8 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing, getTheme } from '@/constants/theme';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { getTheme } from '@/constants/theme';
 
 type Props = {
   text: string;
@@ -10,8 +9,7 @@ type Props = {
 };
 
 export default function HintCard({ text, example }: Props) {
-  const showHints = useSettingsStore((s) => s.showHints);
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
+  const { showHints, colorTheme } = useSettingsStore((s) => ({ showHints: s.showHints, colorTheme: s.colorTheme }));
   const theme = getTheme(colorTheme);
 
   if (!showHints) return null;

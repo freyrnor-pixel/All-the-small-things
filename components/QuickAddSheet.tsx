@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,29 +12,11 @@ import {
 } from 'react-native';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useT } from '@/lib/i18n';
+import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
 
-const DAY_SHORT = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
-
-function dateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 type DayOption = { label: string; date: string };
-
-function buildDayOptions(): DayOption[] {
-  const today = new Date();
-  const opts: DayOption[] = [{ label: 'I dag', date: dateStr(today) }];
-  for (let i = 1; i <= 6; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    opts.push({
-      label: i === 1 ? 'Imorgen' : DAY_SHORT[d.getDay()],
-      date: dateStr(d),
-    });
-  }
-  return opts;
-}
 
 type Props = {
   visible: boolean;
@@ -45,19 +27,34 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
   const addTask = useTaskStore((s) => s.add);
   const colorTheme = useSettingsStore((s) => s.colorTheme);
   const theme = getTheme(colorTheme);
+  const t = useT();
 
   const [title, setTitle] = useState('');
-  const [selectedDate, setSelectedDate] = useState(dateStr(new Date()));
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [showTime, setShowTime] = useState(false);
   const [time, setTime] = useState('');
   const inputRef = useRef<TextInput>(null);
 
-  const dayOptions = buildDayOptions();
+  const dayOptions = useMemo((): DayOption[] => {
+    const today = new Date();
+    const opts: DayOption[] = [{ label: t.today, date: dateStr(today) }];
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      opts.push({
+        label: i === 1 ? t.tomorrow : t.dayShort[d.getDay()],
+        date: dateStr(d),
+      });
+    }
+    return opts;
+    // dayShort/today/tomorrow only change when language changes, which remounts this sheet anyway
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t.today, t.tomorrow]);
 
   useEffect(() => {
     if (visible) {
       setTitle('');
-      setSelectedDate(dateStr(new Date()));
+      setSelectedDate(todayStr());
       setShowTime(false);
       setTime('');
       setTimeout(() => inputRef.current?.focus(), 80);
@@ -94,7 +91,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
           <TextInput
             ref={inputRef}
             style={[styles.titleInput, { color: theme.text, borderBottomColor: theme.grayLight }]}
-            placeholder="Hva må gjøres?"
+            placeholder={t.whatToDo}
             placeholderTextColor={theme.gray}
             value={title}
             onChangeText={setTitle}
@@ -130,7 +127,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
           {!showTime ? (
             <Pressable style={styles.timeToggle} onPress={() => setShowTime(true)}>
               <Text style={[styles.timeToggleText, { color: theme.textLight }]}>
-                + Legg til tidspunkt
+                {t.addTime}
               </Text>
             </Pressable>
           ) : (
@@ -153,7 +150,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
             onPress={save}
             disabled={!title.trim()}
           >
-            <Text style={styles.saveBtnText}>Lagre</Text>
+            <Text style={styles.saveBtnText}>{t.save}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
