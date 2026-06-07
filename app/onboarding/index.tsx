@@ -60,6 +60,7 @@ export default function OnboardingWelcome() {
               onChangeText={setName}
               placeholder={t.namePlaceholder}
               placeholderTextColor={Colors.gray}
+              selectionColor={Colors.orange}
               autoFocus
               returnKeyType="done"
               onSubmitEditing={next}
@@ -121,8 +122,10 @@ const styles = StyleSheet.create({
   },
   label: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
   input: {
-    backgroundColor: Colors.offWhite,
+    backgroundColor: Colors.white,
     borderRadius: Radius.sm,
+    borderWidth: 2,
+    borderColor: Colors.orange,
     padding: Spacing.md,
     fontSize: FontSize.lg,
     color: Colors.text,

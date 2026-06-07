@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -19,16 +20,16 @@ export default function OnboardingStep4() {
   const settings = useSettingsStore();
   const t = useT();
 
-  async function next() {
+  function next() {
     if (settings.remindersEnabled || settings.taskNotificationsEnabled) {
-      await requestPermissions();
+      requestPermissions().catch(() => {});
     }
     router.push('/onboarding/step5');
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
           <Text style={styles.emoji}>🔔</Text>
           <Text style={styles.heading}>{t.notificationsOnboarding}</Text>
@@ -85,7 +86,7 @@ export default function OnboardingStep4() {
             <View key={i} style={[styles.dot, i === 3 && styles.dotActive]} />
           ))}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -101,7 +102,7 @@ export default function OnboardingStep4() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
-  content: { flex: 1, padding: Spacing.xl, gap: Spacing.xl, justifyContent: 'center' },
+  content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
