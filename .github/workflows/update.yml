@@ -1,11 +1,13 @@
-name: Build Android APK
+name: OTA Update
 
 on:
+  push:
+    branches: [claude/adhd-task-life-app-TOdFj]
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Android preview APK
+  update:
+    name: Push OTA update
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,9 +28,5 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build APK
-        run: eas build --platform android --profile preview --non-interactive
-
-      - name: Build complete
-        run: |
-          echo "APK ready — download from https://expo.dev (project → Builds)"
+      - name: Push update
+        run: eas update --auto --channel preview --non-interactive

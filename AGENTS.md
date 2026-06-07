@@ -75,9 +75,29 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - `completedCount` in `useTaskStore` counts all-time done tasks (intentional — cumulative "small things add up" philosophy)
 - `backlogTasks(today)` only returns non-recurring tasks; recurring tasks reappear by date schedule
 
-## EAS Build
+## Builds and updates
 
-- Workflow: `.github/workflows/build-android.yml` — triggers on push to `claude/adhd-task-life-app-TOdFj`
-- Produces an Android APK downloadable from expo.dev → Builds section
-- Uses `eas build --platform android --profile preview --non-interactive`
-- Push to branch to trigger a build; download from **expo.dev → project → Builds** (not Updates)
+### OTA updates (normal flow)
+- Workflow: `.github/workflows/update.yml` — triggers on every push to `claude/adhd-task-life-app-TOdFj`
+- Runs `eas update --auto --channel preview` — pushes the JS bundle silently to all installed apps
+- Apps pick it up automatically on next launch — no download needed
+- Takes ~1–2 min on CI
+
+### New APK build (only when native code changes)
+- Workflow: `.github/workflows/build-android.yml` — **manual trigger only** (`workflow_dispatch`)
+- Use when: new native package added, `app.json` plugin changed, `eas.json` build config changed
+- Produces an Android APK downloadable from **expo.dev → project → Builds** (not Updates)
+- Takes ~20–30 min on CI
+
+### When to do a new build vs. OTA update
+| Change type | Need new build? |
+|---|---|
+| UI text, styles, logic | No — OTA handles it |
+| New screen, new store | No — OTA handles it |
+| Add a native package (expo install) | Yes |
+| Change `app.json` plugins | Yes |
+| Camera/permission changes | Yes |
+
+### Runtime version
+- Policy: `appVersion` — OTA updates apply to apps whose `version` matches `app.json`
+- Bump `version` in `app.json` whenever you do a new build with breaking native changes

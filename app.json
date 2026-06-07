@@ -8,9 +8,16 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "unfocus",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7ccb5393-f6b8-4a0f-8e45-8c86977d581c"
+    },
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "expo-updates",
       [
         "expo-notifications",
         {
