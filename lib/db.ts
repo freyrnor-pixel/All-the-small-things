@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-const db = SQLite.openDatabaseSync('allsmallthings.db');
+const db = SQLite.openDatabaseSync('unfocus.db');
 
 export function initDb() {
   db.execSync(`

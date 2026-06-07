@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "All the Small Things",
-    "slug": "all-the-small-things",
+    "name": "UnFocus",
+    "slug": "unfocus",
     "owner": "freyrnor-pixel",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "allthesmallthings",
+    "scheme": "unfocus",
     "plugins": [
       "expo-router",
       "expo-sqlite",
@@ -21,19 +21,19 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow All the Small Things to use your camera to scan receipts."
+          "cameraPermission": "Allow UnFocus to use your camera to scan receipts."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow All the Small Things to access your photos to scan receipts."
+          "photosPermission": "Allow UnFocus to access your photos to scan receipts."
         }
       ]
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.freyrnorpixel.allthesmallthings"
+      "bundleIdentifier": "com.freyrnorpixel.unfocus"
     },
     "android": {
       "adaptiveIcon": {
@@ -41,7 +41,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.freyrnorpixel.allthesmallthings"
+      "package": "com.freyrnorpixel.unfocus"
     },
     "web": {
       "bundler": "metro",
