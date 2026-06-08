@@ -57,48 +57,52 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   workModeSessionOverride: false,
 
   load() {
-    const row = db.getFirstSync<{
-      user_name: string;
-      weekly_reset_day: number;
-      monthly_reset_date: number;
-      shopping_list_mode: string;
-      reminders_enabled: number;
-      reminder_time: string;
-      task_notifications_enabled: number;
-      setup_complete: number;
-      color_theme: string | null;
-      work_mode_enabled: number | null;
-      work_hours_start: string | null;
-      work_hours_end: string | null;
-      enforce_work_hours: number | null;
-      essentials_mode_enabled: number | null;
-      show_points: number | null;
-      show_hints: number | null;
-      language: string | null;
-      holidays_enabled: number | null;
-    }>('SELECT * FROM settings WHERE id = 1');
-    if (!row) { set({ loaded: true }); return; }
-    set({
-      userName: row.user_name,
-      weeklyResetDay: row.weekly_reset_day,
-      monthlyResetDate: row.monthly_reset_date,
-      shoppingListMode: row.shopping_list_mode as 'weekly' | 'monthly',
-      remindersEnabled: row.reminders_enabled === 1,
-      reminderTime: row.reminder_time,
-      taskNotificationsEnabled: row.task_notifications_enabled === 1,
-      setupComplete: row.setup_complete === 1,
-      colorTheme: (row.color_theme as ColorTheme) ?? 'warm',
-      workModeEnabled: row.work_mode_enabled === 1,
-      workHoursStart: row.work_hours_start ?? '09:00',
-      workHoursEnd: row.work_hours_end ?? '17:00',
-      enforceWorkHours: row.enforce_work_hours === 1,
-      essentialsModeEnabled: row.essentials_mode_enabled === 1,
-      showPoints: row.show_points === 1,
-      showHints: row.show_hints !== 0,
-      language: (row.language as Language) ?? 'no',
-      holidaysEnabled: row.holidays_enabled !== 0,
-      loaded: true,
-    });
+    try {
+      const row = db.getFirstSync<{
+        user_name: string;
+        weekly_reset_day: number;
+        monthly_reset_date: number;
+        shopping_list_mode: string;
+        reminders_enabled: number;
+        reminder_time: string;
+        task_notifications_enabled: number;
+        setup_complete: number;
+        color_theme: string | null;
+        work_mode_enabled: number | null;
+        work_hours_start: string | null;
+        work_hours_end: string | null;
+        enforce_work_hours: number | null;
+        essentials_mode_enabled: number | null;
+        show_points: number | null;
+        show_hints: number | null;
+        language: string | null;
+        holidays_enabled: number | null;
+      }>('SELECT * FROM settings WHERE id = 1');
+      if (!row) { set({ loaded: true }); return; }
+      set({
+        userName: row.user_name,
+        weeklyResetDay: row.weekly_reset_day,
+        monthlyResetDate: row.monthly_reset_date,
+        shoppingListMode: row.shopping_list_mode as 'weekly' | 'monthly',
+        remindersEnabled: row.reminders_enabled === 1,
+        reminderTime: row.reminder_time,
+        taskNotificationsEnabled: row.task_notifications_enabled === 1,
+        setupComplete: row.setup_complete === 1,
+        colorTheme: (row.color_theme as ColorTheme) ?? 'warm',
+        workModeEnabled: row.work_mode_enabled === 1,
+        workHoursStart: row.work_hours_start ?? '09:00',
+        workHoursEnd: row.work_hours_end ?? '17:00',
+        enforceWorkHours: row.enforce_work_hours === 1,
+        essentialsModeEnabled: row.essentials_mode_enabled === 1,
+        showPoints: row.show_points === 1,
+        showHints: row.show_hints !== 0,
+        language: (row.language as Language) ?? 'no',
+        holidaysEnabled: row.holidays_enabled !== 0,
+        loaded: true,
+      });
+    } catch {
+      set({ loaded: true });
+    }
   },
 
   update(patch) {

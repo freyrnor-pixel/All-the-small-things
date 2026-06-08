@@ -65,7 +65,11 @@ export const useMealStore = create<MealStore>((set, get) => ({
   dishes: [],
 
   load() {
-    set({ dishes: loadDishes() });
+    try {
+      set({ dishes: loadDishes() });
+    } catch {
+      set({ dishes: [] });
+    }
   },
 
   addDish({ name, mealType }) {

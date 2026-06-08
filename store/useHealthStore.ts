@@ -21,22 +21,26 @@ export const useHealthStore = create<HealthStore>((set) => ({
   logs: [],
 
   load() {
-    const rows = db.getAllSync<{
-      id: string;
-      log_date: string;
-      ailment: string;
-      severity: number;
-      notes: string;
-    }>('SELECT * FROM health_logs ORDER BY log_date DESC');
-    set({
-      logs: rows.map((r) => ({
-        id: r.id,
-        date: r.log_date,
-        ailment: r.ailment,
-        severity: r.severity,
-        notes: r.notes,
-      })),
-    });
+    try {
+      const rows = db.getAllSync<{
+        id: string;
+        log_date: string;
+        ailment: string;
+        severity: number;
+        notes: string;
+      }>('SELECT * FROM health_logs ORDER BY log_date DESC');
+      set({
+        logs: rows.map((r) => ({
+          id: r.id,
+          date: r.log_date,
+          ailment: r.ailment,
+          severity: r.severity,
+          notes: r.notes,
+        })),
+      });
+    } catch {
+      set({ logs: [] });
+    }
   },
 
   add(entry) {

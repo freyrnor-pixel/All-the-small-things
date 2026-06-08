@@ -45,10 +45,14 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
 
   load() {
-    const rows = db.getAllSync<Record<string, unknown>>(
-      'SELECT * FROM shopping_items ORDER BY list_type, checked, name'
-    );
-    set({ items: rows.map(rowToItem) });
+    try {
+      const rows = db.getAllSync<Record<string, unknown>>(
+        'SELECT * FROM shopping_items ORDER BY list_type, checked, name'
+      );
+      set({ items: rows.map(rowToItem) });
+    } catch {
+      set({ items: [] });
+    }
   },
 
   add(item) {

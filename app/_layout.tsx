@@ -25,8 +25,8 @@ export default function RootLayout() {
   const loadHealth = useHealthStore((s) => s.load);
 
   useEffect(() => {
-    initDb();
-    seedStoreItems();
+    try { initDb(); } catch { /* DB init failed — proceed anyway */ }
+    try { seedStoreItems(); } catch { /* Seed failed */ }
     loadSettings();
     loadTasks();
     loadShopping();

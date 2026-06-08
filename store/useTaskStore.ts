@@ -51,10 +51,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
 
   load() {
-    const rows = db.getAllSync<Record<string, unknown>>(
-      'SELECT * FROM tasks ORDER BY task_date, task_time'
-    );
-    set({ tasks: rows.map(rowToTask) });
+    try {
+      const rows = db.getAllSync<Record<string, unknown>>(
+        'SELECT * FROM tasks ORDER BY task_date, task_time'
+      );
+      set({ tasks: rows.map(rowToTask) });
+    } catch {
+      set({ tasks: [] });
+    }
   },
 
   add(t) {
