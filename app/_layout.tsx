@@ -62,12 +62,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
-    const inOnboarding = segments[0] === 'onboarding';
-    if (!setupComplete && !inOnboarding) {
+    if (!loaded || setupComplete) return;
+    // Read segments inside the effect as a guard — intentionally not in deps
+    // to avoid re-triggering every render (useSegments returns a new array each time)
+    if (segments[0] !== 'onboarding') {
       router.replace('/onboarding/language');
     }
-  }, [loaded, setupComplete, segments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, setupComplete]);
 
   return (
     <ErrorBoundary>
