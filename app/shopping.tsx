@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -12,11 +11,16 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+
+const CATEGORY_ORDER = [
+  'produce', 'dairy', 'meat', 'fish', 'bread', 'frozen',
+  'canned', 'dry', 'snacks', 'drinks', 'cleaning', 'personal', 'other',
+] as const;
+type Category = typeof CATEGORY_ORDER[number];
 
 type Tab = 'weekly' | 'monthly';
 
@@ -27,6 +31,7 @@ export default function ShoppingScreen() {
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('1');
   const [newUnit, setNewUnit] = useState('');
+  const [newCategory, setNewCategory] = useState<Category>('other');
 
   const items = useShoppingStore((s) => s.items);
   const add = useShoppingStore((s) => s.add);
@@ -39,66 +44,68 @@ export default function ShoppingScreen() {
   const unchecked = filtered.filter((i) => !i.checked);
   const checked = filtered.filter((i) => i.checked);
 
+  const groupedUnchecked = useMemo(() =>
+    CATEGORY_ORDER
+      .map((cat) => ({ cat, items: unchecked.filter((i) => (i.category || 'other') === cat) }))
+      .filter((g) => g.items.length > 0),
+    [unchecked]
+  );
+
   function addItem() {
     if (!newName.trim()) return;
-    add({ name: newName.trim(), amount: newAmount, unit: newUnit, listType: tab, store: '', price: 0 });
+    add({ name: newName.trim(), amount: newAmount, unit: newUnit, listType: tab, store: '', price: 0, category: newCategory });
     setNewName('');
     setNewAmount('1');
     setNewUnit('');
+    setNewCategory('other');
     setAdding(false);
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>← Hjem</Text>
+          <Text style={styles.back}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>Handleliste</Text>
+        <Text style={styles.title}>{t.shoppingTitle}</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabs}>
-        {(['weekly', 'monthly'] as Tab[]).map((t) => (
+        {(['weekly', 'monthly'] as Tab[]).map((tabOption) => (
           <Pressable
-            key={t}
-            style={[styles.tab, tab === t && styles.tabActive]}
-            onPress={() => setTab(t)}
+            key={tabOption}
+            style={[styles.tab, tab === tabOption && styles.tabActive]}
+            onPress={() => setTab(tabOption)}
           >
-            <Text style={[styles.tabText, tab === t && styles.tabActiveText]}>
-              {t === 'weekly' ? 'Ukentlig' : 'Månedlig'}
+            <Text style={[styles.tabText, tab === tabOption && styles.tabActiveText]}>
+              {tabOption === 'weekly' ? t.weekly : t.monthly}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
-          {/* Summary chip */}
+
           <View style={styles.summaryChip}>
             <Text style={styles.summaryText}>
-              {unchecked.length} gjenstår · {checked.length} i kurven
+              {t.shoppingRemaining(unchecked.length, checked.length)}
             </Text>
           </View>
 
-          {/* Add form */}
           {adding ? (
             <View style={styles.addCard}>
               <TextInput
                 style={styles.addInput}
                 value={newName}
                 onChangeText={setNewName}
-                placeholder="Vare"
+                placeholder={t.shoppingItemPlaceholder}
                 placeholderTextColor={Colors.gray}
                 autoFocus
                 returnKeyType="done"
@@ -106,54 +113,71 @@ export default function ShoppingScreen() {
               />
               <View style={styles.addRow}>
                 <TextInput
-                  style={[styles.addInput, { width: 60 }]}
+                  style={[styles.addInput, { width: 70 }]}
                   value={newAmount}
                   onChangeText={setNewAmount}
                   keyboardType="decimal-pad"
-                  placeholder="Antall"
+                  placeholder={t.shoppingAmountPlaceholder}
                   placeholderTextColor={Colors.gray}
                 />
                 <TextInput
                   style={[styles.addInput, { flex: 1 }]}
                   value={newUnit}
                   onChangeText={setNewUnit}
-                  placeholder="Enhet (stk, kg, l…)"
+                  placeholder={t.shoppingUnitPlaceholder}
                   placeholderTextColor={Colors.gray}
                 />
               </View>
+              <Text style={styles.categoryLabel}>{t.category}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.categoryRow}>
+                  {CATEGORY_ORDER.map((cat) => (
+                    <Pressable
+                      key={cat}
+                      style={[styles.categoryChip, newCategory === cat && styles.categoryChipActive]}
+                      onPress={() => setNewCategory(cat)}
+                    >
+                      <Text style={[styles.categoryChipText, newCategory === cat && styles.categoryChipTextActive]}>
+                        {t.shoppingCategories[cat]}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
               <View style={styles.addActions}>
                 <Pressable style={styles.cancelBtn} onPress={() => setAdding(false)}>
-                  <Text style={styles.cancelBtnText}>Avbryt</Text>
+                  <Text style={styles.cancelBtnText}>{t.cancel}</Text>
                 </Pressable>
                 <Pressable style={styles.confirmBtn} onPress={addItem}>
-                  <Text style={styles.confirmBtnText}>Legg til</Text>
+                  <Text style={styles.confirmBtnText}>{t.addItemBtn}</Text>
                 </Pressable>
               </View>
             </View>
           ) : (
             <Pressable style={styles.addTrigger} onPress={() => setAdding(true)}>
-              <Text style={styles.addTriggerText}>+ Legg til vare</Text>
+              <Text style={styles.addTriggerText}>{t.addItemTrigger}</Text>
             </Pressable>
           )}
 
-          {/* Unchecked items */}
-          {unchecked.length > 0 && (
-            <View style={styles.card}>
-              {unchecked.map((item) => (
-                <ShoppingRow
-                  key={item.id}
-                  item={item}
-                  onToggle={() => toggle(item.id)}
-                  onRemove={() => remove(item.id)}
-                />
-              ))}
+          {groupedUnchecked.map(({ cat, items: catItems }) => (
+            <View key={cat} style={styles.categoryGroup}>
+              <Text style={styles.categoryHeader}>{t.shoppingCategories[cat]}</Text>
+              <View style={styles.card}>
+                {catItems.map((item) => (
+                  <ShoppingRow
+                    key={item.id}
+                    item={item}
+                    onToggle={() => toggle(item.id)}
+                    onRemove={() => remove(item.id)}
+                  />
+                ))}
+              </View>
             </View>
-          )}
+          ))}
 
-          {/* Checked items */}
           {checked.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>I kurven</Text>
+              <Text style={styles.sectionLabel}>{t.inCart}</Text>
               <View style={styles.card}>
                 {checked.map((item) => (
                   <ShoppingRow
@@ -167,10 +191,9 @@ export default function ShoppingScreen() {
             </View>
           )}
 
-          {/* Reset button */}
           {tab === 'weekly' && filtered.length > 0 && (
             <Pressable style={styles.resetBtn} onPress={resetWeekly}>
-              <Text style={styles.resetBtnText}>Nullstill ukesliste</Text>
+              <Text style={styles.resetBtnText}>{t.resetWeekly}</Text>
             </Pressable>
           )}
 
@@ -238,6 +261,17 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   addRow: { flexDirection: 'row', gap: Spacing.sm },
+  categoryLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
+  categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
+  categoryChip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.grayLight,
+  },
+  categoryChipActive: { backgroundColor: Colors.orange },
+  categoryChipText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
+  categoryChipTextActive: { color: Colors.white },
   addActions: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
   cancelBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   cancelBtnText: { color: Colors.textLight, fontSize: FontSize.md },
@@ -248,6 +282,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   confirmBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  categoryGroup: { gap: Spacing.xs },
+  categoryHeader: {
+    fontSize: FontSize.xs,
+    color: Colors.textLight,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   card: {
     backgroundColor: Colors.white,
     borderRadius: Radius.md,

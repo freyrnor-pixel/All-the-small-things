@@ -17,6 +17,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const loadSettings = useSettingsStore((s) => s.load);
   const setupComplete = useSettingsStore((s) => s.setupComplete);
+  const loaded = useSettingsStore((s) => s.loaded);
   const loadTasks = useTaskStore((s) => s.load);
   const loadShopping = useShoppingStore((s) => s.load);
   const loadMeals = useMealStore((s) => s.load);
@@ -33,11 +34,12 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    if (!loaded) return;
     const inOnboarding = segments[0] === 'onboarding';
     if (!setupComplete && !inOnboarding) {
       router.replace('/onboarding/language');
     }
-  }, [setupComplete, segments]);
+  }, [loaded, setupComplete, segments]);
 
   return (
     <GestureHandlerRootView style={styles.root}>

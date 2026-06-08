@@ -11,12 +11,15 @@ export type ShoppingItem = {
   checked: boolean;
   store: string;
   price: number;
+  category: string;
 };
+
+type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category'> & { category?: string };
 
 type ShoppingStore = {
   items: ShoppingItem[];
   load: () => void;
-  add: (item: Omit<ShoppingItem, 'id' | 'checked'>) => void;
+  add: (item: ShoppingAddInput) => void;
   update: (id: string, patch: Partial<Omit<ShoppingItem, 'id'>>) => void;
   toggleCheck: (id: string) => void;
   remove: (id: string) => void;
@@ -34,6 +37,7 @@ function rowToItem(row: Record<string, unknown>): ShoppingItem {
     checked: row.checked === 1,
     store: (row.store as string) || '',
     price: (row.price as number) || 0,
+    category: (row.category as string) || 'other',
   };
 }
 
@@ -49,13 +53,14 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
 
   add(item) {
     const id = generateId();
+    const category = item.category ?? 'other';
     db.runSync(
-      `INSERT INTO shopping_items (id, name, amount, unit, list_type, checked, store, price)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price]
+      `INSERT INTO shopping_items (id, name, amount, unit, list_type, checked, store, price, category)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category]
     );
     set((s) => ({
-      items: [...s.items, { ...item, id, checked: false }],
+      items: [...s.items, { ...item, id, checked: false, category }],
     }));
   },
 
@@ -64,8 +69,8 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     if (!item) return;
     const next = { ...item, ...patch };
     db.runSync(
-      `UPDATE shopping_items SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=? WHERE id=?`,
-      [next.name, next.amount, next.unit, next.listType, next.checked ? 1 : 0, next.store, next.price, id]
+      `UPDATE shopping_items SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=?, category=? WHERE id=?`,
+      [next.name, next.amount, next.unit, next.listType, next.checked ? 1 : 0, next.store, next.price, next.category, id]
     );
     set((s) => ({ items: s.items.map((i) => (i.id === id ? next : i)) }));
   },

@@ -22,10 +22,12 @@ export type Settings = {
   showPoints: boolean;
   showHints: boolean;
   language: Language;
+  holidaysEnabled: boolean;
 };
 
 type SettingsStore = Settings & {
   // Session-only (not persisted)
+  loaded: boolean;
   workModeSessionOverride: boolean;
   load: () => void;
   update: (patch: Partial<Settings>) => void;
@@ -50,6 +52,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   showPoints: false,
   showHints: true,
   language: 'no' as Language,
+  holidaysEnabled: true,
+  loaded: false,
   workModeSessionOverride: false,
 
   load() {
@@ -71,8 +75,9 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       show_points: number | null;
       show_hints: number | null;
       language: string | null;
+      holidays_enabled: number | null;
     }>('SELECT * FROM settings WHERE id = 1');
-    if (!row) return;
+    if (!row) { set({ loaded: true }); return; }
     set({
       userName: row.user_name,
       weeklyResetDay: row.weekly_reset_day,
@@ -91,6 +96,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       showPoints: row.show_points === 1,
       showHints: row.show_hints !== 0,
       language: (row.language as Language) ?? 'no',
+      holidaysEnabled: row.holidays_enabled !== 0,
+      loaded: true,
     });
   },
 
@@ -104,7 +111,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
           task_notifications_enabled = ?, setup_complete = ?,
           color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
           work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
-          show_points = ?, show_hints = ?, language = ?
+          show_points = ?, show_hints = ?, language = ?,
+          holidays_enabled = ?
         WHERE id = 1`,
         [
           next.userName,
@@ -124,6 +132,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
           next.showPoints ? 1 : 0,
           next.showHints ? 1 : 0,
           next.language,
+          next.holidaysEnabled ? 1 : 0,
         ]
       );
       return next;

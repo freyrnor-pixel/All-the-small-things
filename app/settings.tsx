@@ -26,6 +26,7 @@ export default function SettingsScreen() {
   const clearTasks = useTaskStore((s) => s.clearAll);
   const t = useT();
   const [name, setName] = useState(settings.userName);
+  const [monthlyDateInput, setMonthlyDateInput] = useState(String(settings.monthlyResetDate));
 
   const DAY_LABELS = t.dayFull;
 
@@ -132,20 +133,28 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
 
             <Text style={styles.fieldLabel}>{t.monthlyResetDate}</Text>
-            <View style={styles.dateRow}>
-              {[1, 5, 10, 15, 20, 25, 28].map((d) => (
-                <Pressable
-                  key={d}
-                  style={[styles.dateChip, settings.monthlyResetDate === d && styles.dateChipActive]}
-                  onPress={() => settings.update({ monthlyResetDate: d })}
-                >
-                  <Text style={[styles.dateText, settings.monthlyResetDate === d && styles.dateTextActive]}>
-                    {d}.
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Text style={styles.paydayHint}>{t.monthlyResetHint}</Text>
+            <TextInput
+              style={styles.input}
+              value={monthlyDateInput}
+              onChangeText={(v) => {
+                setMonthlyDateInput(v);
+                const n = parseInt(v, 10);
+                if (!isNaN(n) && n >= 1 && n <= 31) {
+                  settings.update({ monthlyResetDate: n });
+                }
+              }}
+              onBlur={() => {
+                const n = parseInt(monthlyDateInput, 10);
+                if (isNaN(n) || n < 1 || n > 31) {
+                  setMonthlyDateInput(String(settings.monthlyResetDate));
+                }
+              }}
+              keyboardType="number-pad"
+              placeholder="1–31"
+              placeholderTextColor={Colors.gray}
+              maxLength={2}
+            />
+            <Text style={styles.paydayHint}>{t.monthlyDateInputHint}</Text>
           </View>
         </View>
 
@@ -187,6 +196,25 @@ export default function SettingsScreen() {
                 onValueChange={(v) => settings.update({ taskNotificationsEnabled: v })}
                 trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
                 thumbColor={settings.taskNotificationsEnabled ? Colors.orange : Colors.gray}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Holidays */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t.sectionHolidays}</Text>
+          <View style={styles.card}>
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={styles.switchLabel}>{t.holidaysEnabledLabel}</Text>
+                <Text style={styles.switchHint}>{t.holidaysHint}</Text>
+              </View>
+              <Switch
+                value={settings.holidaysEnabled}
+                onValueChange={(v) => settings.update({ holidaysEnabled: v })}
+                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+                thumbColor={settings.holidaysEnabled ? Colors.orange : Colors.gray}
               />
             </View>
           </View>

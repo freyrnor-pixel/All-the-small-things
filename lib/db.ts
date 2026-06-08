@@ -101,6 +101,8 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN show_points INTEGER DEFAULT 0",
     "ALTER TABLE settings ADD COLUMN show_hints INTEGER DEFAULT 1",
     "ALTER TABLE settings ADD COLUMN language TEXT DEFAULT 'no'",
+    "ALTER TABLE shopping_items ADD COLUMN category TEXT DEFAULT 'other'",
+    "ALTER TABLE settings ADD COLUMN holidays_enabled INTEGER DEFAULT 1",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

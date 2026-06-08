@@ -12,7 +12,6 @@ import {
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { requestPermissions } from '@/lib/notifications';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 export default function OnboardingStep4() {
@@ -21,9 +20,6 @@ export default function OnboardingStep4() {
   const t = useT();
 
   function next() {
-    if (settings.remindersEnabled || settings.taskNotificationsEnabled) {
-      requestPermissions().catch(() => {});
-    }
     router.push('/onboarding/step5');
   }
 

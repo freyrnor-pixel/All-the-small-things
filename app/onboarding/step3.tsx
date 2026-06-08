@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
@@ -9,9 +9,11 @@ export default function OnboardingStep3() {
   const router = useRouter();
   const settings = useSettingsStore();
   const t = useT();
+  const [dateInput, setDateInput] = useState(String(settings.monthlyResetDate));
 
   return (
     <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
           <Text style={styles.emoji}>🛒</Text>
@@ -41,19 +43,29 @@ export default function OnboardingStep3() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t.monthlyResetDateQuestion}</Text>
-          <View style={styles.dateRow}>
-            {[1, 5, 10, 15, 20, 25, 28].map((d) => (
-              <Pressable
-                key={d}
-                style={[styles.dateChip, settings.monthlyResetDate === d && styles.dateChipActive]}
-                onPress={() => settings.update({ monthlyResetDate: d })}
-              >
-                <Text style={[styles.dateText, settings.monthlyResetDate === d && styles.dateTextActive]}>
-                  {d}.
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <TextInput
+            style={styles.dateInput}
+            value={dateInput}
+            onChangeText={(v) => {
+              setDateInput(v);
+              const n = parseInt(v, 10);
+              if (!isNaN(n) && n >= 1 && n <= 31) {
+                settings.update({ monthlyResetDate: n });
+              }
+            }}
+            onBlur={() => {
+              const n = parseInt(dateInput, 10);
+              if (isNaN(n) || n < 1 || n > 31) {
+                setDateInput(String(settings.monthlyResetDate));
+              }
+            }}
+            keyboardType="number-pad"
+            placeholder="1–31"
+            placeholderTextColor={Colors.gray}
+            maxLength={2}
+            returnKeyType="done"
+          />
+          <Text style={styles.hint}>{t.monthlyDateInputHint}</Text>
           <View style={styles.tipBox}>
             <Text style={styles.tipText}>{t.monthlyPaydayHint}</Text>
           </View>
@@ -74,12 +86,14 @@ export default function OnboardingStep3() {
           <Text style={styles.nextBtnText}>{t.next}</Text>
         </Pressable>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
+  flex: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },
@@ -102,6 +116,16 @@ const styles = StyleSheet.create({
   dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
   dayTextActive: { color: Colors.white },
   hint: { fontSize: FontSize.sm, color: Colors.textLight, fontStyle: 'italic' },
+  dateInput: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.sm,
+    borderWidth: 2,
+    borderColor: Colors.orange,
+    padding: Spacing.md,
+    fontSize: FontSize.xl,
+    color: Colors.text,
+    textAlign: 'center',
+  },
   dateRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   dateChip: {
     width: 44, height: 44, borderRadius: Radius.full,
