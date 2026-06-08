@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -29,7 +28,7 @@ export default function OnboardingWelcome() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.flex}
       >
         <ScrollView
@@ -61,7 +60,6 @@ export default function OnboardingWelcome() {
               placeholder={t.namePlaceholder}
               placeholderTextColor={Colors.gray}
               selectionColor={Colors.orange}
-              autoFocus
               returnKeyType="done"
               onSubmitEditing={next}
             />
