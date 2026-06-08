@@ -15,7 +15,8 @@ export function initDb() {
       reminders_enabled INTEGER DEFAULT 1,
       reminder_time TEXT DEFAULT '08:00',
       task_notifications_enabled INTEGER DEFAULT 1,
-      setup_complete INTEGER DEFAULT 0
+      setup_complete INTEGER DEFAULT 0,
+      holidays_enabled INTEGER DEFAULT 1
     );
 
     INSERT OR IGNORE INTO settings (id) VALUES (1);
