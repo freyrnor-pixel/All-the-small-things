@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, Component } from 'react';
+import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { initDb } from '@/lib/db';
 import { seedStoreItems } from '@/lib/seed';
 import '@/lib/notifications';
@@ -12,6 +13,32 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useMealStore } from '@/store/useMealStore';
 import { useHealthStore } from '@/store/useHealthStore';
 import { Colors } from '@/constants/theme';
+
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      const err = this.state.error as Error;
+      return (
+        <View style={{ flex: 1, backgroundColor: '#FDF6EC', padding: 24, paddingTop: 60 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#c0392b', marginBottom: 12 }}>
+            Noe gikk galt
+          </Text>
+          <ScrollView>
+            <Text style={{ fontSize: 13, color: '#333', fontFamily: 'monospace' }}>
+              {err.message}{'\n\n'}{err.stack}
+            </Text>
+          </ScrollView>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function RootLayout() {
   const router = useRouter();
@@ -43,6 +70,7 @@ export default function RootLayout() {
   }, [loaded, setupComplete, segments]);
 
   return (
+    <ErrorBoundary>
     <GestureHandlerRootView style={styles.root}>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
@@ -59,6 +87,7 @@ export default function RootLayout() {
         />
       </Stack>
     </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 
