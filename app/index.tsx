@@ -32,7 +32,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const today = todayStr();
   const settings = useSettingsStore();
-  const loaded = useSettingsStore((s) => s.loaded);
   const t = useT();
   const theme = getTheme(settings.colorTheme);
 
@@ -66,7 +65,9 @@ export default function HomeScreen() {
 
   const pendingShopping = shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).slice(0, 5);
 
-  if (!loaded || !settings.setupComplete) return null;
+  if (!settings.loaded || !settings.setupComplete) {
+    return <SafeAreaView style={[styles.safe, { backgroundColor: Colors.cream }]} />;
+  }
 
   const greeting = () => {
     const h = new Date().getHours();
