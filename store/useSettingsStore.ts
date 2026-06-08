@@ -104,37 +104,41 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   update(patch) {
     set((s) => {
       const next = { ...s, ...patch };
-      db.runSync(
-        `UPDATE settings SET
-          user_name = ?, weekly_reset_day = ?, monthly_reset_date = ?,
-          shopping_list_mode = ?, reminders_enabled = ?, reminder_time = ?,
-          task_notifications_enabled = ?, setup_complete = ?,
-          color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
-          work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
-          show_points = ?, show_hints = ?, language = ?,
-          holidays_enabled = ?
-        WHERE id = 1`,
-        [
-          next.userName,
-          next.weeklyResetDay,
-          next.monthlyResetDate,
-          next.shoppingListMode,
-          next.remindersEnabled ? 1 : 0,
-          next.reminderTime,
-          next.taskNotificationsEnabled ? 1 : 0,
-          next.setupComplete ? 1 : 0,
-          next.colorTheme,
-          next.workModeEnabled ? 1 : 0,
-          next.workHoursStart,
-          next.workHoursEnd,
-          next.enforceWorkHours ? 1 : 0,
-          next.essentialsModeEnabled ? 1 : 0,
-          next.showPoints ? 1 : 0,
-          next.showHints ? 1 : 0,
-          next.language,
-          next.holidaysEnabled ? 1 : 0,
-        ]
-      );
+      try {
+        db.runSync(
+          `UPDATE settings SET
+            user_name = ?, weekly_reset_day = ?, monthly_reset_date = ?,
+            shopping_list_mode = ?, reminders_enabled = ?, reminder_time = ?,
+            task_notifications_enabled = ?, setup_complete = ?,
+            color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
+            work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
+            show_points = ?, show_hints = ?, language = ?,
+            holidays_enabled = ?
+          WHERE id = 1`,
+          [
+            next.userName,
+            next.weeklyResetDay,
+            next.monthlyResetDate,
+            next.shoppingListMode,
+            next.remindersEnabled ? 1 : 0,
+            next.reminderTime,
+            next.taskNotificationsEnabled ? 1 : 0,
+            next.setupComplete ? 1 : 0,
+            next.colorTheme,
+            next.workModeEnabled ? 1 : 0,
+            next.workHoursStart,
+            next.workHoursEnd,
+            next.enforceWorkHours ? 1 : 0,
+            next.essentialsModeEnabled ? 1 : 0,
+            next.showPoints ? 1 : 0,
+            next.showHints ? 1 : 0,
+            next.language,
+            next.holidaysEnabled ? 1 : 0,
+          ]
+        );
+      } catch {
+        // DB write failed (e.g. column not yet migrated) — state still updates in memory
+      }
       return next;
     });
   },
