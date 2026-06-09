@@ -264,6 +264,59 @@ const en = {
   deselectAll: 'Deselect all',
   sharedTasksTab: 'Tasks',
   sharedShoppingTab: 'Shopping',
+  // Notifications (shown to the user in their chosen language)
+  notif: {
+    weeklyTitle: 'Time to plan your week',
+    weeklyBody: "Let's take a look at what's coming up this week. You've got this!",
+    monthlyTitle: 'Monthly shopping reset',
+    monthlyBody: 'Time to check what you have at home and refresh your monthly list.',
+    taskStartTitle: (title: string) => `Reminder: ${title}`,
+    taskStartBody: 'Time to get started!',
+    taskBoxTitle: (title: string) => `Start: ${title}`,
+    taskBoxBody: (min: number) => `You have ${min} minutes for this. Good luck!`,
+    taskEndTitle: (title: string) => `Done: ${title}`,
+    taskEndBody: (min: number) => `${min} minutes are up. Well done — you can stop now.`,
+    habitReminderTitle: (title: string) => `Habit: ${title}`,
+    habitReminderBody: 'A gentle nudge for today.',
+  },
+  // Radial menu labels
+  nav: {
+    newTask: 'New', shop: 'Shop', shared: 'Shared', habits: 'Habits',
+    meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
+  },
+  moreItems: (n: number) => `+ ${n} more`,
+  errorTitle: 'Something went wrong',
+  themeNames: { warm: 'Warm', cool: 'Cool', forest: 'Forest', rose: 'Rose' },
+  suggestions: 'Suggestions',
+  lastPaid: (price: string) => `last paid ${price}`,
+  // Meals screen
+  mealsTitle: 'Dishes',
+  mealAll: 'All',
+  mealTypes: { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' },
+  newDishTrigger: '+ New dish',
+  dishNamePlaceholder: 'Dish name',
+  ingredientsCount: (n: number) => `${n} ingredient${n !== 1 ? 's' : ''}`,
+  ingredientPlaceholder: 'Ingredient',
+  addIngredientTrigger: '+ Ingredient',
+  deleteDish: 'Delete dish',
+  noDishesTitle: 'No dishes',
+  noDishesBody: (type: string) => `Add some ${type} first!`,
+  noDishesBodyGeneric: 'Add some dishes first!',
+  randomIngredientsLabel: (list: string) => `Ingredients: ${list}`,
+  randomNoIngredients: 'No ingredients recorded.',
+  addToShoppingList: 'Add to shopping list',
+  // Health screen
+  healthTitle: 'Health',
+  last30Days: 'Last 30 days',
+  logSection: 'Log',
+  noLogs: 'No symptoms logged yet',
+  logSymptomTrigger: '+ Log symptom',
+  ailmentLabel: 'Ailment / symptom',
+  ailmentPlaceholder: 'e.g. Headache, Anxiety, Stomach ache…',
+  severityLabel: 'Severity',
+  notesLabel: 'Notes (optional)',
+  notesPlaceholder: 'Any notes…',
+  severityLabels: ['Mild', 'Slight', 'Moderate', 'Strong', 'Severe'],
   // Hints (one per screen)
   hints: {
     home: {
@@ -559,6 +612,55 @@ const no: typeof en = {
   deselectAll: 'Fjern alle',
   sharedTasksTab: 'Oppgaver',
   sharedShoppingTab: 'Handlelist',
+  notif: {
+    weeklyTitle: 'Tid for ukesplanlegging!',
+    weeklyBody: 'La oss ta en titt på hva som skjer denne uken. Du klarer det!',
+    monthlyTitle: 'Månedlig handleliste',
+    monthlyBody: 'Tid for å sjekke hva du har hjemme og oppdatere månedslisten din.',
+    taskStartTitle: (title: string) => `Påminnelse: ${title}`,
+    taskStartBody: 'Tid for å komme i gang!',
+    taskBoxTitle: (title: string) => `Start: ${title}`,
+    taskBoxBody: (min: number) => `Du har ${min} minutter til dette. Lykke til!`,
+    taskEndTitle: (title: string) => `Ferdig: ${title}`,
+    taskEndBody: (min: number) => `${min} minutter er over. Bra jobbet — du kan stoppe nå.`,
+    habitReminderTitle: (title: string) => `Vane: ${title}`,
+    habitReminderBody: 'En liten påminnelse for i dag.',
+  },
+  nav: {
+    newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
+    meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
+  },
+  moreItems: (n: number) => `+ ${n} til`,
+  errorTitle: 'Noe gikk galt',
+  themeNames: { warm: 'Varm', cool: 'Kjølig', forest: 'Skog', rose: 'Rose' },
+  suggestions: 'Forslag',
+  lastPaid: (price: string) => `betalte sist ${price}`,
+  mealsTitle: 'Matretter',
+  mealAll: 'Alle',
+  mealTypes: { breakfast: 'Frokost', lunch: 'Lunsj', dinner: 'Middag', snack: 'Snacks' },
+  newDishTrigger: '+ Ny rett',
+  dishNamePlaceholder: 'Navn på rett',
+  ingredientsCount: (n: number) => `${n} ingredienser`,
+  ingredientPlaceholder: 'Ingrediens',
+  addIngredientTrigger: '+ Ingrediens',
+  deleteDish: 'Slett rett',
+  noDishesTitle: 'Ingen retter',
+  noDishesBody: (type: string) => `Legg til noen ${type} først!`,
+  noDishesBodyGeneric: 'Legg til noen retter først!',
+  randomIngredientsLabel: (list: string) => `Ingredienser: ${list}`,
+  randomNoIngredients: 'Ingen ingredienser registrert.',
+  addToShoppingList: 'Legg i handleliste',
+  healthTitle: 'Helse',
+  last30Days: 'Siste 30 dager',
+  logSection: 'Logg',
+  noLogs: 'Ingen loggede symptomer enda',
+  logSymptomTrigger: '+ Logg symptom',
+  ailmentLabel: 'Plage / symptom',
+  ailmentPlaceholder: 'f.eks. Hodepine, Angst, Magesmerter…',
+  severityLabel: 'Alvorlighet',
+  notesLabel: 'Notater (valgfritt)',
+  notesPlaceholder: 'Eventuelle notater…',
+  severityLabels: ['Mild', 'Litt', 'Moderat', 'Kraftig', 'Alvorlig'],
   hints: {
     home: {
       text: 'Din daglige oversikt. De viktigste oppgavene er øverst — trykk ⭐ for å fokusere kun på viktige.',
@@ -601,7 +703,17 @@ const no: typeof en = {
 
 export type Translations = typeof en;
 
+/**
+ * Non-hook accessor for the translation dictionary. Use this outside of React
+ * components (stores, schedulers) where `useT` cannot run. Pass an explicit
+ * language, or omit it to read the current one from the settings store.
+ */
+export function getTranslations(lang?: Lang): Translations {
+  const resolved = lang ?? useSettingsStore.getState().language;
+  return (resolved === 'en' ? en : no) as Translations;
+}
+
 export function useT(): Translations {
   const lang = useSettingsStore((s) => s.language);
-  return (lang === 'en' ? en : no) as Translations;
+  return getTranslations(lang);
 }

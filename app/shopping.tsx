@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
+import { useCatalogStore } from '@/store/useCatalogStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
@@ -41,7 +42,21 @@ export default function ShoppingScreen() {
   const toggle = useShoppingStore((s) => s.toggleCheck);
   const remove = useShoppingStore((s) => s.remove);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
+  const suggest = useCatalogStore((s) => s.suggest);
+  const catalog = useCatalogStore((s) => s.items);
   const t = useT();
+
+  // Catalog autocomplete: suggest known items while typing a new one.
+  const suggestions = useMemo(() => {
+    const exact = newName.trim().toLowerCase();
+    if (!exact) return [];
+    return suggest(newName).filter((s) => s.name.toLowerCase() !== exact);
+  }, [newName, catalog, suggest]);
+
+  function pickSuggestion(name: string, category: string) {
+    setNewName(name);
+    setNewCategory((CATEGORY_ORDER as readonly string[]).includes(category) ? (category as Category) : 'other');
+  }
 
   const filtered = items.filter((i) => i.listType === tab);
   const unchecked = filtered.filter((i) => !i.checked);
@@ -119,6 +134,24 @@ export default function ShoppingScreen() {
                 returnKeyType="done"
                 onSubmitEditing={addItem}
               />
+              {suggestions.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={styles.suggestRow}>
+                    {suggestions.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        style={styles.suggestChip}
+                        onPress={() => pickSuggestion(s.name, s.category)}
+                      >
+                        <Text style={styles.suggestText}>{s.name}</Text>
+                        {s.price > 0 && (
+                          <Text style={styles.suggestPrice}>{t.lastPaid(`${s.price.toFixed(2)} kr`)}</Text>
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              )}
               <View style={styles.addRow}>
                 <TextInput
                   style={[styles.addInput, { width: 70 }]}
@@ -271,6 +304,16 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   addRow: { flexDirection: 'row', gap: Spacing.sm },
+  suggestRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: 2 },
+  suggestChip: {
+    backgroundColor: Colors.greenLight,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  suggestText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
+  suggestPrice: { fontSize: 9, color: Colors.textLight },
   categoryLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
   categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
   categoryChip: {

@@ -18,6 +18,7 @@ import BubbleMenu from '@/components/BubbleMenu';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
+import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
 
 function isWithinWorkHours(start: string, end: string): boolean {
@@ -45,7 +46,15 @@ export default function HomeScreen() {
   const isWorkModeActive = useMemo(() => {
     if (settings.workModeSessionOverride) return false;
     if (settings.workModeEnabled) return true;
-    if (settings.enforceWorkHours && isWithinWorkHours(settings.workHoursStart, settings.workHoursEnd)) return true;
+    // Auto-activation respects weekends and (optionally) Norwegian holidays —
+    // no work mode on days off.
+    if (
+      settings.enforceWorkHours &&
+      isWithinWorkHours(settings.workHoursStart, settings.workHoursEnd) &&
+      !isWeekendOrHoliday(new Date(), settings.holidaysEnabled)
+    ) {
+      return true;
+    }
     return false;
   }, [
     settings.workModeSessionOverride,
@@ -53,6 +62,7 @@ export default function HomeScreen() {
     settings.enforceWorkHours,
     settings.workHoursStart,
     settings.workHoursEnd,
+    settings.holidaysEnabled,
   ]);
 
   const allTodayTasks = tasksForDate(today);
@@ -63,7 +73,11 @@ export default function HomeScreen() {
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
 
-  const pendingShopping = shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).slice(0, 5);
+  const weeklyPending = useMemo(
+    () => shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked),
+    [shoppingItems]
+  );
+  const pendingShopping = weeklyPending.slice(0, 5);
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: Colors.cream }]} />;
@@ -222,9 +236,9 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               ))}
-              {shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).length > 5 && (
+              {weeklyPending.length > 5 && (
                 <Text style={[styles.moreText, { color: theme.textLight }]}>
-                  + {shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).length - 5} til
+                  {t.moreItems(weeklyPending.length - 5)}
                 </Text>
               )}
             </View>

@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';
+import { getTranslations } from '@/lib/i18n';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { scheduleDailyReminder, cancelDailyReminder } from '@/lib/notifications';
 
 export type HabitKind = 'build' | 'break';
 export type HabitRecurrence = 'daily' | 'weekly' | 'monthly' | 'one-time';
@@ -43,7 +46,25 @@ type HabitStore = {
   remove: (id: string) => void;
   increment: (habitId: string, date: string) => void;
   decrement: (habitId: string, date: string) => void;
+  /** Re-schedule every habit's daily reminder (after a language change). */
+  syncAllHabitReminders: () => void;
 };
+
+/** Schedule (or cancel) a habit's daily reminder, honouring the user's language. */
+function syncHabitReminder(habit: Habit): void {
+  if (!habit.notificationEnabled || !habit.active) {
+    void cancelDailyReminder(`habit-${habit.id}`);
+    return;
+  }
+  const [h, m] = (habit.notificationTime || '08:00').split(':').map((n) => parseInt(n, 10));
+  const hour = Number.isFinite(h) ? h : 8;
+  const minute = Number.isFinite(m) ? m : 0;
+  const t = getTranslations(useSettingsStore.getState().language);
+  void scheduleDailyReminder(`habit-${habit.id}`, hour, minute, {
+    title: t.notif.habitReminderTitle(habit.title),
+    body: t.notif.habitReminderBody,
+  });
+}
 
 function rowToHabit(row: Record<string, unknown>): Habit {
   return {
@@ -110,6 +131,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     );
     const habit: Habit = { ...h, id, active: true, createdAt: now };
     set((s) => ({ habits: [...s.habits, habit] }));
+    syncHabitReminder(habit);
   },
 
   update(id, patch) {
@@ -125,11 +147,13 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
        next.notificationEnabled ? 1 : 0, next.notificationTime, next.active ? 1 : 0, id]
     );
     set((s) => ({ habits: s.habits.map((h) => (h.id === id ? next : h)) }));
+    syncHabitReminder(next);
   },
 
   remove(id) {
     db.runSync('DELETE FROM habits WHERE id = ?', [id]);
     db.runSync('DELETE FROM habit_logs WHERE habit_id = ?', [id]);
+    void cancelDailyReminder(`habit-${id}`);
     set((s) => ({
       habits: s.habits.filter((h) => h.id !== id),
       logs: s.logs.filter((l) => l.habitId !== id),
@@ -164,5 +188,9 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     set((s) => ({
       logs: s.logs.map((l) => (l.id === existing.id ? { ...l, count: newCount } : l)),
     }));
+  },
+
+  syncAllHabitReminders() {
+    get().habits.forEach(syncHabitReminder);
   },
 }));

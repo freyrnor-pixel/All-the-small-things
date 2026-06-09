@@ -10,6 +10,9 @@ import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FontSize } from '@/constants/theme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { getTheme } from '@/constants/theme';
+import { useT, Translations } from '@/lib/i18n';
+
+type NavKey = keyof Translations['nav'];
 
 type BubbleItem = {
   icon: string;
@@ -23,15 +26,16 @@ type Props = {
   onNewTask?: () => void;
 };
 
-const BASE_ITEMS: Omit<BubbleItem, 'onPress'>[] = [
-  { icon: '➕', label: 'Ny opp.', route: '/task-form', color: '#F4A261' },
-  { icon: '🛒', label: 'Handle', route: '/shopping', color: '#E8895A' },
-  { icon: '🔗', label: 'Delt', route: '/shared', color: '#5AAED4' },
-  { icon: '🌱', label: 'Vaner', route: '/habits', color: '#6BAA75' },
-  { icon: '🍽', label: 'Mat', route: '/meals', color: '#7BC8A4' },
-  { icon: '💚', label: 'Helse', route: '/health', color: '#5E9E6A' },
-  { icon: '📷', label: 'Skann', route: '/scan', color: '#C49A6C' },
-  { icon: '⚙️', label: 'Sett.', route: '/settings', color: '#9E9E9E' },
+// Labels resolve through `t.nav` so the radial menu follows the user's language.
+const BASE_ITEMS: { icon: string; labelKey: NavKey; route: string; color: string }[] = [
+  { icon: '➕', labelKey: 'newTask', route: '/task-form', color: '#F4A261' },
+  { icon: '🛒', labelKey: 'shop', route: '/shopping', color: '#E8895A' },
+  { icon: '🔗', labelKey: 'shared', route: '/shared', color: '#5AAED4' },
+  { icon: '🌱', labelKey: 'habits', route: '/habits', color: '#6BAA75' },
+  { icon: '🍽', labelKey: 'meals', route: '/meals', color: '#7BC8A4' },
+  { icon: '💚', labelKey: 'health', route: '/health', color: '#5E9E6A' },
+  { icon: '📷', labelKey: 'scan', route: '/scan', color: '#C49A6C' },
+  { icon: '⚙️', labelKey: 'settings', route: '/settings', color: '#9E9E9E' },
 ];
 
 // Radius sized to fit 8 bubbles (56px) without overlap across 90° arc.
@@ -47,14 +51,17 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const router = useRouter();
   const colorTheme = useSettingsStore((s) => s.colorTheme);
   const theme = getTheme(colorTheme);
+  const t = useT();
 
   const items = useMemo((): BubbleItem[] =>
-    BASE_ITEMS.map((item) =>
-      item.route === '/task-form' && onNewTask
-        ? { ...item, onPress: onNewTask }
-        : item
-    ),
-    [onNewTask]
+    BASE_ITEMS.map((item) => ({
+      icon: item.icon,
+      label: t.nav[item.labelKey],
+      route: item.route,
+      color: item.color,
+      onPress: item.route === '/task-form' && onNewTask ? onNewTask : undefined,
+    })),
+    [onNewTask, t]
   );
 
   function toggle() {

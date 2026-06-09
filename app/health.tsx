@@ -26,14 +26,13 @@ function getWeekDates(today: string): string[] {
   });
 }
 
-const DAY_ABBR = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
-
+// Severity colours by level (1–5); labels come from `t.severityLabels`.
 const SEVERITIES = [
-  { value: 1, label: 'Mild', color: Colors.greenLight },
-  { value: 2, label: 'Litt', color: '#D4EDDA' },
-  { value: 3, label: 'Moderat', color: Colors.orangeLight },
-  { value: 4, label: 'Kraftig', color: '#FADADD' },
-  { value: 5, label: 'Alvorlig', color: Colors.dangerLight },
+  { value: 1, color: Colors.greenLight },
+  { value: 2, color: '#D4EDDA' },
+  { value: 3, color: Colors.orangeLight },
+  { value: 4, color: '#FADADD' },
+  { value: 5, color: Colors.dangerLight },
 ];
 
 export default function HealthScreen() {
@@ -48,6 +47,7 @@ export default function HealthScreen() {
   const [severity, setSeverity] = useState(2);
   const [date, setDate] = useState(todayStr());
   const t = useT();
+  const severityLabel = (value: number) => t.severityLabels[value - 1] ?? '';
 
   const today = todayStr();
   const weekDates = getWeekDates(today);
@@ -78,9 +78,9 @@ export default function HealthScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>← Hjem</Text>
+          <Text style={styles.back}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>Helse</Text>
+        <Text style={styles.title}>{t.healthTitle}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -93,7 +93,7 @@ export default function HealthScreen() {
         {/* Overview */}
         {topAilments.length > 0 && (
           <View style={styles.overviewCard}>
-            <Text style={styles.sectionLabel}>Siste 30 dager</Text>
+            <Text style={styles.sectionLabel}>{t.last30Days}</Text>
             {topAilments.map(([name, count]) => {
               const weekSeverities = weekDates.map((d) => {
                 const dayLogs = logs.filter((l) => l.ailment === name && l.date === d);
@@ -123,7 +123,7 @@ export default function HealthScreen() {
                       const isFuture = d > today;
                       return (
                         <View key={d} style={styles.ailmentDotCol}>
-                          <Text style={styles.ailmentDayAbbr}>{DAY_ABBR[i]}</Text>
+                          <Text style={styles.ailmentDayAbbr}>{t.dayLabels[i][0]}</Text>
                           <View style={[
                             styles.ailmentDot,
                             {
@@ -145,23 +145,23 @@ export default function HealthScreen() {
         {/* Add form */}
         {adding ? (
           <View style={styles.addCard}>
-            <Text style={styles.formLabel}>Dato (ÅÅÅÅ-MM-DD)</Text>
+            <Text style={styles.formLabel}>{t.dateLabel}</Text>
             <TextInput
               style={styles.input}
               value={date}
               onChangeText={setDate}
               keyboardType="numbers-and-punctuation"
             />
-            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>Plage / symptom</Text>
+            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>{t.ailmentLabel}</Text>
             <TextInput
               style={styles.input}
               value={ailment}
               onChangeText={setAilment}
-              placeholder="f.eks. Hodepine, Angst, Magesmerter…"
+              placeholder={t.ailmentPlaceholder}
               placeholderTextColor={Colors.gray}
               autoFocus
             />
-            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>Alvorlighet</Text>
+            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>{t.severityLabel}</Text>
             <View style={styles.severityRow}>
               {SEVERITIES.map((s) => (
                 <Pressable
@@ -173,39 +173,39 @@ export default function HealthScreen() {
                   ]}
                   onPress={() => setSeverity(s.value)}
                 >
-                  <Text style={styles.severityBtnText}>{s.label}</Text>
+                  <Text style={styles.severityBtnText}>{severityLabel(s.value)}</Text>
                 </Pressable>
               ))}
             </View>
-            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>Notater (valgfritt)</Text>
+            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>{t.notesLabel}</Text>
             <TextInput
               style={[styles.input, styles.notesInput]}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Eventuelle notater…"
+              placeholder={t.notesPlaceholder}
               placeholderTextColor={Colors.gray}
               multiline
             />
             <View style={styles.addActions}>
               <Pressable onPress={() => setAdding(false)}>
-                <Text style={styles.cancelText}>Avbryt</Text>
+                <Text style={styles.cancelText}>{t.cancel}</Text>
               </Pressable>
               <Pressable style={styles.saveBtn} onPress={save}>
-                <Text style={styles.saveBtnText}>Lagre</Text>
+                <Text style={styles.saveBtnText}>{t.save}</Text>
               </Pressable>
             </View>
           </View>
         ) : (
           <Pressable style={styles.addTrigger} onPress={() => setAdding(true)}>
-            <Text style={styles.addTriggerText}>+ Logg symptom</Text>
+            <Text style={styles.addTriggerText}>{t.logSymptomTrigger}</Text>
           </Pressable>
         )}
 
         {/* Log list */}
-        <Text style={styles.sectionLabel}>Logg</Text>
+        <Text style={styles.sectionLabel}>{t.logSection}</Text>
         {logs.length === 0 && (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Ingen loggede symptomer enda</Text>
+            <Text style={styles.emptyText}>{t.noLogs}</Text>
           </View>
         )}
         {logs.map((log) => {
@@ -219,7 +219,7 @@ export default function HealthScreen() {
                 </View>
                 <View style={styles.logRight}>
                   <View style={[styles.severityBadge, { backgroundColor: sev?.color }]}>
-                    <Text style={styles.severityBadgeText}>{sev?.label}</Text>
+                    <Text style={styles.severityBadgeText}>{severityLabel(log.severity)}</Text>
                   </View>
                   <Pressable onPress={() => remove(log.id)} hitSlop={8}>
                     <Text style={styles.removeText}>×</Text>

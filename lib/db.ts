@@ -1,6 +1,10 @@
 import * as SQLite from 'expo-sqlite';
+import { dateStr } from '@/lib/date';
 
 const db = SQLite.openDatabaseSync('unfocus.db');
+
+/** The app keeps at most this many days of historical, time-stamped data. */
+export const RETENTION_DAYS = 365;
 
 export function initDb() {
   db.execSync(`
@@ -138,6 +142,15 @@ export function initDb() {
       count INTEGER DEFAULT 0,
       FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
     );
+
+    -- Indexes for the columns we filter / sort / join on most often.
+    CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(task_date);
+    CREATE INDEX IF NOT EXISTS idx_shopping_list ON shopping_items(list_type);
+    CREATE INDEX IF NOT EXISTS idx_ingredients_dish ON ingredients(dish_id);
+    CREATE INDEX IF NOT EXISTS idx_health_date ON health_logs(log_date);
+    CREATE INDEX IF NOT EXISTS idx_habit_logs ON habit_logs(habit_id, log_date);
+    CREATE INDEX IF NOT EXISTS idx_store_items_name ON store_items(name);
+    CREATE INDEX IF NOT EXISTS idx_purchase_log_date ON purchase_log(purchased_at);
   `);
 
   // Schema migrations — safe to run repeatedly (errors = column already exists)
@@ -158,6 +171,29 @@ export function initDb() {
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }
   }
+}
+
+/**
+ * Keep the local database to roughly the last year of history. Runs once on
+ * startup. Recurring tasks, dishes, habits, the item catalog and settings are
+ * configuration (not dated history) and are deliberately left untouched —
+ * only dated, append-only rows older than the cutoff are removed.
+ *
+ * The cutoff is a `YYYY-MM-DD` string; it compares correctly against both
+ * `YYYY-MM-DD` date columns and `YYYY-MM-DD HH:MM:SS` timestamp columns.
+ */
+export function pruneOldData() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
+  const c = dateStr(cutoff);
+  try {
+    db.runSync("DELETE FROM tasks WHERE recurring = 'none' AND task_date < ?", [c]);
+    db.runSync('DELETE FROM health_logs WHERE log_date < ?', [c]);
+    db.runSync('DELETE FROM habit_logs WHERE log_date < ?', [c]);
+    db.runSync('DELETE FROM purchase_log WHERE purchased_at < ?', [c]);
+    db.runSync('DELETE FROM shared_tasks WHERE date < ?', [c]);
+    db.runSync('DELETE FROM shared_shopping_items WHERE created_at < ?', [c]);
+  } catch { /* never block startup on cleanup */ }
 }
 
 export default db;
