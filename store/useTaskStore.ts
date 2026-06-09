@@ -3,7 +3,12 @@ import db from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { scheduleTaskNotification, cancelTaskNotification } from '@/lib/notifications';
+import {
+  scheduleTaskNotification,
+  scheduleWeeklyTaskNotifications,
+  cancelTaskNotification,
+  WeeklyTaskOccurrence,
+} from '@/lib/notifications';
 
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
@@ -37,19 +42,83 @@ type TaskStore = {
   syncAllTaskNotifications: () => void;
 };
 
+/** Parse "HH:MM" into [hour, minute], or null if it isn't a valid time. */
+function parseTime(time: string): [number, number] | null {
+  const [h, m] = time.split(':').map((n) => parseInt(n, 10));
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+    return null;
+  }
+  return [h, m];
+}
+
+/** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
+function toExpoWeekday(mon0: number): number {
+  return ((mon0 + 1) % 7) + 1;
+}
+
 /**
- * Schedule (or cancel) the reminder for a single task, honouring the current
- * notification setting and language. One-off, time-bound, not-yet-done,
- * non-recurring tasks in the future get a reminder; everything else is cleared.
+ * Schedule (or cancel) the reminder(s) for a single task, honouring the current
+ * notification setting and language. Both task kinds are covered:
+ *   - one-off tasks fire once at their date/time (skipped if done or in the past)
+ *   - weekly-recurring tasks fire on every selected weekday at their time
+ * Time-box tasks additionally get an "end" reminder after their duration.
  */
 function syncTaskNotification(task: Task): void {
   const s = useSettingsStore.getState();
-  if (
-    !s.taskNotificationsEnabled ||
-    task.done ||
-    task.recurring !== 'none' ||
-    !task.time
-  ) {
+  if (!s.taskNotificationsEnabled || !task.time) {
+    void cancelTaskNotification(task.id);
+    return;
+  }
+  const parsed = parseTime(task.time);
+  if (!parsed) {
+    void cancelTaskNotification(task.id);
+    return;
+  }
+  const [hour, minute] = parsed;
+  const t = getTranslations(s.language);
+  const dur = task.durationMinutes ?? 30;
+
+  if (task.recurring === 'weekly') {
+    if (task.recurringDays.length === 0) {
+      void cancelTaskNotification(task.id);
+      return;
+    }
+    const occurrences: WeeklyTaskOccurrence[] = [];
+    for (const day of task.recurringDays) {
+      if (task.taskType === 'time-box') {
+        occurrences.push({
+          suffix: `s${day}`,
+          weekday: toExpoWeekday(day),
+          hour,
+          minute,
+          content: { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
+        });
+        // The end reminder may land later the same day or roll into the next.
+        const endTotal = hour * 60 + minute + dur;
+        const endDay = (day + Math.floor(endTotal / 1440)) % 7;
+        occurrences.push({
+          suffix: `e${day}`,
+          weekday: toExpoWeekday(endDay),
+          hour: Math.floor((endTotal % 1440) / 60),
+          minute: endTotal % 60,
+          content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) },
+        });
+      } else {
+        occurrences.push({
+          suffix: `s${day}`,
+          weekday: toExpoWeekday(day),
+          hour,
+          minute,
+          content: { title: t.notif.taskStartTitle(task.title), body: t.notif.taskStartBody },
+        });
+      }
+    }
+    void scheduleWeeklyTaskNotifications(task.id, occurrences);
+    return;
+  }
+
+  // One-off task: only schedule if not done and still in the future.
+  if (task.done) {
     void cancelTaskNotification(task.id);
     return;
   }
@@ -58,9 +127,7 @@ function syncTaskNotification(task: Task): void {
     void cancelTaskNotification(task.id);
     return;
   }
-  const t = getTranslations(s.language);
   if (task.taskType === 'time-box') {
-    const dur = task.durationMinutes ?? 30;
     const end = new Date(start.getTime() + dur * 60 * 1000);
     void scheduleTaskNotification(
       task.id,

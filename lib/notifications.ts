@@ -99,9 +99,45 @@ export async function scheduleTaskNotification(
   }
 }
 
+// A single weekly occurrence of a recurring task's reminder. `suffix` makes the
+// identifier unique within the task (e.g. "s3" = start on day 3, "e3" = its end).
+export type WeeklyTaskOccurrence = {
+  suffix: string;
+  weekday: number; // Expo weekday: 1 = Sunday … 7 = Saturday
+  hour: number;
+  minute: number;
+  content: Content;
+};
+
+// Recurring task reminders: one repeating weekly trigger per occurrence.
+export async function scheduleWeeklyTaskNotifications(
+  id: string,
+  occurrences: WeeklyTaskOccurrence[]
+) {
+  await cancelTaskNotification(id);
+  for (const o of occurrences) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `task-${id}-${o.suffix}`,
+      content: { ...o.content, data: { taskId: id } },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: o.weekday,
+        hour: o.hour,
+        minute: o.minute,
+      },
+    }).catch(ignore);
+  }
+}
+
 export async function cancelTaskNotification(id: string) {
+  // Clears both the one-off reminders and every weekly occurrence (start + end
+  // for each of the seven possible days), so it works whatever kind the task is.
   await Notifications.cancelScheduledNotificationAsync(`task-${id}`).catch(ignore);
   await Notifications.cancelScheduledNotificationAsync(`task-end-${id}`).catch(ignore);
+  for (let d = 0; d < 7; d++) {
+    await Notifications.cancelScheduledNotificationAsync(`task-${id}-s${d}`).catch(ignore);
+    await Notifications.cancelScheduledNotificationAsync(`task-${id}-e${d}`).catch(ignore);
+  }
 }
 
 // ── Daily reminder (used for habits) ────────────────────────────────────────

@@ -74,7 +74,7 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - `BubbleMenu` labels are localised via `t.nav` — add new entries there when adding a bubble.
 - `completedCount` in `useTaskStore` counts all-time done tasks (intentional — cumulative "small things add up" philosophy)
 - `backlogTasks(today)` only returns non-recurring tasks; recurring tasks reappear by date schedule
-- **Notifications**: `lib/notifications.ts` only takes already-localised content. Per-task reminders live in `useTaskStore` (one-off, non-recurring tasks with a time); habit daily reminders in `useHabitStore`; weekly/monthly reminders in `lib/reminders.ts` (`syncReminders`). `settings.tsx` re-syncs on relevant changes; `_layout.tsx` and onboarding step 5 sync on startup/finish.
+- **Notifications**: `lib/notifications.ts` only takes already-localised content. Per-task reminders live in `useTaskStore` and cover both kinds — one-off tasks fire once (skipped if done/past), weekly-recurring tasks fire on every selected weekday (via `scheduleWeeklyTaskNotifications`); time-box tasks also get an "end" reminder. Habit daily reminders in `useHabitStore`; weekly/monthly reminders in `lib/reminders.ts` (`syncReminders`). `settings.tsx` re-syncs on relevant changes; `_layout.tsx` and onboarding step 5 sync on startup/finish.
 - **Retention**: `pruneOldData()` in `lib/db.ts` trims dated history to the last `RETENTION_DAYS` (365) on startup; config tables are left untouched.
 
 ## Builds and updates
