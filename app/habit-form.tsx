@@ -41,7 +41,7 @@ type FormState = {
 
 export default function HabitForm() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; kind?: string }>();
   const isEdit = !!params.id;
 
   const habits = useHabitStore((s) => s.habits);
@@ -58,7 +58,7 @@ export default function HabitForm() {
   const [form, setForm] = useState<FormState>({
     title: existing?.title ?? '',
     icon: existing?.icon ?? '⭐',
-    kind: existing?.kind ?? 'build',
+    kind: existing?.kind ?? (params.kind === 'break' ? 'break' : 'build'),
     category: existing?.category ?? 'other',
     cue: existing?.cue ?? '',
     craving: existing?.craving ?? '',

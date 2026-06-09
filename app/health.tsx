@@ -12,8 +12,21 @@ import { useRouter } from 'expo-router';
 import { useHealthStore } from '@/store/useHealthStore';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
-import { todayStr } from '@/lib/date';
+import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+
+function getWeekDates(today: string): string[] {
+  const d = new Date(today + 'T12:00:00');
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(mon);
+    day.setDate(mon.getDate() + i);
+    return dateStr(day);
+  });
+}
+
+const DAY_ABBR = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
 
 const SEVERITIES = [
   { value: 1, label: 'Mild', color: Colors.greenLight },
@@ -35,6 +48,9 @@ export default function HealthScreen() {
   const [severity, setSeverity] = useState(2);
   const [date, setDate] = useState(todayStr());
   const t = useT();
+
+  const today = todayStr();
+  const weekDates = getWeekDates(today);
 
   function save() {
     if (!ailment.trim()) return;
@@ -78,22 +94,51 @@ export default function HealthScreen() {
         {topAilments.length > 0 && (
           <View style={styles.overviewCard}>
             <Text style={styles.sectionLabel}>Siste 30 dager</Text>
-            {topAilments.map(([name, count]) => (
-              <View key={name} style={styles.overviewRow}>
-                <Text style={styles.overviewName}>{name}</Text>
-                <View style={styles.overviewBar}>
-                  <View
-                    style={[
-                      styles.overviewFill,
-                      {
-                        width: `${Math.min((count / (topAilments[0]?.[1] ?? 1)) * 100, 100)}%`,
-                      },
-                    ]}
-                  />
+            {topAilments.map(([name, count]) => {
+              const weekSeverities = weekDates.map((d) => {
+                const dayLogs = logs.filter((l) => l.ailment === name && l.date === d);
+                if (dayLogs.length === 0) return null;
+                return Math.max(...dayLogs.map((l) => l.severity));
+              });
+              return (
+                <View key={name} style={styles.overviewAilment}>
+                  <View style={styles.overviewRow}>
+                    <Text style={styles.overviewName}>{name}</Text>
+                    <View style={styles.overviewBar}>
+                      <View
+                        style={[
+                          styles.overviewFill,
+                          {
+                            width: `${Math.min((count / (topAilments[0]?.[1] ?? 1)) * 100, 100)}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.overviewCount}>{count}×</Text>
+                  </View>
+                  <View style={styles.ailmentWeekStrip}>
+                    {weekDates.map((d, i) => {
+                      const sev = weekSeverities[i];
+                      const sevColor = sev ? (SEVERITIES.find((s) => s.value === sev)?.color ?? Colors.grayLight) : 'transparent';
+                      const isFuture = d > today;
+                      return (
+                        <View key={d} style={styles.ailmentDotCol}>
+                          <Text style={styles.ailmentDayAbbr}>{DAY_ABBR[i]}</Text>
+                          <View style={[
+                            styles.ailmentDot,
+                            {
+                              backgroundColor: sev ? sevColor : 'transparent',
+                              borderColor: isFuture ? Colors.grayLight : (sev ? sevColor : Colors.grayLight),
+                              opacity: isFuture ? 0.3 : 1,
+                            },
+                          ]} />
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
-                <Text style={styles.overviewCount}>{count}×</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -211,7 +256,17 @@ const styles = StyleSheet.create({
     ...Shadow.card,
   },
   sectionLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: Spacing.xs },
-  overviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xs },
+  overviewAilment: { marginTop: Spacing.sm },
+  overviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  ailmentWeekStrip: {
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: 5,
+    paddingLeft: 2,
+  },
+  ailmentDotCol: { alignItems: 'center', gap: 2 },
+  ailmentDayAbbr: { fontSize: 7, color: Colors.textLight, fontWeight: '600' },
+  ailmentDot: { width: 9, height: 9, borderRadius: Radius.full, borderWidth: 1.5 },
   overviewName: { fontSize: FontSize.sm, color: Colors.text, width: 100 },
   overviewBar: {
     flex: 1,

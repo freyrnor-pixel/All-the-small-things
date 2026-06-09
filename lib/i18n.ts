@@ -226,7 +226,8 @@ const en = {
   habitGoalMet: 'Goal met!',
   habitBroken: 'Broken today!',
   noHabitsYet: 'No habits yet — tap + to create one.',
-  noHabitsInSection: 'None yet',
+  noHabitsInSection: 'None yet — tap to add one',
+  habitSummaryLabel: 'goals met today',
   habitCategories: {
     physical: 'Physical',
     mental: 'Mental',
@@ -520,7 +521,8 @@ const no: typeof en = {
   habitGoalMet: 'Mål nådd!',
   habitBroken: 'Brutt i dag!',
   noHabitsYet: 'Ingen vaner ennå — trykk + for å opprette.',
-  noHabitsInSection: 'Ingen ennå',
+  noHabitsInSection: 'Ingen ennå — trykk for å legge til',
+  habitSummaryLabel: 'mål nådd i dag',
   habitCategories: {
     physical: 'Fysisk',
     mental: 'Mental',

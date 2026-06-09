@@ -369,6 +369,7 @@ export default function HabitsScreen() {
   const today = todayStr();
 
   const habits = useHabitStore((s) => s.habits);
+  const logs = useHabitStore((s) => s.logs);
   const colorTheme = useSettingsStore((s) => s.colorTheme);
   const lang = useSettingsStore((s) => s.language);
   const theme = getTheme(colorTheme);
@@ -376,6 +377,11 @@ export default function HabitsScreen() {
 
   const buildHabits = habits.filter((h) => h.kind === 'build');
   const breakHabits = habits.filter((h) => h.kind === 'break');
+
+  const metCount = habits.filter((h) => {
+    const log = logs.find((l) => l.habitId === h.id && l.logDate === today);
+    return (log?.count ?? 0) >= h.dailyGoal;
+  }).length;
 
   const onEdit = useCallback((id: string) => {
     router.push({ pathname: '/habit-form', params: { id } });
@@ -422,13 +428,24 @@ export default function HabitsScreen() {
 
         {tab === 'today' && (
           <>
+            {habits.length > 0 && (
+              <View style={[styles.summaryChip, { backgroundColor: theme.white }]}>
+                <Text style={[styles.summaryChipText, { color: metCount === habits.length ? '#6BAA75' : theme.textLight }]}>
+                  {metCount} / {habits.length} {t.habitSummaryLabel}
+                </Text>
+              </View>
+            )}
+
             {/* Building section */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.habitBuilding}</Text>
               {buildHabits.length === 0 ? (
-                <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
-                  <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noHabitsInSection}</Text>
-                </View>
+                <Pressable
+                  style={styles.dashedAdd}
+                  onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'build' } })}
+                >
+                  <Text style={styles.dashedAddText}>{t.noHabitsInSection}</Text>
+                </Pressable>
               ) : (
                 buildHabits.map((h) => (
                   <HabitCard key={h.id} habit={h} today={today} onEdit={onEdit} lang={lang} />
@@ -440,21 +457,18 @@ export default function HabitsScreen() {
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.habitBreaking}</Text>
               {breakHabits.length === 0 ? (
-                <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
-                  <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noHabitsInSection}</Text>
-                </View>
+                <Pressable
+                  style={styles.dashedAdd}
+                  onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'break' } })}
+                >
+                  <Text style={styles.dashedAddText}>{t.noHabitsInSection}</Text>
+                </Pressable>
               ) : (
                 breakHabits.map((h) => (
                   <HabitCard key={h.id} habit={h} today={today} onEdit={onEdit} lang={lang} />
                 ))
               )}
             </View>
-
-            {habits.length === 0 && (
-              <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
-                <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noHabitsYet}</Text>
-              </View>
-            )}
           </>
         )}
 
@@ -498,6 +512,23 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '700' },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center' },
+  summaryChip: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    alignSelf: 'center',
+    ...Shadow.card,
+  },
+  summaryChipText: { fontSize: FontSize.sm, fontWeight: '700' },
+  dashedAdd: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.grayLight,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+  },
+  dashedAddText: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '500' },
 
   // Habit card
   habitCard: {
