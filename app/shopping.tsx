@@ -2,13 +2,13 @@ import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import ShoppingRow from '@/components/ShoppingRow';

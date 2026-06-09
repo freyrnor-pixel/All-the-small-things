@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
   Alert,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
