@@ -14,7 +14,8 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 const CATEGORY_ORDER = [
   'produce', 'dairy', 'meat', 'fish', 'bread', 'frozen',
@@ -26,6 +27,8 @@ type Tab = 'weekly' | 'monthly';
 
 export default function ShoppingScreen() {
   const router = useRouter();
+  const colorTheme = useSettingsStore((s) => s.colorTheme);
+  const theme = getTheme(colorTheme);
   const [tab, setTab] = useState<Tab>('weekly');
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -68,7 +71,12 @@ export default function ShoppingScreen() {
           <Text style={styles.back}>{t.back}</Text>
         </Pressable>
         <Text style={styles.title}>{t.shoppingTitle}</Text>
-        <View style={{ width: 60 }} />
+        <Pressable
+          style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
+          onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
+        >
+          <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+        </Pressable>
       </View>
 
       <View style={styles.tabs}>
@@ -214,6 +222,8 @@ const styles = StyleSheet.create({
   },
   back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
   title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
+  shareHeaderBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+  shareHeaderBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
   tabs: {
     flexDirection: 'row',
     marginHorizontal: Spacing.md,

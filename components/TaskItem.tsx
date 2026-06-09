@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Task } from '@/store/useTaskStore';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 
@@ -15,20 +15,33 @@ const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
 export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const isTimebox = task.taskType === 'time-box';
   const isEssential = task.importance === 'essential';
+  const checkScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (task.done) {
+      Animated.sequence([
+        Animated.timing(checkScale, { toValue: 1.35, duration: 120, useNativeDriver: true }),
+        Animated.spring(checkScale, { toValue: 1, friction: 4, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [task.done]);
+
+  const stripeColor = task.done
+    ? '#6BAA75'
+    : isEssential && !muted ? Colors.orange : Colors.grayLight;
 
   return (
-    <Pressable
-      style={[styles.row, isEssential && !muted && styles.rowEssential]}
-      onPress={onPress}
-    >
-      {isEssential && !muted && <View style={styles.essentialStripe} />}
+    <Pressable style={styles.row} onPress={onPress}>
+      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
-      <Pressable
-        style={[styles.check, muted && styles.checkMuted, task.done && styles.checkDone]}
-        onPress={onToggle}
-      >
-        {task.done && <Text style={styles.checkMark}>✓</Text>}
-      </Pressable>
+      <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+        <Pressable
+          style={[styles.check, muted && styles.checkMuted, task.done && styles.checkDone]}
+          onPress={onToggle}
+        >
+          {task.done && <Text style={styles.checkMark}>✓</Text>}
+        </Pressable>
+      </Animated.View>
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
@@ -67,15 +80,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
-  rowEssential: {
-    paddingLeft: 0,
-  },
-  essentialStripe: {
+  stripe: {
     width: 3,
     alignSelf: 'stretch',
-    backgroundColor: Colors.orange,
     borderRadius: Radius.full,
-    marginRight: Spacing.xs,
   },
   check: {
     width: 24,

@@ -15,11 +15,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
+import { useSharedStore } from '@/store/useSharedStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
+import { decodeSharePayload } from '@/lib/share';
 import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
 
 const NORWEGIAN_STORES = [
@@ -48,10 +51,13 @@ function parseReceiptText(text: string): ParsedItem[] {
 export default function ScanScreen() {
   const router = useRouter();
   const addShopping = useShoppingStore((s) => s.add);
+  const addSharedShopping = useSharedStore((s) => s.addSharedShopping);
+  const addSharedTasks = useSharedStore((s) => s.addSharedTasks);
   const settings = useSettingsStore();
   const t = useT();
   const theme = getTheme(settings.colorTheme);
 
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selectedStore, setSelectedStore] = useState('');
@@ -59,6 +65,8 @@ export default function ScanScreen() {
   const [ocrEmpty, setOcrEmpty] = useState(false);
   const [manualVisible, setManualVisible] = useState(false);
   const [manualName, setManualName] = useState('');
+  const [qrScanVisible, setQrScanVisible] = useState(false);
+  const [qrScanned, setQrScanned] = useState(false);
   const manualInputRef = useRef<TextInput>(null);
   const cameraLaunched = useRef(false);
 
@@ -145,6 +153,57 @@ export default function ScanScreen() {
     Alert.alert(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);
   }
 
+  async function openQrScanner() {
+    if (!cameraPermission?.granted) {
+      const { granted } = await requestCameraPermission();
+      if (!granted) {
+        Alert.alert(t.permissionTitle, t.permissionBody);
+        return;
+      }
+    }
+    setQrScanned(false);
+    setQrScanVisible(true);
+  }
+
+  function handleQrScanned({ data }: { data: string }) {
+    if (qrScanned) return;
+    setQrScanned(true);
+    const payload = decodeSharePayload(data);
+    if (!payload) {
+      Alert.alert('', t.qrInvalid, [{ text: t.ok, onPress: () => setQrScanned(false) }]);
+      return;
+    }
+    const sharedBy = payload.b || 'Unknown';
+    if (payload.k === 's') {
+      addSharedShopping(
+        payload.i.map((item) => ({
+          sourceItemId: null,
+          name: item.n,
+          amount: item.a,
+          unit: item.u,
+          direction: 'in' as const,
+          sharedBy,
+        }))
+      );
+      Alert.alert(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'shopping'), [
+        { text: t.ok, onPress: () => { setQrScanVisible(false); router.push('/shared'); } },
+      ]);
+    } else {
+      addSharedTasks(
+        payload.i.map((item) => ({
+          sourceTaskId: null,
+          title: item.n,
+          date: item.d,
+          direction: 'in' as const,
+          sharedBy,
+        }))
+      );
+      Alert.alert(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'tasks'), [
+        { text: t.ok, onPress: () => { setQrScanVisible(false); router.push('/shared'); } },
+      ]);
+    }
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
@@ -202,6 +261,10 @@ export default function ScanScreen() {
                 <Text style={[styles.secondaryBtnText, { color: theme.text }]}>{t.addManually}</Text>
               </Pressable>
             </View>
+            <Pressable style={[styles.qrScanBtn, { backgroundColor: theme.greenLight }]} onPress={openQrScanner}>
+              <Text style={styles.secondaryBtnIcon}>🔲</Text>
+              <Text style={[styles.secondaryBtnText, { color: theme.text }]}>{t.scanQrCode}</Text>
+            </Pressable>
           </View>
         )}
 
@@ -262,6 +325,33 @@ export default function ScanScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* QR scanner */}
+      <Modal visible={qrScanVisible} animationType="slide" onRequestClose={() => setQrScanVisible(false)}>
+        <View style={styles.qrModal}>
+          <SafeAreaView style={styles.qrSafeArea}>
+            <View style={styles.qrHeader}>
+              <Pressable onPress={() => setQrScanVisible(false)}>
+                <Text style={[styles.back, { color: theme.orange }]}>{t.cancel}</Text>
+              </Pressable>
+              <Text style={[styles.title, { color: Colors.white }]}>{t.qrScanMode}</Text>
+              <View style={{ width: 60 }} />
+            </View>
+            <Text style={styles.qrHint}>{t.qrScanInstructions}</Text>
+            {qrScanVisible && (
+              <CameraView
+                style={styles.qrCamera}
+                facing="back"
+                barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                onBarcodeScanned={handleQrScanned}
+              />
+            )}
+            <View style={styles.qrOverlay} pointerEvents="none">
+              <View style={styles.qrFrame} />
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
 
       {/* Manual add sheet */}
       <Modal visible={manualVisible} transparent animationType="slide" onRequestClose={() => setManualVisible(false)}>
@@ -393,4 +483,31 @@ const styles = StyleSheet.create({
   sheetCancelText: { fontWeight: '600', fontSize: FontSize.md },
   sheetAddBtn: { flex: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   sheetAddText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  qrScanBtn: {
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  qrModal: { flex: 1, backgroundColor: '#000' },
+  qrSafeArea: { flex: 1 },
+  qrHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+  },
+  qrHint: { color: '#ccc', textAlign: 'center', fontSize: FontSize.sm, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md },
+  qrCamera: { flex: 1 },
+  qrOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  qrFrame: {
+    width: 220,
+    height: 220,
+    borderWidth: 2,
+    borderColor: '#fff',
+    borderRadius: Radius.md,
+    backgroundColor: 'transparent',
+  },
 });

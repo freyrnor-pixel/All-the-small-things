@@ -88,6 +88,56 @@ export function initDb() {
       was_on_list INTEGER DEFAULT 1,
       purchased_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS shared_tasks (
+      id TEXT PRIMARY KEY,
+      source_task_id TEXT,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      done INTEGER DEFAULT 0,
+      direction TEXT NOT NULL,
+      shared_by TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS shared_shopping_items (
+      id TEXT PRIMARY KEY,
+      source_item_id TEXT,
+      name TEXT NOT NULL,
+      amount TEXT DEFAULT '1',
+      unit TEXT DEFAULT '',
+      done INTEGER DEFAULT 0,
+      direction TEXT NOT NULL,
+      shared_by TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS habits (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      icon TEXT DEFAULT '⭐',
+      kind TEXT DEFAULT 'build',
+      category TEXT DEFAULT 'other',
+      cue TEXT DEFAULT '',
+      craving TEXT DEFAULT '',
+      response TEXT DEFAULT '',
+      reward TEXT DEFAULT '',
+      daily_goal INTEGER DEFAULT 1,
+      recurrence TEXT DEFAULT 'daily',
+      recurrence_days TEXT DEFAULT '[]',
+      notification_enabled INTEGER DEFAULT 0,
+      notification_time TEXT DEFAULT '08:00',
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS habit_logs (
+      id TEXT PRIMARY KEY,
+      habit_id TEXT NOT NULL,
+      log_date TEXT NOT NULL,
+      count INTEGER DEFAULT 0,
+      FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+    );
   `);
 
   // Schema migrations — safe to run repeatedly (errors = column already exists)
