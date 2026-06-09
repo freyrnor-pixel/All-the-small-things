@@ -193,6 +193,32 @@ const en = {
   sectionHolidays: 'Calendar',
   holidaysEnabledLabel: 'Norwegian public holidays',
   holidaysHint: 'Holidays are treated like weekends — work mode and reminders stay off.',
+  // Sharing
+  sharedTitle: 'Shared',
+  sharedTasks: 'Shared tasks',
+  sharedShopping: 'Shared shopping',
+  shareAll: 'Share all',
+  shareSelected: 'Share selected',
+  shareBtnLabel: 'Share',
+  shareTitle: 'Share list',
+  shareInstructions: 'Ask the other person to open UnFocus, tap Scan, then tap "Scan QR code".',
+  scanQrCode: 'Scan QR code',
+  qrScanMode: 'Scan shared list',
+  qrScanInstructions: 'Point your camera at a QR code from another UnFocus user.',
+  qrScanSuccess: 'List received!',
+  qrScanSuccessBody: (n: number, kind: 'tasks' | 'shopping') =>
+    `${n} ${kind === 'tasks' ? `task${n !== 1 ? 's' : ''}` : `item${n !== 1 ? 's' : ''}`} added to your shared list.`,
+  qrInvalid: 'This does not look like an UnFocus QR code.',
+  sharedDone: 'Done',
+  sharedNotDone: 'Not done',
+  sharedFromLabel: (name: string) => `From ${name}`,
+  sharedBySelf: 'Shared by you',
+  shareSelectItems: 'Select items to share',
+  noSharedItems: 'Nothing shared yet. Share a list or scan someone\'s QR code.',
+  selectAll: 'Select all',
+  deselectAll: 'Deselect all',
+  sharedTasksTab: 'Tasks',
+  sharedShoppingTab: 'Shopping',
   // Hints (one per screen)
   hints: {
     home: {
@@ -216,12 +242,16 @@ const en = {
       example: 'Example: Headache, severity 3/5, after lunch.',
     },
     scan: {
-      text: 'Take a photo of a paper receipt to add items to your shopping list. Or add items manually one by one.',
+      text: 'Take a photo of a paper receipt to add items to your shopping list. Or scan a QR code shared by another UnFocus user.',
       example: 'Example: scan a grocery receipt → items appear ready to select and add.',
     },
     settings: {
       text: 'Adjust language, notifications, colours, and work mode. Changes take effect immediately.',
       example: 'Tip: set the monthly reset date to your payday so monthly items are ready when the money arrives.',
+    },
+    shared: {
+      text: 'Items shared between you and someone else. Toggle Done when you\'ve completed your part.',
+      example: 'Example: partner shares a shopping list → you see it here, tick items off as you shop.',
     },
   },
 };
@@ -409,6 +439,32 @@ const no: typeof en = {
   sectionHolidays: 'Kalender',
   holidaysEnabledLabel: 'Norske helligdager',
   holidaysHint: 'Helligdager behandles som helgedager — jobb-modus og varsler er av.',
+  // Sharing
+  sharedTitle: 'Delt',
+  sharedTasks: 'Delte oppgaver',
+  sharedShopping: 'Delt handleliste',
+  shareAll: 'Del alle',
+  shareSelected: 'Del valgte',
+  shareBtnLabel: 'Del',
+  shareTitle: 'Del liste',
+  shareInstructions: 'Be den andre om å åpne UnFocus, trykke Skann, deretter trykke «Skann QR-kode».',
+  scanQrCode: 'Skann QR-kode',
+  qrScanMode: 'Skann delt liste',
+  qrScanInstructions: 'Pek kameraet mot en QR-kode fra en annen UnFocus-bruker.',
+  qrScanSuccess: 'Liste mottatt!',
+  qrScanSuccessBody: (n: number, kind: 'tasks' | 'shopping') =>
+    `${n} ${kind === 'tasks' ? `oppgave${n !== 1 ? 'r' : ''}` : `vare${n !== 1 ? 'r' : ''}`} lagt til i delt liste.`,
+  qrInvalid: 'Dette ser ikke ut som en UnFocus QR-kode.',
+  sharedDone: 'Utført',
+  sharedNotDone: 'Ikke utført',
+  sharedFromLabel: (name: string) => `Fra ${name}`,
+  sharedBySelf: 'Delt av deg',
+  shareSelectItems: 'Velg elementer å dele',
+  noSharedItems: 'Ingenting delt ennå. Del en liste eller skann en annens QR-kode.',
+  selectAll: 'Velg alle',
+  deselectAll: 'Fjern alle',
+  sharedTasksTab: 'Oppgaver',
+  sharedShoppingTab: 'Handlelist',
   hints: {
     home: {
       text: 'Din daglige oversikt. De viktigste oppgavene er øverst — trykk ⭐ for å fokusere kun på viktige.',
@@ -431,12 +487,16 @@ const no: typeof en = {
       example: 'Eksempel: Hodepine, alvorlighetsgrad 3/5, etter lunsj.',
     },
     scan: {
-      text: 'Ta bilde av en papirkvittering for å legge varer til handlelisten. Eller legg til varer manuelt.',
+      text: 'Ta bilde av en papirkvittering, eller skann en QR-kode delt av en annen UnFocus-bruker.',
       example: 'Eksempel: skann dagligvarekvittering → varer vises klare til å velges og legges til.',
     },
     settings: {
       text: 'Juster språk, varsler, farger og jobb-modus. Endringer trer i kraft umiddelbart.',
       example: 'Tips: sett månedlig nullstillingsdato til lønningsdagen din.',
+    },
+    shared: {
+      text: 'Elementer delt mellom deg og noen andre. Trykk Utført når du har gjort din del.',
+      example: 'Eksempel: partner deler handleliste → du ser den her og haker av etter hvert.',
     },
   },
 };

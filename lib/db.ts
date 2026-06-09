@@ -88,6 +88,29 @@ export function initDb() {
       was_on_list INTEGER DEFAULT 1,
       purchased_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS shared_tasks (
+      id TEXT PRIMARY KEY,
+      source_task_id TEXT,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      done INTEGER DEFAULT 0,
+      direction TEXT NOT NULL,
+      shared_by TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS shared_shopping_items (
+      id TEXT PRIMARY KEY,
+      source_item_id TEXT,
+      name TEXT NOT NULL,
+      amount TEXT DEFAULT '1',
+      unit TEXT DEFAULT '',
+      done INTEGER DEFAULT 0,
+      direction TEXT NOT NULL,
+      shared_by TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Schema migrations — safe to run repeatedly (errors = column already exists)

@@ -26,6 +26,7 @@ type Props = {
 const BASE_ITEMS: Omit<BubbleItem, 'onPress'>[] = [
   { icon: '➕', label: 'Ny opp.', route: '/task-form', color: '#F4A261' },
   { icon: '🛒', label: 'Handle', route: '/shopping', color: '#E8895A' },
+  { icon: '🔗', label: 'Delt', route: '/shared', color: '#5AAED4' },
   { icon: '🍽', label: 'Mat', route: '/meals', color: '#6BAA75' },
   { icon: '💚', label: 'Helse', route: '/health', color: '#7BC8A4' },
   { icon: '📷', label: 'Skann', route: '/scan', color: '#C49A6C' },

@@ -135,12 +135,20 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               {settings.essentialsModeEnabled ? t.essentialTasksToday : t.tasksToday}
             </Text>
-            <Pressable
-              style={[styles.addBtn, { backgroundColor: theme.orange }]}
-              onPress={() => router.push('/task-form')}
-            >
-              <Text style={styles.addBtnText}>{t.addNew}</Text>
-            </Pressable>
+            <View style={styles.sectionActions}>
+              <Pressable
+                style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
+                onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
+              >
+                <Text style={[styles.shareBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.addBtn, { backgroundColor: theme.orange }]}
+                onPress={() => router.push('/task-form')}
+              >
+                <Text style={styles.addBtnText}>{t.addNew}</Text>
+              </Pressable>
+            </View>
           </View>
           {todayTasks.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
@@ -277,6 +285,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  shareBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+  shareBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },

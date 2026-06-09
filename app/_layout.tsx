@@ -12,6 +12,7 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useMealStore } from '@/store/useMealStore';
 import { useHealthStore } from '@/store/useHealthStore';
+import { useSharedStore } from '@/store/useSharedStore';
 import { Colors } from '@/constants/theme';
 
 class ErrorBoundary extends Component<
@@ -50,6 +51,7 @@ export default function RootLayout() {
   const loadShopping = useShoppingStore((s) => s.load);
   const loadMeals = useMealStore((s) => s.load);
   const loadHealth = useHealthStore((s) => s.load);
+  const loadShared = useSharedStore((s) => s.load);
 
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
@@ -59,6 +61,7 @@ export default function RootLayout() {
     loadShopping();
     loadMeals();
     loadHealth();
+    loadShared();
   }, []);
 
   useEffect(() => {
@@ -74,6 +77,9 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
     <GestureHandlerRootView style={styles.root}>
+      {/* backgroundColor is an Android-only runtime prop not in expo-status-bar types */}
+      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+      {/* @ts-expect-error */}
       <StatusBar style="dark" backgroundColor={Colors.cream} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
         <Stack.Screen name="index" />
@@ -83,6 +89,11 @@ export default function RootLayout() {
         <Stack.Screen name="scan" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="onboarding" />
+        <Stack.Screen name="shared" />
+        <Stack.Screen
+          name="share-modal"
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen
           name="task-form"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
