@@ -3,6 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { requestPermissions } from '@/lib/notifications';
+import { syncReminders } from '@/lib/reminders';
+import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
 
@@ -13,6 +16,12 @@ export default function OnboardingStep5() {
 
   function finish() {
     settings.update({ setupComplete: true });
+    // Ask for notification permission once setup is done, then schedule the
+    // reminders the user just configured during onboarding.
+    requestPermissions().finally(() => {
+      syncReminders();
+      useTaskStore.getState().syncAllTaskNotifications();
+    });
     router.replace('/');
   }
 
@@ -46,7 +55,7 @@ export default function OnboardingStep5() {
                   <View style={[styles.swatch, { backgroundColor: th.brown }]} />
                 </View>
                 <Text style={styles.themeEmoji}>{meta.emoji}</Text>
-                <Text style={[styles.themeLabel, { color: th.text }]}>{meta.label}</Text>
+                <Text style={[styles.themeLabel, { color: th.text }]}>{t.themeNames[key]}</Text>
                 {isActive && (
                   <View style={[styles.checkmark, { backgroundColor: th.orange }]}>
                     <Text style={styles.checkmarkText}>✓</Text>

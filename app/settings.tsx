@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useSettingsStore } from '@/store/useSettingsStore';
+import { useSettingsStore, Settings } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
+import { useHabitStore } from '@/store/useHabitStore';
+import { syncReminders } from '@/lib/reminders';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
@@ -24,11 +26,28 @@ export default function SettingsScreen() {
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const clearTasks = useTaskStore((s) => s.clearAll);
+  const syncTaskNotifs = useTaskStore((s) => s.syncAllTaskNotifications);
+  const syncHabitNotifs = useHabitStore((s) => s.syncAllHabitReminders);
   const t = useT();
   const [name, setName] = useState(settings.userName);
   const [monthlyDateInput, setMonthlyDateInput] = useState(String(settings.monthlyResetDate));
 
   const DAY_LABELS = t.dayFull;
+
+  // Apply a settings change, then re-sync any notifications it affects.
+  function applyAndSync(patch: Partial<Settings>) {
+    settings.update(patch);
+    const keys = Object.keys(patch);
+    if (keys.some((k) => ['remindersEnabled', 'reminderTime', 'weeklyResetDay', 'monthlyResetDate', 'language'].includes(k))) {
+      void syncReminders();
+    }
+    if (keys.some((k) => ['taskNotificationsEnabled', 'language'].includes(k))) {
+      syncTaskNotifs();
+    }
+    if (keys.includes('language')) {
+      syncHabitNotifs();
+    }
+  }
 
   function confirmReset(label: string, action: () => void) {
     Alert.alert(
@@ -80,7 +99,7 @@ export default function SettingsScreen() {
                 <Pressable
                   key={lang}
                   style={[styles.langChip, settings.language === lang && styles.langChipActive]}
-                  onPress={() => settings.update({ language: lang })}
+                  onPress={() => applyAndSync({ language: lang })}
                 >
                   <Text style={styles.langFlag}>{lang === 'no' ? '🇳🇴' : '🇬🇧'}</Text>
                   <Text style={[styles.langText, settings.language === lang && styles.langTextActive]}>
@@ -120,7 +139,7 @@ export default function SettingsScreen() {
                   <Pressable
                     key={i}
                     style={[styles.dayChip, settings.weeklyResetDay === i && styles.dayChipActive]}
-                    onPress={() => settings.update({ weeklyResetDay: i })}
+                    onPress={() => applyAndSync({ weeklyResetDay: i })}
                   >
                     <Text style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}>
                       {label.slice(0, 3)}
@@ -140,7 +159,7 @@ export default function SettingsScreen() {
                 setMonthlyDateInput(v);
                 const n = parseInt(v, 10);
                 if (!isNaN(n) && n >= 1 && n <= 31) {
-                  settings.update({ monthlyResetDate: n });
+                  applyAndSync({ monthlyResetDate: n });
                 }
               }}
               onBlur={() => {
@@ -166,7 +185,7 @@ export default function SettingsScreen() {
               <Text style={styles.switchLabel}>{t.weeklyReminders}</Text>
               <Switch
                 value={settings.remindersEnabled}
-                onValueChange={(v) => settings.update({ remindersEnabled: v })}
+                onValueChange={(v) => applyAndSync({ remindersEnabled: v })}
                 trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
                 thumbColor={settings.remindersEnabled ? Colors.orange : Colors.gray}
               />
@@ -178,7 +197,7 @@ export default function SettingsScreen() {
                 <TextInput
                   style={styles.input}
                   value={settings.reminderTime}
-                  onChangeText={(v) => settings.update({ reminderTime: v })}
+                  onChangeText={(v) => applyAndSync({ reminderTime: v })}
                   keyboardType="numbers-and-punctuation"
                   placeholder={t.reminderTimePlaceholder}
                   placeholderTextColor={Colors.gray}
@@ -193,7 +212,7 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={settings.taskNotificationsEnabled}
-                onValueChange={(v) => settings.update({ taskNotificationsEnabled: v })}
+                onValueChange={(v) => applyAndSync({ taskNotificationsEnabled: v })}
                 trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
                 thumbColor={settings.taskNotificationsEnabled ? Colors.orange : Colors.gray}
               />
@@ -242,7 +261,7 @@ export default function SettingsScreen() {
                     </View>
                     <Text style={styles.themeEmoji}>{meta.emoji}</Text>
                     <Text style={[styles.themeLabel, isActive && { color: th.orange, fontWeight: '700' }]}>
-                      {meta.label}
+                      {t.themeNames[key]}
                     </Text>
                   </Pressable>
                 );

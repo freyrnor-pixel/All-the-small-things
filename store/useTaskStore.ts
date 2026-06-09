@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';
+import { getTranslations } from '@/lib/i18n';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { scheduleTaskNotification, cancelTaskNotification } from '@/lib/notifications';
 
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
@@ -30,7 +33,48 @@ type TaskStore = {
   tasksForDate: (date: string) => Task[];
   backlogTasks: (today: string) => Task[];
   completedCount: () => number;
+  /** Re-schedule every task's reminder (after a settings/language change). */
+  syncAllTaskNotifications: () => void;
 };
+
+/**
+ * Schedule (or cancel) the reminder for a single task, honouring the current
+ * notification setting and language. One-off, time-bound, not-yet-done,
+ * non-recurring tasks in the future get a reminder; everything else is cleared.
+ */
+function syncTaskNotification(task: Task): void {
+  const s = useSettingsStore.getState();
+  if (
+    !s.taskNotificationsEnabled ||
+    task.done ||
+    task.recurring !== 'none' ||
+    !task.time
+  ) {
+    void cancelTaskNotification(task.id);
+    return;
+  }
+  const start = new Date(`${task.date}T${task.time}:00`);
+  if (isNaN(start.getTime()) || start.getTime() <= Date.now()) {
+    void cancelTaskNotification(task.id);
+    return;
+  }
+  const t = getTranslations(s.language);
+  if (task.taskType === 'time-box') {
+    const dur = task.durationMinutes ?? 30;
+    const end = new Date(start.getTime() + dur * 60 * 1000);
+    void scheduleTaskNotification(
+      task.id,
+      start,
+      { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
+      { date: end, content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
+    );
+  } else {
+    void scheduleTaskNotification(task.id, start, {
+      title: t.notif.taskStartTitle(task.title),
+      body: t.notif.taskStartBody,
+    });
+  }
+}
 
 function rowToTask(row: Record<string, unknown>): Task {
   return {
@@ -81,6 +125,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     );
     const task: Task = { ...t, id, done: false };
     set((s) => ({ tasks: [...s.tasks, task] }));
+    syncTaskNotification(task);
     return task;
   },
 
@@ -105,6 +150,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       ]
     );
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? next : t)) }));
+    syncTaskNotification(next);
   },
 
   toggle(id) {
@@ -115,11 +161,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   remove(id) {
     db.runSync('DELETE FROM tasks WHERE id = ?', [id]);
+    void cancelTaskNotification(id);
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
   },
 
   clearAll() {
+    const ids = get().tasks.map((t) => t.id);
     db.runSync('DELETE FROM tasks');
+    ids.forEach((id) => void cancelTaskNotification(id));
     set({ tasks: [] });
   },
 
@@ -143,5 +192,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   completedCount() {
     return get().tasks.filter((t) => t.done).length;
+  },
+
+  syncAllTaskNotifications() {
+    get().tasks.forEach(syncTaskNotification);
   },
 }));

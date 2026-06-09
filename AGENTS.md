@@ -68,12 +68,14 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 ## Known gotchas
 
 - **`StyleSheet.absoluteFill`** (not `.absoluteFillObject`) for full-screen overlays
-- `useT()` depends on `useSettingsStore`, so it re-renders when language changes — this is intentional
+- `useT()` depends on `useSettingsStore`, so it re-renders when language changes — this is intentional. Outside components (stores, schedulers) use `getTranslations(lang?)` instead — it reads the current language from the store when no arg is given.
 - `QuickAddSheet` day options are memoized on `t.today`/`t.tomorrow` — they'll update when language changes
-- The scan OCR is a stub (always returns Melk/Brød/Egg). Real OCR needs a backend service (Google Vision, AWS Textract). A demo-mode banner is shown when parsed items are present.
-- `BubbleMenu` labels (`'Ny opp.'`, `'Handle'`, etc.) are not translated — they're tiny 2-word abbreviations in the radial bubbles
+- The scan uses on-device OCR via `@react-native-ml-kit/text-recognition` (`parseReceiptText` in `app/scan.tsx`). Confirmed items are added to the shopping list, logged to `purchase_log`, and upserted into the `store_items` catalog (powers shopping autocomplete).
+- `BubbleMenu` labels are localised via `t.nav` — add new entries there when adding a bubble.
 - `completedCount` in `useTaskStore` counts all-time done tasks (intentional — cumulative "small things add up" philosophy)
 - `backlogTasks(today)` only returns non-recurring tasks; recurring tasks reappear by date schedule
+- **Notifications**: `lib/notifications.ts` only takes already-localised content. Per-task reminders live in `useTaskStore` (one-off, non-recurring tasks with a time); habit daily reminders in `useHabitStore`; weekly/monthly reminders in `lib/reminders.ts` (`syncReminders`). `settings.tsx` re-syncs on relevant changes; `_layout.tsx` and onboarding step 5 sync on startup/finish.
+- **Retention**: `pruneOldData()` in `lib/db.ts` trims dated history to the last `RETENTION_DAYS` (365) on startup; config tables are left untouched.
 
 ## Builds and updates
 

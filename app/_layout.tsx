@@ -4,9 +4,11 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { initDb } from '@/lib/db';
+import { initDb, pruneOldData } from '@/lib/db';
 import { seedStoreItems } from '@/lib/seed';
-import '@/lib/notifications';
+import { requestPermissions } from '@/lib/notifications';
+import { syncReminders } from '@/lib/reminders';
+import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -14,6 +16,7 @@ import { useMealStore } from '@/store/useMealStore';
 import { useHealthStore } from '@/store/useHealthStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useCatalogStore } from '@/store/useCatalogStore';
 import { Colors } from '@/constants/theme';
 
 class ErrorBoundary extends Component<
@@ -28,7 +31,7 @@ class ErrorBoundary extends Component<
       return (
         <View style={{ flex: 1, backgroundColor: '#FDF6EC', padding: 24, paddingTop: 60 }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#c0392b', marginBottom: 12 }}>
-            Noe gikk galt
+            {getTranslations().errorTitle}
           </Text>
           <ScrollView>
             <Text style={{ fontSize: 13, color: '#333', fontFamily: 'monospace' }}>
@@ -54,9 +57,11 @@ export default function RootLayout() {
   const loadHealth = useHealthStore((s) => s.load);
   const loadShared = useSharedStore((s) => s.load);
   const loadHabits = useHabitStore((s) => s.load);
+  const loadCatalog = useCatalogStore((s) => s.load);
 
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
+    try { pruneOldData(); } catch { /* keep going if cleanup fails */ }
     try { seedStoreItems(); } catch { /* Seed failed */ }
     loadSettings();
     loadTasks();
@@ -65,6 +70,15 @@ export default function RootLayout() {
     loadHealth();
     loadShared();
     loadHabits();
+    loadCatalog();
+
+    // Notifications: ask once, then bring all scheduled reminders in line with
+    // the loaded settings, tasks and habits (and the user's chosen language).
+    requestPermissions().finally(() => {
+      syncReminders();
+      useTaskStore.getState().syncAllTaskNotifications();
+      useHabitStore.getState().syncAllHabitReminders();
+    });
   }, []);
 
   useEffect(() => {

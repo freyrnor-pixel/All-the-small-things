@@ -19,6 +19,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSharedStore } from '@/store/useSharedStore';
+import { useCatalogStore } from '@/store/useCatalogStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
@@ -51,6 +52,8 @@ function parseReceiptText(text: string): ParsedItem[] {
 export default function ScanScreen() {
   const router = useRouter();
   const addShopping = useShoppingStore((s) => s.add);
+  const shoppingItems = useShoppingStore((s) => s.items);
+  const recordPurchases = useCatalogStore((s) => s.recordPurchases);
   const addSharedShopping = useSharedStore((s) => s.addSharedShopping);
   const addSharedTasks = useSharedStore((s) => s.addSharedTasks);
   const settings = useSettingsStore();
@@ -147,9 +150,19 @@ export default function ScanScreen() {
 
   function addToList() {
     const selected = parsedItems.filter((i) => i.selected);
+    const existingNames = new Set(shoppingItems.map((i) => i.name.toLowerCase()));
     selected.forEach((item) => {
       addShopping({ name: item.name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: item.price });
     });
+    // Log the receipt as purchases and keep the catalog's prices current.
+    recordPurchases(
+      selected.map((item) => ({
+        name: item.name,
+        store: selectedStore,
+        price: item.price,
+        wasOnList: existingNames.has(item.name.toLowerCase()),
+      }))
+    );
     Alert.alert(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);
   }
 
