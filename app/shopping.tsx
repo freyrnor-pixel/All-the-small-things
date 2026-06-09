@@ -13,10 +13,11 @@ import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 import ShoppingRow from '@/components/ShoppingRow';
+import MonthlyPickerSheet from '@/components/MonthlyPickerSheet';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
-import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAppTheme } from '@/lib/useAppTheme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 const CATEGORY_ORDER = [
   'produce', 'dairy', 'meat', 'fish', 'bread', 'frozen',
@@ -28,10 +29,10 @@ type Tab = 'weekly' | 'monthly';
 
 export default function ShoppingScreen() {
   const router = useRouter();
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
   const [tab, setTab] = useState<Tab>('weekly');
   const [adding, setAdding] = useState(false);
+  const [showMonthlyPicker, setShowMonthlyPicker] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('1');
   const [newUnit, setNewUnit] = useState('');
@@ -40,13 +41,15 @@ export default function ShoppingScreen() {
   const items = useShoppingStore((s) => s.items);
   const add = useShoppingStore((s) => s.add);
   const toggle = useShoppingStore((s) => s.toggleCheck);
-  const remove = useShoppingStore((s) => s.remove);
+  const removeWithSource = useShoppingStore((s) => s.removeWithSource);
+  const adjustAmount = useShoppingStore((s) => s.adjustAmount);
+  const addFromMonthly = useShoppingStore((s) => s.addFromMonthly);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
+  const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const suggest = useCatalogStore((s) => s.suggest);
   const catalog = useCatalogStore((s) => s.items);
   const t = useT();
 
-  // Catalog autocomplete: suggest known items while typing a new one.
   const suggestions = useMemo(() => {
     const exact = newName.trim().toLowerCase();
     if (!exact) return [];
@@ -58,20 +61,37 @@ export default function ShoppingScreen() {
     setNewCategory((CATEGORY_ORDER as readonly string[]).includes(category) ? (category as Category) : 'other');
   }
 
-  const filtered = items.filter((i) => i.listType === tab);
+  const weeklyItems = items.filter((i) => i.listType === 'weekly');
+  const monthlyItems = items.filter((i) => i.listType === 'monthly');
+  const filtered = tab === 'weekly' ? weeklyItems : monthlyItems;
   const unchecked = filtered.filter((i) => !i.checked);
   const checked = filtered.filter((i) => i.checked);
 
-  const groupedUnchecked = useMemo(() =>
+  type Group = { cat: Category; items: typeof unchecked };
+  const groupedUnchecked = useMemo((): Group[] =>
     CATEGORY_ORDER
       .map((cat) => ({ cat, items: unchecked.filter((i) => (i.category || 'other') === cat) }))
       .filter((g) => g.items.length > 0),
     [unchecked]
   );
 
+  // Monthly items that still have remaining quantity (available to add to weekly)
+  const monthlyAvailable = monthlyItems.filter((i) => {
+    const total = parseInt(i.amount, 10) || 1;
+    return total - i.monthlyAllocated > 0;
+  });
+
   function addItem() {
     if (!newName.trim()) return;
-    add({ name: newName.trim(), amount: newAmount, unit: newUnit, listType: tab, store: '', price: 0, category: newCategory });
+    add({
+      name: newName.trim(),
+      amount: newAmount || '1',
+      unit: newUnit,
+      listType: tab,
+      store: '',
+      price: 0,
+      category: newCategory,
+    });
     setNewName('');
     setNewAmount('1');
     setNewUnit('');
@@ -79,13 +99,25 @@ export default function ShoppingScreen() {
     setAdding(false);
   }
 
+  function handleMonthlyPickerConfirm(selections: { id: string; qty: number }[]) {
+    for (const { id, qty } of selections) {
+      addFromMonthly(id, qty);
+    }
+    setShowMonthlyPicker(false);
+  }
+
+  // Per-tab accent colour
+  const tabAccent = tab === 'weekly' ? theme.green : theme.orange;
+  const tabAccentLight = tab === 'weekly' ? theme.greenLight : theme.orangeLight;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>{t.shoppingTitle}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.shoppingTitle}</Text>
         <Pressable
           style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
           onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
@@ -94,19 +126,52 @@ export default function ShoppingScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.tabs}>
-        {(['weekly', 'monthly'] as Tab[]).map((tabOption) => (
-          <Pressable
-            key={tabOption}
-            style={[styles.tab, tab === tabOption && styles.tabActive]}
-            onPress={() => setTab(tabOption)}
-          >
-            <Text style={[styles.tabText, tab === tabOption && styles.tabActiveText]}>
-              {tabOption === 'weekly' ? t.weekly : t.monthly}
-            </Text>
-          </Pressable>
-        ))}
+      {/* Tabs — styled per tab */}
+      <View style={[styles.tabsContainer, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
+        {(['weekly', 'monthly'] as Tab[]).map((tabOption) => {
+          const isActive = tab === tabOption;
+          const accent = tabOption === 'weekly' ? theme.green : theme.orange;
+          const accentLight = tabOption === 'weekly' ? theme.greenLight : theme.orangeLight;
+          const count = tabOption === 'weekly' ? weeklyItems.filter(i => !i.checked).length : monthlyItems.filter(i => !i.checked).length;
+          return (
+            <Pressable
+              key={tabOption}
+              style={[
+                styles.tab,
+                isActive && { borderBottomColor: accent, borderBottomWidth: 2 },
+              ]}
+              onPress={() => setTab(tabOption)}
+            >
+              <Text style={[
+                styles.tabText,
+                { color: isActive ? accent : theme.textLight },
+                isActive && { fontWeight: '700' },
+              ]}>
+                {tabOption === 'weekly' ? t.weeklyTabLabel : t.monthlyTabLabel}
+              </Text>
+              {count > 0 && (
+                <View style={[styles.tabBadge, { backgroundColor: isActive ? accent : theme.grayLight }]}>
+                  <Text style={[styles.tabBadgeText, { color: isActive ? '#fff' : theme.textLight }]}>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
+
+      {/* "Add from monthly" action bar — weekly tab only */}
+      {tab === 'weekly' && monthlyAvailable.length > 0 && (
+        <Pressable
+          style={[styles.fromMonthlyBar, { backgroundColor: theme.orangeLight }]}
+          onPress={() => setShowMonthlyPicker(true)}
+        >
+          <Text style={[styles.fromMonthlyText, { color: theme.brown }]}>
+            {t.addFromMonthly}  ·  {monthlyAvailable.length} {t.monthlyTabLabel.toLowerCase()}
+          </Text>
+        </Pressable>
+      )}
 
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView
@@ -116,20 +181,22 @@ export default function ShoppingScreen() {
         >
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
 
-          <View style={styles.summaryChip}>
-            <Text style={styles.summaryText}>
+          {/* Summary pill */}
+          <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
+            <Text style={[styles.summaryText, { color: theme.text }]}>
               {t.shoppingRemaining(unchecked.length, checked.length)}
             </Text>
           </View>
 
+          {/* Add item form / trigger */}
           {adding ? (
-            <View style={styles.addCard}>
+            <View style={[styles.addCard, { backgroundColor: theme.white }]}>
               <TextInput
-                style={styles.addInput}
+                style={[styles.addInput, { backgroundColor: theme.offWhite, color: theme.text }]}
                 value={newName}
                 onChangeText={setNewName}
                 placeholder={t.shoppingItemPlaceholder}
-                placeholderTextColor={Colors.gray}
+                placeholderTextColor={theme.gray}
                 autoFocus
                 returnKeyType="done"
                 onSubmitEditing={addItem}
@@ -140,12 +207,14 @@ export default function ShoppingScreen() {
                     {suggestions.map((s) => (
                       <Pressable
                         key={s.id}
-                        style={styles.suggestChip}
+                        style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
                         onPress={() => pickSuggestion(s.name, s.category)}
                       >
-                        <Text style={styles.suggestText}>{s.name}</Text>
+                        <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
                         {s.price > 0 && (
-                          <Text style={styles.suggestPrice}>{t.lastPaid(`${s.price.toFixed(2)} kr`)}</Text>
+                          <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
+                            {t.lastPaid(`${s.price.toFixed(2)} kr`)}
+                          </Text>
                         )}
                       </Pressable>
                     ))}
@@ -153,32 +222,53 @@ export default function ShoppingScreen() {
                 </ScrollView>
               )}
               <View style={styles.addRow}>
+                <View style={styles.stepperInline}>
+                  <Pressable
+                    style={[styles.inlineStepBtn, { backgroundColor: theme.grayLight }]}
+                    onPress={() => setNewAmount(String(Math.max(1, (parseInt(newAmount, 10) || 1) - 1)))}
+                  >
+                    <Text style={[styles.inlineStepText, { color: theme.text }]}>−</Text>
+                  </Pressable>
+                  <TextInput
+                    style={[styles.amountInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                    value={newAmount}
+                    onChangeText={setNewAmount}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor={theme.gray}
+                    selectTextOnFocus
+                  />
+                  <Pressable
+                    style={[styles.inlineStepBtn, { backgroundColor: theme.orange }]}
+                    onPress={() => setNewAmount(String((parseInt(newAmount, 10) || 1) + 1))}
+                  >
+                    <Text style={[styles.inlineStepText, { color: '#fff' }]}>+</Text>
+                  </Pressable>
+                </View>
                 <TextInput
-                  style={[styles.addInput, { width: 70 }]}
-                  value={newAmount}
-                  onChangeText={setNewAmount}
-                  keyboardType="decimal-pad"
-                  placeholder={t.shoppingAmountPlaceholder}
-                  placeholderTextColor={Colors.gray}
-                />
-                <TextInput
-                  style={[styles.addInput, { flex: 1 }]}
+                  style={[styles.addInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
                   value={newUnit}
                   onChangeText={setNewUnit}
                   placeholder={t.shoppingUnitPlaceholder}
-                  placeholderTextColor={Colors.gray}
+                  placeholderTextColor={theme.gray}
                 />
               </View>
-              <Text style={styles.categoryLabel}>{t.category}</Text>
+              <Text style={[styles.categoryLabel, { color: theme.textLight }]}>{t.category}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.categoryRow}>
                   {CATEGORY_ORDER.map((cat) => (
                     <Pressable
                       key={cat}
-                      style={[styles.categoryChip, newCategory === cat && styles.categoryChipActive]}
+                      style={[
+                        styles.categoryChip,
+                        { backgroundColor: newCategory === cat ? tabAccent : theme.grayLight },
+                      ]}
                       onPress={() => setNewCategory(cat)}
                     >
-                      <Text style={[styles.categoryChipText, newCategory === cat && styles.categoryChipTextActive]}>
+                      <Text style={[
+                        styles.categoryChipText,
+                        { color: newCategory === cat ? '#fff' : theme.text },
+                      ]}>
                         {t.shoppingCategories[cat]}
                       </Text>
                     </Pressable>
@@ -187,175 +277,250 @@ export default function ShoppingScreen() {
               </ScrollView>
               <View style={styles.addActions}>
                 <Pressable style={styles.cancelBtn} onPress={() => setAdding(false)}>
-                  <Text style={styles.cancelBtnText}>{t.cancel}</Text>
+                  <Text style={[styles.cancelBtnText, { color: theme.textLight }]}>{t.cancel}</Text>
                 </Pressable>
-                <Pressable style={styles.confirmBtn} onPress={addItem}>
+                <Pressable style={[styles.confirmBtn, { backgroundColor: tabAccent }]} onPress={addItem}>
                   <Text style={styles.confirmBtnText}>{t.addItemBtn}</Text>
                 </Pressable>
               </View>
             </View>
           ) : (
-            <Pressable style={styles.addTrigger} onPress={() => setAdding(true)}>
-              <Text style={styles.addTriggerText}>{t.addItemTrigger}</Text>
+            <Pressable
+              style={[styles.addTrigger, { borderColor: tabAccent }]}
+              onPress={() => setAdding(true)}
+            >
+              <Text style={[styles.addTriggerText, { color: tabAccent }]}>{t.addItemTrigger}</Text>
             </Pressable>
           )}
 
-          {groupedUnchecked.map(({ cat, items: catItems }) => (
+          {/* Grouped unchecked items */}
+          {groupedUnchecked.map(({ cat, items: catItems }: Group) => (
             <View key={cat} style={styles.categoryGroup}>
-              <Text style={styles.categoryHeader}>{t.shoppingCategories[cat]}</Text>
-              <View style={styles.card}>
-                {catItems.map((item) => (
-                  <ShoppingRow
-                    key={item.id}
-                    item={item}
-                    onToggle={() => toggle(item.id)}
-                    onRemove={() => remove(item.id)}
-                  />
+              <Text style={[styles.categoryHeader, { color: theme.textLight }]}>
+                {t.shoppingCategories[cat as keyof typeof t.shoppingCategories]}
+              </Text>
+              <View style={[styles.card, { backgroundColor: theme.white }]}>
+                {catItems.map((item, idx) => (
+                  <View key={item.id}>
+                    <ShoppingRow
+                      item={item}
+                      theme={theme}
+                      onToggle={() => toggle(item.id)}
+                      onRemove={() => removeWithSource(item.id)}
+                      onAdjust={(d) => adjustAmount(item.id, d)}
+                      fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
+                    />
+                    {idx < catItems.length - 1 && (
+                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                    )}
+                  </View>
                 ))}
               </View>
             </View>
           ))}
 
+          {/* Monthly items: allocation status */}
+          {tab === 'monthly' && unchecked.length > 0 && (
+            <View style={[styles.monthlyInfoBar, { backgroundColor: theme.orangeLight }]}>
+              <Text style={[styles.monthlyInfoText, { color: theme.brown }]}>
+                {unchecked.filter(i => i.monthlyAllocated > 0).length > 0
+                  ? `${unchecked.filter(i => i.monthlyAllocated > 0).length} varer planlagt i ukeliste`
+                  : 'Ingen varer planlagt i ukeliste ennå'}
+              </Text>
+            </View>
+          )}
+
+          {/* Checked / In cart */}
           {checked.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>{t.inCart}</Text>
-              <View style={styles.card}>
-                {checked.map((item) => (
-                  <ShoppingRow
-                    key={item.id}
-                    item={item}
-                    onToggle={() => toggle(item.id)}
-                    onRemove={() => remove(item.id)}
-                  />
+              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.inCart}</Text>
+              <View style={[styles.card, { backgroundColor: theme.white }]}>
+                {checked.map((item, idx) => (
+                  <View key={item.id}>
+                    <ShoppingRow
+                      item={item}
+                      theme={theme}
+                      onToggle={() => toggle(item.id)}
+                      onRemove={() => removeWithSource(item.id)}
+                    />
+                    {idx < checked.length - 1 && (
+                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                    )}
+                  </View>
                 ))}
               </View>
             </View>
           )}
 
+          {/* Reset buttons */}
           {tab === 'weekly' && filtered.length > 0 && (
-            <Pressable style={styles.resetBtn} onPress={resetWeekly}>
-              <Text style={styles.resetBtnText}>{t.resetWeekly}</Text>
+            <Pressable
+              style={[styles.resetBtn, { backgroundColor: theme.dangerLight }]}
+              onPress={resetWeekly}
+            >
+              <Text style={[styles.resetBtnText, { color: theme.danger }]}>{t.resetWeekly}</Text>
+            </Pressable>
+          )}
+          {tab === 'monthly' && filtered.length > 0 && (
+            <Pressable
+              style={[styles.resetBtn, { backgroundColor: theme.dangerLight }]}
+              onPress={resetMonthly}
+            >
+              <Text style={[styles.resetBtnText, { color: theme.danger }]}>{t.resetMonthly}</Text>
             </Pressable>
           )}
 
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Monthly picker sheet */}
+      <MonthlyPickerSheet
+        visible={showMonthlyPicker}
+        monthlyItems={monthlyItems}
+        categoryLabels={t.shoppingCategories as Record<string, string>}
+        onConfirm={handleMonthlyPickerConfirm}
+        onClose={() => setShowMonthlyPicker(false)}
+        theme={theme}
+        t={{
+          monthlyPickerTitle: t.monthlyPickerTitle,
+          monthlyPickerConfirm: t.monthlyPickerConfirm,
+          noMonthlyItems: t.noMonthlyItems,
+          monthlyRemaining: t.monthlyRemaining,
+          monthlyInWeekly: t.monthlyInWeekly,
+          cancel: t.cancel,
+        }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.md,
+    borderBottomWidth: 1,
   },
-  back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
+  back: { fontSize: FontSize.md, fontWeight: '600' },
+  title: { fontSize: FontSize.xl, fontWeight: '700' },
   shareHeaderBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
   shareHeaderBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
-  tabs: {
+
+  tabsContainer: {
     flexDirection: 'row',
-    marginHorizontal: Spacing.md,
-    backgroundColor: Colors.grayLight,
-    borderRadius: Radius.md,
-    padding: 3,
-    marginBottom: Spacing.sm,
-    gap: 3,
+    borderBottomWidth: 1,
+    paddingHorizontal: Spacing.md,
   },
-  tab: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
-  tabActive: { backgroundColor: Colors.white, ...Shadow.card },
-  tabText: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
-  tabActiveText: { color: Colors.text },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm + 2,
+    gap: Spacing.xs,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabText: { fontSize: FontSize.sm, fontWeight: '600' },
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  tabBadgeText: { fontSize: 10, fontWeight: '700' },
+
+  fromMonthlyBar: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    alignItems: 'center',
+  },
+  fromMonthlyText: { fontSize: FontSize.sm, fontWeight: '700' },
+
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
+
   summaryChip: {
-    backgroundColor: Colors.greenLight,
     borderRadius: Radius.full,
     alignSelf: 'flex-start',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
   },
-  summaryText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '500' },
+  summaryText: { fontSize: FontSize.sm, fontWeight: '500' },
+
   addTrigger: {
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: Colors.orange,
     borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
   },
-  addTriggerText: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
-  addCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-    ...Shadow.card,
+  addTriggerText: { fontSize: FontSize.md, fontWeight: '600' },
+  addCard: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
+  addInput: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
+  addRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
+  stepperInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  inlineStepBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  addInput: {
-    backgroundColor: Colors.offWhite,
+  inlineStepText: { fontSize: FontSize.lg, fontWeight: '700', lineHeight: 22 },
+  amountInput: {
+    width: 50,
     borderRadius: Radius.sm,
-    padding: Spacing.sm,
+    padding: Spacing.xs,
     fontSize: FontSize.md,
-    color: Colors.text,
+    textAlign: 'center',
   },
-  addRow: { flexDirection: 'row', gap: Spacing.sm },
   suggestRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: 2 },
   suggestChip: {
-    backgroundColor: Colors.greenLight,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     alignItems: 'center',
   },
-  suggestText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  suggestPrice: { fontSize: 9, color: Colors.textLight },
-  categoryLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
+  suggestText: { fontSize: FontSize.xs, fontWeight: '600' },
+  suggestPrice: { fontSize: 9 },
+  categoryLabel: { fontSize: FontSize.xs, fontWeight: '600' },
   categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
-  categoryChip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
-  },
-  categoryChipActive: { backgroundColor: Colors.orange },
-  categoryChipText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  categoryChipTextActive: { color: Colors.white },
+  categoryChip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
+  categoryChipText: { fontSize: FontSize.xs, fontWeight: '600' },
   addActions: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
   cancelBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
-  cancelBtnText: { color: Colors.textLight, fontSize: FontSize.md },
-  confirmBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  confirmBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  cancelBtnText: { fontSize: FontSize.md },
+  confirmBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  confirmBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
+
   categoryGroup: { gap: Spacing.xs },
   categoryHeader: {
     fontSize: FontSize.xs,
-    color: Colors.textLight,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.card,
-  },
+  card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
+  rowDivider: { height: 1 },
+
   section: { gap: Spacing.xs },
-  sectionLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
-  resetBtn: {
-    backgroundColor: Colors.dangerLight,
+  sectionLabel: { fontSize: FontSize.sm, fontWeight: '600' },
+
+  monthlyInfoBar: {
     borderRadius: Radius.md,
-    padding: Spacing.md,
+    padding: Spacing.sm,
     alignItems: 'center',
   },
-  resetBtnText: { color: Colors.danger, fontWeight: '600', fontSize: FontSize.md },
+  monthlyInfoText: { fontSize: FontSize.xs, fontWeight: '600' },
+
+  resetBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  resetBtnText: { fontWeight: '600', fontSize: FontSize.md },
 });

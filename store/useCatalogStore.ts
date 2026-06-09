@@ -1,13 +1,8 @@
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';
+import { CATALOG_SEED } from '@/lib/catalogSeed';
 
-/**
- * The shopping "catalog": a list of known items (name + category + last price)
- * used to power autocomplete and auto-categorisation on the shopping screen.
- * Purchases (e.g. from a scanned receipt) are logged to `purchase_log` and
- * upserted into the catalog so prices stay current.
- */
 export type StoreItem = {
   id: string;
   name: string;
@@ -27,9 +22,7 @@ export type PurchaseInput = {
 type CatalogStore = {
   items: StoreItem[];
   load: () => void;
-  /** Up to `limit` catalog items whose name matches `query` (prefix first). */
   suggest: (query: string, limit?: number) => StoreItem[];
-  /** Log purchases and upsert each into the catalog. */
   recordPurchases: (purchases: PurchaseInput[]) => void;
 };
 
@@ -43,6 +36,23 @@ function rowToItem(row: Record<string, unknown>): StoreItem {
   };
 }
 
+function seedCatalog(): StoreItem[] {
+  const now = new Date().toISOString();
+  const inserted: StoreItem[] = [];
+  for (const s of CATALOG_SEED) {
+    const id = generateId();
+    try {
+      db.runSync(
+        `INSERT OR IGNORE INTO store_items (id, name, category, store, price, last_updated)
+         VALUES (?, ?, ?, '', 0, ?)`,
+        [id, s.name, s.category, now]
+      );
+      inserted.push({ id, name: s.name, category: s.category, store: '', price: 0 });
+    } catch { /* already exists */ }
+  }
+  return inserted;
+}
+
 export const useCatalogStore = create<CatalogStore>((set, get) => ({
   items: [],
 
@@ -51,20 +61,28 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
       const rows = db.getAllSync<Record<string, unknown>>(
         'SELECT * FROM store_items ORDER BY name'
       );
-      set({ items: rows.map(rowToItem) });
+      let items = rows.map(rowToItem);
+      if (items.length === 0) {
+        seedCatalog();
+        const seeded = db.getAllSync<Record<string, unknown>>(
+          'SELECT * FROM store_items ORDER BY name'
+        );
+        items = seeded.map(rowToItem);
+      }
+      set({ items });
     } catch {
       set({ items: [] });
     }
   },
 
-  suggest(query, limit = 6) {
+  suggest(query, limit = 8) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const matches = get().items.filter((i) => i.name.toLowerCase().includes(q));
     matches.sort((a, b) => {
       const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1;
       const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1;
-      return ap !== bp ? ap - bp : a.name.localeCompare(b.name);
+      return ap !== bp ? ap - bp : a.name.localeCompare(b.name, 'no');
     });
     return matches.slice(0, limit);
   },
@@ -102,25 +120,18 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
         } catch { /* ignore */ }
       } else {
         const id = generateId();
-        const item: StoreItem = {
-          id,
-          name,
-          category: p.category ?? 'other',
-          store: p.store,
-          price: p.price,
-        };
+        const item: StoreItem = { id, name, category: p.category ?? 'other', store: p.store, price: p.price };
         next.push(item);
         try {
           db.runSync(
-            `INSERT INTO store_items (id, name, category, store, price, last_updated)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO store_items (id, name, category, store, price, last_updated) VALUES (?, ?, ?, ?, ?, ?)`,
             [id, item.name, item.category, item.store, item.price, now]
           );
         } catch { /* ignore */ }
       }
     }
 
-    next.sort((a, b) => a.name.localeCompare(b.name));
+    next.sort((a, b) => a.name.localeCompare(b.name, 'no'));
     set({ items: next });
   },
 }));

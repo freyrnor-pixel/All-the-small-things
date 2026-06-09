@@ -168,6 +168,8 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN category TEXT DEFAULT 'other'",
     "ALTER TABLE settings ADD COLUMN holidays_enabled INTEGER DEFAULT 1",
     "ALTER TABLE settings ADD COLUMN dark_mode TEXT DEFAULT 'system'",
+    "ALTER TABLE shopping_items ADD COLUMN monthly_allocated INTEGER DEFAULT 0",
+    "ALTER TABLE shopping_items ADD COLUMN monthly_source_id TEXT DEFAULT NULL",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }
