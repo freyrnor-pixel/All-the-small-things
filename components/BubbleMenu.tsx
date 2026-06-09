@@ -27,16 +27,15 @@ const BASE_ITEMS: Omit<BubbleItem, 'onPress'>[] = [
   { icon: '➕', label: 'Ny opp.', route: '/task-form', color: '#F4A261' },
   { icon: '🛒', label: 'Handle', route: '/shopping', color: '#E8895A' },
   { icon: '🔗', label: 'Delt', route: '/shared', color: '#5AAED4' },
-  { icon: '🍽', label: 'Mat', route: '/meals', color: '#6BAA75' },
-  { icon: '💚', label: 'Helse', route: '/health', color: '#7BC8A4' },
+  { icon: '🌱', label: 'Vaner', route: '/habits', color: '#6BAA75' },
+  { icon: '🍽', label: 'Mat', route: '/meals', color: '#7BC8A4' },
+  { icon: '💚', label: 'Helse', route: '/health', color: '#5E9E6A' },
   { icon: '📷', label: 'Skann', route: '/scan', color: '#C49A6C' },
   { icon: '⚙️', label: 'Sett.', route: '/settings', color: '#9E9E9E' },
 ];
 
-// Bubbles fan from pointing-left to pointing-straight-up (upper-left quadrant).
-// All bubbles are in the upper-left relative to the FAB, so none go off-screen
-// when the FAB is in the lower-right corner.
-const RADIUS = 180;
+// Radius sized to fit 8 bubbles (56px) without overlap across 90° arc.
+const RADIUS = 250;
 const BUBBLE_SIZE = 56;
 const START_ANGLE = -Math.PI;      // pointing left
 const END_ANGLE = -Math.PI / 2;    // pointing straight up
