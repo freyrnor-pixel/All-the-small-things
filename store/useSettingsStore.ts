@@ -3,6 +3,7 @@ import db from '@/lib/db';
 
 export type ColorTheme = 'warm' | 'cool' | 'forest' | 'rose';
 export type Language = 'en' | 'no';
+export type DarkMode = 'system' | 'on' | 'off';
 
 export type Settings = {
   userName: string;
@@ -23,6 +24,7 @@ export type Settings = {
   showHints: boolean;
   language: Language;
   holidaysEnabled: boolean;
+  darkMode: DarkMode;
 };
 
 type SettingsStore = Settings & {
@@ -53,6 +55,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   showHints: true,
   language: 'no' as Language,
   holidaysEnabled: true,
+  darkMode: 'system' as DarkMode,
   loaded: false,
   workModeSessionOverride: false,
 
@@ -77,6 +80,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         show_hints: number | null;
         language: string | null;
         holidays_enabled: number | null;
+        dark_mode: string | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -98,6 +102,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         showHints: row.show_hints !== 0,
         language: (row.language as Language) ?? 'no',
         holidaysEnabled: row.holidays_enabled !== 0,
+        darkMode: (row.dark_mode as DarkMode) ?? 'system',
         loaded: true,
       });
     } catch {
@@ -117,7 +122,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
             work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
             show_points = ?, show_hints = ?, language = ?,
-            holidays_enabled = ?
+            holidays_enabled = ?, dark_mode = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -138,6 +143,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.showHints ? 1 : 0,
             next.language,
             next.holidaysEnabled ? 1 : 0,
+            next.darkMode,
           ]
         );
       } catch {

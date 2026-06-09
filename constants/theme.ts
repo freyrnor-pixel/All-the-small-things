@@ -103,8 +103,84 @@ export const THEME_META: Record<ThemeName, { label: string; emoji: string }> = {
   rose: { label: 'Rose', emoji: '🌸' },
 };
 
-export function getTheme(name: string): AppColors {
-  return THEMES[name as ThemeName] ?? warmColors;
+export const DARK_THEMES: Record<ThemeName, AppColors> = {
+  warm: {
+    cream: '#1A1410',
+    orange: '#F4A261',
+    orangeLight: '#3D2010',
+    green: '#6BAA75',
+    greenLight: '#152515',
+    brown: '#C49A6C',
+    brownLight: '#4A2810',
+    white: '#242018',
+    offWhite: '#1D1810',
+    gray: '#8A7060',
+    grayLight: '#2E2420',
+    text: '#F0E8D8',
+    textLight: '#B09070',
+    danger: '#E07070',
+    dangerLight: '#3A1212',
+    shadow: 'rgba(0,0,0,0.6)',
+  },
+  cool: {
+    cream: '#101822',
+    orange: '#5FA8D8',
+    orangeLight: '#102030',
+    green: '#4A9E8C',
+    greenLight: '#0E2018',
+    brown: '#7AABCA',
+    brownLight: '#152535',
+    white: '#182535',
+    offWhite: '#121E2B',
+    gray: '#6A8E9E',
+    grayLight: '#1E3040',
+    text: '#D8EAF8',
+    textLight: '#7AABCA',
+    danger: '#C05050',
+    dangerLight: '#2A1010',
+    shadow: 'rgba(0,0,0,0.6)',
+  },
+  forest: {
+    cream: '#101A10',
+    orange: '#6EAE7A',
+    orangeLight: '#102015',
+    green: '#4A7D57',
+    greenLight: '#0E2012',
+    brown: '#8CB898',
+    brownLight: '#1A2E1E',
+    white: '#181E18',
+    offWhite: '#121812',
+    gray: '#6A9070',
+    grayLight: '#1E2E1E',
+    text: '#D0EAD8',
+    textLight: '#8CB898',
+    danger: '#C06050',
+    dangerLight: '#2A1010',
+    shadow: 'rgba(0,0,0,0.6)',
+  },
+  rose: {
+    cream: '#1E1018',
+    orange: '#D4688A',
+    orangeLight: '#380E20',
+    green: '#6A9E8A',
+    greenLight: '#152018',
+    brown: '#C49AB5',
+    brownLight: '#4A1830',
+    white: '#261520',
+    offWhite: '#1E1018',
+    gray: '#9A7080',
+    grayLight: '#2E1E28',
+    text: '#F0D8E8',
+    textLight: '#C49AB5',
+    danger: '#C06070',
+    dangerLight: '#2A1020',
+    shadow: 'rgba(0,0,0,0.6)',
+  },
+};
+
+export function getTheme(name: string, isDark = false): AppColors {
+  const map = isDark ? DARK_THEMES : THEMES;
+  return map[name as ThemeName] ?? (isDark ? DARK_THEMES.warm : warmColors);
 }
 
 export const Colors = warmColors;

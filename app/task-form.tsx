@@ -12,12 +12,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTaskStore, Task, TaskType, Importance } from '@/store/useTaskStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
+import { useTaskStore, TaskType, Importance } from '@/store/useTaskStore';
+import { useAppTheme } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import HintCard from '@/components/HintCard';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import DatePickerCalendar from '@/components/DatePickerCalendar';
+import TimePickerWheel from '@/components/TimePickerWheel';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+
+function nextHourStr(): string {
+  const h = (new Date().getHours() + 1) % 24;
+  return `${String(h).padStart(2, '0')}:00`;
+}
 
 export default function TaskFormScreen() {
   const router = useRouter();
@@ -26,22 +33,22 @@ export default function TaskFormScreen() {
   const addTask = useTaskStore((s) => s.add);
   const updateTask = useTaskStore((s) => s.update);
   const removeTask = useTaskStore((s) => s.remove);
-  const settings = useSettingsStore();
   const t = useT();
-  const theme = getTheme(settings.colorTheme);
+  const theme = useAppTheme();
 
   const existing = id ? tasks.find((task) => task.id === id) : undefined;
 
   const [title, setTitle] = useState(existing?.title ?? '');
   const [date, setDate] = useState(existing?.date ?? todayStr());
-  const [time, setTime] = useState(existing?.time ?? '');
+  const [timeEnabled, setTimeEnabled] = useState(!!existing?.time);
+  const [time, setTime] = useState(existing?.time ?? nextHourStr());
   const [taskType, setTaskType] = useState<TaskType>(existing?.taskType ?? 'start-at');
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? '30'));
   const [recurring, setRecurring] = useState(existing?.recurring ?? 'none');
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
 
-  const { dayLabels } = t;
+  const { dayLabels, months } = t;
 
   function toggleDay(d: number) {
     setRecurringDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -52,7 +59,7 @@ export default function TaskFormScreen() {
     const payload = {
       title: title.trim(),
       date,
-      time: time.trim() || undefined,
+      time: timeEnabled ? time : undefined,
       taskType,
       durationMinutes: taskType === 'time-box' ? Number(duration) || 30 : undefined,
       done: existing?.done ?? false,
@@ -113,30 +120,39 @@ export default function TaskFormScreen() {
             />
           </View>
 
-          {/* Date */}
+          {/* Date — calendar */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.dateLabel}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
+            <DatePickerCalendar
               value={date}
-              onChangeText={setDate}
-              placeholder="2025-01-15"
-              placeholderTextColor={theme.gray}
-              keyboardType="numbers-and-punctuation"
+              onChange={setDate}
+              theme={theme}
+              dayLabels={dayLabels}
+              monthLabels={months}
             />
           </View>
 
-          {/* Time */}
+          {/* Time — scroll wheel */}
           <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
-              value={time}
-              onChangeText={setTime}
-              placeholder="14:00"
-              placeholderTextColor={theme.gray}
-              keyboardType="numbers-and-punctuation"
-            />
+            <View style={styles.switchRow}>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
+              <Switch
+                value={timeEnabled}
+                onValueChange={(v) => {
+                  setTimeEnabled(v);
+                  if (!v) setTime(nextHourStr());
+                }}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={timeEnabled ? theme.orange : theme.gray}
+              />
+            </View>
+            {timeEnabled && (
+              <TimePickerWheel
+                value={time}
+                onChange={setTime}
+                theme={theme}
+              />
+            )}
           </View>
 
           {/* Type */}
@@ -146,7 +162,7 @@ export default function TaskFormScreen() {
               {(['start-at', 'time-box'] as TaskType[]).map((type) => (
                 <Pressable
                   key={type}
-                  style={[styles.seg, taskType === type && styles.segActive]}
+                  style={[styles.seg, taskType === type && [styles.segActive, { backgroundColor: theme.white }]]}
                   onPress={() => setTaskType(type)}
                 >
                   <Text style={[styles.segText, { color: theme.textLight }, taskType === type && { color: theme.text, fontWeight: '600' }]}>
@@ -192,7 +208,7 @@ export default function TaskFormScreen() {
               {(['regular', 'essential'] as Importance[]).map((imp) => (
                 <Pressable
                   key={imp}
-                  style={[styles.seg, importance === imp && styles.segActive]}
+                  style={[styles.seg, importance === imp && [styles.segActive, { backgroundColor: theme.white }]]}
                   onPress={() => setImportance(imp)}
                 >
                   <Text style={[styles.segText, { color: theme.textLight }, importance === imp && { color: theme.text, fontWeight: '600' }]}>
@@ -223,7 +239,7 @@ export default function TaskFormScreen() {
                     onPress={() => toggleDay(i)}
                   >
                     <Text style={[styles.dayText, { color: theme.text }, recurringDays.includes(i) && { color: Colors.white }]}>
-                      {label}
+                      {label.slice(0, 2)}
                     </Text>
                   </Pressable>
                 ))}
@@ -274,8 +290,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   seg: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
-  segActive: { backgroundColor: Colors.white, ...Shadow.card },
+  segActive: { ...Shadow.card },
   segText: { fontSize: FontSize.sm, textAlign: 'center' },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, alignItems: 'center' },
   durationChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.full },
   durationText: { fontSize: FontSize.sm },
@@ -287,8 +304,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     ...Shadow.card,
   },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
   dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },

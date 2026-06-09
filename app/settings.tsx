@@ -19,6 +19,7 @@ import { syncReminders } from '@/lib/reminders';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
+import { DarkMode } from '@/store/useSettingsStore';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -266,6 +267,27 @@ export default function SettingsScreen() {
                   </Pressable>
                 );
               })}
+            </View>
+          </View>
+        </View>
+
+        {/* Appearance — dark mode */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t.sectionAppearance}</Text>
+          <View style={styles.card}>
+            <Text style={styles.fieldLabel}>{t.darkModeLabel}</Text>
+            <View style={styles.segmented}>
+              {(['system', 'off', 'on'] as DarkMode[]).map((mode) => (
+                <Pressable
+                  key={mode}
+                  style={[styles.seg, settings.darkMode === mode && styles.segActive]}
+                  onPress={() => settings.update({ darkMode: mode })}
+                >
+                  <Text style={[styles.segText, settings.darkMode === mode && styles.segActiveText]}>
+                    {mode === 'system' ? t.darkModeSystem : mode === 'on' ? t.darkModeOn : t.darkModeOff}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
         </View>

@@ -167,6 +167,7 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN language TEXT DEFAULT 'no'",
     "ALTER TABLE shopping_items ADD COLUMN category TEXT DEFAULT 'other'",
     "ALTER TABLE settings ADD COLUMN holidays_enabled INTEGER DEFAULT 1",
+    "ALTER TABLE settings ADD COLUMN dark_mode TEXT DEFAULT 'system'",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }
