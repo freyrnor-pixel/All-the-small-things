@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import TextRecognition from '@react-native-ml-kit/text-recognition';
 import {
   Alert,
   Image,
@@ -55,6 +56,7 @@ export default function ScanScreen() {
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selectedStore, setSelectedStore] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ocrEmpty, setOcrEmpty] = useState(false);
   const [manualVisible, setManualVisible] = useState(false);
   const [manualName, setManualName] = useState('');
   const manualInputRef = useRef<TextInput>(null);
@@ -84,31 +86,38 @@ export default function ScanScreen() {
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      processImage();
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      processImage(uri);
     }
   }
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      processImage();
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
+      processImage(uri);
     }
   }
 
-  function processImage() {
+  async function processImage(uri: string) {
     setLoading(true);
-    // Demo mode: real OCR requires a backend service (e.g. Google Vision, AWS Textract).
-    // This simulates a parsed receipt result so the selection UI can be used.
-    setTimeout(() => {
-      setParsedItems([
-        { name: 'Melk 1L', price: 19.9, selected: true },
-        { name: 'Brød grovt', price: 34.9, selected: true },
-        { name: 'Egg 12pk', price: 49.9, selected: true },
-      ]);
+    setOcrEmpty(false);
+    setParsedItems([]);
+    try {
+      const result = await TextRecognition.recognize(uri);
+      const items = parseReceiptText(result.text);
+      if (items.length > 0) {
+        setParsedItems(items);
+      } else {
+        setOcrEmpty(true);
+      }
+    } catch {
+      setOcrEmpty(true);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   }
 
   function toggleItem(i: number) {
@@ -201,7 +210,7 @@ export default function ScanScreen() {
           <View style={[styles.previewCard, { overflow: 'hidden' }]}>
             <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
             <View style={[styles.previewActions, { backgroundColor: theme.white }]}>
-              <Pressable onPress={() => { setImageUri(null); setParsedItems([]); }}>
+              <Pressable onPress={() => { setImageUri(null); setParsedItems([]); setOcrEmpty(false); }}>
                 <Text style={[styles.retakeBtnText, { color: theme.orange }]}>{t.retakePhoto}</Text>
               </Pressable>
               <Pressable onPress={() => setManualVisible(true)}>
@@ -217,10 +226,9 @@ export default function ScanScreen() {
           </View>
         )}
 
-        {/* Demo mode banner */}
-        {parsedItems.length > 0 && (
-          <View style={[styles.demoBanner, { backgroundColor: theme.orangeLight }]}>
-            <Text style={[styles.demoBannerText, { color: theme.brown }]}>⚠️ {t.demoModeBanner}</Text>
+        {ocrEmpty && !loading && (
+          <View style={[styles.emptyOcr, { backgroundColor: theme.offWhite }]}>
+            <Text style={[styles.emptyOcrText, { color: theme.textLight }]}>{t.ocrNoItems}</Text>
           </View>
         )}
 
@@ -343,8 +351,8 @@ const styles = StyleSheet.create({
   retakeBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
   loadingCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center' },
   loadingText: { fontSize: FontSize.md },
-  demoBanner: { borderRadius: Radius.md, padding: Spacing.sm },
-  demoBannerText: { fontSize: FontSize.xs, fontWeight: '600', textAlign: 'center' },
+  emptyOcr: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  emptyOcrText: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
   parsedRow: {
     flexDirection: 'row',
     alignItems: 'center',

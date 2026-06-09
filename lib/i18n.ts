@@ -55,7 +55,7 @@ const en = {
   // Scan
   scanReceipt: 'Scan receipt',
   scanHintBanner: 'Point your camera at a receipt. Make sure text is clear and well-lit.',
-  demoModeBanner: 'Demo mode — real OCR requires a backend service',
+  ocrNoItems: 'No items recognised — try better lighting or add items manually.',
   store: 'Store',
   takePhoto: 'Take photo',
   chooseFromLibrary: 'Choose from library',
@@ -274,7 +274,7 @@ const no: typeof en = {
   deleteTask: 'Slett oppgave',
   scanReceipt: 'Skann kvittering',
   scanHintBanner: 'Hold kameraet mot kvitteringen. Pass på at teksten er tydelig og godt belyst.',
-  demoModeBanner: 'Demonstrasjonsmodus — ekte OCR krever en nettverkstjeneste',
+  ocrNoItems: 'Ingen varer gjenkjent — prøv bedre lys eller legg til varer manuelt.',
   store: 'Butikk',
   takePhoto: 'Ta bilde',
   chooseFromLibrary: 'Velg fra bibliotek',

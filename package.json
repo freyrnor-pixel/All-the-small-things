@@ -19,7 +19,8 @@
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.25.2",
     "react-native-worklets": "^0.9.1",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "@react-native-ml-kit/text-recognition": "^3.0.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
