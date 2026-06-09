@@ -74,7 +74,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
     <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="dark" />
+      <StatusBar style="dark" backgroundColor={Colors.cream} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="shopping" />
