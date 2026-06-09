@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Task } from '@/store/useTaskStore';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
+import { useT } from '@/lib/i18n';
 
 type Props = {
   task: Task;
@@ -10,9 +12,9 @@ type Props = {
   muted?: boolean;
 };
 
-const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
-
 export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
+  const theme = useAppTheme();
+  const t = useT();
   const isTimebox = task.taskType === 'time-box';
   const isEssential = task.importance === 'essential';
   const checkScale = useRef(new Animated.Value(1)).current;
@@ -27,8 +29,10 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   }, [task.done]);
 
   const stripeColor = task.done
-    ? '#6BAA75'
-    : isEssential && !muted ? Colors.orange : Colors.grayLight;
+    ? theme.green
+    : isEssential && !muted ? theme.orange : theme.grayLight;
+
+  const checkBorderColor = muted ? theme.gray : theme.orange;
 
   return (
     <Pressable style={styles.row} onPress={onPress}>
@@ -36,7 +40,11 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
 
       <Animated.View style={{ transform: [{ scale: checkScale }] }}>
         <Pressable
-          style={[styles.check, muted && styles.checkMuted, task.done && styles.checkDone]}
+          style={[
+            styles.check,
+            { borderColor: checkBorderColor },
+            task.done && { backgroundColor: theme.orange, borderColor: theme.orange },
+          ]}
           onPress={onToggle}
         >
           {task.done && <Text style={styles.checkMark}>✓</Text>}
@@ -45,7 +53,12 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={[styles.title, muted && styles.titleMuted, task.done && styles.done]}>
+          <Text style={[
+            styles.title,
+            { color: theme.text },
+            muted && { color: theme.gray, fontWeight: '400' },
+            task.done && { color: theme.gray, textDecorationLine: 'line-through' },
+          ]}>
             {task.title}
           </Text>
           {isEssential && !task.done && (
@@ -54,16 +67,19 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
         </View>
         <View style={styles.meta}>
           {task.time ? (
-            <View style={[styles.tag, isTimebox ? styles.tagTimebox : styles.tagStartAt]}>
-              <Text style={styles.tagText}>
+            <View style={[styles.tag, isTimebox
+              ? { backgroundColor: theme.orangeLight }
+              : { backgroundColor: theme.greenLight }
+            ]}>
+              <Text style={[styles.tagText, { color: theme.text }]}>
                 {isTimebox ? `⏱ ${task.durationMinutes} min` : `🕐 ${task.time}`}
               </Text>
             </View>
           ) : null}
           {task.recurring === 'weekly' && task.recurringDays.length > 0 && (
-            <View style={styles.tagRecurring}>
-              <Text style={styles.tagText}>
-                {task.recurringDays.map((d) => DAY_LABELS[d]).join(', ')}
+            <View style={[styles.tagRecurring, { backgroundColor: theme.grayLight }]}>
+              <Text style={[styles.tagText, { color: theme.text }]}>
+                {task.recurringDays.map((d) => t.dayLabels[d]).join(', ')}
               </Text>
             </View>
           )}
@@ -90,17 +106,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: Radius.full,
     borderWidth: 2,
-    borderColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  checkDone: {
-    backgroundColor: Colors.orange,
-    borderColor: Colors.orange,
-  },
   checkMark: {
-    color: Colors.white,
+    color: '#FFFFFF',
     fontSize: FontSize.sm,
     fontWeight: '700',
   },
@@ -112,20 +123,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: FontSize.md,
-    color: Colors.text,
     fontWeight: '500',
     flex: 1,
-  },
-  titleMuted: {
-    color: Colors.gray,
-    fontWeight: '400',
-  },
-  checkMuted: {
-    borderColor: Colors.gray,
-  },
-  done: {
-    color: Colors.gray,
-    textDecorationLine: 'line-through',
   },
   essentialStar: {
     fontSize: 12,
@@ -141,17 +140,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
-  tagStartAt: { backgroundColor: Colors.greenLight },
-  tagTimebox: { backgroundColor: Colors.orangeLight },
   tagRecurring: {
-    backgroundColor: Colors.grayLight,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
   tagText: {
     fontSize: FontSize.xs,
-    color: Colors.text,
     fontWeight: '500',
   },
 });

@@ -17,13 +17,16 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { syncReminders } from '@/lib/reminders';
 import { useT } from '@/lib/i18n';
+import { useAppTheme } from '@/lib/useAppTheme';
 import HintCard from '@/components/HintCard';
-import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
+import TimePickerWheel from '@/components/TimePickerWheel';
+import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const theme = useAppTheme();
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const clearTasks = useTaskStore((s) => s.clearAll);
@@ -35,7 +38,6 @@ export default function SettingsScreen() {
 
   const DAY_LABELS = t.dayFull;
 
-  // Apply a settings change, then re-sync any notifications it affects.
   function applyAndSync(patch: Partial<Settings>) {
     settings.update(patch);
     const keys = Object.keys(patch);
@@ -62,12 +64,12 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>{t.settingsTitle}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.settingsTitle}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -76,15 +78,15 @@ export default function SettingsScreen() {
 
         {/* Profile */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionProfile}</Text>
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.yourName}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionProfile}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.yourName}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
               value={name}
               onChangeText={setName}
               placeholder={t.namePlaceholder}
-              placeholderTextColor={Colors.gray}
+              placeholderTextColor={theme.gray}
               onBlur={() => settings.update({ userName: name })}
               returnKeyType="done"
             />
@@ -93,17 +95,25 @@ export default function SettingsScreen() {
 
         {/* Language */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionLanguage}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionLanguage}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.langRow}>
               {(['no', 'en'] as const).map((lang) => (
                 <Pressable
                   key={lang}
-                  style={[styles.langChip, settings.language === lang && styles.langChipActive]}
+                  style={[
+                    styles.langChip,
+                    { backgroundColor: theme.grayLight },
+                    settings.language === lang && { backgroundColor: theme.orange },
+                  ]}
                   onPress={() => applyAndSync({ language: lang })}
                 >
                   <Text style={styles.langFlag}>{lang === 'no' ? '🇳🇴' : '🇬🇧'}</Text>
-                  <Text style={[styles.langText, settings.language === lang && styles.langTextActive]}>
+                  <Text style={[
+                    styles.langText,
+                    { color: theme.text },
+                    settings.language === lang && { color: '#FFFFFF' },
+                  ]}>
                     {lang === 'no' ? t.norwegian : t.english}
                   </Text>
                 </Pressable>
@@ -114,35 +124,47 @@ export default function SettingsScreen() {
 
         {/* Shopping list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionShopping}</Text>
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.defaultListType}</Text>
-            <View style={styles.segmented}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionShopping}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.defaultListType}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
               {(['weekly', 'monthly'] as const).map((mode) => (
                 <Pressable
                   key={mode}
-                  style={[styles.seg, settings.shoppingListMode === mode && styles.segActive]}
+                  style={[styles.seg, settings.shoppingListMode === mode && [styles.segActive, { backgroundColor: theme.white }]]}
                   onPress={() => settings.update({ shoppingListMode: mode })}
                 >
-                  <Text style={[styles.segText, settings.shoppingListMode === mode && styles.segActiveText]}>
+                  <Text style={[
+                    styles.segText,
+                    { color: theme.textLight },
+                    settings.shoppingListMode === mode && { color: theme.text, fontWeight: '600' },
+                  ]}>
                     {mode === 'weekly' ? t.weekly : t.monthly}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
-            <Text style={styles.fieldLabel}>{t.weeklyResetDay}</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.weeklyResetDay}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.xs }}>
               <View style={styles.dayRow}>
                 {DAY_LABELS.map((label, i) => (
                   <Pressable
                     key={i}
-                    style={[styles.dayChip, settings.weeklyResetDay === i && styles.dayChipActive]}
+                    style={[
+                      styles.dayChip,
+                      { backgroundColor: theme.grayLight },
+                      settings.weeklyResetDay === i && { backgroundColor: theme.orange },
+                    ]}
                     onPress={() => applyAndSync({ weeklyResetDay: i })}
                   >
-                    <Text style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}>
+                    <Text style={[
+                      styles.dayText,
+                      { color: theme.text },
+                      settings.weeklyResetDay === i && { color: '#FFFFFF' },
+                    ]}>
                       {label.slice(0, 3)}
                     </Text>
                   </Pressable>
@@ -150,11 +172,11 @@ export default function SettingsScreen() {
               </View>
             </ScrollView>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
-            <Text style={styles.fieldLabel}>{t.monthlyResetDate}</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.monthlyResetDate}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
               value={monthlyDateInput}
               onChangeText={(v) => {
                 setMonthlyDateInput(v);
@@ -171,51 +193,48 @@ export default function SettingsScreen() {
               }}
               keyboardType="number-pad"
               placeholder="1–31"
-              placeholderTextColor={Colors.gray}
+              placeholderTextColor={theme.gray}
               maxLength={2}
             />
-            <Text style={styles.paydayHint}>{t.monthlyDateInputHint}</Text>
+            <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.monthlyDateInputHint}</Text>
           </View>
         </View>
 
         {/* Notifications */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionNotifications}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionNotifications}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>{t.weeklyReminders}</Text>
+              <Text style={[styles.switchLabel, { color: theme.text }]}>{t.weeklyReminders}</Text>
               <Switch
                 value={settings.remindersEnabled}
                 onValueChange={(v) => applyAndSync({ remindersEnabled: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.remindersEnabled ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.remindersEnabled ? theme.orange : theme.gray}
               />
             </View>
             {settings.remindersEnabled && (
               <>
-                <View style={styles.divider} />
-                <Text style={styles.fieldLabel}>{t.reminderTimeLabel}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={settings.reminderTime}
-                  onChangeText={(v) => applyAndSync({ reminderTime: v })}
-                  keyboardType="numbers-and-punctuation"
-                  placeholder={t.reminderTimePlaceholder}
-                  placeholderTextColor={Colors.gray}
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.reminderTimeLabel}</Text>
+                <TimePickerWheel
+                  value={settings.reminderTime || '08:00'}
+                  onChange={(v) => applyAndSync({ reminderTime: v })}
+                  theme={theme}
                 />
               </>
             )}
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>{t.taskNotifications}</Text>
-                <Text style={styles.switchHint}>{t.taskNotificationsHint}</Text>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.taskNotifications}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.taskNotificationsHint}</Text>
               </View>
               <Switch
                 value={settings.taskNotificationsEnabled}
                 onValueChange={(v) => applyAndSync({ taskNotificationsEnabled: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.taskNotificationsEnabled ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.taskNotificationsEnabled ? theme.orange : theme.gray}
               />
             </View>
           </View>
@@ -223,18 +242,18 @@ export default function SettingsScreen() {
 
         {/* Holidays */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionHolidays}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionHolidays}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>{t.holidaysEnabledLabel}</Text>
-                <Text style={styles.switchHint}>{t.holidaysHint}</Text>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.holidaysEnabledLabel}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.holidaysHint}</Text>
               </View>
               <Switch
                 value={settings.holidaysEnabled}
                 onValueChange={(v) => settings.update({ holidaysEnabled: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.holidaysEnabled ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.holidaysEnabled ? theme.orange : theme.gray}
               />
             </View>
           </View>
@@ -242,8 +261,8 @@ export default function SettingsScreen() {
 
         {/* Color theme */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionColorTheme}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionColorTheme}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.themeGrid}>
               {(Object.keys(THEMES) as ThemeName[]).map((key) => {
                 const meta = THEME_META[key];
@@ -252,7 +271,11 @@ export default function SettingsScreen() {
                 return (
                   <Pressable
                     key={key}
-                    style={[styles.themeOption, isActive && styles.themeOptionActive, { borderColor: th.orange }]}
+                    style={[
+                      styles.themeOption,
+                      { borderColor: isActive ? th.orange : theme.grayLight },
+                      isActive && styles.themeOptionActive,
+                    ]}
                     onPress={() => settings.update({ colorTheme: key })}
                   >
                     <View style={styles.themeSwatches}>
@@ -261,7 +284,11 @@ export default function SettingsScreen() {
                       <View style={[styles.swatch, { backgroundColor: th.green }]} />
                     </View>
                     <Text style={styles.themeEmoji}>{meta.emoji}</Text>
-                    <Text style={[styles.themeLabel, isActive && { color: th.orange, fontWeight: '700' }]}>
+                    <Text style={[
+                      styles.themeLabel,
+                      { color: theme.textLight },
+                      isActive && { color: th.orange, fontWeight: '700' },
+                    ]}>
                       {t.themeNames[key]}
                     </Text>
                   </Pressable>
@@ -273,17 +300,21 @@ export default function SettingsScreen() {
 
         {/* Appearance — dark mode */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionAppearance}</Text>
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.darkModeLabel}</Text>
-            <View style={styles.segmented}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionAppearance}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
               {(['system', 'off', 'on'] as DarkMode[]).map((mode) => (
                 <Pressable
                   key={mode}
-                  style={[styles.seg, settings.darkMode === mode && styles.segActive]}
+                  style={[styles.seg, settings.darkMode === mode && [styles.segActive, { backgroundColor: theme.white }]]}
                   onPress={() => settings.update({ darkMode: mode })}
                 >
-                  <Text style={[styles.segText, settings.darkMode === mode && styles.segActiveText]}>
+                  <Text style={[
+                    styles.segText,
+                    { color: theme.textLight },
+                    settings.darkMode === mode && { color: theme.text, fontWeight: '600' },
+                  ]}>
                     {mode === 'system' ? t.darkModeSystem : mode === 'on' ? t.darkModeOn : t.darkModeOff}
                   </Text>
                 </Pressable>
@@ -294,93 +325,79 @@ export default function SettingsScreen() {
 
         {/* Work mode */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionWorkMode}</Text>
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.workModeDesc}</Text>
-            <View style={styles.divider} />
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionWorkMode}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workModeDesc}</Text>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>{t.workModeActive}</Text>
+              <Text style={[styles.switchLabel, { color: theme.text }]}>{t.workModeActive}</Text>
               <Switch
                 value={settings.workModeEnabled}
                 onValueChange={(v) => settings.update({ workModeEnabled: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.workModeEnabled ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.workModeEnabled ? theme.orange : theme.gray}
               />
             </View>
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>{t.autoActivate}</Text>
-                <Text style={styles.switchHint}>{t.autoActivateHint}</Text>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.autoActivate}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.autoActivateHint}</Text>
               </View>
               <Switch
                 value={settings.enforceWorkHours}
                 onValueChange={(v) => settings.update({ enforceWorkHours: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.enforceWorkHours ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.enforceWorkHours ? theme.orange : theme.gray}
               />
             </View>
             {settings.enforceWorkHours && (
               <>
-                <View style={styles.divider} />
-                <Text style={styles.fieldLabel}>{t.workHoursLabel}</Text>
-                <View style={styles.hoursRow}>
-                  <View style={styles.hourField}>
-                    <Text style={styles.hourLabel}>{t.workHoursFrom}</Text>
-                    <TextInput
-                      style={styles.hourInput}
-                      value={settings.workHoursStart}
-                      onChangeText={(v) => settings.update({ workHoursStart: v })}
-                      placeholder="09:00"
-                      placeholderTextColor={Colors.gray}
-                      keyboardType="numbers-and-punctuation"
-                    />
-                  </View>
-                  <Text style={styles.hourSep}>–</Text>
-                  <View style={styles.hourField}>
-                    <Text style={styles.hourLabel}>{t.workHoursTo}</Text>
-                    <TextInput
-                      style={styles.hourInput}
-                      value={settings.workHoursEnd}
-                      onChangeText={(v) => settings.update({ workHoursEnd: v })}
-                      placeholder="17:00"
-                      placeholderTextColor={Colors.gray}
-                      keyboardType="numbers-and-punctuation"
-                    />
-                  </View>
-                </View>
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
+                <TimePickerWheel
+                  value={settings.workHoursStart || '09:00'}
+                  onChange={(v) => settings.update({ workHoursStart: v })}
+                  theme={theme}
+                />
+                <Text style={[styles.fieldLabel, { color: theme.textLight, marginTop: Spacing.md }]}>{t.workHoursTo}</Text>
+                <TimePickerWheel
+                  value={settings.workHoursEnd || '17:00'}
+                  onChange={(v) => settings.update({ workHoursEnd: v })}
+                  theme={theme}
+                />
               </>
             )}
           </View>
         </View>
 
-        {/* Motivasjon */}
+        {/* Motivation */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionMotivation}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionMotivation}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>{t.showPointsLabel}</Text>
-                <Text style={styles.switchHint}>{t.showPointsHint}</Text>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.showPointsLabel}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.showPointsHint}</Text>
               </View>
               <Switch
                 value={settings.showPoints}
                 onValueChange={(v) => settings.update({ showPoints: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.showPoints ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.showPoints ? theme.orange : theme.gray}
               />
             </View>
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={styles.switchLabel}>{t.showHintsLabel}</Text>
-                <Text style={styles.switchHint}>{t.showHintsHint}</Text>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.showHintsLabel}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.showHintsHint}</Text>
               </View>
               <Switch
                 value={settings.showHints}
                 onValueChange={(v) => settings.update({ showHints: v })}
-                trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-                thumbColor={settings.showHints ? Colors.orange : Colors.gray}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.showHints ? theme.orange : theme.gray}
               />
             </View>
           </View>
@@ -388,18 +405,18 @@ export default function SettingsScreen() {
 
         {/* Reset data */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.sectionReset}</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionReset}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
             <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetWeekly.toLowerCase(), resetWeekly)}>
-              <Text style={styles.dangerBtnText}>{t.resetWeekly}</Text>
+              <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetWeekly}</Text>
             </Pressable>
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetMonthly.toLowerCase(), resetMonthly)}>
-              <Text style={styles.dangerBtnText}>{t.resetMonthly}</Text>
+              <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetMonthly}</Text>
             </Pressable>
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetTasks.toLowerCase(), clearTasks)}>
-              <Text style={styles.dangerBtnText}>{t.resetTasks}</Text>
+              <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetTasks}</Text>
             </Pressable>
           </View>
         </View>
@@ -411,55 +428,46 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
-  back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
+  safe: { flex: 1 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: Spacing.md, borderBottomWidth: 1,
+  },
+  back: { fontSize: FontSize.md, fontWeight: '600' },
+  title: { fontSize: FontSize.xl, fontWeight: '700' },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.lg },
   section: { gap: Spacing.sm },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.text },
-  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
-  fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: Spacing.xs },
-  input: { backgroundColor: Colors.offWhite, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md, color: Colors.text },
-  segmented: { flexDirection: 'row', backgroundColor: Colors.grayLight, borderRadius: Radius.md, padding: 3, gap: 3 },
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
+  fieldLabel: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: Spacing.xs },
+  input: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
+  segmented: { flexDirection: 'row', borderRadius: Radius.md, padding: 3, gap: 3 },
   seg: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
-  segActive: { backgroundColor: Colors.white, ...Shadow.card },
-  segText: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
-  segActiveText: { color: Colors.text },
-  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.md },
+  segActive: { ...Shadow.card },
+  segText: { fontSize: FontSize.sm, fontWeight: '600' },
+  divider: { height: 1, marginVertical: Spacing.md },
   dayRow: { flexDirection: 'row', gap: Spacing.xs },
-  dayChip: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dayChipActive: { backgroundColor: Colors.orange },
-  dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  dayTextActive: { color: Colors.white },
-  dateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
-  dateChip: { width: 40, height: 40, borderRadius: Radius.full, backgroundColor: Colors.grayLight, alignItems: 'center', justifyContent: 'center' },
-  dateChipActive: { backgroundColor: Colors.orange },
-  dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
-  dateTextActive: { color: Colors.white },
-  paydayHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: Spacing.xs, fontStyle: 'italic' },
+  dayChip: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radius.full },
+  dayText: { fontSize: FontSize.xs, fontWeight: '600' },
+  paydayHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontSize: FontSize.md, color: Colors.text, fontWeight: '500' },
-  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
+  switchLabel: { fontSize: FontSize.md, fontWeight: '500' },
+  switchHint: { fontSize: FontSize.xs, marginTop: 2 },
   dangerBtn: { paddingVertical: Spacing.sm },
-  dangerBtnText: { fontSize: FontSize.md, color: Colors.danger, fontWeight: '600' },
+  dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
   themeGrid: { flexDirection: 'row', gap: Spacing.sm },
-  themeOption: { flex: 1, borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.grayLight, padding: Spacing.sm, alignItems: 'center', gap: 4 },
+  themeOption: { flex: 1, borderRadius: Radius.md, borderWidth: 2, padding: Spacing.sm, alignItems: 'center', gap: 4 },
   themeOptionActive: { borderWidth: 2 },
   themeSwatches: { flexDirection: 'row', gap: 3 },
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
   themeEmoji: { fontSize: 20 },
-  themeLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
-  hoursRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginTop: Spacing.xs },
-  hourField: { flex: 1, gap: 4 },
-  hourLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600' },
-  hourInput: { backgroundColor: Colors.offWhite, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md, color: Colors.text, textAlign: 'center' },
-  hourSep: { fontSize: FontSize.lg, color: Colors.textLight, marginTop: Spacing.md },
+  themeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
   langRow: { flexDirection: 'row', gap: Spacing.md },
-  langChip: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: Colors.grayLight, justifyContent: 'center' },
-  langChipActive: { backgroundColor: Colors.orange },
+  langChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    padding: Spacing.md, borderRadius: Radius.md, justifyContent: 'center',
+  },
   langFlag: { fontSize: 24 },
-  langText: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  langTextActive: { color: Colors.white },
+  langText: { fontSize: FontSize.md, fontWeight: '600' },
 });

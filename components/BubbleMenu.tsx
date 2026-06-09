@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bubbleLabel: {
-    fontSize: 9,
+    fontSize: 11,
     color: Colors.white,
     fontWeight: '700',
     textAlign: 'center',

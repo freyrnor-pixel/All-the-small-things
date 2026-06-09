@@ -41,6 +41,7 @@ export default function HomeScreen() {
   const completedCountFn = useTaskStore((s) => s.completedCount);
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
+  const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const isWorkModeActive = useMemo(() => {
@@ -149,20 +150,12 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               {settings.essentialsModeEnabled ? t.essentialTasksToday : t.tasksToday}
             </Text>
-            <View style={styles.sectionActions}>
-              <Pressable
-                style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
-                onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
-              >
-                <Text style={[styles.shareBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.addBtn, { backgroundColor: theme.orange }]}
-                onPress={() => router.push('/task-form')}
-              >
-                <Text style={styles.addBtnText}>{t.addNew}</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              style={[styles.addBtn, { backgroundColor: theme.orange }]}
+              onPress={() => router.push('/task-form')}
+            >
+              <Text style={styles.addBtnText}>{t.addNew}</Text>
+            </Pressable>
           </View>
           {todayTasks.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
@@ -229,12 +222,12 @@ export default function HomeScreen() {
           ) : (
             <View style={[styles.card, { backgroundColor: theme.white }]}>
               {pendingShopping.map((item) => (
-                <View key={item.id} style={styles.shoppingPreviewRow}>
-                  <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
+                <Pressable key={item.id} style={styles.shoppingPreviewRow} onPress={() => toggleShoppingItem(item.id)}>
+                  <View style={[styles.shoppingCheck, { borderColor: theme.green }]} />
                   <Text style={[styles.shoppingPreviewName, { color: theme.text }]}>
-                    {item.amount} {item.unit} {item.name}
+                    {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
                   </Text>
-                </View>
+                </Pressable>
               ))}
               {weeklyPending.length > 5 && (
                 <Text style={[styles.moreText, { color: theme.textLight }]}>
@@ -299,18 +292,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
-  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  shareBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
-  shareBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
   card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm },
-  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, gap: Spacing.sm },
-  shoppingDot: { width: 8, height: 8, borderRadius: Radius.full },
-  shoppingPreviewName: { fontSize: FontSize.md },
+  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: Spacing.sm },
+  shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2 },
+  shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
