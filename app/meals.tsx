@@ -17,6 +17,8 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -156,6 +158,7 @@ export default function MealsScreen() {
         ))}
       </ScrollView>
 
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -165,35 +168,38 @@ export default function MealsScreen() {
         {/* Add dish */}
         {addingDish ? (
           <View style={[styles.addCard, { backgroundColor: theme.white }]}>
-            <TextInput
-              style={[styles.addInput, { backgroundColor: theme.offWhite, color: theme.text }]}
-              value={newDishName}
-              onChangeText={setNewDishName}
-              placeholder={t.dishNamePlaceholder}
-              placeholderTextColor={theme.gray}
-              autoFocus
-            />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
-              <View style={styles.typeRow}>
-                {MEAL_TYPES.map((mt) => (
-                  <Pressable
-                    key={mt.value}
-                    style={[styles.chip, { backgroundColor: theme.grayLight }, newDishType === mt.value && { backgroundColor: theme.orange }]}
-                    onPress={() => setNewDishType(mt.value)}
-                  >
-                    <Text style={[styles.chipText, { color: theme.text }, newDishType === mt.value && { color: '#fff' }]}>
-                      {mt.icon} {mealLabel(mt.value)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-            <View style={styles.addActions}>
-              <Pressable onPress={() => setAddingDish(false)}>
-                <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
-              </Pressable>
+            {/* Meal type row — pick type first so the name field stays visible above keyboard */}
+            <View style={styles.typeRow}>
+              {MEAL_TYPES.map((mt) => (
+                <Pressable
+                  key={mt.value}
+                  style={[
+                    styles.typePill,
+                    { backgroundColor: theme.grayLight },
+                    newDishType === mt.value && { backgroundColor: theme.orange },
+                  ]}
+                  onPress={() => setNewDishType(mt.value)}
+                >
+                  <Text style={styles.typePillIcon}>{mt.icon}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.addRow}>
+              <TextInput
+                style={[styles.addInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
+                value={newDishName}
+                onChangeText={setNewDishName}
+                placeholder={t.dishNamePlaceholder}
+                placeholderTextColor={theme.gray}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={saveNewDish}
+              />
               <Pressable style={[styles.confirmBtn, { backgroundColor: theme.orange }]} onPress={saveNewDish}>
                 <Text style={styles.confirmBtnText}>{t.save}</Text>
+              </Pressable>
+              <Pressable onPress={() => setAddingDish(false)} style={styles.cancelBtn}>
+                <Text style={[styles.cancelText, { color: theme.textLight }]}>✕</Text>
               </Pressable>
             </View>
           </View>
@@ -236,17 +242,9 @@ export default function MealsScreen() {
             {/* Add ingredient inline */}
             {addingIngredient === dish.id ? (
               <View style={styles.ingAddCard}>
-                <TextInput
-                  style={[styles.ingInput, { backgroundColor: theme.offWhite, color: theme.text }]}
-                  value={ingName}
-                  onChangeText={setIngName}
-                  placeholder={t.ingredientPlaceholder}
-                  placeholderTextColor={theme.gray}
-                  autoFocus
-                />
                 <View style={styles.ingAmountRow}>
                   <TextInput
-                    style={[styles.ingInput, { width: 60, backgroundColor: theme.offWhite, color: theme.text }]}
+                    style={[styles.ingInput, { width: 52, backgroundColor: theme.offWhite, color: theme.text }]}
                     value={ingAmount}
                     onChangeText={setIngAmount}
                     keyboardType="decimal-pad"
@@ -254,19 +252,24 @@ export default function MealsScreen() {
                     placeholderTextColor={theme.gray}
                   />
                   <TextInput
-                    style={[styles.ingInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
+                    style={[styles.ingInput, { width: 60, backgroundColor: theme.offWhite, color: theme.text }]}
                     value={ingUnit}
                     onChangeText={setIngUnit}
                     placeholder={t.shoppingUnitPlaceholder}
                     placeholderTextColor={theme.gray}
                   />
-                </View>
-                <View style={styles.ingActions}>
-                  <Pressable onPress={() => setAddingIngredient(null)}>
-                    <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
-                  </Pressable>
+                  <TextInput
+                    style={[styles.ingInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
+                    value={ingName}
+                    onChangeText={setIngName}
+                    placeholder={t.ingredientPlaceholder}
+                    placeholderTextColor={theme.gray}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={() => saveIngredient(dish.id)}
+                  />
                   <Pressable style={[styles.confirmBtn, { backgroundColor: theme.orange }]} onPress={() => saveIngredient(dish.id)}>
-                    <Text style={styles.confirmBtnText}>{t.addItemBtn}</Text>
+                    <Text style={styles.confirmBtnText}>+</Text>
                   </Pressable>
                 </View>
               </View>
@@ -285,6 +288,7 @@ export default function MealsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -336,8 +340,19 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
+    gap: Spacing.sm,
     ...Shadow.card,
   },
+  typeRow: { flexDirection: 'row', gap: Spacing.xs },
+  typePill: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typePillIcon: { fontSize: 18 },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   addInput: {
     backgroundColor: Colors.offWhite,
     borderRadius: Radius.sm,
@@ -345,22 +360,15 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.text,
   },
-  typeRow: { flexDirection: 'row', gap: Spacing.sm },
-  addActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: Spacing.md,
-    marginTop: Spacing.sm,
-  },
+  cancelBtn: { padding: Spacing.xs },
   cancelText: { fontSize: FontSize.md, color: Colors.textLight },
   confirmBtn: {
     backgroundColor: Colors.orange,
     borderRadius: Radius.full,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
-  confirmBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  confirmBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
   ingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,21 +379,16 @@ const styles = StyleSheet.create({
   removeText: { fontSize: 18, color: Colors.gray },
   shoppingBtn: { padding: Spacing.xs },
   shoppingBtnText: { fontSize: 18 },
-  ingAddCard: { marginTop: Spacing.sm, gap: Spacing.sm },
+  ingAddCard: { marginTop: Spacing.xs },
   ingInput: {
     backgroundColor: Colors.offWhite,
     borderRadius: Radius.sm,
-    padding: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     fontSize: FontSize.sm,
     color: Colors.text,
   },
-  ingAmountRow: { flexDirection: 'row', gap: Spacing.sm },
-  ingActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
+  ingAmountRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   ingFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',

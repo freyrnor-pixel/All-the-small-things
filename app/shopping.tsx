@@ -70,9 +70,15 @@ export default function ShoppingScreen() {
 
   const suggestions = useMemo(() => {
     const exact = newName.trim().toLowerCase();
-    if (!exact) return [];
+    if (!exact) {
+      // Show popular seed items as quick picks when input is empty
+      const alreadyAdded = new Set(items.map((i) => i.name.toLowerCase()));
+      return catalog
+        .filter((i) => !alreadyAdded.has(i.name.toLowerCase()))
+        .slice(0, 10);
+    }
     return suggest(newName).filter((s) => s.name.toLowerCase() !== exact);
-  }, [newName, catalog, suggest]);
+  }, [newName, catalog, suggest, items]);
 
   function pickSuggestion(name: string, category: string) {
     setNewName(name);
