@@ -61,8 +61,13 @@ function seedCatalog(): void {
     try {
       db.runSync(
         `INSERT OR IGNORE INTO store_items (id, name, category, store, price, last_updated)
-         VALUES (?, ?, ?, '', 0, ?)`,
-        [stableId, s.name, s.category, now]
+         VALUES (?, ?, ?, '', ?, ?)`,
+        [stableId, s.name, s.category, s.price, now]
+      );
+      // Backfill price for rows that were seeded before prices were added.
+      db.runSync(
+        `UPDATE store_items SET price = ? WHERE id = ? AND price = 0`,
+        [s.price, stableId]
       );
     } catch { /* ignore */ }
   }

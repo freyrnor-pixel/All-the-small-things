@@ -55,6 +55,7 @@ export default function ShoppingScreen() {
   const [newAmount, setNewAmount] = useState('1');
   const [newUnit, setNewUnit] = useState('');
   const [newCategory, setNewCategory] = useState<Category>('other');
+  const [newPrice, setNewPrice] = useState(0);
 
   const items = useShoppingStore((s) => s.items);
   const add = useShoppingStore((s) => s.add);
@@ -80,9 +81,10 @@ export default function ShoppingScreen() {
     return suggest(newName).filter((s) => s.name.toLowerCase() !== exact);
   }, [newName, catalog, suggest, items]);
 
-  function pickSuggestion(name: string, category: string) {
+  function pickSuggestion(name: string, category: string, price: number) {
     setNewName(name);
     setNewCategory((CATEGORY_ORDER as readonly string[]).includes(category) ? (category as Category) : 'other');
+    setNewPrice(price);
   }
 
   const weeklyItems = items.filter((i) => i.listType === 'weekly');
@@ -113,13 +115,14 @@ export default function ShoppingScreen() {
       unit: newUnit,
       listType: tab,
       store: '',
-      price: 0,
+      price: newPrice,
       category: newCategory,
     });
     setNewName('');
     setNewAmount('1');
     setNewUnit('');
     setNewCategory('other');
+    setNewPrice(0);
     setAdding(false);
   }
 
@@ -232,7 +235,7 @@ export default function ShoppingScreen() {
                       <Pressable
                         key={s.id}
                         style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
-                        onPress={() => pickSuggestion(s.name, s.category)}
+                        onPress={() => pickSuggestion(s.name, s.category, s.price)}
                       >
                         <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
                         {s.price > 0 && (
