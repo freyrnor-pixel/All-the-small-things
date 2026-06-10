@@ -15,6 +15,7 @@
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
+ *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -288,6 +289,13 @@ export default function HomeScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
+      <Pressable
+        style={[styles.settingsBtn, { backgroundColor: theme.grayLight }]}
+        onPress={() => router.push('/settings')}
+      >
+        <Text style={styles.settingsBtnIcon}>⚙️</Text>
+      </Pressable>
+
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
       <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
@@ -351,4 +359,10 @@ const styles = StyleSheet.create({
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
+  settingsBtn: {
+    position: 'absolute', top: 12, right: 16, zIndex: 10,
+    width: 36, height: 36, borderRadius: Radius.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  settingsBtnIcon: { fontSize: 18 },
 });

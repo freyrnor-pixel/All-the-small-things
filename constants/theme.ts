@@ -204,6 +204,16 @@ export function getTheme(name: string, isDark = false): AppColors {
 
 export const Colors = warmColors;
 
+export const FeatureColors = {
+  task:    '#F4A261',
+  scan:    '#E8C46A',
+  habits:  '#8CC97E',
+  health:  '#6BAA75',
+  meals:   '#56B89E',
+  shop:    '#4AAFCA',
+  shared:  '#5590D4',
+} as const;
+
 export const Spacing = {
   xs: 4,
   sm: 8,
