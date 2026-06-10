@@ -23,7 +23,8 @@ import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Updates from 'expo-updates';
 import { initDb, pruneOldData } from '@/lib/db';
 import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
@@ -97,6 +98,24 @@ export default function RootLayout() {
       useTaskStore.getState().syncAllTaskNotifications();
       useHabitStore.getState().syncAllHabitReminders();
     });
+  }, []);
+
+  useEffect(() => {
+    if (!Updates.isEnabled) return;
+    (async () => {
+      try {
+        const check = await Updates.checkForUpdateAsync();
+        if (!check.isAvailable) return;
+        await Updates.fetchUpdateAsync();
+        const t = getTranslations();
+        Alert.alert(t.updateAvailableTitle, t.updateAvailableBody, [
+          { text: t.updateLater, style: 'cancel' },
+          { text: t.updateRestart, onPress: () => Updates.reloadAsync() },
+        ]);
+      } catch {
+        /* silently ignore — update check must never crash the app */
+      }
+    })();
   }, []);
 
   useEffect(() => {
