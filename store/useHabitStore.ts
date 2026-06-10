@@ -23,7 +23,7 @@ import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { scheduleDailyReminder, cancelDailyReminder } from '@/lib/notifications';
 
-export type HabitKind = 'build' | 'break';
+export type HabitKind = 'build' | 'break' | 'neutral';
 export type HabitRecurrence = 'daily' | 'weekly' | 'monthly' | 'one-time';
 export type HabitCategory =
   | 'physical' | 'mental' | 'health' | 'nutrition'
@@ -44,6 +44,7 @@ export type Habit = {
   recurrenceDays: number[];
   notificationEnabled: boolean;
   notificationTime: string;
+  routineOrder: number;
   active: boolean;
   createdAt: string;
 };
@@ -62,6 +63,7 @@ type HabitStore = {
   add: (h: Omit<Habit, 'id' | 'createdAt' | 'active'>) => void;
   update: (id: string, patch: Partial<Omit<Habit, 'id'>>) => void;
   remove: (id: string) => void;
+  reorder: (id: string, direction: 'up' | 'down') => void;
   increment: (habitId: string, date: string) => void;
   decrement: (habitId: string, date: string) => void;
   /** Re-schedule every habit's daily reminder (after a language change). */
@@ -100,6 +102,7 @@ function rowToHabit(row: Record<string, unknown>): Habit {
     recurrenceDays: JSON.parse((row.recurrence_days as string) || '[]'),
     notificationEnabled: row.notification_enabled === 1,
     notificationTime: (row.notification_time as string) || '08:00',
+    routineOrder: (row.routine_order as number) || 0,
     active: row.active !== 0,
     createdAt: (row.created_at as string) || '',
   };
@@ -121,7 +124,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   load() {
     try {
       const habitRows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM habits WHERE active = 1 ORDER BY kind DESC, created_at'
+        'SELECT * FROM habits WHERE active = 1 ORDER BY routine_order, created_at'
       );
       const since = new Date();
       since.setDate(since.getDate() - 35);
@@ -139,16 +142,18 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   add(h) {
     const id = generateId();
     const now = new Date().toISOString();
+    const routineOrder = h.routineOrder || Date.now();
     db.runSync(
       `INSERT INTO habits (id, title, icon, kind, category, cue, craving, response, reward,
-       daily_goal, recurrence, recurrence_days, notification_enabled, notification_time, active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+       daily_goal, recurrence, recurrence_days, notification_enabled, notification_time,
+       routine_order, active, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
       [id, h.title, h.icon, h.kind, h.category, h.cue, h.craving, h.response, h.reward,
        h.dailyGoal, h.recurrence, JSON.stringify(h.recurrenceDays),
-       h.notificationEnabled ? 1 : 0, h.notificationTime, now]
+       h.notificationEnabled ? 1 : 0, h.notificationTime, routineOrder, now]
     );
-    const habit: Habit = { ...h, id, active: true, createdAt: now };
-    set((s) => ({ habits: [...s.habits, habit] }));
+    const habit: Habit = { ...h, id, routineOrder, active: true, createdAt: now };
+    set((s) => ({ habits: [...s.habits, habit].sort((a, b) => a.routineOrder - b.routineOrder) }));
     syncHabitReminder(habit);
   },
 
@@ -158,13 +163,16 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const next = { ...habit, ...patch };
     db.runSync(
       `UPDATE habits SET title=?, icon=?, kind=?, category=?, cue=?, craving=?, response=?, reward=?,
-       daily_goal=?, recurrence=?, recurrence_days=?, notification_enabled=?, notification_time=?, active=?
+       daily_goal=?, recurrence=?, recurrence_days=?, notification_enabled=?, notification_time=?,
+       routine_order=?, active=?
        WHERE id=?`,
       [next.title, next.icon, next.kind, next.category, next.cue, next.craving, next.response, next.reward,
        next.dailyGoal, next.recurrence, JSON.stringify(next.recurrenceDays),
-       next.notificationEnabled ? 1 : 0, next.notificationTime, next.active ? 1 : 0, id]
+       next.notificationEnabled ? 1 : 0, next.notificationTime, next.routineOrder, next.active ? 1 : 0, id]
     );
-    set((s) => ({ habits: s.habits.map((h) => (h.id === id ? next : h)) }));
+    set((s) => ({
+      habits: s.habits.map((h) => (h.id === id ? next : h)).sort((a, b) => a.routineOrder - b.routineOrder),
+    }));
     syncHabitReminder(next);
   },
 
@@ -175,6 +183,28 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     set((s) => ({
       habits: s.habits.filter((h) => h.id !== id),
       logs: s.logs.filter((l) => l.habitId !== id),
+    }));
+  },
+
+  reorder(id, direction) {
+    const { habits } = get();
+    const sorted = [...habits].sort((a, b) => a.routineOrder - b.routineOrder);
+    const idx = sorted.findIndex((h) => h.id === id);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx];
+    const b = sorted[swapIdx];
+    const aOrder = a.routineOrder;
+    const bOrder = b.routineOrder;
+    db.runSync('UPDATE habits SET routine_order = ? WHERE id = ?', [bOrder, a.id]);
+    db.runSync('UPDATE habits SET routine_order = ? WHERE id = ?', [aOrder, b.id]);
+    set((s) => ({
+      habits: s.habits.map((h) => {
+        if (h.id === a.id) return { ...h, routineOrder: bOrder };
+        if (h.id === b.id) return { ...h, routineOrder: aOrder };
+        return h;
+      }).sort((x, y) => x.routineOrder - y.routineOrder),
     }));
   },
 

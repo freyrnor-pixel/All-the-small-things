@@ -17,6 +17,8 @@
  */
 import React, { useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -105,11 +107,12 @@ export default function HealthScreen() {
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
         <HintCard text={t.hints.health.text} example={t.hints.health.example} />
         {/* Overview */}
         {topAilments.length > 0 && (
@@ -251,7 +254,8 @@ export default function HealthScreen() {
         })}
 
         <View style={{ height: 40 }} />
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

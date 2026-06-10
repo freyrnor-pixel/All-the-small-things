@@ -36,6 +36,7 @@ export interface AppColors {
   danger: string;
   dangerLight: string;
   shadow: string;
+  border: string;
 }
 
 const warmColors: AppColors = {
@@ -55,6 +56,7 @@ const warmColors: AppColors = {
   danger: '#E07070',
   dangerLight: '#FADADD',
   shadow: 'rgba(61,43,31,0.12)',
+  border: '#E8E0D8',
 };
 
 export const THEMES: Record<ThemeName, AppColors> = {
@@ -76,6 +78,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     danger: '#C05050',
     dangerLight: '#F8D0D0',
     shadow: 'rgba(26,58,82,0.12)',
+    border: '#DDE3EC',
   },
   forest: {
     cream: '#F0F7F0',
@@ -94,6 +97,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     danger: '#C06050',
     dangerLight: '#F5D5D0',
     shadow: 'rgba(26,61,34,0.12)',
+    border: '#D8E4DA',
   },
   rose: {
     cream: '#FDF0F5',
@@ -112,6 +116,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     danger: '#C06070',
     dangerLight: '#F5D0D8',
     shadow: 'rgba(61,26,46,0.12)',
+    border: '#EAD9DF',
   },
 };
 
@@ -140,6 +145,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     danger: '#E07070',
     dangerLight: '#3A1212',
     shadow: 'rgba(0,0,0,0.6)',
+    border: '#3A3530',
   },
   cool: {
     cream: '#101822',
@@ -158,6 +164,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     danger: '#C05050',
     dangerLight: '#2A1010',
     shadow: 'rgba(0,0,0,0.6)',
+    border: '#2A3140',
   },
   forest: {
     cream: '#101A10',
@@ -176,6 +183,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     danger: '#C06050',
     dangerLight: '#2A1010',
     shadow: 'rgba(0,0,0,0.6)',
+    border: '#253029',
   },
   rose: {
     cream: '#1E1018',
@@ -194,6 +202,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     danger: '#C06070',
     dangerLight: '#2A1020',
     shadow: 'rgba(0,0,0,0.6)',
+    border: '#3A2830',
   },
 };
 
@@ -224,9 +233,9 @@ export const Spacing = {
 };
 
 export const Radius = {
-  sm: 8,
-  md: 14,
-  lg: 20,
+  sm: 10,
+  md: 18,
+  lg: 26,
   full: 999,
 };
 
@@ -242,17 +251,17 @@ export const FontSize = {
 
 export const Shadow = {
   card: {
-    shadowColor: warmColors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    elevation: 5,
   },
   fab: {
-    shadowColor: warmColors.brown,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 12,
   },
 };
