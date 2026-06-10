@@ -11,10 +11,10 @@ import {
   View,
 } from 'react-native';
 import { useTaskStore } from '@/store/useTaskStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 type DayOption = { label: string; date: string };
 
@@ -25,8 +25,7 @@ type Props = {
 
 export default function QuickAddSheet({ visible, onClose }: Props) {
   const addTask = useTaskStore((s) => s.add);
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
   const t = useT();
 
   const [title, setTitle] = useState('');

@@ -8,8 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FontSize } from '@/constants/theme';
-import { useSettingsStore } from '@/store/useSettingsStore';
-import { getTheme } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 
 type NavKey = keyof Translations['nav'];
@@ -49,8 +48,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const anim = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
   const router = useRouter();
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
   const t = useT();
 
   const items = useMemo((): BubbleItem[] =>
