@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bubbleLabel: {
+    // OLD: fontSize: 9,   — too small to read comfortably on any screen density
     fontSize: 11,
     color: Colors.white,
     fontWeight: '700',

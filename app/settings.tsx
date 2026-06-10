@@ -20,6 +20,10 @@ import { useT } from '@/lib/i18n';
 import { useAppTheme } from '@/lib/useAppTheme';
 import HintCard from '@/components/HintCard';
 import TimePickerWheel from '@/components/TimePickerWheel';
+// OLD: import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
+//      Colors (the warm/default palette) was used throughout this screen for every
+//      background, text, and border colour — meaning theme changes had no effect here.
+//      Replaced with useAppTheme() so settings matches the user's chosen theme and dark mode.
 import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
@@ -217,6 +221,16 @@ export default function SettingsScreen() {
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.reminderTimeLabel}</Text>
+                {/* OLD: <TextInput
+                      style={styles.input}
+                      value={settings.reminderTime}
+                      onChangeText={(v) => applyAndSync({ reminderTime: v })}
+                      keyboardType="numbers-and-punctuation"
+                      placeholder={t.reminderTimePlaceholder}
+                      placeholderTextColor={Colors.gray}
+                    />
+                    Free-text HH:MM entry was error-prone (partial input, wrong separators).
+                    TimePickerWheel is already used in task-form for the same purpose. */}
                 <TimePickerWheel
                   value={settings.reminderTime || '08:00'}
                   onChange={(v) => applyAndSync({ reminderTime: v })}
@@ -354,6 +368,25 @@ export default function SettingsScreen() {
             {settings.enforceWorkHours && (
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                {/* OLD: <Text style={styles.fieldLabel}>{t.workHoursLabel}</Text>
+                        <View style={styles.hoursRow}>
+                          <View style={styles.hourField}>
+                            <Text style={styles.hourLabel}>{t.workHoursFrom}</Text>
+                            <TextInput style={styles.hourInput} value={settings.workHoursStart}
+                              onChangeText={(v) => settings.update({ workHoursStart: v })}
+                              placeholder="09:00" keyboardType="numbers-and-punctuation" />
+                          </View>
+                          <Text style={styles.hourSep}>–</Text>
+                          <View style={styles.hourField}>
+                            <Text style={styles.hourLabel}>{t.workHoursTo}</Text>
+                            <TextInput style={styles.hourInput} value={settings.workHoursEnd}
+                              onChangeText={(v) => settings.update({ workHoursEnd: v })}
+                              placeholder="17:00" keyboardType="numbers-and-punctuation" />
+                          </View>
+                        </View>
+                    Side-by-side text inputs were compact but error-prone. Work hours are a
+                    one-time setup step (hidden unless enforceWorkHours is on), so the extra
+                    height from two stacked wheels is acceptable for the clarity gained. */}
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
                 <TimePickerWheel
                   value={settings.workHoursStart || '09:00'}
