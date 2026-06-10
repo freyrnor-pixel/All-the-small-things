@@ -3,7 +3,8 @@
  *
  * Floating action button on the home screen that animates open into an arc of
  * bubbles linking to the app's main screens. Labels resolve through `t.nav` so
- * the menu follows the user's language.
+ * the menu follows the user's language. Bubble colors follow the FeatureColors
+ * warm-to-cool gradient (orange → blue across the arc).
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, store/useSettingsStore
@@ -12,8 +13,9 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - The arc geometry (RADIUS / START_ANGLE / END_ANGLE) is tuned for 8 bubbles; adding items may cause overlap.
+ *   - The arc geometry (RADIUS / START_ANGLE / END_ANGLE) is tuned for 7 bubbles; adding items may cause overlap.
  *   - All labels go through useT() — no hardcoded text.
+ *   - Settings is not in the arc; it lives as a persistent corner button in app/index.tsx.
  */
 import React, { useMemo, useRef, useState } from 'react';
 import {
@@ -24,7 +26,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, Radius, Shadow, FontSize } from '@/constants/theme';
+import { Colors, Radius, Shadow, FeatureColors } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 
@@ -42,19 +44,18 @@ type Props = {
   onNewTask?: () => void;
 };
 
-// Labels resolve through `t.nav` so the radial menu follows the user's language.
+// Warm-to-cool gradient across the arc: creation → daily tracking → social.
 const BASE_ITEMS: { icon: string; labelKey: NavKey; route: string; color: string }[] = [
-  { icon: '➕', labelKey: 'newTask', route: '/task-form', color: '#F4A261' },
-  { icon: '🛒', labelKey: 'shop', route: '/shopping', color: '#E8895A' },
-  { icon: '🔗', labelKey: 'shared', route: '/shared', color: '#5AAED4' },
-  { icon: '🌱', labelKey: 'habits', route: '/habits', color: '#6BAA75' },
-  { icon: '🍽', labelKey: 'meals', route: '/meals', color: '#7BC8A4' },
-  { icon: '💚', labelKey: 'health', route: '/health', color: '#5E9E6A' },
-  { icon: '📷', labelKey: 'scan', route: '/scan', color: '#C49A6C' },
-  { icon: '⚙️', labelKey: 'settings', route: '/settings', color: '#9E9E9E' },
+  { icon: '➕', labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
+  { icon: '📷', labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
+  { icon: '🌱', labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
+  { icon: '💚', labelKey: 'health',  route: '/health',    color: FeatureColors.health },
+  { icon: '🍽', labelKey: 'meals',   route: '/meals',     color: FeatureColors.meals },
+  { icon: '🛒', labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
+  { icon: '🔗', labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-// Radius sized to fit 8 bubbles (56px) without overlap across 90° arc.
+// Radius sized to fit 7 bubbles (56px) without overlap across 90° arc.
 const RADIUS = 250;
 const BUBBLE_SIZE = 56;
 const START_ANGLE = -Math.PI;      // pointing left
@@ -64,6 +65,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
+  const pressAnims = useRef(BASE_ITEMS.map(() => new Animated.Value(1))).current;
   const router = useRouter();
   const theme = useAppTheme();
   const t = useT();
@@ -94,6 +96,18 @@ export default function BubbleMenu({ onNewTask }: Props) {
     setTimeout(action, 150);
   }
 
+  function pressIn(i: number) {
+    Animated.spring(pressAnims[i], {
+      toValue: 0.88, useNativeDriver: true, tension: 150, friction: 8,
+    }).start();
+  }
+
+  function pressOut(i: number) {
+    Animated.spring(pressAnims[i], {
+      toValue: 1, useNativeDriver: true, tension: 150, friction: 8,
+    }).start();
+  }
+
   const rotate = rotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '45deg'],
@@ -113,7 +127,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
         const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [0, x] });
         const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, y] });
         const opacity = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0, 1] });
-        const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
+        const fanScale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
+        const combinedScale = Animated.multiply(fanScale, pressAnims[i]);
 
         return (
           <Animated.View
@@ -121,14 +136,19 @@ export default function BubbleMenu({ onNewTask }: Props) {
             style={[
               styles.bubble,
               {
-                backgroundColor: i === 0 ? theme.orange : item.color,
+                backgroundColor: item.color,
                 opacity,
-                transform: [{ translateX }, { translateY }, { scale }],
+                transform: [{ translateX }, { translateY }, { scale: combinedScale }],
               },
             ]}
             pointerEvents={open ? 'auto' : 'none'}
           >
-            <Pressable style={styles.bubbleInner} onPress={() => navigate(item)}>
+            <Pressable
+              style={styles.bubbleInner}
+              onPress={() => navigate(item)}
+              onPressIn={() => pressIn(i)}
+              onPressOut={() => pressOut(i)}
+            >
               <Text style={styles.bubbleIcon}>{item.icon}</Text>
               <Text style={styles.bubbleLabel}>{item.label}</Text>
             </Pressable>
