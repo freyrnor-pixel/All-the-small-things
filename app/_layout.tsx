@@ -135,7 +135,7 @@ export default function RootLayout() {
       {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
       {/* @ts-expect-error */}
       <StatusBar style="dark" backgroundColor={Colors.cream} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream }, backgroundColor: Colors.cream }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="meals" />

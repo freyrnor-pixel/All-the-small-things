@@ -192,6 +192,8 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN monthly_source_id TEXT DEFAULT NULL",
     "ALTER TABLE settings ADD COLUMN work_days TEXT DEFAULT '[0,1,2,3,4]'",
     "ALTER TABLE habits ADD COLUMN routine_order INTEGER DEFAULT 0",
+    "ALTER TABLE habits ADD COLUMN child_name TEXT DEFAULT ''",
+    "ALTER TABLE settings ADD COLUMN child_profiles TEXT DEFAULT '[]'",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

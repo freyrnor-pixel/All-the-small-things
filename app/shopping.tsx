@@ -93,19 +93,19 @@ export default function ShoppingScreen() {
   const unchecked = filtered.filter((i) => !i.checked);
   const checked = filtered.filter((i) => i.checked);
 
-  type Group = { cat: Category; items: typeof unchecked };
-  const groupedUnchecked = useMemo((): Group[] =>
-    CATEGORY_ORDER
-      .map((cat) => ({ cat, items: unchecked.filter((i) => (i.category || 'other') === cat) }))
-      .filter((g) => g.items.length > 0),
+  // Alphabetically sorted unchecked items for current tab
+  const sortedUnchecked = useMemo(
+    () => [...unchecked].sort((a, b) => a.name.localeCompare(b.name)),
     [unchecked]
   );
 
   // Monthly items that still have remaining quantity (available to add to weekly)
-  const monthlyAvailable = monthlyItems.filter((i) => {
-    const total = parseInt(i.amount, 10) || 1;
-    return total - i.monthlyAllocated > 0;
-  });
+  const monthlyAvailable = useMemo(
+    () => monthlyItems
+      .filter((i) => !i.checked && (parseInt(i.amount, 10) || 1) - i.monthlyAllocated > 0)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [monthlyItems]
+  );
 
   function addItem() {
     if (!newName.trim()) return;
@@ -188,17 +188,6 @@ export default function ShoppingScreen() {
         })}
       </View>
 
-      {/* "Add from monthly" action bar — weekly tab only */}
-      {tab === 'weekly' && monthlyAvailable.length > 0 && (
-        <Pressable
-          style={[styles.fromMonthlyBar, { backgroundColor: theme.orangeLight }]}
-          onPress={() => setShowMonthlyPicker(true)}
-        >
-          <Text style={[styles.fromMonthlyText, { color: theme.brown }]}>
-            {t.addFromMonthly}  ·  {monthlyAvailable.length} {t.monthlyTabLabel.toLowerCase()}
-          </Text>
-        </Pressable>
-      )}
 
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView
@@ -320,14 +309,49 @@ export default function ShoppingScreen() {
             </Pressable>
           )}
 
-          {/* Grouped unchecked items */}
-          {groupedUnchecked.map(({ cat, items: catItems }: Group) => (
-            <View key={cat} style={styles.categoryGroup}>
-              <Text style={[styles.categoryHeader, { color: theme.textLight }]}>
-                {t.shoppingCategories[cat as keyof typeof t.shoppingCategories]}
-              </Text>
+          {/* Weekly tab: Monthly-source section + Weekly items */}
+          {tab === 'weekly' && monthlyAvailable.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.monthlySourceSection}</Text>
               <View style={[styles.card, { backgroundColor: theme.white }]}>
-                {catItems.map((item, idx) => (
+                {monthlyAvailable.map((item, idx) => {
+                  const remaining = (parseInt(item.amount, 10) || 1) - item.monthlyAllocated;
+                  return (
+                    <View key={item.id}>
+                      <View style={styles.monthlySourceRow}>
+                        <View style={styles.monthlySourceInfo}>
+                          <Text style={[styles.monthlySourceName, { color: theme.text }]} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          <Text style={[styles.monthlySourceMeta, { color: theme.textLight }]}>
+                            {t.monthlyRemaining(remaining, item.unit)}
+                          </Text>
+                        </View>
+                        <Pressable
+                          style={[styles.monthlyAddBtn, { backgroundColor: theme.orange }]}
+                          onPress={() => addFromMonthly(item.id, 1)}
+                        >
+                          <Text style={styles.monthlyAddBtnText}>{t.addOneToWeekly}</Text>
+                        </Pressable>
+                      </View>
+                      {idx < monthlyAvailable.length - 1 && (
+                        <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* Alphabetical unchecked items */}
+          {sortedUnchecked.length > 0 && (
+            <View style={styles.section}>
+              {tab === 'weekly' && (
+                <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.weeklyItemsSection}</Text>
+              )}
+              <View style={[styles.card, { backgroundColor: theme.white }]}>
+                {sortedUnchecked.map((item, idx) => (
                   <View key={item.id}>
                     <ShoppingRow
                       item={item}
@@ -337,23 +361,12 @@ export default function ShoppingScreen() {
                       onAdjust={(d) => adjustAmount(item.id, d)}
                       fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
                     />
-                    {idx < catItems.length - 1 && (
+                    {idx < sortedUnchecked.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                     )}
                   </View>
                 ))}
               </View>
-            </View>
-          ))}
-
-          {/* Monthly items: allocation status */}
-          {tab === 'monthly' && unchecked.length > 0 && (
-            <View style={[styles.monthlyInfoBar, { backgroundColor: theme.orangeLight }]}>
-              <Text style={[styles.monthlyInfoText, { color: theme.brown }]}>
-                {unchecked.filter(i => i.monthlyAllocated > 0).length > 0
-                  ? `${unchecked.filter(i => i.monthlyAllocated > 0).length} varer planlagt i ukeliste`
-                  : 'Ingen varer planlagt i ukeliste ennå'}
-              </Text>
             </View>
           )}
 
@@ -462,15 +475,6 @@ const styles = StyleSheet.create({
   },
   tabBadgeText: { fontSize: 10, fontWeight: '700' },
 
-  fromMonthlyBar: {
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
-    alignItems: 'center',
-  },
-  fromMonthlyText: { fontSize: FontSize.sm, fontWeight: '700' },
-
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
 
@@ -528,25 +532,30 @@ const styles = StyleSheet.create({
   confirmBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   confirmBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 
-  categoryGroup: { gap: Spacing.xs },
-  categoryHeader: {
+  card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
+  rowDivider: { height: 1 },
+  section: { gap: Spacing.xs },
+  sectionLabel: {
     fontSize: FontSize.xs,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
-  rowDivider: { height: 1 },
-
-  section: { gap: Spacing.xs },
-  sectionLabel: { fontSize: FontSize.sm, fontWeight: '600' },
-
-  monthlyInfoBar: {
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
+  monthlySourceRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
   },
-  monthlyInfoText: { fontSize: FontSize.xs, fontWeight: '600' },
+  monthlySourceInfo: { flex: 1 },
+  monthlySourceName: { fontSize: FontSize.md, fontWeight: '600' },
+  monthlySourceMeta: { fontSize: FontSize.xs, marginTop: 2 },
+  monthlyAddBtn: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+  },
+  monthlyAddBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.xs },
 
   resetBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   resetBtnText: { fontWeight: '600', fontSize: FontSize.md },
