@@ -38,6 +38,7 @@ import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
@@ -193,7 +194,7 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
               {todayTasks.map((task) => (
                 <TaskItem
                   key={task.id}
@@ -221,7 +222,7 @@ export default function HomeScreen() {
                 {t.backlog} ({backlog.length})
               </Text>
             </View>
-            <View style={[styles.card, { backgroundColor: theme.offWhite }]}>
+            <View style={[styles.card, { backgroundColor: theme.offWhite, borderColor: theme.border }]}>
               {backlog.map((task) => (
                 <TaskItem
                   key={task.id}
@@ -249,7 +250,7 @@ export default function HomeScreen() {
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
               {pendingShopping.map((item) => (
                 // OLD: <View key={item.id} style={styles.shoppingPreviewRow}>
                 //        <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
@@ -289,8 +290,9 @@ export default function HomeScreen() {
       <Pressable
         style={[styles.settingsBtn, { backgroundColor: theme.grayLight }]}
         onPress={() => router.push('/settings')}
+        accessibilityLabel="Settings"
       >
-        <Text style={styles.settingsBtnIcon}>⚙️</Text>
+        <Ionicons name="settings-outline" size={20} color={theme.textLight} />
       </Pressable>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
@@ -341,7 +343,7 @@ const styles = StyleSheet.create({
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
-  card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
+  card: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, ...Shadow.card },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm },
   // OLD: shoppingPreviewRow: { ..., paddingVertical: 4 }  — increased to 6 for easier tap target
@@ -361,5 +363,4 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  settingsBtnIcon: { fontSize: 18 },
 });
