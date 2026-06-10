@@ -36,21 +36,19 @@ function rowToItem(row: Record<string, unknown>): StoreItem {
   };
 }
 
-function seedCatalog(): StoreItem[] {
+function seedCatalog(): void {
   const now = new Date().toISOString();
-  const inserted: StoreItem[] = [];
   for (const s of CATALOG_SEED) {
-    const id = generateId();
+    // Stable ID derived from name so this is safe to call on every load.
+    const stableId = 'cat_' + s.name.toLowerCase().replace(/\s+/g, '_');
     try {
       db.runSync(
         `INSERT OR IGNORE INTO store_items (id, name, category, store, price, last_updated)
          VALUES (?, ?, ?, '', 0, ?)`,
-        [id, s.name, s.category, now]
+        [stableId, s.name, s.category, now]
       );
-      inserted.push({ id, name: s.name, category: s.category, store: '', price: 0 });
-    } catch { /* already exists */ }
+    } catch { /* ignore */ }
   }
-  return inserted;
 }
 
 export const useCatalogStore = create<CatalogStore>((set, get) => ({
@@ -58,18 +56,11 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
 
   load() {
     try {
+      seedCatalog();
       const rows = db.getAllSync<Record<string, unknown>>(
         'SELECT * FROM store_items ORDER BY name'
       );
-      let items = rows.map(rowToItem);
-      if (items.length === 0) {
-        seedCatalog();
-        const seeded = db.getAllSync<Record<string, unknown>>(
-          'SELECT * FROM store_items ORDER BY name'
-        );
-        items = seeded.map(rowToItem);
-      }
-      set({ items });
+      set({ items: rows.map(rowToItem) });
     } catch {
       set({ items: [] });
     }
@@ -78,7 +69,13 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
   suggest(query, limit = 8) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    const matches = get().items.filter((i) => i.name.toLowerCase().includes(q));
+    const seen = new Set<string>();
+    const matches = get().items.filter((i) => {
+      const ln = i.name.toLowerCase();
+      if (!ln.includes(q) || seen.has(ln)) return false;
+      seen.add(ln);
+      return true;
+    });
     matches.sort((a, b) => {
       const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1;
       const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1;

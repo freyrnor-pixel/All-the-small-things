@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { initDb, pruneOldData } from '@/lib/db';
-import { seedStoreItems } from '@/lib/seed';
 import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
 import { getTranslations } from '@/lib/i18n';
@@ -62,7 +61,6 @@ export default function RootLayout() {
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
     try { pruneOldData(); } catch { /* keep going if cleanup fails */ }
-    try { seedStoreItems(); } catch { /* Seed failed */ }
     loadSettings();
     loadTasks();
     loadShopping();
