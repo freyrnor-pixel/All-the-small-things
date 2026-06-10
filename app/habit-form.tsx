@@ -14,7 +14,7 @@
  * Edit notes:
  *   - All visible strings go through useT(); colour theme comes from useSettingsStore.
  *   - recurrenceDays is always saved as [] here (weekday selection not exposed in this form).
- *   - notificationTime is a free-text HH:MM TextInput (maxLength 5), not a picker.
+ *   - notificationTime uses the TimePickerWheel component (same as task-form).
  */
 import React, { useState } from 'react';
 import {
@@ -34,6 +34,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useHabitStore, HabitKind, HabitRecurrence, HabitCategory } from '@/store/useHabitStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
+import TimePickerWheel from '@/components/TimePickerWheel';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
@@ -56,17 +57,19 @@ type FormState = {
   recurrence: HabitRecurrence;
   notificationEnabled: boolean;
   notificationTime: string;
+  childName: string;
 };
 
 export default function HabitForm() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; kind?: string }>();
+  const params = useLocalSearchParams<{ id?: string; kind?: string; childName?: string }>();
   const isEdit = !!params.id;
 
   const habits = useHabitStore((s) => s.habits);
   const add = useHabitStore((s) => s.add);
   const update = useHabitStore((s) => s.update);
   const remove = useHabitStore((s) => s.remove);
+  const childProfiles = useSettingsStore((s) => s.childProfiles);
 
   const theme = useAppTheme();
   const t = useT();
@@ -86,6 +89,7 @@ export default function HabitForm() {
     recurrence: existing?.recurrence ?? 'daily',
     notificationEnabled: existing?.notificationEnabled ?? false,
     notificationTime: existing?.notificationTime ?? '08:00',
+    childName: existing?.childName ?? (params.childName ?? ''),
   });
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -293,22 +297,35 @@ export default function HabitForm() {
             </View>
           </View>
 
+          {/* For — profile assignment */}
+          {childProfiles.length > 0 && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.habitForLabel}</Text>
+              <View style={styles.chipRow}>
+                {(['', ...childProfiles] as string[]).map((name) => {
+                  const active = form.childName === name;
+                  return (
+                    <Pressable
+                      key={name || '__me__'}
+                      style={[
+                        styles.chip,
+                        { backgroundColor: active ? theme.orange : theme.grayLight },
+                      ]}
+                      onPress={() => patch('childName', name)}
+                    >
+                      <Text style={[styles.chipText, active && { color: Colors.white }]}>
+                        {name || t.habitForMe}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
           {/* Notification */}
           <View style={[styles.notifRow, { backgroundColor: theme.white }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.notifLabel, { color: theme.text }]}>{t.habitNotification}</Text>
-              {form.notificationEnabled && (
-                <TextInput
-                  style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
-                  value={form.notificationTime}
-                  onChangeText={(v) => patch('notificationTime', v)}
-                  placeholder="08:00"
-                  placeholderTextColor={theme.gray}
-                  keyboardType="numeric"
-                  maxLength={5}
-                />
-              )}
-            </View>
+            <Text style={[styles.notifLabel, { color: theme.text }]}>{t.habitNotification}</Text>
             <Switch
               value={form.notificationEnabled}
               onValueChange={(v) => patch('notificationEnabled', v)}
@@ -316,6 +333,13 @@ export default function HabitForm() {
               thumbColor={Colors.white}
             />
           </View>
+          {form.notificationEnabled && (
+            <TimePickerWheel
+              value={form.notificationTime}
+              onChange={(v) => patch('notificationTime', v)}
+              theme={theme}
+            />
+          )}
 
           {/* Delete */}
           {isEdit && (
@@ -373,14 +397,10 @@ const styles = StyleSheet.create({
   stepperBtnText: { fontSize: FontSize.xl, fontWeight: '300', lineHeight: 40 },
   stepperValue: { fontSize: FontSize.xl, fontWeight: '700', minWidth: 30, textAlign: 'center' },
   notifRow: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: Radius.md,
-    padding: Spacing.md, gap: Spacing.md, ...Shadow.card,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card,
   },
   notifLabel: { fontSize: FontSize.md, fontWeight: '600' },
-  timeInput: {
-    borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md,
-    marginTop: Spacing.xs, width: 80,
-  },
   deleteBtn: {
     borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md,
   },

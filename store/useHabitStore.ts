@@ -47,6 +47,7 @@ export type Habit = {
   routineOrder: number;
   active: boolean;
   createdAt: string;
+  childName: string;
 };
 
 export type HabitLog = {
@@ -105,6 +106,7 @@ function rowToHabit(row: Record<string, unknown>): Habit {
     routineOrder: (row.routine_order as number) || 0,
     active: row.active !== 0,
     createdAt: (row.created_at as string) || '',
+    childName: (row.child_name as string) || '',
   };
 }
 
@@ -146,11 +148,11 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     db.runSync(
       `INSERT INTO habits (id, title, icon, kind, category, cue, craving, response, reward,
        daily_goal, recurrence, recurrence_days, notification_enabled, notification_time,
-       routine_order, active, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+       routine_order, active, created_at, child_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       [id, h.title, h.icon, h.kind, h.category, h.cue, h.craving, h.response, h.reward,
        h.dailyGoal, h.recurrence, JSON.stringify(h.recurrenceDays),
-       h.notificationEnabled ? 1 : 0, h.notificationTime, routineOrder, now]
+       h.notificationEnabled ? 1 : 0, h.notificationTime, routineOrder, now, h.childName || '']
     );
     const habit: Habit = { ...h, id, routineOrder, active: true, createdAt: now };
     set((s) => ({ habits: [...s.habits, habit].sort((a, b) => a.routineOrder - b.routineOrder) }));
@@ -164,11 +166,11 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     db.runSync(
       `UPDATE habits SET title=?, icon=?, kind=?, category=?, cue=?, craving=?, response=?, reward=?,
        daily_goal=?, recurrence=?, recurrence_days=?, notification_enabled=?, notification_time=?,
-       routine_order=?, active=?
+       routine_order=?, active=?, child_name=?
        WHERE id=?`,
       [next.title, next.icon, next.kind, next.category, next.cue, next.craving, next.response, next.reward,
        next.dailyGoal, next.recurrence, JSON.stringify(next.recurrenceDays),
-       next.notificationEnabled ? 1 : 0, next.notificationTime, next.routineOrder, next.active ? 1 : 0, id]
+       next.notificationEnabled ? 1 : 0, next.notificationTime, next.routineOrder, next.active ? 1 : 0, next.childName || '', id]
     );
     set((s) => ({
       habits: s.habits.map((h) => (h.id === id ? next : h)).sort((a, b) => a.routineOrder - b.routineOrder),

@@ -44,6 +44,7 @@ export type Settings = {
   language: Language;
   holidaysEnabled: boolean;
   darkMode: DarkMode;
+  childProfiles: string[];
 };
 
 type SettingsStore = Settings & {
@@ -76,6 +77,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   language: 'no' as Language,
   holidaysEnabled: true,
   darkMode: 'system' as DarkMode,
+  childProfiles: [],
   loaded: false,
   workModeSessionOverride: false,
 
@@ -102,6 +104,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         language: string | null;
         holidays_enabled: number | null;
         dark_mode: string | null;
+        child_profiles: string | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -125,6 +128,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         language: (row.language as Language) ?? 'no',
         holidaysEnabled: row.holidays_enabled !== 0,
         darkMode: (row.dark_mode as DarkMode) ?? 'system',
+        childProfiles: (() => { try { return JSON.parse(row.child_profiles ?? '[]'); } catch { return []; } })(),
         loaded: true,
       });
     } catch {
@@ -144,7 +148,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
             work_hours_end = ?, enforce_work_hours = ?, work_days = ?, essentials_mode_enabled = ?,
             show_points = ?, show_hints = ?, language = ?,
-            holidays_enabled = ?, dark_mode = ?
+            holidays_enabled = ?, dark_mode = ?, child_profiles = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -167,6 +171,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.language,
             next.holidaysEnabled ? 1 : 0,
             next.darkMode,
+            JSON.stringify(next.childProfiles),
           ]
         );
       } catch {
