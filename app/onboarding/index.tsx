@@ -1,3 +1,19 @@
+/**
+ * index.tsx — Onboarding welcome + name capture (guided step 1 of 5)
+ *
+ * First guided step after the language/guided choice. Shows feature highlights
+ * and a text field for the user's name, then advances into the setup wizard.
+ *
+ * Connections:
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Used by → Expo Router route "/onboarding"
+ *   Data    → useSettingsStore (writes `userName`)
+ *
+ * Edit notes:
+ *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - next() writes `userName` (trimmed) to settings, then router.push to "/onboarding/step2".
+ *   - Progress dot index 0 here; keep the 5-dot row in sync across steps.
+ */
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,

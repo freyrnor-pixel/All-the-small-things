@@ -1,3 +1,22 @@
+/**
+ * notifications.ts — low-level expo-notifications scheduling primitives.
+ *
+ * Configures the foreground notification handler and exposes language-agnostic
+ * schedule/cancel helpers (weekly, monthly, per-task one-off, recurring weekly
+ * task, daily/habit). Callers pass already-localised Content; this module never
+ * builds strings itself. Uses stable identifiers so re-scheduling replaces.
+ *
+ * Connections:
+ *   Imports → —
+ *   Used by → app/_layout.tsx, app/onboarding/step5.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Data    → schedules OS notifications (no SQLite/store)
+ *
+ * Edit notes:
+ *   - Keep notification identifiers consistent between schedule and cancel
+ *     (e.g. `task-${id}`, `daily-${key}`) or cancellation silently misses.
+ *   - Scheduling failures are swallowed via `ignore` — intentional, never crash the UI.
+ *   - Content must already be localised by the caller; do not import i18n here.
+ */
 import * as Notifications from 'expo-notifications';
 
 Notifications.setNotificationHandler({

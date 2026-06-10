@@ -1,3 +1,21 @@
+/**
+ * holidays.ts — Norwegian public-holiday calculation (incl. movable Easter dates).
+ *
+ * Computes the fixed and Easter-derived Norwegian public holidays for a given
+ * year (Gauss's algorithm), with a per-year cache. isWeekendOrHoliday() is used
+ * to treat holidays like weekends so work mode and reminders stay off.
+ *
+ * Connections:
+ *   Imports → lib/date
+ *   Used by → app/index.tsx
+ *   Data    → none (pure computation + in-memory year cache)
+ *
+ * Edit notes:
+ *   - Holidays are Norway-specific and hardcoded; update both the fixed-date set
+ *     and Easter offsets if localising to another country.
+ *   - isHoliday() only honours the user's holidays_enabled setting via callers
+ *     (e.g. isWeekendOrHoliday's holidaysEnabled flag), not internally.
+ */
 import { dateStr } from '@/lib/date';
 
 function easterSunday(year: number): Date {

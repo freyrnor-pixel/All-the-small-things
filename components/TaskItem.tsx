@@ -1,3 +1,20 @@
+/**
+ * TaskItem.tsx — single task row on the home list with check, tags, and animations.
+ *
+ * Renders one Task: accent stripe, animated check toggle, title (with muted /
+ * done states + essential star), and time / recurring-day tags. Tap toggles
+ * done; press opens the task. Fully theme-aware via useAppTheme.
+ *
+ * Connections:
+ *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Used by → app/index.tsx
+ *   Data    → consumes the Task type from useTaskStore; toggle/open handled by parent callbacks (no direct store writes)
+ *
+ * Edit notes:
+ *   - All colors come from useAppTheme() and are applied inline — do NOT reintroduce static Colors/* (broke dark mode; see OLD comments inline).
+ *   - Recurring-day abbreviations use t.dayLabels (localized); never hardcode day names.
+ *   - The check "pop" animation runs whenever task.done becomes true (effect keyed on task.done).
+ */
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Task } from '@/store/useTaskStore';

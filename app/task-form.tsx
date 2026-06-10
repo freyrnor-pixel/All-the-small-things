@@ -1,3 +1,20 @@
+/**
+ * task-form.tsx — add / edit a task
+ *
+ * Modal form for creating or editing a single task: title, date, optional time,
+ * type (start-at / time-box with duration), importance, and weekly recurrence.
+ * Presence of an `id` route param switches it into edit mode (with a delete action).
+ *
+ * Connections:
+ *   Imports → components/DatePickerCalendar, components/HintCard, components/TimePickerWheel, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx)
+ *   Data    → useTaskStore (tasks table) via add/update/remove
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); date defaults to todayStr() (YYYY-MM-DD).
+ *   - Edit vs. add is keyed off the `id` param resolved against the store; save()/del() then router.back().
+ *   - recurringDays is only persisted when recurring === 'weekly' (cleared to [] otherwise).
+ */
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,

@@ -1,3 +1,20 @@
+/**
+ * useCatalogStore.ts — item catalog + purchase history (store/price suggestions)
+ *
+ * Zustand store backing the scan/shopping autocomplete: remembers known grocery
+ * items with their last store and price, and logs every purchase. Powers the
+ * suggest() typeahead and learns from recordPurchases() so suggestions improve.
+ *
+ * Connections:
+ *   Imports → lib/catalogSeed, lib/db, lib/id
+ *   Used by → app/_layout.tsx, app/scan.tsx, app/shopping.tsx
+ *   Data    → defines a Zustand store; owns SQLite tables store_items (catalog) and purchase_log (append-only history)
+ *
+ * Edit notes:
+ *   - seedCatalog() runs on every load() and uses stable name-derived IDs ('cat_<name>') with INSERT OR IGNORE — safe to re-run, but renaming seed items orphans old rows.
+ *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/price/category.
+ *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

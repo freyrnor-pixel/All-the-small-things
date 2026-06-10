@@ -1,3 +1,20 @@
+/**
+ * step3.tsx — Shopping reset days (guided step 3 of 5)
+ *
+ * Captures the weekly shopping/reset day and the monthly reset date that drive
+ * the shopping list's recurring resets.
+ *
+ * Connections:
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Used by → Expo Router route "/onboarding/step3"
+ *   Data    → useSettingsStore (writes `weeklyResetDay`, `monthlyResetDate`)
+ *
+ * Edit notes:
+ *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - monthlyResetDate is committed live on valid input (1–31); onBlur reverts bad input.
+ *   - Next button → router.push "/onboarding/step4"; Previous uses router.back().
+ *   - `dateInput` is local edit state seeded from settings.monthlyResetDate.
+ */
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

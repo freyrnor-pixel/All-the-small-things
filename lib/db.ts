@@ -1,3 +1,23 @@
+/**
+ * db.ts — SQLite database: connection, schema, migrations, retention pruning.
+ *
+ * Opens the shared `unfocus.db` handle and exports it as default. initDb()
+ * creates every table/index and runs idempotent ALTER-TABLE migrations;
+ * pruneOldData() trims dated history older than RETENTION_DAYS (365). All Zustand
+ * stores import this db handle to run their queries.
+ *
+ * Connections:
+ *   Imports → lib/date
+ *   Used by → app/_layout.tsx, store/useCatalogStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs
+ *
+ * Edit notes:
+ *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
+ *     change an existing table; migrations run on every launch and swallow
+ *     "column already exists" errors.
+ *   - pruneOldData() deliberately spares config-like tables (recurring tasks,
+ *     dishes, habits, catalog, settings); only dated/append-only rows are pruned.
+ */
 import * as SQLite from 'expo-sqlite';
 import { dateStr } from '@/lib/date';
 

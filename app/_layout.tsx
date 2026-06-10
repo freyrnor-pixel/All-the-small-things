@@ -1,3 +1,23 @@
+/**
+ * _layout.tsx — root layout & app bootstrap
+ *
+ * Mounts on launch: initDb() + pruneOldData(), then loads every Zustand store
+ * (settings, tasks, shopping, meals, health, shared, habits, catalog). After
+ * requesting notification permission it re-syncs all reminders/notifications to
+ * the loaded data and language. Defines the expo-router Stack and per-screen
+ * options, redirects to onboarding until setup is complete, and wraps the tree
+ * in an ErrorBoundary.
+ *
+ * Connections:
+ *   Imports → constants/theme, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Used by → router layout — defines the Stack and per-screen options
+ *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders
+ *
+ * Edit notes:
+ *   - task-form, habit-form and share-modal are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
+ *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
+ *   - segments are read inside the onboarding-guard effect but intentionally kept out of its deps — do not add them.
+ */
 import { useEffect, Component } from 'react';
 import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';

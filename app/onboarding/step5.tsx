@@ -1,3 +1,25 @@
+/**
+ * step5.tsx — Color theme + finish (guided step 5 of 5)
+ *
+ * Final wizard step: pick a color theme, then complete onboarding. On finish it
+ * marks setup complete, requests notification permission, and schedules the
+ * reminders/task notifications configured in earlier steps.
+ *
+ * Connections:
+ *   Imports → @/store/useSettingsStore, @/lib/notifications, @/lib/reminders,
+ *             @/store/useTaskStore, @/lib/i18n, @/constants/theme
+ *   Used by → Expo Router route "/onboarding/step5"
+ *   Data    → useSettingsStore (writes `colorTheme`, `setupComplete`);
+ *             schedules notifications via requestPermissions + syncReminders +
+ *             useTaskStore.syncAllTaskNotifications
+ *
+ * Edit notes:
+ *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - finish() sets `setupComplete:true` (the onboarding completion flag), then
+ *     requests OS notification permission and, regardless of outcome, syncs
+ *     reminders and task notifications; finally router.replace "/" to home.
+ *   - Previous uses router.back(); Finish button color is theme-driven.
+ */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

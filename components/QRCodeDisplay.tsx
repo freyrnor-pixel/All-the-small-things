@@ -1,3 +1,18 @@
+/**
+ * QRCodeDisplay.tsx — renders a QR code from a string using stacked Views.
+ *
+ * Encodes `data` with qrcode-generator and draws the module grid as nested
+ * Views (no SVG/canvas dependency). Returns null if encoding fails.
+ *
+ * Connections:
+ *   Imports → —
+ *   Used by → app/share-modal.tsx
+ *   Data    → none (presentational); encodes the `data` string prop only
+ *
+ * Edit notes:
+ *   - The grid is memoized on `data`; large payloads produce many module Views and can be expensive to render.
+ *   - `size` includes an 8px white quiet-zone border on each side (cellSize derives from size - 16).
+ */
 import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import qrcode from 'qrcode-generator';

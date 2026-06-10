@@ -1,3 +1,20 @@
+/**
+ * settings.tsx — app settings
+ *
+ * Central settings screen: name, language, colour theme / dark mode, work-mode
+ * and focus options, reminder + notification toggles and times, weekly/monthly
+ * reset schedule, and destructive reset/clear actions. Changing reminder-,
+ * notification- or language-related settings re-syncs the scheduled reminders.
+ *
+ * Connections:
+ *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Used by → Expo Router route "/settings"
+ *   Data    → useSettingsStore (settings table); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
+ *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
+ */
 import React, { useState } from 'react';
 import {
   Alert,

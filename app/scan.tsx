@@ -1,3 +1,21 @@
+/**
+ * scan.tsx — receipt OCR scanner & QR import
+ *
+ * Captures or picks a receipt photo, runs ML Kit text recognition, and parses
+ * lines into priced items (parseReceiptText lives here). The user picks a store,
+ * edits/deselects rows, and confirms. Also hosts a QR scanner that imports
+ * shared shopping/task payloads into the shared store.
+ *
+ * Connections:
+ *   Imports → components/HintCard, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Used by → Expo Router route "/scan"
+ *   Data    → confirmed items write to THREE stores: useShoppingStore (shopping_items) + useCatalogStore.recordPurchases (purchase_log + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks)
+ *
+ * Edit notes:
+ *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → confirm via addToList.
+ *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
+ *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import {

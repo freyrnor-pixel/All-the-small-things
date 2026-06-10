@@ -1,3 +1,20 @@
+/**
+ * useMealStore.ts — dishes and their ingredients (meal planning)
+ *
+ * Zustand store for saved dishes (by meal type) and their nested ingredient
+ * lists. Backs the meals screen and the randomDish() "what should I cook" picker;
+ * ingredients can be pushed onto the shopping list from the consuming screen.
+ *
+ * Connections:
+ *   Imports → lib/db, lib/id
+ *   Used by → app/_layout.tsx, app/meals.tsx
+ *   Data    → defines a Zustand store; owns SQLite tables dishes and ingredients (1-to-many)
+ *
+ * Edit notes:
+ *   - ingredients are loaded in one query and grouped onto dishes in JS (loadDishes), not via a JOIN.
+ *   - dishes/ingredients are configuration, not dated history — they are NOT pruned by RETENTION_DAYS; deleting a dish cascades to its ingredients (FK ON DELETE CASCADE).
+ *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

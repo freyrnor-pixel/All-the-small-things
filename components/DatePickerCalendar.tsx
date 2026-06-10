@@ -1,3 +1,19 @@
+/**
+ * DatePickerCalendar.tsx — month-grid calendar for picking a YYYY-MM-DD date.
+ *
+ * Self-contained month calendar with prev/next navigation that highlights the
+ * selected day and today. Day/month names and theme colors are injected via
+ * props so the parent owns localization and theming.
+ *
+ * Connections:
+ *   Imports → constants/theme
+ *   Used by → app/task-form.tsx
+ *   Data    → none (presentational); value/onChange/theme/labels all come from props
+ *
+ * Edit notes:
+ *   - dayLabels must be Mon–Sun ordered (7 entries); the grid offsets weeks so Monday is column 0.
+ *   - Dates are handled as YYYY-MM-DD strings via toDateStr/parseDateParts — avoid raw Date math to dodge timezone shifts.
+ */
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';

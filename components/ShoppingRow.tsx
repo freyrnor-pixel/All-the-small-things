@@ -1,3 +1,19 @@
+/**
+ * ShoppingRow.tsx — single row in the shopping list with check, qty stepper, and remove.
+ *
+ * Presentational row for a ShoppingItem: a check toggle, name + meta (unit /
+ * store / monthly-source tag), an inline qty stepper for numeric amounts, an
+ * optional price, and a remove button. All actions are bubbled up via callbacks.
+ *
+ * Connections:
+ *   Imports → constants/theme, store/useShoppingStore
+ *   Used by → app/shopping.tsx
+ *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onRemove/onAdjust
+ *
+ * Edit notes:
+ *   - The stepper only shows when amount parses as a positive number, onAdjust is provided, and the item is unchecked; otherwise a static qty is rendered.
+ *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels (fromMonthlyLabel) are passed in pre-formatted/localized.
+ */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ShoppingItem } from '@/store/useShoppingStore';

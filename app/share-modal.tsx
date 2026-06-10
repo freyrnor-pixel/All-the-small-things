@@ -1,3 +1,19 @@
+/**
+ * share-modal.tsx — QR share sheet
+ *
+ * Modal that lets the user pick shopping items or upcoming tasks (kind 's' / 't'
+ * from the route param) and encodes the selection into a QR payload for another
+ * user to scan. Also records the selection as outbound shared items locally.
+ *
+ * Connections:
+ *   Imports → components/QRCodeDisplay, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Used by → Expo Router route "/share-modal" (presented as a modal — see app/_layout.tsx)
+ *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks)
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); kind param ('t' = tasks, anything else = shopping) drives the whole sheet.
+ *   - Source lists are filtered to unchecked shopping / future-dated undone tasks (today via todayStr()); payload built with encodeSharePayload.
+ */
 import React, { useMemo, useState } from 'react';
 import {
   Pressable,
