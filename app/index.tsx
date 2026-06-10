@@ -41,6 +41,7 @@ export default function HomeScreen() {
   const completedCountFn = useTaskStore((s) => s.completedCount);
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
+  const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const isWorkModeActive = useMemo(() => {
@@ -150,6 +151,10 @@ export default function HomeScreen() {
               {settings.essentialsModeEnabled ? t.essentialTasksToday : t.tasksToday}
             </Text>
             <View style={styles.sectionActions}>
+              {/* TODO: the Share button is infrequent (QR sharing, not daily-use) and adds
+                  visual weight to the primary daily header. Consider replacing with a small
+                  icon-only variant once a suitable icon is available, rather than removing it
+                  entirely — this is currently the only access point for task QR sharing. */}
               <Pressable
                 style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
                 onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
@@ -229,12 +234,19 @@ export default function HomeScreen() {
           ) : (
             <View style={[styles.card, { backgroundColor: theme.white }]}>
               {pendingShopping.map((item) => (
-                <View key={item.id} style={styles.shoppingPreviewRow}>
-                  <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
+                // OLD: <View key={item.id} style={styles.shoppingPreviewRow}>
+                //        <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
+                //        <Text ...>{item.amount} {item.unit} {item.name}</Text>
+                //      </View>
+                //      Items were read-only; tapping anywhere navigated to /shopping instead
+                //      of acting on the individual item. Changed to a per-item checkbox so
+                //      users can tick things off from the home screen while shopping.
+                <Pressable key={item.id} style={styles.shoppingPreviewRow} onPress={() => toggleShoppingItem(item.id)}>
+                  <View style={[styles.shoppingCheck, { borderColor: theme.green }]} />
                   <Text style={[styles.shoppingPreviewName, { color: theme.text }]}>
-                    {item.amount} {item.unit} {item.name}
+                    {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
                   </Text>
-                </View>
+                </Pressable>
               ))}
               {weeklyPending.length > 5 && (
                 <Text style={[styles.moreText, { color: theme.textLight }]}>
@@ -308,9 +320,14 @@ const styles = StyleSheet.create({
   card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm },
-  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, gap: Spacing.sm },
-  shoppingDot: { width: 8, height: 8, borderRadius: Radius.full },
-  shoppingPreviewName: { fontSize: FontSize.md },
+  // OLD: shoppingPreviewRow: { ..., paddingVertical: 4 }  — increased to 6 for easier tap target
+  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: Spacing.sm },
+  // OLD: shoppingDot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: theme.green }
+  //      Solid filled dot — purely decorative, gave no hint the row was interactive.
+  //      Replaced with an open circle (shoppingCheck) to signal "tap to complete".
+  shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2 },
+  // OLD: shoppingPreviewName: { fontSize: FontSize.md }  — added flex:1 so long names don't overflow
+  shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
