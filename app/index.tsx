@@ -171,15 +171,12 @@ export default function HomeScreen() {
               {settings.essentialsModeEnabled ? t.essentialTasksToday : t.tasksToday}
             </Text>
             <View style={styles.sectionActions}>
-              {/* TODO: the Share button is infrequent (QR sharing, not daily-use) and adds
-                  visual weight to the primary daily header. Consider replacing with a small
-                  icon-only variant once a suitable icon is available, rather than removing it
-                  entirely — this is currently the only access point for task QR sharing. */}
               <Pressable
                 style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
                 onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
+                accessibilityLabel={t.shareBtnLabel}
               >
-                <Text style={[styles.shareBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+                <Text style={styles.shareBtnIcon}>⤴</Text>
               </Pressable>
               <Pressable
                 style={[styles.addBtn, { backgroundColor: theme.orange }]}
@@ -339,8 +336,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  shareBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
-  shareBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
+  shareBtn: { borderRadius: Radius.full, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  shareBtnIcon: { fontSize: 14 },
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
