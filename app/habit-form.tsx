@@ -16,7 +16,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useHabitStore, HabitKind, HabitRecurrence, HabitCategory } from '@/store/useHabitStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 const HABIT_ICONS = [
   '💧','🏃','📚','🧘','🥗','💊','😴','🏋️','🧹','🌿',
@@ -49,8 +50,7 @@ export default function HabitForm() {
   const update = useHabitStore((s) => s.update);
   const remove = useHabitStore((s) => s.remove);
 
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
   const t = useT();
 
   const existing = isEdit ? habits.find((h) => h.id === params.id) : null;
@@ -137,7 +137,7 @@ export default function HabitForm() {
                 style={[
                   styles.kindOption,
                   form.kind === k && {
-                    backgroundColor: k === 'build' ? '#6BAA75' : '#E07070',
+                    backgroundColor: k === 'build' ? theme.green : theme.danger,
                     ...Shadow.card,
                   },
                 ]}

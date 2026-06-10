@@ -13,7 +13,8 @@ import { useHealthStore } from '@/store/useHealthStore';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 function getWeekDates(today: string): string[] {
   const d = new Date(today + 'T12:00:00');
@@ -26,14 +27,15 @@ function getWeekDates(today: string): string[] {
   });
 }
 
-// Severity colours by level (1–5); labels come from `t.severityLabels`.
-const SEVERITIES = [
-  { value: 1, color: Colors.greenLight },
-  { value: 2, color: '#D4EDDA' },
-  { value: 3, color: Colors.orangeLight },
-  { value: 4, color: '#FADADD' },
-  { value: 5, color: Colors.dangerLight },
-];
+function severities(theme: AppColors) {
+  return [
+    { value: 1, color: theme.greenLight },
+    { value: 2, color: theme.green + '55' },
+    { value: 3, color: theme.orangeLight },
+    { value: 4, color: theme.dangerLight },
+    { value: 5, color: theme.danger },
+  ];
+}
 
 export default function HealthScreen() {
   const router = useRouter();
@@ -47,6 +49,8 @@ export default function HealthScreen() {
   const [severity, setSeverity] = useState(2);
   const [date, setDate] = useState(todayStr());
   const t = useT();
+  const theme = useAppTheme();
+  const SEVERITIES = severities(theme);
   const severityLabel = (value: number) => t.severityLabels[value - 1] ?? '';
 
   const today = todayStr();
@@ -75,12 +79,12 @@ export default function HealthScreen() {
     .slice(0, 5);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>{t.healthTitle}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t.healthTitle}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -92,8 +96,8 @@ export default function HealthScreen() {
         <HintCard text={t.hints.health.text} example={t.hints.health.example} />
         {/* Overview */}
         {topAilments.length > 0 && (
-          <View style={styles.overviewCard}>
-            <Text style={styles.sectionLabel}>{t.last30Days}</Text>
+          <View style={[styles.overviewCard, { backgroundColor: theme.white }]}>
+            <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.last30Days}</Text>
             {topAilments.map(([name, count]) => {
               const weekSeverities = weekDates.map((d) => {
                 const dayLogs = logs.filter((l) => l.ailment === name && l.date === d);
@@ -103,32 +107,30 @@ export default function HealthScreen() {
               return (
                 <View key={name} style={styles.overviewAilment}>
                   <View style={styles.overviewRow}>
-                    <Text style={styles.overviewName}>{name}</Text>
-                    <View style={styles.overviewBar}>
+                    <Text style={[styles.overviewName, { color: theme.text }]}>{name}</Text>
+                    <View style={[styles.overviewBar, { backgroundColor: theme.grayLight }]}>
                       <View
                         style={[
                           styles.overviewFill,
-                          {
-                            width: `${Math.min((count / (topAilments[0]?.[1] ?? 1)) * 100, 100)}%`,
-                          },
+                          { backgroundColor: theme.orange, width: `${Math.min((count / (topAilments[0]?.[1] ?? 1)) * 100, 100)}%` },
                         ]}
                       />
                     </View>
-                    <Text style={styles.overviewCount}>{count}×</Text>
+                    <Text style={[styles.overviewCount, { color: theme.textLight }]}>{count}×</Text>
                   </View>
                   <View style={styles.ailmentWeekStrip}>
                     {weekDates.map((d, i) => {
                       const sev = weekSeverities[i];
-                      const sevColor = sev ? (SEVERITIES.find((s) => s.value === sev)?.color ?? Colors.grayLight) : 'transparent';
+                      const sevColor = sev ? (SEVERITIES.find((s) => s.value === sev)?.color ?? theme.grayLight) : 'transparent';
                       const isFuture = d > today;
                       return (
                         <View key={d} style={styles.ailmentDotCol}>
-                          <Text style={styles.ailmentDayAbbr}>{t.dayLabels[i][0]}</Text>
+                          <Text style={[styles.ailmentDayAbbr, { color: theme.textLight }]}>{t.dayLabels[i][0]}</Text>
                           <View style={[
                             styles.ailmentDot,
                             {
                               backgroundColor: sev ? sevColor : 'transparent',
-                              borderColor: isFuture ? Colors.grayLight : (sev ? sevColor : Colors.grayLight),
+                              borderColor: isFuture ? theme.grayLight : (sev ? sevColor : theme.grayLight),
                               opacity: isFuture ? 0.3 : 1,
                             },
                           ]} />
@@ -144,24 +146,24 @@ export default function HealthScreen() {
 
         {/* Add form */}
         {adding ? (
-          <View style={styles.addCard}>
-            <Text style={styles.formLabel}>{t.dateLabel}</Text>
+          <View style={[styles.addCard, { backgroundColor: theme.white }]}>
+            <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.dateLabel}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
               value={date}
               onChangeText={setDate}
               keyboardType="numbers-and-punctuation"
             />
-            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>{t.ailmentLabel}</Text>
+            <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.ailmentLabel}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
               value={ailment}
               onChangeText={setAilment}
               placeholder={t.ailmentPlaceholder}
-              placeholderTextColor={Colors.gray}
+              placeholderTextColor={theme.gray}
               autoFocus
             />
-            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>{t.severityLabel}</Text>
+            <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.severityLabel}</Text>
             <View style={styles.severityRow}>
               {SEVERITIES.map((s) => (
                 <Pressable
@@ -169,64 +171,64 @@ export default function HealthScreen() {
                   style={[
                     styles.severityBtn,
                     { backgroundColor: s.color },
-                    severity === s.value && styles.severityActive,
+                    severity === s.value && [styles.severityActive, { borderColor: theme.brown }],
                   ]}
                   onPress={() => setSeverity(s.value)}
                 >
-                  <Text style={styles.severityBtnText}>{severityLabel(s.value)}</Text>
+                  <Text style={[styles.severityBtnText, { color: theme.text }]}>{severityLabel(s.value)}</Text>
                 </Pressable>
               ))}
             </View>
-            <Text style={[styles.formLabel, { marginTop: Spacing.sm }]}>{t.notesLabel}</Text>
+            <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.notesLabel}</Text>
             <TextInput
-              style={[styles.input, styles.notesInput]}
+              style={[styles.input, styles.notesInput, { backgroundColor: theme.offWhite, color: theme.text }]}
               value={notes}
               onChangeText={setNotes}
               placeholder={t.notesPlaceholder}
-              placeholderTextColor={Colors.gray}
+              placeholderTextColor={theme.gray}
               multiline
             />
             <View style={styles.addActions}>
               <Pressable onPress={() => setAdding(false)}>
-                <Text style={styles.cancelText}>{t.cancel}</Text>
+                <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
               </Pressable>
-              <Pressable style={styles.saveBtn} onPress={save}>
+              <Pressable style={[styles.saveBtn, { backgroundColor: theme.green }]} onPress={save}>
                 <Text style={styles.saveBtnText}>{t.save}</Text>
               </Pressable>
             </View>
           </View>
         ) : (
-          <Pressable style={styles.addTrigger} onPress={() => setAdding(true)}>
-            <Text style={styles.addTriggerText}>{t.logSymptomTrigger}</Text>
+          <Pressable style={[styles.addTrigger, { borderColor: theme.green }]} onPress={() => setAdding(true)}>
+            <Text style={[styles.addTriggerText, { color: theme.green }]}>{t.logSymptomTrigger}</Text>
           </Pressable>
         )}
 
         {/* Log list */}
-        <Text style={styles.sectionLabel}>{t.logSection}</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
         {logs.length === 0 && (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>{t.noLogs}</Text>
+          <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+            <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noLogs}</Text>
           </View>
         )}
         {logs.map((log) => {
           const sev = SEVERITIES.find((s) => s.value === log.severity);
           return (
-            <View key={log.id} style={[styles.logCard, { borderLeftColor: sev?.color ?? Colors.grayLight }]}>
+            <View key={log.id} style={[styles.logCard, { backgroundColor: theme.white, borderLeftColor: sev?.color ?? theme.grayLight }]}>
               <View style={styles.logTop}>
                 <View>
-                  <Text style={styles.logAilment}>{log.ailment}</Text>
-                  <Text style={styles.logDate}>{log.date}</Text>
+                  <Text style={[styles.logAilment, { color: theme.text }]}>{log.ailment}</Text>
+                  <Text style={[styles.logDate, { color: theme.textLight }]}>{log.date}</Text>
                 </View>
                 <View style={styles.logRight}>
                   <View style={[styles.severityBadge, { backgroundColor: sev?.color }]}>
                     <Text style={styles.severityBadgeText}>{severityLabel(log.severity)}</Text>
                   </View>
                   <Pressable onPress={() => remove(log.id)} hitSlop={8}>
-                    <Text style={styles.removeText}>×</Text>
+                    <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
                   </Pressable>
                 </View>
               </View>
-              {log.notes ? <Text style={styles.logNotes}>{log.notes}</Text> : null}
+              {log.notes ? <Text style={[styles.logNotes, { color: theme.textLight }]}>{log.notes}</Text> : null}
             </View>
           );
         })}
@@ -271,11 +273,10 @@ const styles = StyleSheet.create({
   overviewBar: {
     flex: 1,
     height: 8,
-    backgroundColor: Colors.grayLight,
     borderRadius: Radius.full,
     overflow: 'hidden',
   },
-  overviewFill: { height: 8, backgroundColor: Colors.orange, borderRadius: Radius.full },
+  overviewFill: { height: 8, borderRadius: Radius.full },
   overviewCount: { fontSize: FontSize.xs, color: Colors.textLight, width: 28, textAlign: 'right' },
   addTrigger: {
     borderWidth: 2,
@@ -315,8 +316,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  severityActive: { borderColor: Colors.brown },
-  severityBtnText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
+  severityActive: { borderWidth: 2 },
+  severityBtnText: { fontSize: FontSize.xs, fontWeight: '600' },
   addActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

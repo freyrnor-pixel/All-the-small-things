@@ -14,7 +14,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import { todayStr, dateStr } from '@/lib/date';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -37,10 +38,10 @@ function getMonthDates(year: number, month: number): string[] {
   });
 }
 
-function progressColor(ratio: number, kind: HabitKind): string {
-  if (ratio >= 1) return '#6BAA75';
-  if (ratio > 0) return '#F4A261';
-  return kind === 'break' ? '#E07070' : '#D8CFC4';
+function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string {
+  if (ratio >= 1) return theme.green;
+  if (ratio > 0) return theme.orange;
+  return kind === 'break' ? theme.danger : theme.gray;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -48,14 +49,14 @@ function progressColor(ratio: number, kind: HabitKind): string {
 const DAY_ABBR = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DAY_ABBR_NO = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
 
-function ProgressDots({ count, goal, kind }: { count: number; goal: number; kind: HabitKind }) {
+function ProgressDots({ count, goal, kind, theme }: { count: number; goal: number; kind: HabitKind; theme: AppColors }) {
   const dots = Math.min(goal, 8);
   const filled = Math.min(count, dots);
   return (
     <View style={styles.dots}>
       {Array.from({ length: dots }, (_, i) => {
         const isDone = i < filled;
-        const color = progressColor(filled / dots, kind);
+        const color = progressColor(filled / dots, kind, theme);
         return (
           <View
             key={i}
@@ -71,9 +72,9 @@ function ProgressDots({ count, goal, kind }: { count: number; goal: number; kind
 }
 
 function WeekStrip({
-  habitId, today, goal, kind, lang,
+  habitId, today, goal, kind, lang, theme,
 }: {
-  habitId: string; today: string; goal: number; kind: HabitKind; lang: string;
+  habitId: string; today: string; goal: number; kind: HabitKind; lang: string; theme: AppColors;
 }) {
   const logs = useHabitStore((s) => s.logs);
   const weekDates = useMemo(() => getWeekDates(today), [today]);
@@ -86,12 +87,12 @@ function WeekStrip({
         const count = log?.count ?? 0;
         const ratio = goal > 0 ? Math.min(count / goal, 1) : 0;
         const isFuture = date > today;
-        const color = isFuture ? '#D8CFC4' : progressColor(ratio, kind);
+        const color = isFuture ? theme.grayLight : progressColor(ratio, kind, theme);
         const filled = !isFuture && ratio > 0;
         const isToday = date === today;
         return (
           <View key={date} style={styles.dayCol}>
-            <Text style={[styles.dayAbbr, isToday && styles.dayAbbrToday]}>{abbr[i]}</Text>
+            <Text style={[styles.dayAbbr, { color: theme.textLight }, isToday && { color: theme.orange, fontWeight: '700' }]}>{abbr[i]}</Text>
             <View
               style={[
                 styles.weekDot,
@@ -107,9 +108,9 @@ function WeekStrip({
 }
 
 function HabitCard({
-  habit, today, onEdit, lang,
+  habit, today, onEdit, lang, theme,
 }: {
-  habit: Habit; today: string; onEdit: (id: string) => void; lang: string;
+  habit: Habit; today: string; onEdit: (id: string) => void; lang: string; theme: AppColors;
 }) {
   const [expanded, setExpanded] = useState(false);
   const logs = useHabitStore((s) => s.logs);
@@ -141,7 +142,7 @@ function HabitCard({
     return () => { pulseRef.current?.stop(); };
   }, [isDone]);
 
-  const borderColor = progressColor(ratio, habit.kind);
+  const borderColor = progressColor(ratio, habit.kind, theme);
   const stepLabels = [t.habitCue, t.habitCraving, t.habitResponse, t.habitReward];
   const stepValues = [habit.cue, habit.craving, habit.response, habit.reward];
 
@@ -153,8 +154,8 @@ function HabitCard({
       <View
         style={[
           styles.habitCard,
-          { borderLeftColor: borderColor },
-          isDone && { backgroundColor: habit.kind === 'build' ? '#F0FAF1' : '#F0FAF1' },
+          { borderLeftColor: borderColor, backgroundColor: theme.white },
+          isDone && { backgroundColor: theme.greenLight },
         ]}
       >
         {/* Header row */}
@@ -163,20 +164,20 @@ function HabitCard({
             {habit.icon}
           </Animated.Text>
           <View style={styles.habitTitleWrap}>
-            <Text style={styles.habitTitle} numberOfLines={1}>{habit.title}</Text>
+            <Text style={[styles.habitTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
             {isDone && (
-              <Text style={styles.doneLabel}>
+              <Text style={[styles.doneLabel, { color: theme.green }]}>
                 {habit.kind === 'build' ? t.habitGoalMet : t.habitBroken}
               </Text>
             )}
           </View>
-          <ProgressDots count={count} goal={habit.dailyGoal} kind={habit.kind} />
+          <ProgressDots count={count} goal={habit.dailyGoal} kind={habit.kind} theme={theme} />
           <Pressable
-            style={styles.adjBtn}
+            style={[styles.adjBtn, { backgroundColor: theme.grayLight }]}
             onPress={() => decrement(habit.id, today)}
             hitSlop={8}
           >
-            <Text style={styles.adjBtnText}>−</Text>
+            <Text style={[styles.adjBtnText, { color: theme.textLight }]}>−</Text>
           </Pressable>
           <Pressable
             style={[styles.adjBtn, styles.adjBtnPlus, { backgroundColor: borderColor }]}
@@ -193,19 +194,20 @@ function HabitCard({
             {stepLabels.map((label, i) =>
               stepValues[i] ? (
                 <View key={i} style={styles.stepRow}>
-                  <Text style={styles.stepLabel}>{label}</Text>
-                  <Text style={styles.stepArrow}>→</Text>
-                  <Text style={styles.stepValue}>{stepValues[i]}</Text>
+                  <Text style={[styles.stepLabel, { color: theme.textLight }]}>{label}</Text>
+                  <Text style={[styles.stepArrow, { color: theme.textLight }]}>→</Text>
+                  <Text style={[styles.stepValue, { color: theme.text }]}>{stepValues[i]}</Text>
                 </View>
               ) : null
             )}
-            <View style={styles.weekStripWrap}>
+            <View style={[styles.weekStripWrap, { borderTopColor: theme.grayLight }]}>
               <WeekStrip
                 habitId={habit.id}
                 today={today}
                 goal={habit.dailyGoal}
                 kind={habit.kind}
                 lang={lang}
+                theme={theme}
               />
             </View>
           </View>
@@ -218,9 +220,9 @@ function HabitCard({
 // ─── Week overview ───────────────────────────────────────────────────────────
 
 function WeekView({
-  habits, today, lang,
+  habits, today, lang, theme,
 }: {
-  habits: Habit[]; today: string; lang: string;
+  habits: Habit[]; today: string; lang: string; theme: AppColors;
 }) {
   const logs = useHabitStore((s) => s.logs);
   const weekDates = useMemo(() => getWeekDates(today), [today]);
@@ -242,10 +244,10 @@ function WeekView({
         <View style={styles.weekGridLabel} />
         {weekDates.map((date, i) => (
           <View key={date} style={styles.weekGridCell}>
-            <Text style={[styles.weekGridDayAbbr, date === today && { color: '#F4A261', fontWeight: '700' }]}>
+            <Text style={[styles.weekGridDayAbbr, { color: theme.textLight }, date === today && { color: theme.orange, fontWeight: '700' }]}>
               {abbr[i]}
             </Text>
-            <Text style={[styles.weekGridDate, date === today && { fontWeight: '700' }]}>
+            <Text style={[styles.weekGridDate, { color: theme.textLight }, date === today && { fontWeight: '700' }]}>
               {date.slice(8)}
             </Text>
           </View>
@@ -256,13 +258,13 @@ function WeekView({
         <View key={habit.id} style={styles.weekGridRow}>
           <View style={styles.weekGridLabel}>
             <Text style={styles.weekGridIcon}>{habit.icon}</Text>
-            <Text style={styles.weekGridTitle} numberOfLines={1}>{habit.title}</Text>
+            <Text style={[styles.weekGridTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
           </View>
           {weekDates.map((date) => {
             const log = logs.find((l) => l.habitId === habit.id && l.logDate === date);
             const ratio = habit.dailyGoal > 0 ? Math.min((log?.count ?? 0) / habit.dailyGoal, 1) : 0;
             const isFuture = date > today;
-            const color = isFuture ? '#E8E2DA' : progressColor(ratio, habit.kind);
+            const color = isFuture ? theme.grayLight : progressColor(ratio, habit.kind, theme);
             return (
               <View key={date} style={styles.weekGridCell}>
                 <View style={[
@@ -282,9 +284,9 @@ function WeekView({
 // ─── Month overview ───────────────────────────────────────────────────────────
 
 function MonthView({
-  habits, today,
+  habits, today, theme,
 }: {
-  habits: Habit[]; today: string;
+  habits: Habit[]; today: string; theme: AppColors;
 }) {
   const logs = useHabitStore((s) => s.logs);
   const t = useT();
@@ -315,23 +317,23 @@ function MonthView({
     <View>
       <View style={styles.monthNav}>
         <Pressable onPress={() => setOffset((o) => o - 1)} style={styles.monthNavBtn}>
-          <Text style={styles.monthNavText}>‹</Text>
+          <Text style={[styles.monthNavText, { color: theme.orange }]}>‹</Text>
         </Pressable>
-        <Text style={styles.monthLabel}>{label}</Text>
+        <Text style={[styles.monthLabel, { color: theme.text }]}>{label}</Text>
         <Pressable
           onPress={() => setOffset((o) => Math.min(0, o + 1))}
           style={[styles.monthNavBtn, offset >= 0 && { opacity: 0.3 }]}
           disabled={offset >= 0}
         >
-          <Text style={styles.monthNavText}>›</Text>
+          <Text style={[styles.monthNavText, { color: theme.orange }]}>›</Text>
         </Pressable>
       </View>
 
       {habits.map((habit) => (
-        <View key={habit.id} style={styles.monthRow}>
+        <View key={habit.id} style={[styles.monthRow, { borderBottomColor: theme.grayLight }]}>
           <View style={styles.monthRowLabel}>
             <Text style={styles.monthRowIcon}>{habit.icon}</Text>
-            <Text style={styles.monthRowTitle} numberOfLines={1}>{habit.title}</Text>
+            <Text style={[styles.monthRowTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.monthDots}>
@@ -339,11 +341,11 @@ function MonthView({
                 const log = logs.find((l) => l.habitId === habit.id && l.logDate === date);
                 const ratio = habit.dailyGoal > 0 ? Math.min((log?.count ?? 0) / habit.dailyGoal, 1) : 0;
                 const isFuture = date > today;
-                const color = isFuture ? '#E8E2DA' : progressColor(ratio, habit.kind);
+                const color = isFuture ? theme.grayLight : progressColor(ratio, habit.kind, theme);
                 const filled = !isFuture && ratio > 0;
                 return (
                   <View key={date} style={styles.monthDotWrap}>
-                    <Text style={styles.monthDotDate}>{date.slice(8)}</Text>
+                    <Text style={[styles.monthDotDate, { color: theme.textLight }]}>{date.slice(8)}</Text>
                     <View style={[
                       styles.monthDot,
                       { borderColor: color, backgroundColor: filled ? color : 'transparent' },
@@ -370,9 +372,8 @@ export default function HabitsScreen() {
 
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
   const lang = useSettingsStore((s) => s.language);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
   const t = useT();
 
   const buildHabits = habits.filter((h) => h.kind === 'build');
@@ -430,7 +431,7 @@ export default function HabitsScreen() {
           <>
             {habits.length > 0 && (
               <View style={[styles.summaryChip, { backgroundColor: theme.white }]}>
-                <Text style={[styles.summaryChipText, { color: metCount === habits.length ? '#6BAA75' : theme.textLight }]}>
+                <Text style={[styles.summaryChipText, { color: metCount === habits.length ? theme.green : theme.textLight }]}>
                   {metCount} / {habits.length} {t.habitSummaryLabel}
                 </Text>
               </View>
@@ -441,14 +442,14 @@ export default function HabitsScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.habitBuilding}</Text>
               {buildHabits.length === 0 ? (
                 <Pressable
-                  style={styles.dashedAdd}
+                  style={[styles.dashedAdd, { borderColor: theme.grayLight }]}
                   onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'build' } })}
                 >
-                  <Text style={styles.dashedAddText}>{t.noHabitsInSection}</Text>
+                  <Text style={[styles.dashedAddText, { color: theme.textLight }]}>{t.noHabitsInSection}</Text>
                 </Pressable>
               ) : (
                 buildHabits.map((h) => (
-                  <HabitCard key={h.id} habit={h} today={today} onEdit={onEdit} lang={lang} />
+                  <HabitCard key={h.id} habit={h} today={today} onEdit={onEdit} lang={lang} theme={theme} />
                 ))
               )}
             </View>
@@ -458,22 +459,22 @@ export default function HabitsScreen() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.habitBreaking}</Text>
               {breakHabits.length === 0 ? (
                 <Pressable
-                  style={styles.dashedAdd}
+                  style={[styles.dashedAdd, { borderColor: theme.grayLight }]}
                   onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'break' } })}
                 >
-                  <Text style={styles.dashedAddText}>{t.noHabitsInSection}</Text>
+                  <Text style={[styles.dashedAddText, { color: theme.textLight }]}>{t.noHabitsInSection}</Text>
                 </Pressable>
               ) : (
                 breakHabits.map((h) => (
-                  <HabitCard key={h.id} habit={h} today={today} onEdit={onEdit} lang={lang} />
+                  <HabitCard key={h.id} habit={h} today={today} onEdit={onEdit} lang={lang} theme={theme} />
                 ))
               )}
             </View>
           </>
         )}
 
-        {tab === 'week' && <WeekView habits={habits} today={today} lang={lang} />}
-        {tab === 'month' && <MonthView habits={habits} today={today} />}
+        {tab === 'week' && <WeekView habits={habits} today={today} lang={lang} theme={theme} />}
+        {tab === 'month' && <MonthView habits={habits} today={today} theme={theme} />}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -523,19 +524,16 @@ const styles = StyleSheet.create({
   dashedAdd: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: Colors.grayLight,
     borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
   },
-  dashedAddText: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '500' },
+  dashedAddText: { fontSize: FontSize.sm, fontWeight: '500' },
 
   // Habit card
   habitCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     borderLeftWidth: 5,
-    borderLeftColor: '#D8CFC4',
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     ...Shadow.card,
@@ -547,8 +545,8 @@ const styles = StyleSheet.create({
   },
   habitIcon: { fontSize: 22, lineHeight: 26 },
   habitTitleWrap: { flex: 1 },
-  habitTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  doneLabel: { fontSize: FontSize.xs, color: '#6BAA75', fontWeight: '600', marginTop: 1 },
+  habitTitle: { fontSize: FontSize.md, fontWeight: '600' },
+  doneLabel: { fontSize: FontSize.xs, fontWeight: '600', marginTop: 1 },
   dots: { flexDirection: 'row', gap: 3 },
   dot: {
     width: 9, height: 9,
@@ -558,11 +556,10 @@ const styles = StyleSheet.create({
   adjBtn: {
     width: 30, height: 30,
     borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adjBtnText: { fontSize: FontSize.lg, color: Colors.textLight, lineHeight: 30 },
+  adjBtnText: { fontSize: FontSize.lg, lineHeight: 30 },
   adjBtnPlus: {},
   adjBtnPlusText: { fontSize: FontSize.lg, color: Colors.white, fontWeight: '700', lineHeight: 30 },
 
@@ -577,24 +574,22 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontSize: FontSize.xs,
     fontWeight: '700',
-    color: Colors.textLight,
     width: 70,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingTop: 1,
   },
-  stepArrow: { fontSize: FontSize.xs, color: Colors.textLight, paddingTop: 1 },
-  stepValue: { flex: 1, fontSize: FontSize.sm, color: Colors.text, lineHeight: 19 },
+  stepArrow: { fontSize: FontSize.xs, paddingTop: 1 },
+  stepValue: { flex: 1, fontSize: FontSize.sm, lineHeight: 19 },
   weekStripWrap: {
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.grayLight,
   },
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between' },
   dayCol: { alignItems: 'center', gap: 3 },
-  dayAbbr: { fontSize: 9, color: Colors.textLight, fontWeight: '600' },
-  dayAbbrToday: { color: Colors.orange, fontWeight: '700' },
+  dayAbbr: { fontSize: 9, fontWeight: '600' },
+  dayAbbrToday: { fontWeight: '700' },
   weekDot: {
     width: 12, height: 12, borderRadius: Radius.full, borderWidth: 1.5,
   },
@@ -607,10 +602,10 @@ const styles = StyleSheet.create({
     width: 110, flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: Spacing.xs,
   },
   weekGridIcon: { fontSize: 16 },
-  weekGridTitle: { flex: 1, fontSize: FontSize.xs, color: Colors.text, fontWeight: '500' },
+  weekGridTitle: { flex: 1, fontSize: FontSize.xs, fontWeight: '500' },
   weekGridCell: { flex: 1, alignItems: 'center', gap: 2 },
-  weekGridDayAbbr: { fontSize: 9, color: Colors.textLight },
-  weekGridDate: { fontSize: 9, color: Colors.textLight },
+  weekGridDayAbbr: { fontSize: 9 },
+  weekGridDate: { fontSize: 9 },
   weekGridDot: {
     width: 14, height: 14, borderRadius: Radius.full, borderWidth: 1.5,
   },
@@ -622,18 +617,18 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   monthNavBtn: { padding: Spacing.sm },
-  monthNavText: { fontSize: FontSize.xl, color: Colors.orange, fontWeight: '700' },
-  monthLabel: { fontSize: FontSize.md, fontWeight: '700', color: Colors.text },
+  monthNavText: { fontSize: FontSize.xl, fontWeight: '700' },
+  monthLabel: { fontSize: FontSize.md, fontWeight: '700' },
   monthRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: Spacing.xs,
-    borderBottomWidth: 1, borderBottomColor: Colors.grayLight,
+    borderBottomWidth: 1,
   },
   monthRowLabel: { width: 90, flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthRowIcon: { fontSize: 14 },
-  monthRowTitle: { flex: 1, fontSize: FontSize.xs, color: Colors.text, fontWeight: '500' },
+  monthRowTitle: { flex: 1, fontSize: FontSize.xs, fontWeight: '500' },
   monthDots: { flexDirection: 'row', gap: 3, paddingHorizontal: Spacing.xs },
   monthDotWrap: { alignItems: 'center', gap: 2 },
-  monthDotDate: { fontSize: 7, color: Colors.textLight },
+  monthDotDate: { fontSize: 7 },
   monthDot: { width: 8, height: 8, borderRadius: Radius.full, borderWidth: 1 },
 });

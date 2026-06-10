@@ -16,6 +16,7 @@ import ExpandableCard from '@/components/ExpandableCard';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 // Visual metadata only — labels come from the user's language via `t.mealTypes`.
 const MEAL_TYPES: { value: MealType; icon: string; color: string }[] = [
@@ -34,6 +35,7 @@ export default function MealsScreen() {
   const removeIngredient = useMealStore((s) => s.removeIngredient);
   const randomDish = useMealStore((s) => s.randomDish);
   const t = useT();
+  const theme = useAppTheme();
   const addToShopping = useShoppingStore((s) => s.add);
   const mealLabel = (v: MealType) => t.mealTypes[v];
 
@@ -102,13 +104,13 @@ export default function MealsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{t.back}</Text>
+          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
-        <Text style={styles.title}>{t.mealsTitle}</Text>
-        <Pressable style={styles.randomBtn} onPress={() => pickRandom()}>
+        <Text style={[styles.title, { color: theme.text }]}>{t.mealsTitle}</Text>
+        <Pressable style={[styles.randomBtn, { backgroundColor: theme.white }]} onPress={() => pickRandom()}>
           <Text style={styles.randomBtnText}>🎲</Text>
         </Pressable>
       </View>
@@ -120,18 +122,18 @@ export default function MealsScreen() {
         contentContainerStyle={styles.filterRow}
       >
         <Pressable
-          style={[styles.chip, filterType === 'all' && styles.chipActive]}
+          style={[styles.chip, { backgroundColor: theme.grayLight }, filterType === 'all' && { backgroundColor: theme.orange }]}
           onPress={() => setFilterType('all')}
         >
-          <Text style={[styles.chipText, filterType === 'all' && styles.chipActiveText]}>{t.mealAll}</Text>
+          <Text style={[styles.chipText, { color: theme.text }, filterType === 'all' && { color: '#fff' }]}>{t.mealAll}</Text>
         </Pressable>
         {MEAL_TYPES.map((mt) => (
           <Pressable
             key={mt.value}
-            style={[styles.chip, filterType === mt.value && styles.chipActive]}
+            style={[styles.chip, { backgroundColor: theme.grayLight }, filterType === mt.value && { backgroundColor: theme.orange }]}
             onPress={() => setFilterType(mt.value)}
           >
-            <Text style={[styles.chipText, filterType === mt.value && styles.chipActiveText]}>
+            <Text style={[styles.chipText, { color: theme.text }, filterType === mt.value && { color: '#fff' }]}>
               {mt.icon} {mealLabel(mt.value)}
             </Text>
           </Pressable>
@@ -146,13 +148,13 @@ export default function MealsScreen() {
         <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
         {/* Add dish */}
         {addingDish ? (
-          <View style={styles.addCard}>
+          <View style={[styles.addCard, { backgroundColor: theme.white }]}>
             <TextInput
-              style={styles.addInput}
+              style={[styles.addInput, { backgroundColor: theme.offWhite, color: theme.text }]}
               value={newDishName}
               onChangeText={setNewDishName}
               placeholder={t.dishNamePlaceholder}
-              placeholderTextColor={Colors.gray}
+              placeholderTextColor={theme.gray}
               autoFocus
             />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }}>
@@ -160,10 +162,10 @@ export default function MealsScreen() {
                 {MEAL_TYPES.map((mt) => (
                   <Pressable
                     key={mt.value}
-                    style={[styles.chip, newDishType === mt.value && styles.chipActive]}
+                    style={[styles.chip, { backgroundColor: theme.grayLight }, newDishType === mt.value && { backgroundColor: theme.orange }]}
                     onPress={() => setNewDishType(mt.value)}
                   >
-                    <Text style={[styles.chipText, newDishType === mt.value && styles.chipActiveText]}>
+                    <Text style={[styles.chipText, { color: theme.text }, newDishType === mt.value && { color: '#fff' }]}>
                       {mt.icon} {mealLabel(mt.value)}
                     </Text>
                   </Pressable>
@@ -172,16 +174,16 @@ export default function MealsScreen() {
             </ScrollView>
             <View style={styles.addActions}>
               <Pressable onPress={() => setAddingDish(false)}>
-                <Text style={styles.cancelText}>{t.cancel}</Text>
+                <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
               </Pressable>
-              <Pressable style={styles.confirmBtn} onPress={saveNewDish}>
+              <Pressable style={[styles.confirmBtn, { backgroundColor: theme.orange }]} onPress={saveNewDish}>
                 <Text style={styles.confirmBtnText}>{t.save}</Text>
               </Pressable>
             </View>
           </View>
         ) : (
-          <Pressable style={styles.addTrigger} onPress={() => setAddingDish(true)}>
-            <Text style={styles.addTriggerText}>{t.newDishTrigger}</Text>
+          <Pressable style={[styles.addTrigger, { borderColor: theme.green }]} onPress={() => setAddingDish(true)}>
+            <Text style={[styles.addTriggerText, { color: theme.green }]}>{t.newDishTrigger}</Text>
           </Pressable>
         )}
 
@@ -206,11 +208,11 @@ export default function MealsScreen() {
             {/* Ingredients list */}
             {dish.ingredients.map((ing) => (
               <View key={ing.id} style={styles.ingRow}>
-                <Text style={styles.ingText}>
+                <Text style={[styles.ingText, { color: theme.text }]}>
                   {ing.amount} {ing.unit} {ing.name}
                 </Text>
                 <Pressable onPress={() => removeIngredient(ing.id)} hitSlop={8}>
-                  <Text style={styles.removeText}>×</Text>
+                  <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
                 </Pressable>
               </View>
             ))}
@@ -219,35 +221,35 @@ export default function MealsScreen() {
             {addingIngredient === dish.id ? (
               <View style={styles.ingAddCard}>
                 <TextInput
-                  style={styles.ingInput}
+                  style={[styles.ingInput, { backgroundColor: theme.offWhite, color: theme.text }]}
                   value={ingName}
                   onChangeText={setIngName}
                   placeholder={t.ingredientPlaceholder}
-                  placeholderTextColor={Colors.gray}
+                  placeholderTextColor={theme.gray}
                   autoFocus
                 />
                 <View style={styles.ingAmountRow}>
                   <TextInput
-                    style={[styles.ingInput, { width: 60 }]}
+                    style={[styles.ingInput, { width: 60, backgroundColor: theme.offWhite, color: theme.text }]}
                     value={ingAmount}
                     onChangeText={setIngAmount}
                     keyboardType="decimal-pad"
                     placeholder={t.shoppingAmountPlaceholder}
-                    placeholderTextColor={Colors.gray}
+                    placeholderTextColor={theme.gray}
                   />
                   <TextInput
-                    style={[styles.ingInput, { flex: 1 }]}
+                    style={[styles.ingInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
                     value={ingUnit}
                     onChangeText={setIngUnit}
                     placeholder={t.shoppingUnitPlaceholder}
-                    placeholderTextColor={Colors.gray}
+                    placeholderTextColor={theme.gray}
                   />
                 </View>
                 <View style={styles.ingActions}>
                   <Pressable onPress={() => setAddingIngredient(null)}>
-                    <Text style={styles.cancelText}>{t.cancel}</Text>
+                    <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
                   </Pressable>
-                  <Pressable style={styles.confirmBtn} onPress={() => saveIngredient(dish.id)}>
+                  <Pressable style={[styles.confirmBtn, { backgroundColor: theme.orange }]} onPress={() => saveIngredient(dish.id)}>
                     <Text style={styles.confirmBtnText}>{t.addItemBtn}</Text>
                   </Pressable>
                 </View>
@@ -255,10 +257,10 @@ export default function MealsScreen() {
             ) : (
               <View style={styles.ingFooter}>
                 <Pressable onPress={() => setAddingIngredient(dish.id)}>
-                  <Text style={styles.ingAddText}>{t.addIngredientTrigger}</Text>
+                  <Text style={[styles.ingAddText, { color: theme.green }]}>{t.addIngredientTrigger}</Text>
                 </Pressable>
                 <Pressable onPress={() => removeDish(dish.id)}>
-                  <Text style={styles.deleteText}>{t.deleteDish}</Text>
+                  <Text style={[styles.deleteText, { color: theme.danger }]}>{t.deleteDish}</Text>
                 </Pressable>
               </View>
             )}

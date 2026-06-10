@@ -14,7 +14,8 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 type Tab = 'tasks' | 'shopping';
 
@@ -23,8 +24,7 @@ export default function SharedScreen() {
   const [tab, setTab] = useState<Tab>('shopping');
 
   const t = useT();
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
 
   const sharedTasks = useSharedStore((s) => s.tasks);
   const sharedShopping = useSharedStore((s) => s.shoppingItems);
@@ -188,7 +188,6 @@ export default function SharedScreen() {
   );
 }
 
-type AppColors = ReturnType<typeof getTheme>;
 type TType = ReturnType<typeof import('@/lib/i18n').useT>;
 
 function SharedShoppingRow({

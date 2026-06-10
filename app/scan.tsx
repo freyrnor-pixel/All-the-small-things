@@ -24,7 +24,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import { decodeSharePayload } from '@/lib/share';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 const NORWEGIAN_STORES = [
   'REMA 1000', 'Kiwi', 'Coop Extra', 'Coop Mega', 'Meny', 'Spar', 'Bunnpris', 'Joker', 'Prix',
@@ -58,7 +59,7 @@ export default function ScanScreen() {
   const addSharedTasks = useSharedStore((s) => s.addSharedTasks);
   const settings = useSettingsStore();
   const t = useT();
-  const theme = getTheme(settings.colorTheme);
+  const theme = useAppTheme();
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [imageUri, setImageUri] = useState<string | null>(null);

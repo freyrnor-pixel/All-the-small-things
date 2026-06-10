@@ -19,7 +19,8 @@ import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 function isWithinWorkHours(start: string, end: string): boolean {
   const now = new Date();
@@ -34,7 +35,7 @@ export default function HomeScreen() {
   const today = todayStr();
   const settings = useSettingsStore();
   const t = useT();
-  const theme = getTheme(settings.colorTheme);
+  const theme = useAppTheme();
 
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
@@ -116,10 +117,10 @@ export default function HomeScreen() {
 
       {settings.essentialsModeEnabled && (
         <Pressable
-          style={styles.essentialsBanner}
+          style={[styles.essentialsBanner, { backgroundColor: theme.orangeLight, borderBottomColor: theme.orange }]}
           onPress={() => settings.update({ essentialsModeEnabled: false })}
         >
-          <Text style={styles.essentialsBannerText}>{t.focusBanner}</Text>
+          <Text style={[styles.essentialsBannerText, { color: theme.brown }]}>{t.focusBanner}</Text>
         </Pressable>
       )}
 
@@ -133,10 +134,10 @@ export default function HomeScreen() {
             <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
           <Pressable
-            style={[styles.essentialsBtn, { backgroundColor: Colors.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
+            style={[styles.essentialsBtn, { backgroundColor: theme.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
             onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
           >
-            <Text style={[styles.essentialsBtnText, { color: Colors.textLight }, settings.essentialsModeEnabled && { color: Colors.white }]}>
+            <Text style={[styles.essentialsBtnText, { color: theme.textLight }, settings.essentialsModeEnabled && { color: '#fff' }]}>
               {settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
             </Text>
           </Pressable>

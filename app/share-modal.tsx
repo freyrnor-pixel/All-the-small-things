@@ -16,7 +16,8 @@ import { useT } from '@/lib/i18n';
 import { encodeSharePayload } from '@/lib/share';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { todayStr } from '@/lib/date';
-import { Colors, FontSize, Radius, Shadow, Spacing, getTheme } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/lib/useAppTheme';
 
 export default function ShareModal() {
   const router = useRouter();
@@ -24,9 +25,8 @@ export default function ShareModal() {
   const kind = params.kind === 't' ? 't' : 's';
 
   const t = useT();
-  const colorTheme = useSettingsStore((s) => s.colorTheme);
   const userName = useSettingsStore((s) => s.userName);
-  const theme = getTheme(colorTheme);
+  const theme = useAppTheme();
 
   const shoppingItems = useShoppingStore((s) => s.items);
   const tasks = useTaskStore((s) => s.tasks);
