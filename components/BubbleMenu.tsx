@@ -25,15 +25,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FeatureColors } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
 type NavKey = keyof Translations['nav'];
 
 type BubbleItem = {
-  icon: string;
+  icon: IoniconsName;
   label: string;
   route: string;
   color: string;
@@ -45,14 +48,14 @@ type Props = {
 };
 
 // Warm-to-cool gradient across the arc: creation → daily tracking → social.
-const BASE_ITEMS: { icon: string; labelKey: NavKey; route: string; color: string }[] = [
-  { icon: '➕', labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
-  { icon: '📷', labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
-  { icon: '🌱', labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
-  { icon: '💚', labelKey: 'health',  route: '/health',    color: FeatureColors.health },
-  { icon: '🍽', labelKey: 'meals',   route: '/meals',     color: FeatureColors.meals },
-  { icon: '🛒', labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
-  { icon: '🔗', labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
+const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
+  { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
+  { icon: 'camera-outline',     labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
+  { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
+  { icon: 'heart-outline',      labelKey: 'health',  route: '/health',    color: FeatureColors.health },
+  { icon: 'restaurant-outline', labelKey: 'meals',   route: '/meals',     color: FeatureColors.meals },
+  { icon: 'cart-outline',       labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
+  { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
 // Radius sized to fit 7 bubbles (56px) without overlap across 90° arc.
@@ -149,7 +152,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
               onPressIn={() => pressIn(i)}
               onPressOut={() => pressOut(i)}
             >
-              <Text style={styles.bubbleIcon}>{item.icon}</Text>
+              <Ionicons name={item.icon} size={22} color="#fff" />
               <Text style={styles.bubbleLabel}>{item.label}</Text>
             </Pressable>
           </Animated.View>
@@ -157,7 +160,9 @@ export default function BubbleMenu({ onNewTask }: Props) {
       })}
 
       <Pressable style={[styles.fab, { backgroundColor: theme.orange }]} onPress={toggle}>
-        <Animated.Text style={[styles.fabIcon, { transform: [{ rotate }] }]}>+</Animated.Text>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Ionicons name="add" size={28} color="#fff" />
+        </Animated.View>
       </Pressable>
     </View>
   );
@@ -179,12 +184,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.fab,
   },
-  fabIcon: {
-    fontSize: 32,
-    color: Colors.white,
-    lineHeight: 36,
-    fontWeight: '300',
-  },
   bubble: {
     position: 'absolute',
     width: BUBBLE_SIZE,
@@ -197,14 +196,9 @@ const styles = StyleSheet.create({
   bubbleInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
-  },
-  bubbleIcon: {
-    fontSize: 20,
-    lineHeight: 24,
+    gap: 2,
   },
   bubbleLabel: {
-    // OLD: fontSize: 9,   — too small to read comfortably on any screen density
     fontSize: 11,
     color: Colors.white,
     fontWeight: '700',
