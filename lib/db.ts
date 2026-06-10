@@ -190,6 +190,8 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN dark_mode TEXT DEFAULT 'system'",
     "ALTER TABLE shopping_items ADD COLUMN monthly_allocated INTEGER DEFAULT 0",
     "ALTER TABLE shopping_items ADD COLUMN monthly_source_id TEXT DEFAULT NULL",
+    "ALTER TABLE settings ADD COLUMN work_days TEXT DEFAULT '[0,1,2,3,4]'",
+    "ALTER TABLE habits ADD COLUMN routine_order INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

@@ -37,6 +37,7 @@ export type Settings = {
   workHoursStart: string;
   workHoursEnd: string;
   enforceWorkHours: boolean;
+  workDays: number[];
   essentialsModeEnabled: boolean;
   showPoints: boolean;
   showHints: boolean;
@@ -68,6 +69,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   workHoursStart: '09:00',
   workHoursEnd: '17:00',
   enforceWorkHours: false,
+  workDays: [0, 1, 2, 3, 4],
   essentialsModeEnabled: false,
   showPoints: false,
   showHints: true,
@@ -93,6 +95,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         work_hours_start: string | null;
         work_hours_end: string | null;
         enforce_work_hours: number | null;
+        work_days: string | null;
         essentials_mode_enabled: number | null;
         show_points: number | null;
         show_hints: number | null;
@@ -115,6 +118,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         workHoursStart: row.work_hours_start ?? '09:00',
         workHoursEnd: row.work_hours_end ?? '17:00',
         enforceWorkHours: row.enforce_work_hours === 1,
+        workDays: (() => { try { return JSON.parse(row.work_days ?? '[0,1,2,3,4]'); } catch { return [0,1,2,3,4]; } })(),
         essentialsModeEnabled: row.essentials_mode_enabled === 1,
         showPoints: row.show_points === 1,
         showHints: row.show_hints !== 0,
@@ -138,7 +142,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             shopping_list_mode = ?, reminders_enabled = ?, reminder_time = ?,
             task_notifications_enabled = ?, setup_complete = ?,
             color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
-            work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
+            work_hours_end = ?, enforce_work_hours = ?, work_days = ?, essentials_mode_enabled = ?,
             show_points = ?, show_hints = ?, language = ?,
             holidays_enabled = ?, dark_mode = ?
           WHERE id = 1`,
@@ -156,6 +160,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.workHoursStart,
             next.workHoursEnd,
             next.enforceWorkHours ? 1 : 0,
+            JSON.stringify(next.workDays),
             next.essentialsModeEnabled ? 1 : 0,
             next.showPoints ? 1 : 0,
             next.showHints ? 1 : 0,
