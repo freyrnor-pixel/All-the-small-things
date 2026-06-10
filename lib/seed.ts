@@ -1,3 +1,19 @@
+/**
+ * seed.ts — UNUSED/LEGACY — not imported anywhere; lib/catalogSeed.ts is the live catalog seed.
+ *
+ * Older shopping-catalog seeder: SEED_ITEMS + seedStoreItems() insert directly
+ * into store_items. Superseded by lib/catalogSeed.ts (CATALOG_SEED), which
+ * useCatalogStore actually consumes. Kept only for reference; safe to delete.
+ *
+ * Connections:
+ *   Imports → lib/db (relative ./db)
+ *   Used by → nothing (verified: seedStoreItems has no importers)
+ *   Data    → would seed the `store_items` SQLite table — but is never called
+ *
+ * Edit notes:
+ *   - Dead code: changes here have no effect. Edit lib/catalogSeed.ts instead.
+ *   - If reviving, note categories here use 'other' for spices/sauces, unlike catalogSeed.
+ */
 import db from './db';
 
 // Common Norwegian grocery/household items used to seed the shopping catalog

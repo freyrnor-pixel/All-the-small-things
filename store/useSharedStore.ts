@@ -1,3 +1,20 @@
+/**
+ * useSharedStore.ts — tasks / shopping items shared between users (in & out)
+ *
+ * Zustand store for items exchanged via the share/scan QR flow: both inbound
+ * (received) and outbound (sent) shared tasks and shopping items, tracked with a
+ * `direction` and the sender's name. Backs the shared screen and share modal.
+ *
+ * Connections:
+ *   Imports → lib/db, lib/id
+ *   Used by → app/_layout.tsx, app/scan.tsx, app/share-modal.tsx, app/shared.tsx
+ *   Data    → defines a Zustand store; owns SQLite tables shared_tasks and shared_shopping_items
+ *
+ * Edit notes:
+ *   - `direction` ('in'|'out') is the key distinction — the same table holds both sent and received rows; source_task_id/source_item_id link back to the local origin (may be null).
+ *   - addShared* INSERTs are wrapped in try/catch to silently skip duplicates; these are append-only and pruned past RETENTION_DAYS in lib/db.ts.
+ *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

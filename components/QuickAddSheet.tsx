@@ -1,3 +1,20 @@
+/**
+ * QuickAddSheet.tsx — bottom-sheet for quickly adding a task from the home screen.
+ *
+ * Modal with a title input, a horizontal day picker (today + next 6 days), and
+ * an optional time field. On save it creates a default 'start-at' task via the
+ * task store. State resets each time the sheet becomes visible.
+ *
+ * Connections:
+ *   Imports → constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore
+ *   Used by → app/index.tsx
+ *   Data    → calls useTaskStore.add() to insert a task; reads colorTheme from useSettingsStore
+ *
+ * Edit notes:
+ *   - dayOptions is memoized on t.today/t.tomorrow; a language change remounts the sheet so dayShort stays in sync.
+ *   - save() builds a task with fixed defaults (taskType 'start-at', recurring 'none', importance 'regular') — extend here for richer quick-add.
+ *   - All visible strings via useT(); placeholders like "HH:MM" are format hints, not user copy.
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,

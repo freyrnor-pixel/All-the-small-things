@@ -1,3 +1,19 @@
+/**
+ * useHealthStore.ts — symptom / ailment health log
+ *
+ * Zustand store for dated health entries (ailment, 1-5 severity, notes). Simple
+ * append/remove log surfaced on the health screen, ordered newest-first.
+ *
+ * Connections:
+ *   Imports → lib/db, lib/id
+ *   Used by → app/_layout.tsx, app/health.tsx
+ *   Data    → defines a Zustand store; owns SQLite table health_logs
+ *
+ * Edit notes:
+ *   - DB column is log_date but the in-memory field is `date`; map both directions in load()/add().
+ *   - health_logs is dated history and is pruned past RETENTION_DAYS in lib/db.ts.
+ *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

@@ -1,3 +1,20 @@
+/**
+ * BubbleMenu.tsx — radial FAB that fans out navigation bubbles.
+ *
+ * Floating action button on the home screen that animates open into an arc of
+ * bubbles linking to the app's main screens. Labels resolve through `t.nav` so
+ * the menu follows the user's language.
+ *
+ * Connections:
+ *   Imports → constants/theme, lib/i18n, store/useSettingsStore
+ *   Used by → app/index.tsx
+ *   Data    → none (presentational); reads colorTheme from useSettingsStore for theming
+ *
+ * Edit notes:
+ *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
+ *   - The arc geometry (RADIUS / START_ANGLE / END_ANGLE) is tuned for 8 bubbles; adding items may cause overlap.
+ *   - All labels go through useT() — no hardcoded text.
+ */
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Animated,

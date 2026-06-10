@@ -1,3 +1,22 @@
+/**
+ * share.ts — QR share payload encode/decode (UNFOCUS: prefixed JSON).
+ *
+ * Defines the versioned QR payload shape for sharing shopping lists ('s') or
+ * tasks ('t') between users, and encode/decode helpers. decodeSharePayload
+ * validates the prefix, version, kind, and items array, returning null on
+ * anything malformed.
+ *
+ * Connections:
+ *   Imports → —
+ *   Used by → app/scan.tsx, app/share-modal.tsx
+ *   Data    → none (serialises in-memory items to/from QR strings)
+ *
+ * Edit notes:
+ *   - Wire-format is compact (single-letter keys n/a/u, d) to fit in a QR code —
+ *     keep keys short and bump `v` if you change the schema.
+ *   - decodeSharePayload must stay strict (prefix + v + k + Array check); it's
+ *     parsing untrusted scanned input.
+ */
 export type QRShoppingItem = { n: string; a: string; u: string };
 export type QRTaskItem = { n: string; d: string };
 

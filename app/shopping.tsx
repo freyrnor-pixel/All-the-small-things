@@ -1,3 +1,21 @@
+/**
+ * shopping.tsx — weekly & monthly shopping lists
+ *
+ * Tabbed shopping screen (weekly / monthly) with per-category grouping,
+ * check-off, quantity adjust, and add via the catalog-backed autocomplete
+ * (useCatalogStore.suggest). Monthly items can be allocated into the weekly
+ * list through the MonthlyPickerSheet.
+ *
+ * Connections:
+ *   Imports → components/HintCard, components/MonthlyPickerSheet, components/ShoppingRow, constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore, store/useShoppingStore
+ *   Used by → Expo Router route "/shopping"
+ *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions)
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
+ *   - A couple of monthly-allocation status strings are still hardcoded Norwegian (search "varer planlagt") — not yet via useT().
+ *   - Header Share button opens the /share-modal modal with params { kind: 's' }.
+ */
 import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,

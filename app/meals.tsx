@@ -1,3 +1,19 @@
+/**
+ * meals.tsx — dish library
+ *
+ * Library of dishes grouped by meal type, each with an editable ingredient
+ * list. Dishes (or a random pick via 🎲) can be pushed straight onto the
+ * weekly shopping list. Add/edit happens inline within the screen.
+ *
+ * Connections:
+ *   Imports → components/ExpandableCard, components/HintCard, constants/theme, lib/i18n, store/useMealStore, store/useShoppingStore
+ *   Used by → Expo Router route "/meals"
+ *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore (shopping_items) when pushing a dish to shopping
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); MEAL_TYPES holds only icon/colour metadata, labels come from t.mealTypes.
+ *   - pushDishToShopping always adds ingredients as listType 'weekly'.
+ */
 import React, { useState } from 'react';
 import {
   Alert,

@@ -1,3 +1,21 @@
+/**
+ * index.tsx — Home screen
+ *
+ * The app's daily landing screen: greeting, today's tasks + backlog, a weekly
+ * shopping preview (tickable inline), gentle completed-count points, and the
+ * BubbleMenu / QuickAddSheet entry points. Honours work mode and essentials
+ * (focus) mode, both driven by settings.
+ *
+ * Connections:
+ *   Imports → components/BubbleMenu, components/HintCard, components/QuickAddSheet, components/TaskItem, constants/theme, lib/date, lib/holidays, lib/i18n, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Used by → Expo Router route "/"
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items); settings via useSettingsStore
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
+ *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
+ *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
+ */
 import React, { useMemo, useState } from 'react';
 import {
   Alert,

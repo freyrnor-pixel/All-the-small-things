@@ -1,3 +1,21 @@
+/**
+ * habits.tsx — habit tracker
+ *
+ * Tracks build/break habits with daily-goal counters and three views (today /
+ * week grid / month grid). Today view groups habits into Building and Breaking
+ * sections; tapping a card expands the cue→craving→response→reward steps plus a
+ * week strip. Long-press (or the per-habit edit) opens the habit form.
+ *
+ * Connections:
+ *   Imports → components/HintCard, constants/theme, lib/date, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Used by → Expo Router route "/habits"
+ *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); per-day keys are YYYY-MM-DD via todayStr()/dateStr() (week starts Monday).
+ *   - increment/decrement key off (habitId, today) into habit_logs; counts are clamped against dailyGoal for ratio/colour.
+ *   - Edit navigates to the /habit-form modal; the empty-section CTAs pre-seed the `kind` param.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,

@@ -1,3 +1,21 @@
+/**
+ * useSettingsStore.ts — single-row app settings / preferences
+ *
+ * Zustand store mirroring the one settings row: user name, language, theme,
+ * dark mode, reminder/notification toggles, reset cadence, work/essentials modes,
+ * and onboarding state. Read widely across the app to drive behavior and copy.
+ *
+ * Connections:
+ *   Imports → lib/db
+ *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Data    → defines a Zustand store; owns the single-row SQLite table settings (id = 1)
+ *
+ * Edit notes:
+ *   - Settings live in ONE row (id = 1, inserted by initDb); update() always rewrites every column WHERE id = 1.
+ *   - `loaded` and `workModeSessionOverride` are session-only (never persisted to SQLite).
+ *   - update() updates in-memory state even if the DB write throws (e.g. column not yet migrated), so the UI stays responsive.
+ *   - New settings columns go through the migrations array in lib/db.ts; add to Settings type, load() mapping, and update()'s column list.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 

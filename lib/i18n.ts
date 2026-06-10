@@ -1,3 +1,23 @@
+/**
+ * i18n.ts — translation dictionaries (en/no) and the useT() / getTranslations() accessors.
+ *
+ * Holds the full English and Norwegian string tables (typed off `en`) plus
+ * helper functions to read the active language. useT() is the React hook for
+ * components; getTranslations() is the non-hook accessor for stores/schedulers.
+ * Language is sourced from the settings store.
+ *
+ * Connections:
+ *   Imports → store/useSettingsStore
+ *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Data    → reads `language` from the settings Zustand store
+ *
+ * Edit notes:
+ *   - `no` is typed as `typeof en`, so every key added to `en` MUST be added to
+ *     `no` (and vice versa) or it won't compile.
+ *   - All user-facing strings go through here; no hardcoded UI text in screens.
+ *   - In components use the useT() hook (reactive); in stores/schedulers use
+ *     getTranslations(lang) — useT cannot run outside React.
+ */
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 export type Lang = 'en' | 'no';

@@ -1,3 +1,20 @@
+/**
+ * MonthlyPickerSheet.tsx — bottom-sheet for pulling monthly items into the weekly list.
+ *
+ * Modal sheet that groups monthly shopping items by category and lets the user
+ * pick how many of each remaining unit to add to the weekly list via steppers.
+ * Confirmed selections are returned through onConfirm for the parent to apply.
+ *
+ * Connections:
+ *   Imports → constants/theme, store/useShoppingStore
+ *   Used by → app/shopping.tsx
+ *   Data    → consumes the ShoppingItem type from useShoppingStore; selections flow out via onConfirm (no direct store writes here)
+ *
+ * Edit notes:
+ *   - Per-item max is `amount - monthlyAllocated`; steppers clamp to that remaining count.
+ *   - Localized strings (incl. count-formatter functions) arrive via the `t` prop; theme via `theme`. No useT() call here.
+ *   - CATEGORY_ORDER fixes the group display order — extend it if new categories are added.
+ */
 import React, { useMemo, useState } from 'react';
 import {
   Modal,

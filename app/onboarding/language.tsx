@@ -1,3 +1,19 @@
+/**
+ * language.tsx — Language picker (first onboarding screen)
+ *
+ * Entry point of the onboarding flow. Lets the user pick English or Norwegian,
+ * persisting the choice so all subsequent strings render in that language.
+ *
+ * Connections:
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Used by → Expo Router route "/onboarding/language"
+ *   Data    → useSettingsStore (writes `language`)
+ *
+ * Edit notes:
+ *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - choose() writes `language` to settings, then router.push to "/onboarding/guided".
+ *   - OPTIONS labels are intentionally literal language names (not translated).
+ */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

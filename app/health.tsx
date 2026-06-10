@@ -1,3 +1,20 @@
+/**
+ * health.tsx — health / symptom log
+ *
+ * Logs ailments with a date, 1–5 severity and notes. Shows a last-30-days
+ * overview (top ailments by frequency, each with a current-week severity
+ * strip) above the chronological log list.
+ *
+ * Connections:
+ *   Imports → components/HintCard, constants/theme, lib/date, lib/i18n, store/useHealthStore
+ *   Used by → Expo Router route "/health"
+ *   Data    → useHealthStore (health_logs table)
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); dates are YYYY-MM-DD via todayStr()/dateStr().
+ *   - The date field is a free-text TextInput (no picker) — it trusts the YYYY-MM-DD string entered.
+ *   - SEVERITIES holds only the 1–5 colour scale; severity labels come from t.severityLabels.
+ */
 import React, { useState } from 'react';
 import {
   Pressable,

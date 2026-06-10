@@ -1,3 +1,21 @@
+/**
+ * useTaskStore.ts — tasks (one-off + weekly recurring) and their reminders
+ *
+ * Zustand store for to-do tasks: one-off and weekly-recurring, start-at and
+ * time-box types, with importance and a backlog view. Owns per-task notification
+ * scheduling (start, and end reminders for time-box tasks).
+ *
+ * Connections:
+ *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useSettingsStore
+ *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step5.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx
+ *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications
+ *
+ * Edit notes:
+ *   - Per-task notification scheduling lives here (syncTaskNotification); add/update auto-reschedule. Call syncAllTaskNotifications() after a settings/language change since notification copy is baked in at schedule time.
+ *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
+ *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
+ *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

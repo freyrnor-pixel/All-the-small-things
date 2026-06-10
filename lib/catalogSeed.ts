@@ -1,3 +1,20 @@
+/**
+ * catalogSeed.ts — static list of common Norwegian groceries used to seed the item catalog.
+ *
+ * Exports CATALOG_SEED, ~230 real-world grocery/household items each tagged with
+ * a shopping category key. useCatalogStore inserts these into the store_items
+ * table on first run to power autocomplete and auto-categorisation.
+ *
+ * Connections:
+ *   Imports → —
+ *   Used by → store/useCatalogStore.ts
+ *   Data    → seeds the `store_items` SQLite table (via useCatalogStore)
+ *
+ * Edit notes:
+ *   - `category` values must match the shopping category keys (produce, dairy,
+ *     meat, fish, bread, frozen, canned, dry, snacks, drinks, cleaning, personal).
+ *   - Item names are intentionally Norwegian and NOT translated — only UI follows the user's language.
+ */
 export type SeedItem = { name: string; category: string };
 
 export const CATALOG_SEED: SeedItem[] = [

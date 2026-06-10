@@ -1,3 +1,21 @@
+/**
+ * reminders.ts — coordinator that turns settings into scheduled weekly/monthly reminders.
+ *
+ * syncReminders() reads the settings store + active language, builds localised
+ * Content, and (re)schedules or cancels the weekly planning nudge and monthly
+ * shopping-reset reminder via lib/notifications. Call after any reminder/language
+ * setting change or on app start.
+ *
+ * Connections:
+ *   Imports → lib/i18n, lib/notifications, store/useSettingsStore
+ *   Used by → app/_layout.tsx, app/onboarding/step5.tsx, app/settings.tsx
+ *   Data    → reads settings store; schedules OS notifications
+ *
+ * Edit notes:
+ *   - Weekday conversion: app stores 0=Mon..6=Sun, Expo wants 1=Sun..7=Sat
+ *     (toExpoWeekday) — keep this mapping if you touch weekly scheduling.
+ *   - parseHM falls back to 08:00 on malformed "HH:MM"; preserve that guard.
+ */
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { getTranslations } from '@/lib/i18n';
 import {

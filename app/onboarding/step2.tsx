@@ -1,3 +1,21 @@
+/**
+ * step2.tsx — Work mode setup (guided step 2 of 5)
+ *
+ * Lets the user toggle work mode, auto-activation by work hours, and enter the
+ * start/end work-hour strings used to switch the app's mode automatically.
+ *
+ * Connections:
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Used by → Expo Router route "/onboarding/step2"
+ *   Data    → useSettingsStore (writes `workModeEnabled`, `enforceWorkHours`,
+ *             `workHoursStart`, `workHoursEnd`)
+ *
+ * Edit notes:
+ *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - Switches write directly to settings.update() on change (no local state).
+ *   - Next button → router.push "/onboarding/step3"; Previous uses router.back().
+ *   - Hour inputs are free-text strings ("09:00"); not validated here.
+ */
 import React from 'react';
 import {
   Pressable,

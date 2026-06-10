@@ -1,3 +1,21 @@
+/**
+ * useHabitStore.ts — habits and their daily completion logs
+ *
+ * Zustand store for build/break habits (with optional per-habit daily reminders)
+ * and the per-day count logs that drive streaks. Schedules each habit's
+ * notification when added/updated and exposes syncAllHabitReminders for re-scheduling.
+ *
+ * Connections:
+ *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useSettingsStore
+ *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/settings.tsx
+ *   Data    → defines a Zustand store; owns SQLite tables habits and habit_logs; schedules per-habit daily notifications
+ *
+ * Edit notes:
+ *   - Per-habit daily reminders are scheduled here via syncHabitReminder() (id `habit-<id>`); call syncAllHabitReminders() after a language change since strings are baked in.
+ *   - load() only fetches active habits and the last 35 days of logs (streak window) — not full history.
+ *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
+ *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

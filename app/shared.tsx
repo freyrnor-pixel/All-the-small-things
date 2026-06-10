@@ -1,3 +1,19 @@
+/**
+ * shared.tsx — items shared between users
+ *
+ * Tabbed view (shopping / tasks) of items shared in or out between users. Each
+ * row can be checked off or removed; completing a shared item also acts on its
+ * linked source task/shopping item when one exists (sourceTaskId / sourceItemId).
+ *
+ * Connections:
+ *   Imports → components/HintCard, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Used by → Expo Router route "/shared"
+ *   Data    → useSharedStore (shared_tasks + shared_shopping_items tables); mirrors actions to useTaskStore (tasks) / useShoppingStore (shopping_items) via the source ids
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); direction 'in'/'out' decides the "from X" vs "shared by you" meta label.
+ *   - Checking a shared shopping item removes its source item; checking a shared task toggles its source task only when not already done.
+ */
 import React, { useState } from 'react';
 import {
   Pressable,

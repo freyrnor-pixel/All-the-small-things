@@ -1,3 +1,19 @@
+/**
+ * ExpandableCard.tsx — collapsible card with animated header chevron.
+ *
+ * Generic accordion container: shows a title/subtitle/badge row that toggles a
+ * body section with a LayoutAnimation expand and a rotating arrow. Content,
+ * labels, and optional right action are all passed in as children/props.
+ *
+ * Connections:
+ *   Imports → constants/theme
+ *   Used by → app/meals.tsx
+ *   Data    → none (presentational); fully driven by props
+ *
+ * Edit notes:
+ *   - LayoutAnimation is enabled on Android via UIManager at module load — keep that guard if refactoring imports.
+ *   - Uses static Colors (not the per-user theme); restyle here if dark-mode support is needed.
+ */
 import React, { useRef, useState } from 'react';
 import {
   Animated,

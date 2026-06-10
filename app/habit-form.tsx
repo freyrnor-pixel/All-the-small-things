@@ -1,3 +1,21 @@
+/**
+ * habit-form.tsx — add / edit a habit
+ *
+ * Modal form for one habit: build/break kind, icon, title, category, the four
+ * cue→craving→response→reward steps, daily goal, recurrence, and an optional
+ * daily notification. An `id` route param switches it to edit mode (with
+ * delete); a `kind` param pre-seeds build vs. break for new habits.
+ *
+ * Connections:
+ *   Imports → constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
+ *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder
+ *
+ * Edit notes:
+ *   - All visible strings go through useT(); colour theme comes from useSettingsStore.
+ *   - recurrenceDays is always saved as [] here (weekday selection not exposed in this form).
+ *   - notificationTime is a free-text HH:MM TextInput (maxLength 5), not a picker.
+ */
 import React, { useState } from 'react';
 import {
   Alert,

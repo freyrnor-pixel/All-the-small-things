@@ -1,3 +1,19 @@
+/**
+ * TimePickerWheel.tsx — dual scrolling wheels for picking an HH:MM time.
+ *
+ * Two snap-scrolling FlatList wheels (hours 0–23, minutes 0–59) with a center
+ * selection band. Emits the selected "HH:MM" string via onChange as each wheel
+ * settles. Theme colors are injected via the `theme` prop.
+ *
+ * Connections:
+ *   Imports → constants/theme
+ *   Used by → app/settings.tsx, app/task-form.tsx
+ *   Data    → none (presentational); value in / onChange out
+ *
+ * Edit notes:
+ *   - Selected values are tracked in refs (curHour/curMin) to avoid closure staleness inside scroll handlers; keep state + refs in sync if changing.
+ *   - Geometry depends on ITEM_H and VISIBLE (must stay odd); initial scroll-to-offset runs on an 80ms timeout after mount.
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import {
   FlatList,

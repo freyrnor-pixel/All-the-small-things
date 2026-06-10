@@ -12,6 +12,30 @@ Quick-start guide for future Claude sessions on this codebase.
 
 **UnFocus** — ADHD life-management app (React Native / Expo SDK 56, TypeScript, Expo Router, Zustand + SQLite). Local-only, no backend. Norwegian-first but fully bilingual (EN/NO). Target: iOS + Android.
 
+## Read the file header first
+
+Every `.ts`/`.tsx` file starts with a JSDoc header block. **Read it before editing — it is the fastest way to orient.** Format:
+
+```
+/**
+ * <filename> — <one-line purpose>
+ *
+ * <1–3 sentence description>
+ *
+ * Connections:
+ *   Imports → <local @/ deps>
+ *   Used by → <files that import this, or the Expo Router route>
+ *   Data    → <SQLite tables / Zustand store / notifications>
+ *
+ * Edit notes:
+ *   - <file-specific gotchas>
+ * /
+```
+
+- **Use by → / Imports →** are a hand-maintained dependency map. To find every caller of a module, open the module and read its `Used by →` line (or grep `from '@/<path>'`). When you add/remove an import or change who consumes a file, **update the affected headers** (both ends) so the map stays true.
+- **Edit notes** capture the real traps for that file — honour them.
+- Two files are intentionally dead and labelled as such: `App.tsx` (leftover Expo template; real entry is `index.ts`) and `lib/seed.ts` (legacy catalog seeder; the live one is `lib/catalogSeed.ts`). Don't wire either back in.
+
 ## Key invariants — do NOT break these
 
 | Rule | Why |

@@ -1,3 +1,20 @@
+/**
+ * useShoppingStore.ts — weekly + monthly shopping list
+ *
+ * Zustand store for shopping items across a weekly and a monthly list, with
+ * check-off, quantity adjust, and a monthly→weekly allocation flow (a monthly
+ * staple can spawn weekly entries that decrement its allocated count when removed).
+ *
+ * Connections:
+ *   Imports → lib/db, lib/id
+ *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/MonthlyPickerSheet.tsx, components/ShoppingRow.tsx
+ *   Data    → defines a Zustand store; owns SQLite table shopping_items (both weekly and monthly rows, distinguished by list_type)
+ *
+ * Edit notes:
+ *   - monthly_source_id links a weekly item back to its monthly staple; removeWithSource()/adjustAmount()/resetWeekly() must release the parent's monthly_allocated — use these, not the bare remove().
+ *   - resetWeekly() deletes all weekly rows (releasing allocations first); resetMonthly() only unchecks + zeroes monthly_allocated, it does not delete.
+ *   - New columns (e.g. monthly_allocated, monthly_source_id) go through the migrations array in lib/db.ts; never recreate tables.
+ */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';

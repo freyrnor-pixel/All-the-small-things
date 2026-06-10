@@ -1,3 +1,20 @@
+/**
+ * step4.tsx — Notification preferences (guided step 4 of 5)
+ *
+ * Toggles weekly shopping reminders (with a reminder time) and per-task
+ * notifications. Only records preferences here — scheduling happens in step5.
+ *
+ * Connections:
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Used by → Expo Router route "/onboarding/step4"
+ *   Data    → useSettingsStore (writes `remindersEnabled`, `reminderTime`,
+ *             `taskNotificationsEnabled`)
+ *
+ * Edit notes:
+ *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - No OS permission prompt or scheduling here — step5.finish() does that.
+ *   - next() → router.push "/onboarding/step5"; Previous uses router.back().
+ */
 import React from 'react';
 import {
   Pressable,
