@@ -7,15 +7,16 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/CompanionPet, components/HintCard, components/QuickAddSheet, components/TaskItem, constants/theme, lib/date, lib/holidays, lib/i18n, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/CompanionPet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items); settings via useSettingsStore
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
  *
  * Edit notes:
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
+ *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
  *   - CompanionPet renders when petEnabled; justCompleted resets after 1 s.
  */
@@ -33,12 +34,15 @@ import { useRouter } from 'expo-router';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useHabitStore } from '@/store/useHabitStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
 import CompanionPet from '@/components/CompanionPet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
+import CoverScreen from '@/components/cover/CoverScreen';
+import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,6 +63,7 @@ export default function HomeScreen() {
   const settings = useSettingsStore();
   const t = useT();
   const theme = useAppTheme();
+  const { isCoverScreen } = useCoverScreen();
 
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
@@ -66,6 +71,8 @@ export default function HomeScreen() {
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
+  const habits = useHabitStore((s) => s.habits);
+  const habitLogs = useHabitStore((s) => s.logs);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
   // Pet celebration: true for 1 s after a task completion.
   const [justCompleted, setJustCompleted] = useState(false);
@@ -109,6 +116,17 @@ export default function HomeScreen() {
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: Colors.cream }]} />;
+  }
+
+  if (isCoverScreen) {
+    return (
+      <CoverScreen
+        todayTasks={tasksForDate(today)}
+        toggleTask={toggleTask}
+        habits={habits}
+        logs={habitLogs}
+      />
+    );
   }
 
   const greeting = () => {
@@ -168,17 +186,33 @@ export default function HomeScreen() {
             </Text>
             <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
-          {settings.petEnabled && (
-            <CompanionPet celebrating={justCompleted} />
-          )}
-          <Pressable
-            style={[styles.essentialsBtn, { backgroundColor: theme.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
-            onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
-          >
-            <Text style={[styles.essentialsBtnText, { color: theme.textLight }, settings.essentialsModeEnabled && { color: '#fff' }]}>
-              {settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
-            </Text>
-          </Pressable>
+
+          {/* Right column: pet (if enabled) + icon buttons */}
+          <View style={styles.headerRight}>
+            {settings.petEnabled && (
+              <CompanionPet celebrating={justCompleted} />
+            )}
+            <View style={styles.headerIcons}>
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
+                onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
+                accessibilityLabel={settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
+              >
+                <Ionicons
+                  name={settings.essentialsModeEnabled ? 'star' : 'star-outline'}
+                  size={20}
+                  color={settings.essentialsModeEnabled ? theme.orange : theme.textLight}
+                />
+              </Pressable>
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
+                onPress={() => router.push('/settings')}
+                accessibilityLabel="Settings"
+              >
+                <Ionicons name="settings-outline" size={20} color={theme.textLight} />
+              </Pressable>
+            </View>
+          </View>
         </View>
 
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
@@ -308,14 +342,6 @@ export default function HomeScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <Pressable
-        style={[styles.settingsBtn, { backgroundColor: theme.grayLight }]}
-        onPress={() => router.push('/settings')}
-        accessibilityLabel="Settings"
-      >
-        <Ionicons name="settings-outline" size={20} color={theme.textLight} />
-      </Pressable>
-
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
       <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
@@ -347,11 +373,20 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: FontSize.xxl, fontWeight: '700' },
   dateLabel: { fontSize: FontSize.md, marginTop: 2, textTransform: 'capitalize' },
-  essentialsBtn: {
-    borderRadius: Radius.full, paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs, marginTop: 4,
+  headerRight: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginLeft: Spacing.sm,
   },
-  essentialsBtnText: { fontSize: FontSize.sm, fontWeight: '700' },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  iconBtn: {
+    width: 34, height: 34, borderRadius: Radius.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
   section: { marginBottom: Spacing.lg },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -389,9 +424,4 @@ const styles = StyleSheet.create({
   backlogBadgeText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
-  settingsBtn: {
-    position: 'absolute', top: 52, right: 16, zIndex: 10,
-    width: 36, height: 36, borderRadius: Radius.full,
-    alignItems: 'center', justifyContent: 'center',
-  },
 });
