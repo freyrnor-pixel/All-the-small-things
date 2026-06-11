@@ -14,7 +14,7 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - Wheel geometry (RADIUS / WINDOW_FADE) is tuned for 8 bubbles. STEP_ANGLE
+ *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE
  *     updates automatically from BASE_ITEMS.length.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
@@ -80,8 +80,7 @@ const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
 // correctly from the FAB without any right/bottom positioning tricks.
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // diameter + one bubble
 
-// Fade zone at each edge of the viewing window (22.5°).
-const WINDOW_FADE = Math.PI / 8;
+const DRAG_SENSITIVITY = 120;      // px of drag per radian — lower = more responsive
 
 // Normalises any angle into [−π, π].
 function normalizeAngle(a: number): number {
@@ -90,17 +89,11 @@ function normalizeAngle(a: number): number {
   return ((a + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
 }
 
-// Returns 0–1 opacity based on how deep inside the viewing window the angle is.
-// winStart < winEnd, both in [−π, π].
+// Returns 1 if the angle is inside the viewing window, 0 otherwise (hard cut, no fade).
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
   const norm = normalizeAngle(angle);
-  if (norm < winStart - WINDOW_FADE || norm > winEnd + WINDOW_FADE) return 0;
-  if (norm < winStart + WINDOW_FADE)
-    return (norm - (winStart - WINDOW_FADE)) / (2 * WINDOW_FADE);
-  if (norm > winEnd - WINDOW_FADE)
-    return ((winEnd + WINDOW_FADE) - norm) / (2 * WINDOW_FADE);
-  return 1;
+  return norm >= winStart && norm <= winEnd ? 1 : 0;
 }
 
 // ─── Per-bubble sub-component ────────────────────────────────────────────────
@@ -142,10 +135,10 @@ function BubbleItemView({
   });
 
   function handlePressIn() {
-    pressAnim.value = withSpring(0.88, { mass: 1, damping: 15, stiffness: 150 });
+    pressAnim.value = withSpring(0.88, { mass: 1, damping: 30, stiffness: 400 });
   }
   function handlePressOut() {
-    pressAnim.value = withSpring(1, { mass: 1, damping: 15, stiffness: 150 });
+    pressAnim.value = withSpring(1, { mass: 1, damping: 30, stiffness: 400 });
   }
 
   return (
@@ -203,7 +196,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   function toggle() {
     const toValue = open ? 0 : 1;
-    openProgress.value = withSpring(toValue, { damping: 15, stiffness: 150 });
+    openProgress.value = withSpring(toValue, { damping: 25, stiffness: 320 });
     setOpen((v) => !v);
   }
 
@@ -220,11 +213,12 @@ export default function BubbleMenu({ onNewTask }: Props) {
       startAngle.value = wheelAngle.value;
     })
     .onUpdate((e) => {
-      wheelAngle.value = startAngle.value - e.translationY / RADIUS;
+      wheelAngle.value = startAngle.value - e.translationY / DRAG_SENSITIVITY;
     })
-    .onEnd(() => {
-      const snapped = Math.round(wheelAngle.value / STEP_ANGLE) * STEP_ANGLE;
-      wheelAngle.value = withSpring(snapped, { damping: 20, stiffness: 200 });
+    .onEnd((e) => {
+      const projected = wheelAngle.value - (e.velocityY / DRAG_SENSITIVITY) * 0.12;
+      const snapped = Math.round(projected / STEP_ANGLE) * STEP_ANGLE;
+      wheelAngle.value = withSpring(snapped, { damping: 35, stiffness: 500 });
     });
 
   const fabStyle = useAnimatedStyle(() => ({
