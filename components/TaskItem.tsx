@@ -17,6 +17,7 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Task } from '@/store/useTaskStore';
 // OLD: import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 //      Colors was used for hardcoded warm-theme values that ignored the user's
@@ -77,7 +78,7 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
           ]}
           onPress={onToggle}
         >
-          {task.done && <Text style={styles.checkMark}>✓</Text>}
+          {task.done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
         </Pressable>
       </Animated.View>
 
@@ -97,7 +98,7 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
             {task.title}
           </Text>
           {isEssential && !task.done && (
-            <Text style={styles.essentialStar}>⭐</Text>
+            <Ionicons name="star" size={14} color={theme.orange} />
           )}
         </View>
         <View style={styles.meta}>
@@ -110,9 +111,16 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
                 : { backgroundColor: theme.greenLight }
               ]}
             >
-              <Text style={[styles.tagText, { color: theme.text }]}>
-                {isTimebox ? `⏱ ${task.durationMinutes} min` : `🕐 ${task.time}`}
-              </Text>
+              <View style={styles.tagContent}>
+                <Ionicons
+                  name={isTimebox ? 'timer-outline' : 'time-outline'}
+                  size={11}
+                  color={theme.text}
+                />
+                <Text style={[styles.tagText, { color: theme.text }]}>
+                  {isTimebox ? `${task.durationMinutes} min` : task.time}
+                </Text>
+              </View>
             </View>
           ) : null}
           {task.recurring === 'weekly' && task.recurringDays.length > 0 && (
@@ -149,13 +157,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
-    // OLD entries removed — checkMuted and checkDone used Colors.orange/Colors.gray
-    // and are now applied inline above so they respect the active theme.
-  },
-  checkMark: {
-    color: '#FFFFFF',
-    fontSize: FontSize.sm,
-    fontWeight: '700',
   },
   content: { flex: 1 },
   titleRow: {
@@ -169,9 +170,6 @@ const styles = StyleSheet.create({
     flex: 1,
     // OLD: color: Colors.text   — removed; applied inline above via theme.text
   },
-  essentialStar: {
-    fontSize: 12,
-  },
   meta: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -181,10 +179,12 @@ const styles = StyleSheet.create({
   tag: {
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    // OLD: tagStartAt: { backgroundColor: Colors.greenLight }
-    // OLD: tagTimebox:  { backgroundColor: Colors.orangeLight }
-    // Both removed; background is now applied inline above via theme.
+    paddingVertical: 3,
+  },
+  tagContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   tagRecurring: {
     borderRadius: Radius.full,

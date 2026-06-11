@@ -18,6 +18,8 @@
  */
 import React from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,11 +41,12 @@ export default function OnboardingStep2() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.top}>
           <Text style={styles.emoji}>💼</Text>
           <Text style={styles.heading}>{t.workModeOnboarding}</Text>
@@ -121,16 +124,17 @@ export default function OnboardingStep2() {
             <View key={i} style={[styles.dot, i === 1 && styles.dotActive]} />
           ))}
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      <View style={styles.footer}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.previous}</Text>
-        </Pressable>
-        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step3')}>
-          <Text style={styles.nextBtnText}>{t.next}</Text>
-        </Pressable>
-      </View>
+        <View style={styles.footer}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Text style={styles.backBtnText}>{t.previous}</Text>
+          </Pressable>
+          <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step3')}>
+            <Text style={styles.nextBtnText}>{t.next}</Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

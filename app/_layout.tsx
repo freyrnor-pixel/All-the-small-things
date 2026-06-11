@@ -23,7 +23,8 @@ import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Updates from 'expo-updates';
 import { initDb, pruneOldData } from '@/lib/db';
 import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
@@ -100,6 +101,24 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    if (!Updates.isEnabled) return;
+    (async () => {
+      try {
+        const check = await Updates.checkForUpdateAsync();
+        if (!check.isAvailable) return;
+        await Updates.fetchUpdateAsync();
+        const t = getTranslations();
+        Alert.alert(t.updateAvailableTitle, t.updateAvailableBody, [
+          { text: t.updateLater, style: 'cancel' },
+          { text: t.updateRestart, onPress: () => Updates.reloadAsync() },
+        ]);
+      } catch {
+        /* silently ignore — update check must never crash the app */
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     if (!loaded || setupComplete) return;
     // Read segments inside the effect as a guard — intentionally not in deps
     // to avoid re-triggering every render (useSegments returns a new array each time)
@@ -116,7 +135,7 @@ export default function RootLayout() {
       {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
       {/* @ts-expect-error */}
       <StatusBar style="dark" backgroundColor={Colors.cream} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream }, backgroundColor: Colors.cream }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="meals" />

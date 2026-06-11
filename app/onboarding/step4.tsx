@@ -17,6 +17,8 @@
  */
 import React from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,7 +44,8 @@ export default function OnboardingStep4() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.top}>
           <Text style={styles.emoji}>🔔</Text>
           <Text style={styles.heading}>{t.notificationsOnboarding}</Text>
@@ -99,16 +102,17 @@ export default function OnboardingStep4() {
             <View key={i} style={[styles.dot, i === 3 && styles.dotActive]} />
           ))}
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      <View style={styles.footer}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.previous}</Text>
-        </Pressable>
-        <Pressable style={styles.nextBtn} onPress={next}>
-          <Text style={styles.nextBtnText}>{t.next}</Text>
-        </Pressable>
-      </View>
+        <View style={styles.footer}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Text style={styles.backBtnText}>{t.previous}</Text>
+          </Pressable>
+          <Pressable style={styles.nextBtn} onPress={next}>
+            <Text style={styles.nextBtnText}>{t.next}</Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

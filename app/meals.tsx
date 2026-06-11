@@ -123,6 +123,10 @@ export default function MealsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -158,7 +162,6 @@ export default function MealsScreen() {
         ))}
       </ScrollView>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -181,6 +184,9 @@ export default function MealsScreen() {
                   onPress={() => setNewDishType(mt.value)}
                 >
                   <Text style={styles.typePillIcon}>{mt.icon}</Text>
+                  <Text style={[styles.typePillLabel, { color: theme.text }, newDishType === mt.value && { color: '#fff' }]}>
+                    {mealLabel(mt.value)}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -345,13 +351,15 @@ const styles = StyleSheet.create({
   },
   typeRow: { flexDirection: 'row', gap: Spacing.xs },
   typePill: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
   },
-  typePillIcon: { fontSize: 18 },
+  typePillIcon: { fontSize: 16 },
+  typePillLabel: { fontSize: FontSize.xs, fontWeight: '500' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   addInput: {
     backgroundColor: Colors.offWhite,

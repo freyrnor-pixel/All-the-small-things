@@ -3,11 +3,11 @@
  *
  * Zustand store mirroring the one settings row: user name, language, theme,
  * dark mode, reminder/notification toggles, reset cadence, work/essentials modes,
- * and onboarding state. Read widely across the app to drive behavior and copy.
+ * onboarding state, accessibility flags, and companion pet settings.
  *
  * Connections:
  *   Imports → lib/db
- *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/CompanionPet.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns the single-row SQLite table settings (id = 1)
  *
  * Edit notes:
@@ -22,6 +22,8 @@ import db from '@/lib/db';
 export type ColorTheme = 'warm' | 'cool' | 'forest' | 'rose';
 export type Language = 'en' | 'no';
 export type DarkMode = 'system' | 'on' | 'off';
+export type FontSizePref = 'small' | 'default' | 'large';
+export type PetType = 'cat' | 'dog' | 'bird' | 'fox' | 'bunny';
 
 export type Settings = {
   userName: string;
@@ -37,12 +39,22 @@ export type Settings = {
   workHoursStart: string;
   workHoursEnd: string;
   enforceWorkHours: boolean;
+  workDays: number[];
   essentialsModeEnabled: boolean;
   showPoints: boolean;
   showHints: boolean;
   language: Language;
   holidaysEnabled: boolean;
   darkMode: DarkMode;
+  childProfiles: string[];
+  // Accessibility (Proposal 4)
+  reducedMotion: boolean;
+  fontSize: FontSizePref;
+  // Companion pet (Proposal 6)
+  petEnabled: boolean;
+  petName: string;
+  petType: PetType;
+  petColor: string;
 };
 
 type SettingsStore = Settings & {
@@ -68,12 +80,20 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   workHoursStart: '09:00',
   workHoursEnd: '17:00',
   enforceWorkHours: false,
+  workDays: [0, 1, 2, 3, 4],
   essentialsModeEnabled: false,
   showPoints: false,
   showHints: true,
   language: 'no' as Language,
   holidaysEnabled: true,
   darkMode: 'system' as DarkMode,
+  childProfiles: [],
+  reducedMotion: false,
+  fontSize: 'default' as FontSizePref,
+  petEnabled: false,
+  petName: '',
+  petType: 'cat' as PetType,
+  petColor: '#A78BFA',
   loaded: false,
   workModeSessionOverride: false,
 
@@ -93,12 +113,20 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         work_hours_start: string | null;
         work_hours_end: string | null;
         enforce_work_hours: number | null;
+        work_days: string | null;
         essentials_mode_enabled: number | null;
         show_points: number | null;
         show_hints: number | null;
         language: string | null;
         holidays_enabled: number | null;
         dark_mode: string | null;
+        child_profiles: string | null;
+        reduced_motion: number | null;
+        font_size: string | null;
+        pet_enabled: number | null;
+        pet_name: string | null;
+        pet_type: string | null;
+        pet_color: string | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -115,12 +143,20 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         workHoursStart: row.work_hours_start ?? '09:00',
         workHoursEnd: row.work_hours_end ?? '17:00',
         enforceWorkHours: row.enforce_work_hours === 1,
+        workDays: (() => { try { return JSON.parse(row.work_days ?? '[0,1,2,3,4]'); } catch { return [0,1,2,3,4]; } })(),
         essentialsModeEnabled: row.essentials_mode_enabled === 1,
         showPoints: row.show_points === 1,
         showHints: row.show_hints !== 0,
         language: (row.language as Language) ?? 'no',
         holidaysEnabled: row.holidays_enabled !== 0,
         darkMode: (row.dark_mode as DarkMode) ?? 'system',
+        childProfiles: (() => { try { return JSON.parse(row.child_profiles ?? '[]'); } catch { return []; } })(),
+        reducedMotion: row.reduced_motion === 1,
+        fontSize: (row.font_size as FontSizePref) ?? 'default',
+        petEnabled: row.pet_enabled === 1,
+        petName: row.pet_name ?? '',
+        petType: (row.pet_type as PetType) ?? 'cat',
+        petColor: row.pet_color ?? '#A78BFA',
         loaded: true,
       });
     } catch {
@@ -138,9 +174,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             shopping_list_mode = ?, reminders_enabled = ?, reminder_time = ?,
             task_notifications_enabled = ?, setup_complete = ?,
             color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
-            work_hours_end = ?, enforce_work_hours = ?, essentials_mode_enabled = ?,
+            work_hours_end = ?, enforce_work_hours = ?, work_days = ?, essentials_mode_enabled = ?,
             show_points = ?, show_hints = ?, language = ?,
-            holidays_enabled = ?, dark_mode = ?
+            holidays_enabled = ?, dark_mode = ?, child_profiles = ?,
+            reduced_motion = ?, font_size = ?,
+            pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -156,12 +194,20 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.workHoursStart,
             next.workHoursEnd,
             next.enforceWorkHours ? 1 : 0,
+            JSON.stringify(next.workDays),
             next.essentialsModeEnabled ? 1 : 0,
             next.showPoints ? 1 : 0,
             next.showHints ? 1 : 0,
             next.language,
             next.holidaysEnabled ? 1 : 0,
             next.darkMode,
+            JSON.stringify(next.childProfiles),
+            next.reducedMotion ? 1 : 0,
+            next.fontSize,
+            next.petEnabled ? 1 : 0,
+            next.petName,
+            next.petType,
+            next.petColor,
           ]
         );
       } catch {

@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/CompanionPet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
  *
@@ -17,8 +17,10 @@
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
+ *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
+ *   - CompanionPet renders when petEnabled; justCompleted resets after 1 s.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -36,12 +38,14 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
+import CompanionPet from '@/components/CompanionPet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import CoverScreen from '@/components/cover/CoverScreen';
 import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
@@ -70,6 +74,9 @@ export default function HomeScreen() {
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
+  // Pet celebration: true for 1 s after a task completion.
+  const [justCompleted, setJustCompleted] = useState(false);
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWorkModeActive = useMemo(() => {
     if (settings.workModeSessionOverride) return false;
@@ -134,6 +141,15 @@ export default function HomeScreen() {
     return `${t.days[d.getDay()]} ${d.getDate()}. ${t.months[d.getMonth()]}`;
   })();
 
+  function handleToggleTask(id: string) {
+    toggleTask(id);
+    if (settings.petEnabled) {
+      setJustCompleted(true);
+      if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
+      celebrateTimer.current = setTimeout(() => setJustCompleted(false), 1000);
+    }
+  }
+
   function handleWorkModeOverride() {
     Alert.alert(t.switchModeTitle, t.switchModeBody, [
       { text: t.cancel, style: 'cancel' },
@@ -164,12 +180,15 @@ export default function HomeScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: theme.text }]}>
               {greeting()}{settings.userName ? `, ${settings.userName}` : ''}!
             </Text>
             <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
+          {settings.petEnabled && (
+            <CompanionPet celebrating={justCompleted} />
+          )}
           <Pressable
             style={[styles.essentialsBtn, { backgroundColor: theme.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
             onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
@@ -211,12 +230,12 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
               {todayTasks.map((task) => (
                 <TaskItem
                   key={task.id}
                   task={task}
-                  onToggle={() => toggleTask(task.id)}
+                  onToggle={() => handleToggleTask(task.id)}
                   onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
                 />
               ))}
@@ -231,20 +250,23 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Backlog */}
+        {/* Backlog — "waiting for you" phrasing, neutral colour (no red/overdue framing) */}
         {backlog.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.textLight }]}>
-                {t.backlog} ({backlog.length})
-              </Text>
+              <View style={styles.backlogLabelRow}>
+                <Text style={[styles.sectionTitle, { color: theme.textLight }]}>{t.backlog}</Text>
+                <View style={[styles.backlogBadge, { backgroundColor: theme.neutral }]}>
+                  <Text style={styles.backlogBadgeText}>{backlog.length}</Text>
+                </View>
+              </View>
             </View>
-            <View style={[styles.card, { backgroundColor: theme.offWhite }]}>
+            <View style={[styles.card, { backgroundColor: theme.offWhite, borderColor: theme.border }]}>
               {backlog.map((task) => (
                 <TaskItem
                   key={task.id}
                   task={task}
-                  onToggle={() => toggleTask(task.id)}
+                  onToggle={() => handleToggleTask(task.id)}
                   onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
                   muted
                 />
@@ -267,7 +289,7 @@ export default function HomeScreen() {
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
               {pendingShopping.map((item) => (
                 // OLD: <View key={item.id} style={styles.shoppingPreviewRow}>
                 //        <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
@@ -307,8 +329,9 @@ export default function HomeScreen() {
       <Pressable
         style={[styles.settingsBtn, { backgroundColor: theme.grayLight }]}
         onPress={() => router.push('/settings')}
+        accessibilityLabel="Settings"
       >
-        <Text style={styles.settingsBtnIcon}>⚙️</Text>
+        <Ionicons name="settings-outline" size={20} color={theme.textLight} />
       </Pressable>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
@@ -359,7 +382,7 @@ const styles = StyleSheet.create({
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
-  card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
+  card: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, ...Shadow.card },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm },
   // OLD: shoppingPreviewRow: { ..., paddingVertical: 4 }  — increased to 6 for easier tap target
@@ -372,12 +395,21 @@ const styles = StyleSheet.create({
   shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
+  backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  backlogBadge: {
+    borderRadius: Radius.full,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backlogBadgeText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
   settingsBtn: {
-    position: 'absolute', top: 12, right: 16, zIndex: 10,
+    position: 'absolute', top: 52, right: 16, zIndex: 10,
     width: 36, height: 36, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  settingsBtnIcon: { fontSize: 18 },
 });

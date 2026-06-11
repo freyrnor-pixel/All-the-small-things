@@ -15,14 +15,18 @@
  *   - All visible strings go through useT(); per-day keys are YYYY-MM-DD via todayStr()/dateStr() (week starts Monday).
  *   - increment/decrement key off (habitId, today) into habit_logs; counts are clamped against dailyGoal for ratio/colour.
  *   - Edit navigates to the /habit-form modal; the empty-section CTAs pre-seed the `kind` param.
+ *   - No-shame: past days with 0 progress show an empty circle in theme.neutral — no red/✗ indicators.
+ *   - Missed days silently reset the streak; no separate "missed" counter displayed (Proposal 5).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,10 +60,11 @@ function getMonthDates(year: number, month: number): string[] {
   });
 }
 
-function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string {
+function progressColor(ratio: number, _kind: HabitKind, theme: AppColors): string {
   if (ratio >= 1) return theme.green;
   if (ratio > 0) return theme.orange;
-  return kind === 'break' ? theme.danger : theme.gray;
+  // No-shame: zero progress uses neutral regardless of habit kind — no red punishment colour.
+  return theme.neutral;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -105,6 +110,7 @@ function WeekStrip({
         const count = log?.count ?? 0;
         const ratio = goal > 0 ? Math.min(count / goal, 1) : 0;
         const isFuture = date > today;
+        // Past zero-progress days: neutral border, transparent fill (empty circle — no shame).
         const color = isFuture ? theme.grayLight : progressColor(ratio, kind, theme);
         const filled = !isFuture && ratio > 0;
         const isToday = date === today;
@@ -185,7 +191,7 @@ function HabitCard({
             <Text style={[styles.habitTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
             {isDone && (
               <Text style={[styles.doneLabel, { color: theme.green }]}>
-                {habit.kind === 'build' ? t.habitGoalMet : t.habitBroken}
+                {t.habitGoalMet}
               </Text>
             )}
           </View>
@@ -283,12 +289,12 @@ function WeekView({
             const ratio = habit.dailyGoal > 0 ? Math.min((log?.count ?? 0) / habit.dailyGoal, 1) : 0;
             const isFuture = date > today;
             const color = isFuture ? theme.grayLight : progressColor(ratio, habit.kind, theme);
+            const filled = !isFuture && ratio > 0;
             return (
               <View key={date} style={styles.weekGridCell}>
                 <View style={[
                   styles.weekGridDot,
-                  { backgroundColor: isFuture ? 'transparent' : color, borderColor: color },
-                  isFuture && { borderColor: '#E8E2DA' },
+                  { backgroundColor: filled ? color : 'transparent', borderColor: isFuture ? theme.grayLight : color },
                 ]} />
               </View>
             );
@@ -359,6 +365,7 @@ function MonthView({
                 const log = logs.find((l) => l.habitId === habit.id && l.logDate === date);
                 const ratio = habit.dailyGoal > 0 ? Math.min((log?.count ?? 0) / habit.dailyGoal, 1) : 0;
                 const isFuture = date > today;
+                // Past zero-progress: empty circle in neutral — no shame.
                 const color = isFuture ? theme.grayLight : progressColor(ratio, habit.kind, theme);
                 const filled = !isFuture && ratio > 0;
                 return (
@@ -386,18 +393,25 @@ type ViewTab = 'today' | 'week' | 'month';
 export default function HabitsScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<ViewTab>('today');
+  const [selectedProfile, setSelectedProfile] = useState<string>(''); // '' = me/parent
+  const [addingChild, setAddingChild] = useState(false);
+  const [newChildName, setNewChildName] = useState('');
   const today = todayStr();
 
   const habits = useHabitStore((s) => s.habits);
   const logs = useHabitStore((s) => s.logs);
   const lang = useSettingsStore((s) => s.language);
+  const childProfiles = useSettingsStore((s) => s.childProfiles);
+  const updateSettings = useSettingsStore((s) => s.update);
   const theme = useAppTheme();
   const t = useT();
 
-  const buildHabits = habits.filter((h) => h.kind === 'build');
-  const breakHabits = habits.filter((h) => h.kind === 'break');
+  const profileHabits = habits.filter((h) => h.childName === selectedProfile);
 
-  const metCount = habits.filter((h) => {
+  const buildHabits = profileHabits.filter((h) => h.kind === 'build');
+  const breakHabits = profileHabits.filter((h) => h.kind === 'break');
+
+  const metCount = profileHabits.filter((h) => {
     const log = logs.find((l) => l.habitId === h.id && l.logDate === today);
     return (log?.count ?? 0) >= h.dailyGoal;
   }).length;
@@ -412,6 +426,29 @@ export default function HabitsScreen() {
     { key: 'month', label: t.habitMonthView },
   ];
 
+  function addChild() {
+    const name = newChildName.trim();
+    if (!name) return;
+    updateSettings({ childProfiles: [...childProfiles, name] });
+    setNewChildName('');
+    setAddingChild(false);
+  }
+
+  function removeChild(name: string) {
+    Alert.alert(t.habitRemoveChild(name), t.habitRemoveChildBody, [
+      { text: t.cancel, style: 'cancel' },
+      {
+        text: t.resetConfirmBtn, style: 'destructive',
+        onPress: () => {
+          updateSettings({ childProfiles: childProfiles.filter((c) => c !== name) });
+          if (selectedProfile === name) setSelectedProfile('');
+        },
+      },
+    ]);
+  }
+
+  const showProfiles = childProfiles.length > 0 || addingChild;
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <View style={styles.header}>
@@ -421,11 +458,74 @@ export default function HabitsScreen() {
         <Text style={[styles.title, { color: theme.text }]}>{t.habitsTitle}</Text>
         <Pressable
           style={[styles.addBtn, { backgroundColor: theme.orange }]}
-          onPress={() => router.push('/habit-form')}
+          onPress={() => router.push({
+            pathname: '/habit-form',
+            params: selectedProfile ? { childName: selectedProfile } : {},
+          })}
         >
           <Text style={styles.addBtnText}>+</Text>
         </Pressable>
       </View>
+
+      {/* Profile selector */}
+      {showProfiles && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.profileRow}
+        >
+          {(['', ...childProfiles] as string[]).map((name) => {
+            const isActive = selectedProfile === name;
+            return (
+              <Pressable
+                key={name || '__me__'}
+                style={[
+                  styles.profileChip,
+                  { backgroundColor: isActive ? theme.orange : theme.grayLight },
+                ]}
+                onPress={() => setSelectedProfile(name)}
+                onLongPress={() => name && removeChild(name)}
+              >
+                <Text style={[styles.profileChipText, { color: isActive ? '#fff' : theme.text }]}>
+                  {name || t.habitForMe}
+                </Text>
+              </Pressable>
+            );
+          })}
+          {addingChild ? (
+            <View style={[styles.profileChip, styles.addChildRow, { backgroundColor: theme.white }]}>
+              <TextInput
+                style={[styles.addChildInput, { color: theme.text }]}
+                value={newChildName}
+                onChangeText={setNewChildName}
+                placeholder={t.habitAddChildPlaceholder}
+                placeholderTextColor={theme.gray}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={addChild}
+              />
+              <Pressable onPress={addChild}>
+                <Text style={[styles.addChildConfirm, { color: theme.orange }]}>✓</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              style={[styles.profileChip, { backgroundColor: theme.grayLight, borderStyle: 'dashed', borderWidth: 1, borderColor: theme.gray }]}
+              onPress={() => setAddingChild(true)}
+            >
+              <Text style={[styles.profileChipText, { color: theme.textLight }]}>{t.habitAddChild}</Text>
+            </Pressable>
+          )}
+        </ScrollView>
+      )}
+      {!showProfiles && (
+        <Pressable
+          style={styles.addChildBtn}
+          onPress={() => setAddingChild(true)}
+        >
+          <Text style={[styles.addChildBtnText, { color: theme.textLight }]}>{t.habitAddChild}</Text>
+        </Pressable>
+      )}
 
       {/* View tabs */}
       <View style={[styles.tabs, { backgroundColor: theme.grayLight }]}>
@@ -447,10 +547,10 @@ export default function HabitsScreen() {
 
         {tab === 'today' && (
           <>
-            {habits.length > 0 && (
+            {profileHabits.length > 0 && (
               <View style={[styles.summaryChip, { backgroundColor: theme.white }]}>
-                <Text style={[styles.summaryChipText, { color: metCount === habits.length ? theme.green : theme.textLight }]}>
-                  {metCount} / {habits.length} {t.habitSummaryLabel}
+                <Text style={[styles.summaryChipText, { color: metCount === profileHabits.length ? theme.green : theme.textLight }]}>
+                  {metCount} / {profileHabits.length} {t.habitSummaryLabel}
                 </Text>
               </View>
             )}
@@ -461,7 +561,7 @@ export default function HabitsScreen() {
               {buildHabits.length === 0 ? (
                 <Pressable
                   style={[styles.dashedAdd, { borderColor: theme.grayLight }]}
-                  onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'build' } })}
+                  onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'build', ...(selectedProfile ? { childName: selectedProfile } : {}) } })}
                 >
                   <Text style={[styles.dashedAddText, { color: theme.textLight }]}>{t.noHabitsInSection}</Text>
                 </Pressable>
@@ -478,7 +578,7 @@ export default function HabitsScreen() {
               {breakHabits.length === 0 ? (
                 <Pressable
                   style={[styles.dashedAdd, { borderColor: theme.grayLight }]}
-                  onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'break' } })}
+                  onPress={() => router.push({ pathname: '/habit-form', params: { kind: 'break', ...(selectedProfile ? { childName: selectedProfile } : {}) } })}
                 >
                   <Text style={[styles.dashedAddText, { color: theme.textLight }]}>{t.noHabitsInSection}</Text>
                 </Pressable>
@@ -491,8 +591,8 @@ export default function HabitsScreen() {
           </>
         )}
 
-        {tab === 'week' && <WeekView habits={habits} today={today} lang={lang} theme={theme} />}
-        {tab === 'month' && <MonthView habits={habits} today={today} theme={theme} />}
+        {tab === 'week' && <WeekView habits={profileHabits} today={today} lang={lang} theme={theme} />}
+        {tab === 'month' && <MonthView habits={profileHabits} today={today} theme={theme} />}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -515,6 +615,25 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   addBtnText: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '300', lineHeight: 36 },
+  profileRow: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  profileChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  profileChipText: { fontSize: FontSize.sm, fontWeight: '600' },
+  addChildRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  addChildInput: { fontSize: FontSize.sm, minWidth: 80 },
+  addChildConfirm: { fontSize: FontSize.lg, fontWeight: '700' },
+  addChildBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.xs,
+  },
+  addChildBtnText: { fontSize: FontSize.xs, fontWeight: '500' },
   tabs: {
     flexDirection: 'row',
     marginHorizontal: Spacing.md,
