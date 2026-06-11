@@ -12,6 +12,12 @@
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
  *
  * Edit notes:
+ *   - Today's tasks are ranked "what do I need right now?": undone first, then
+ *     time-anchored (time-box/time) earliest, then essentials. Rendered list is
+ *     capped at Layout.maxVisible; the overflow shows a low-weight t.andMoreTasks
+ *     nudge (informational — home is the full list, so it doesn't navigate).
+ *   - Greeting is intentionally low-weight (Fonts.semibold, FontSize.xl); cards use
+ *     Layout.cardPadding for a consistent calm rhythm.
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
@@ -46,7 +52,7 @@ import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
 function isWithinWorkHours(start: string, end: string): boolean {
@@ -97,10 +103,37 @@ export default function HomeScreen() {
     settings.holidaysEnabled,
   ]);
 
-  const allTodayTasks = tasksForDate(today);
-  const todayTasks = settings.essentialsModeEnabled
+  // Single clear purpose on open — "what do I need right now?": surface today's
+  // tasks in priority order (undone first, then timed/time-box items earliest,
+  // then essentials), so the most actionable things sit at the top.
+  const allTodayTasks = useMemo(() => {
+    const list = tasksForDate(today);
+    const rank = (task: typeof list[number]) => {
+      let r = 0;
+      if (task.done) r += 1000;                              // done sinks to the bottom
+      if (task.taskType === 'time-box' || task.time) r -= 100; // time-anchored rises
+      if (task.importance === 'essential') r -= 10;          // essentials rise
+      return r;
+    };
+    return [...list].sort((a, b) => {
+      const dr = rank(a) - rank(b);
+      if (dr !== 0) return dr;
+      // Within the same rank, order by time when present (earliest first).
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      if (a.time) return -1;
+      if (b.time) return 1;
+      return 0;
+    });
+  }, [tasksForDate, today]);
+
+  const visibleTodayTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((task) => task.importance === 'essential')
     : allTodayTasks;
+
+  // Keep the home calm: render at most Layout.maxVisible rows, then a low-weight
+  // "and X more…" nudge instead of an overwhelming wall of tasks.
+  const todayTasks = visibleTodayTasks.slice(0, Layout.maxVisible);
+  const hiddenTodayCount = visibleTodayTasks.length - todayTasks.length;
 
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
@@ -246,6 +279,14 @@ export default function HomeScreen() {
               ))}
             </View>
           )}
+          {/* Low-weight "and X more…" nudge — the list is intentionally capped at
+              Layout.maxVisible to keep the home calm. Purely informational: there's
+              no separate all-tasks screen (home is the list), so it doesn't navigate. */}
+          {hiddenTodayCount > 0 && (
+            <Text style={[styles.andMore, { color: theme.textLight }]}>
+              {t.andMoreTasks(hiddenTodayCount)}
+            </Text>
+          )}
           {settings.essentialsModeEnabled && allTodayTasks.length > todayTasks.length && (
             <Pressable onPress={() => settings.update({ essentialsModeEnabled: false })}>
               <Text style={[styles.seeAll, { color: theme.orange }]}>
@@ -361,8 +402,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
     marginBottom: Spacing.lg,
   },
-  greeting: { fontSize: FontSize.xxl, fontWeight: '700' },
-  dateLabel: { fontSize: FontSize.md, marginTop: 2, textTransform: 'capitalize' },
+  // Calm greeting: rounded semibold (not heavy bold) keeps it low-weight; the
+  // muted date label sits quietly beneath it.
+  greeting: { fontSize: FontSize.xl, fontFamily: Fonts.semibold },
+  dateLabel: { fontSize: FontSize.md, marginTop: 2, textTransform: 'capitalize', fontFamily: Fonts.regular },
   headerRight: {
     alignItems: 'center',
     gap: Spacing.xs,
@@ -389,9 +432,13 @@ const styles = StyleSheet.create({
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
-  card: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1, ...Shadow.card },
-  emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
-  emptyText: { fontSize: FontSize.sm },
+  card: { borderRadius: Radius.md, padding: Layout.cardPadding, borderWidth: 1, ...Shadow.card },
+  // Empty/ahead state: generous padding so a gentle prompt never reads as cramped.
+  emptyCard: { borderRadius: Radius.md, padding: Layout.cardPadding, alignItems: 'center' },
+  emptyText: { fontSize: FontSize.sm, fontFamily: Fonts.regular, textAlign: 'center' },
+  // Low-weight nudge — regular face, muted colour, small, right-aligned so it
+  // recedes beneath the capped task list rather than competing with it.
+  andMore: { fontSize: FontSize.sm, fontFamily: Fonts.regular, marginTop: Spacing.xs, textAlign: 'right' },
   // OLD: shoppingPreviewRow: { ..., paddingVertical: 4 }  — increased to 6 for easier tap target
   shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: Spacing.sm },
   // OLD: shoppingDot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: theme.green }

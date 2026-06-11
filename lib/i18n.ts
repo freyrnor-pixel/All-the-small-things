@@ -30,6 +30,7 @@ const en = {
   // Navigation / common
   back: '← Home',
   cancel: 'Cancel',
+  close: 'Close', // home overhaul: BubbleMenu FAB close affordance label
   save: 'Save',
   next: 'Next →',
   previous: '← Back',
@@ -340,6 +341,8 @@ const en = {
     focus: 'Focus',
   },
   moreItems: (n: number) => `+ ${n} more`,
+  // home overhaul: low-weight nudge when today's task list is capped at maxVisible
+  andMoreTasks: (n: number) => `and ${n} more…`,
   errorTitle: 'Something went wrong',
   updateAvailableTitle: 'Update available',
   updateAvailableBody: 'A new version has been downloaded. Restart now to apply it.',
@@ -487,6 +490,7 @@ const no: typeof en = {
   months: ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'],
   back: '← Hjem',
   cancel: 'Avbryt',
+  close: 'Lukk', // home overhaul: BubbleMenu FAB close affordance label
   save: 'Lagre',
   next: 'Neste →',
   previous: '← Tilbake',
@@ -833,6 +837,8 @@ const no: typeof en = {
     focus: 'Fokus',
   },
   moreItems: (n: number) => `+ ${n} til`,
+  // home overhaul: low-weight nudge when today's task list is capped at maxVisible
+  andMoreTasks: (n: number) => `og ${n} til…`,
   errorTitle: 'Noe gikk galt',
   updateAvailableTitle: 'Oppdatering tilgjengelig',
   updateAvailableBody: 'En ny versjon er lastet ned. Start på nytt for å bruke den.',
