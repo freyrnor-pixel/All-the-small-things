@@ -55,6 +55,8 @@ export type Settings = {
   petName: string;
   petType: PetType;
   petColor: string;
+  // Left-handed mode
+  leftHanded: boolean;
 };
 
 type SettingsStore = Settings & {
@@ -94,6 +96,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   petName: '',
   petType: 'cat' as PetType,
   petColor: '#A78BFA',
+  leftHanded: false,
   loaded: false,
   workModeSessionOverride: false,
 
@@ -127,6 +130,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         pet_name: string | null;
         pet_type: string | null;
         pet_color: string | null;
+        left_handed: number | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -157,6 +161,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         petName: row.pet_name ?? '',
         petType: (row.pet_type as PetType) ?? 'cat',
         petColor: row.pet_color ?? '#A78BFA',
+        leftHanded: row.left_handed === 1,
         loaded: true,
       });
     } catch {
@@ -178,7 +183,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             show_points = ?, show_hints = ?, language = ?,
             holidays_enabled = ?, dark_mode = ?, child_profiles = ?,
             reduced_motion = ?, font_size = ?,
-            pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?
+            pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?,
+            left_handed = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -208,6 +214,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.petName,
             next.petType,
             next.petColor,
+            next.leftHanded ? 1 : 0,
           ]
         );
       } catch {
