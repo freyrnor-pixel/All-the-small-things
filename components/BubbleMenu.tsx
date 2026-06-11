@@ -13,7 +13,7 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - RADIUS was bumped to 270 and the arc spread to 105° to keep 8 bubbles clear of each other.
+ *   - RADIUS is 300 so 8 bubbles fit across the 90° arc (-π to -π/2). END_ANGLE must stay at -π/2 (straight up) — going past it pushes bubbles off the right edge since the FAB is near the screen edge.
  *   - All labels go through useT() — no hardcoded text.
  *   - Settings is not in the arc; it lives as a persistent corner button in app/index.tsx.
  */
@@ -59,11 +59,13 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-// Radius bumped to 270 and arc widened to ~105° to keep 8 bubbles clear of each other.
-const RADIUS = 270;
+// Radius bumped to 300 to space 8 bubbles across the same 90° arc without overlap.
+// END_ANGLE stays at -π/2 (straight up); going past that into positive-x pushes bubbles
+// off the right edge because the FAB is already near the screen edge.
+const RADIUS = 300;
 const BUBBLE_SIZE = 56;
-const START_ANGLE = -Math.PI;                        // pointing left
-const END_ANGLE = -Math.PI / 2 + Math.PI / 12;      // ~105° arc (15° past straight-up)
+const START_ANGLE = -Math.PI;      // pointing left
+const END_ANGLE = -Math.PI / 2;    // pointing straight up
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
