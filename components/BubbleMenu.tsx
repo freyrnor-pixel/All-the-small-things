@@ -73,10 +73,12 @@ const RADIUS = 300;
 const BUBBLE_SIZE = 56;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
 
-// Viewing window: 150° arc sweeping from left (−180°) to upper-right (−30°).
-// WINDOW_END is capped at −π/6 to keep bubbles away from the right screen edge.
+// Viewing window: 90° arc sweeping from left (−180°) to straight up (−90°).
+// WINDOW_END = −π/2 keeps all bubbles left-of or above the FAB. Going further
+// toward 0° (upper-right) would push items off the right screen edge because the
+// FAB is already near the right edge (right: 24).
 const WINDOW_START = -Math.PI;     // −180° — leftmost visible edge
-const WINDOW_END   = -Math.PI / 6; // −30°  — upper-right visible edge
+const WINDOW_END   = -Math.PI / 2; // −90°  — topmost visible edge (straight up)
 const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
 
 // Normalises any angle into [−π, π].
@@ -219,7 +221,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
       )}
 
       <GestureDetector gesture={spinGesture}>
-        <View style={styles.wheelArea} pointerEvents="box-none">
+        <View style={styles.wheelArea} pointerEvents={open ? 'auto' : 'none'}>
           {items.map((item, i) => (
             <BubbleItemView
               key={item.route}
