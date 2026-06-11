@@ -581,6 +581,18 @@ export default function SettingsScreen() {
             <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetTasks.toLowerCase(), clearTasks)}>
               <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetTasks}</Text>
             </Pressable>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <Pressable
+              style={styles.dangerBtn}
+              onPress={() =>
+                confirmReset(t.resetOnboarding.toLowerCase(), () => {
+                  settings.update({ setupComplete: false });
+                  router.replace('/onboarding/language');
+                })
+              }
+            >
+              <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetOnboarding}</Text>
+            </Pressable>
           </View>
         </View>
 
