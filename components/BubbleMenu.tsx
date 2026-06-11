@@ -69,7 +69,7 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const RADIUS = 300;
+const RADIUS = 120;
 const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
