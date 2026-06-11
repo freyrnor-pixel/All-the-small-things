@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/CompanionPet.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/CompanionPet.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -424,6 +424,16 @@ const en = {
     },
   },
   // Hints (one per screen)
+  // Cover screen (Galaxy Z Flip outer display)
+  cover: {
+    tasksToday: 'Today',
+    taskCount: (n: number) => `${n} task${n !== 1 ? 's' : ''}`,
+    noTasks: 'All done!',
+    quickAdd: '+ Add',
+    habitsToday: 'Habits',
+    habitsSummary: (done: number, total: number) => `${done}/${total} done`,
+    moreTasksHint: (n: number) => `+${n} more`,
+  },
   hints: {
     home: {
       text: "Your daily overview. The most important tasks are at the top — tap ⭐ to focus on essentials only.",
@@ -851,6 +861,15 @@ const no: typeof en = {
   notesLabel: 'Notater (valgfritt)',
   notesPlaceholder: 'Eventuelle notater…',
   severityLabels: ['Mild', 'Litt', 'Moderat', 'Kraftig', 'Alvorlig'],
+  cover: {
+    tasksToday: 'I dag',
+    taskCount: (n: number) => `${n} oppgave${n !== 1 ? 'r' : ''}`,
+    noTasks: 'Alt klart!',
+    quickAdd: '+ Legg til',
+    habitsToday: 'Vaner',
+    habitsSummary: (done: number, total: number) => `${done}/${total} ferdig`,
+    moreTasksHint: (n: number) => `+${n} til`,
+  },
   hints: {
     home: {
       text: 'Din daglige oversikt. De viktigste oppgavene er øverst — trykk ⭐ for å fokusere kun på viktige.',
