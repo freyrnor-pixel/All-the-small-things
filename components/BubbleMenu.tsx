@@ -90,7 +90,7 @@ const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
 function normalizeAngle(a: number): number {
   'worklet';
   const twoPi = 2 * Math.PI;
-  return ((a % twoPi) + twoPi) % twoPi - Math.PI;
+  return ((a + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
 }
 
 // Returns 0–1 opacity based on how deep inside the viewing window the angle is.
