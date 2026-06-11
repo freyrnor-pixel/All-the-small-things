@@ -1,33 +1,49 @@
 /**
  * Pet.tsx — animated home-screen companion
  *
- * A small cat that lives in the bottom-left corner of the home screen. It bobs
- * gently at idle, bounces happily when pressed, wiggles when tasks are completed,
- * goes to sleep late at night, and can be fed by dragging food items onto it.
- * No real persistence — purely for fun.
+ * A small pet that lives in the bottom-left corner of the home screen inside
+ * its appropriate habitat. It bobs gently at idle, bounces when pressed,
+ * wiggles when tasks are completed, sleeps late at night, and can be fed by
+ * dragging food chips onto it. Food chips come from the weekly shopping list
+ * (falls back to defaults when the list is empty). Different food categories
+ * trigger different speech-bubble reactions.
  *
  * Connections:
- *   Imports → constants/theme, lib/useAppTheme
+ *   Imports → constants/petData, constants/theme, lib/useAppTheme,
+ *             store/useSettingsStore, store/useShoppingStore
  *   Used by → app/index.tsx
  *   Props   → completedToday: triggers excited animation when it increases
  */
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   Animated,
-  PanResponder,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useAppTheme } from '@/lib/useAppTheme';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { useShoppingStore } from '@/store/useShoppingStore';
+import {
+  PetState,
+  FoodChip,
+  PET_EMOJIS,
+  PET_HABITATS,
+  DEFAULT_FOOD_ITEMS,
+  shoppingItemToFoodChip,
+  reactionForCategory,
+} from '@/constants/petData';
 
-type PetState = 'idle' | 'happy' | 'eating' | 'excited' | 'sleeping';
-
-const FOOD_ITEMS = ['🍎', '🥕', '🧀', '🐟'];
-
-const HAPPY_MSGS  = ['Yay! ✨', '♪ ♪', 'Hehe~', '💖'];
-const EAT_MSGS    = ['Nom nom!', 'Yummy!', 'Delish!', 'More?'];
+const HAPPY_MSGS   = ['Yay! ✨', '♪ ♪', 'Hehe~', '💖'];
 const EXCITED_MSGS = ['⭐!', 'Woah!', 'Yesss!', 'Great!'];
 
 function pick<T>(arr: T[]): T {
@@ -37,122 +53,113 @@ function pick<T>(arr: T[]): T {
 // ─── Draggable food chip ──────────────────────────────────────────────────────
 
 type FoodProps = {
-  emoji: string;
+  item: FoodChip;
   petRef: React.RefObject<View | null>;
-  onFedRef: React.MutableRefObject<() => void>;
+  onFedRef: React.MutableRefObject<(category: string) => void>;
 };
 
-function DraggableFoodItem({ emoji, petRef, onFedRef }: FoodProps) {
-  const pan        = useRef(new Animated.ValueXY()).current;
-  const chipScale  = useRef(new Animated.Value(1)).current;
-  const chipOpacity = useRef(new Animated.Value(1)).current;
+function DraggableFoodItem({ item, petRef, onFedRef }: FoodProps) {
+  const translateX  = useSharedValue(0);
+  const translateY  = useSharedValue(0);
+  const chipScale   = useSharedValue(1);
+  const chipOpacity = useSharedValue(1);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+  function checkHitAndFeed(absX: number, absY: number) {
+    petRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
+      const HIT = 28;
+      const isOver =
+        absX >= pageX - HIT && absX <= pageX + w + HIT &&
+        absY >= pageY - HIT && absY <= pageY + h + HIT;
 
-      onPanResponderGrant: () => {
-        pan.setOffset({ x: (pan.x as any)._value, y: (pan.y as any)._value });
-        pan.setValue({ x: 0, y: 0 });
-        Animated.spring(chipScale, {
-          toValue: 1.3, useNativeDriver: true, tension: 250, friction: 5,
-        }).start();
-      },
-
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
-
-      onPanResponderRelease: (_, gesture) => {
-        pan.flattenOffset();
-        Animated.spring(chipScale, {
-          toValue: 1, useNativeDriver: true, tension: 200, friction: 6,
-        }).start();
-
-        petRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
-          const HIT = 28;
-          const isOver =
-            gesture.moveX >= pageX - HIT && gesture.moveX <= pageX + w + HIT &&
-            gesture.moveY >= pageY - HIT && gesture.moveY <= pageY + h + HIT;
-
-          if (isOver) {
-            // Food disappears into the pet
-            Animated.parallel([
-              Animated.timing(chipOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-              Animated.spring(chipScale, { toValue: 1.9, useNativeDriver: true, tension: 150, friction: 5 }),
-            ]).start(() => {
-              onFedRef.current();
-              chipOpacity.setValue(1);
-              chipScale.setValue(1);
-              pan.setValue({ x: 0, y: 0 });
-            });
-          } else {
-            // Snap back to tray
-            Animated.spring(pan, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: false,
-              tension: 80,
-              friction: 7,
-            }).start();
-          }
+      if (isOver) {
+        chipOpacity.value = withTiming(0, { duration: 200 }, () => {
+          runOnJS(onFedRef.current)(item.category);
+          chipOpacity.value = 1;
+          chipScale.value   = 1;
+          translateX.value  = 0;
+          translateY.value  = 0;
         });
-      },
+        chipScale.value = withSpring(1.9, { damping: 10, stiffness: 150 });
+      } else {
+        translateX.value = withSpring(0, { damping: 14, stiffness: 80 });
+        translateY.value = withSpring(0, { damping: 14, stiffness: 80 });
+      }
+    });
+  }
+
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      chipScale.value = withSpring(1.3, { damping: 10, stiffness: 250 });
     })
-  ).current;
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+      translateY.value = e.translationY;
+    })
+    .onEnd((e) => {
+      chipScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      runOnJS(checkHitAndFeed)(e.absoluteX, e.absoluteY);
+    });
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: chipOpacity.value,
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: chipScale.value },
+    ],
+  }));
 
   return (
-    // Outer: non-native translation (drag follows finger)
-    <Animated.View
-      style={[styles.foodWrap, { transform: pan.getTranslateTransform() }]}
-      {...panResponder.panHandlers}
-    >
-      {/* Inner: native scale + opacity (visual feedback) */}
-      <Animated.View style={{ opacity: chipOpacity, transform: [{ scale: chipScale }] }}>
-        <Text style={styles.foodEmoji}>{emoji}</Text>
-      </Animated.View>
-    </Animated.View>
+    <GestureDetector gesture={panGesture}>
+      <Reanimated.View style={[styles.foodWrap, animStyle]}>
+        <Text style={styles.foodEmoji}>{item.emoji}</Text>
+        <Text style={styles.foodLabel} numberOfLines={1}>{item.label}</Text>
+      </Reanimated.View>
+    </GestureDetector>
   );
 }
 
 // ─── Pet ──────────────────────────────────────────────────────────────────────
 
-const PET_EMOJI: Record<PetState, string> = {
-  idle:    '🐱',
-  happy:   '😸',
-  eating:  '😋',
-  excited: '🙀',
-  sleeping:'😴',
-};
-
 type Props = { completedToday: number };
 
 export default function Pet({ completedToday }: Props) {
-  const theme = useAppTheme();
+  const theme    = useAppTheme();
+  const petType  = useSettingsStore((s) => s.petType);
+  const petColor = useSettingsStore((s) => s.petColor);
+  const habitat  = PET_HABITATS[petType] ?? PET_HABITATS.cat;
+
+  const shoppingItems = useShoppingStore((s) => s.items);
+  const foodChips = useMemo(() => {
+    const unchecked = shoppingItems.filter(
+      (i) => i.listType === 'weekly' && !i.checked
+    );
+    if (unchecked.length === 0) return DEFAULT_FOOD_ITEMS;
+    return unchecked.slice(0, 5).map(shoppingItemToFoodChip);
+  }, [shoppingItems]);
 
   const [petState, setPetState] = useState<PetState>(() => {
     const h = new Date().getHours();
     return h < 7 || h >= 23 ? 'sleeping' : 'idle';
   });
-  const [bubbleText, setBubbleText]   = useState('');
-  const [showBubble, setShowBubble]   = useState(false);
+  const [bubbleText, setBubbleText] = useState('');
+  const [showBubble, setShowBubble] = useState(false);
 
-  const petRef       = useRef<View>(null);
-  const stateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const petRef        = useRef<View>(null);
+  const stateTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevCompleted = useRef(completedToday);
 
-  // Stable callback ref so the food-item PanResponder (created once) always
-  // calls the current triggerEating without stale-closure issues.
-  const onFedRef = useRef<() => void>(() => {});
+  // Stable ref so DraggableFoodItem (created once) always calls the current
+  // triggerEating without stale-closure issues.
+  const onFedRef = useRef<(category: string) => void>(() => {});
 
-  // ── Animated values ────────────────────────────────────────────────────────
-  const bobAnim      = useRef(new Animated.Value(0)).current;
-  const scaleAnim    = useRef(new Animated.Value(1)).current;
-  const rotateAnim   = useRef(new Animated.Value(0)).current;
-  const heartOpacity = useRef(new Animated.Value(0)).current;
-  const heartY       = useRef(new Animated.Value(0)).current;
-  const heartScale   = useRef(new Animated.Value(1)).current;
+  // ── Animated values (react-native Animated — native driver) ───────────────
+  const bobAnim       = useRef(new Animated.Value(0)).current;
+  const scaleAnim     = useRef(new Animated.Value(1)).current;
+  const rotateAnim    = useRef(new Animated.Value(0)).current;
+  const heartOpacity  = useRef(new Animated.Value(0)).current;
+  const heartY        = useRef(new Animated.Value(0)).current;
+  const heartScale    = useRef(new Animated.Value(1)).current;
   const bubbleOpacity = useRef(new Animated.Value(0)).current;
 
   // ── Idle bob (runs forever) ────────────────────────────────────────────────
@@ -223,7 +230,6 @@ export default function Pet({ completedToday }: Props) {
   function triggerExcited() {
     clearState();
     setPetState('excited');
-    // Wiggle: rapid rotate oscillation
     const steps = [8, -8, 6, -6, 4, -4, 0].map((v, i) =>
       Animated.timing(rotateAnim, { toValue: v, duration: 70 + i * 5, useNativeDriver: true })
     );
@@ -232,10 +238,9 @@ export default function Pet({ completedToday }: Props) {
     returnToIdle(2500);
   }
 
-  function triggerEating() {
+  function triggerEating(category: string) {
     clearState();
     setPetState('eating');
-    // Quick chomp sequence
     Animated.sequence([
       Animated.timing(scaleAnim, { toValue: 0.82, duration: 80,  useNativeDriver: true }),
       Animated.timing(scaleAnim, { toValue: 1.18, duration: 80,  useNativeDriver: true }),
@@ -243,12 +248,13 @@ export default function Pet({ completedToday }: Props) {
       Animated.timing(scaleAnim, { toValue: 1.12, duration: 80,  useNativeDriver: true }),
       Animated.timing(scaleAnim, { toValue: 1,    duration: 120, useNativeDriver: true }),
     ]).start();
-    showBubbleMsg(pick(EAT_MSGS));
+    showBubbleMsg(reactionForCategory(category));
     returnToIdle(2000);
   }
 
-  // Keep the food-item callback ref current on every render
   onFedRef.current = triggerEating;
+
+  const currentEmoji = (PET_EMOJIS[petType] ?? PET_EMOJIS.cat)[petState];
 
   const rotateStr = rotateAnim.interpolate({
     inputRange: [-10, 10],
@@ -257,7 +263,7 @@ export default function Pet({ completedToday }: Props) {
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Speech bubble — pops up above the pet */}
+      {/* Speech bubble */}
       {showBubble && (
         <Animated.View
           style={[
@@ -267,7 +273,6 @@ export default function Pet({ completedToday }: Props) {
           pointerEvents="none"
         >
           <Text style={[styles.bubbleText, { color: theme.text }]}>{bubbleText}</Text>
-          {/* Little triangle tail */}
           <View style={[styles.bubbleTail, { borderTopColor: theme.border }]} />
         </Animated.View>
       )}
@@ -276,29 +281,26 @@ export default function Pet({ completedToday }: Props) {
       <Animated.Text
         style={[
           styles.hearts,
-          {
-            opacity: heartOpacity,
-            transform: [{ translateY: heartY }, { scale: heartScale }],
-          },
+          { opacity: heartOpacity, transform: [{ translateY: heartY }, { scale: heartScale }] },
         ]}
         pointerEvents="none"
       >
         💕
       </Animated.Text>
 
-      {/* Food tray — horizontal row of draggable items above the pet */}
+      {/* Food tray — draggable chips from shopping list */}
       <View style={styles.foodTray} pointerEvents="box-none">
-        {FOOD_ITEMS.map((food) => (
+        {foodChips.map((chip, i) => (
           <DraggableFoodItem
-            key={food}
-            emoji={food}
+            key={`${chip.emoji}-${chip.label}-${i}`}
+            item={chip}
             petRef={petRef}
             onFedRef={onFedRef}
           />
         ))}
       </View>
 
-      {/* Pet — measurement anchor (ref on outer, animation on inner) */}
+      {/* Pet in habitat — measurement anchor (ref on outer, animation on inner) */}
       <Pressable onPress={triggerHappy} hitSlop={10}>
         <View ref={petRef} style={styles.petAnchor}>
           <Animated.View
@@ -310,8 +312,20 @@ export default function Pet({ completedToday }: Props) {
               ],
             }}
           >
-            <View style={[styles.petBody, { backgroundColor: theme.orangeLight }]}>
-              <Text style={styles.petEmoji}>{PET_EMOJI[petState]}</Text>
+            <View
+              style={[
+                styles.petHabitat,
+                {
+                  backgroundColor: habitat.bg,
+                  borderRadius: habitat.radius,
+                  borderColor: petColor,
+                },
+              ]}
+            >
+              <Text style={styles.petEmoji}>{currentEmoji}</Text>
+              <View style={[styles.habitatFloor, { backgroundColor: habitat.floorBg }]}>
+                <Text style={styles.floorEmoji}>{habitat.floor}</Text>
+              </View>
             </View>
           </Animated.View>
         </View>
@@ -330,7 +344,7 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    bottom: 128,
+    bottom: 148,
     alignSelf: 'center',
     borderRadius: 12,
     borderWidth: 1,
@@ -354,7 +368,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 7,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    // borderTopColor set inline from theme
   },
   bubbleText: {
     fontSize: 12,
@@ -363,7 +376,7 @@ const styles = StyleSheet.create({
   },
   hearts: {
     position: 'absolute',
-    bottom: 110,
+    bottom: 130,
     alignSelf: 'center',
     fontSize: 20,
     zIndex: 11,
@@ -374,27 +387,34 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   foodWrap: {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 20,
   },
   foodEmoji: {
-    fontSize: 22,
+    fontSize: 20,
+  },
+  foodLabel: {
+    fontSize: 9,
+    textAlign: 'center',
+    color: '#888',
   },
   petAnchor: {
-    width: 60,
-    height: 60,
+    width: 96,
+    height: 106,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  petBody: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+  petHabitat: {
+    width: 90,
+    height: 100,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    paddingTop: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.12,
@@ -402,6 +422,19 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   petEmoji: {
-    fontSize: 30,
+    fontSize: 44,
+    lineHeight: 52,
+  },
+  habitatFloor: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floorEmoji: {
+    fontSize: 16,
   },
 });

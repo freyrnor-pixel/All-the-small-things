@@ -22,30 +22,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAccessibility } from '@/lib/useAppTheme';
-
-const PET_EMOJIS: Record<string, { idle: string; happy: string }> = {
-  cat:   { idle: '🐱', happy: '😸' },
-  dog:   { idle: '🐶', happy: '🐕' },
-  bird:  { idle: '🐦', happy: '🦜' },
-  fox:   { idle: '🦊', happy: '🦊' },
-  bunny: { idle: '🐰', happy: '🐇' },
-};
-
-// Each entry describes the natural habitat the pet sits in.
-// radius controls how round/square the container looks.
-// floor is the small decorative emoji shown as the "ground" at the bottom.
-const PET_HABITATS: Record<string, {
-  bg: string;
-  radius: number;
-  floor: string;
-  floorBg: string;
-}> = {
-  cat:   { bg: '#FFF4EE', radius: 32, floor: '🛋️', floorBg: '#FFE4D0' },
-  dog:   { bg: '#FFFBF5', radius: 10, floor: '🏡', floorBg: '#FFE8C2' },
-  bird:  { bg: '#EDFBF2', radius: 18, floor: '🪺', floorBg: '#C8EDCF' },
-  fox:   { bg: '#FEF8F0', radius: 22, floor: '🍂', floorBg: '#FCDCB0' },
-  bunny: { bg: '#FFF4FA', radius: 36, floor: '🌸', floorBg: '#F9D4EA' },
-};
+import { PET_EMOJIS, PET_HABITATS } from '@/constants/petData';
 
 type Props = {
   celebrating?: boolean;
