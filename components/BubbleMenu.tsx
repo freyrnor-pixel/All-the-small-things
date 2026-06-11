@@ -1,11 +1,11 @@
 /**
  * BubbleMenu.tsx — spinning-wheel radial FAB for navigation.
  *
- * Floating action button on the home screen that opens into a spinnable ring of
- * bubbles. Only 3-4 bubbles are visible in the 150° viewing window at any time;
- * dragging the wheel spins it to reveal the rest. Labels resolve through `t.nav`
- * so the menu follows the user's language. Bubble colors follow the FeatureColors
- * warm-to-cool gradient (orange → blue).
+ * Floating action button on the home screen that opens into a 4-bubble arc.
+ * Item 0 (add/newTask) is always at the leftmost position (−180° from FAB).
+ * Items 1–7 form a spinning carousel: 3 slots in the remaining arc, drag up/down
+ * to cycle through all 7. Labels resolve through `t.nav` so the menu follows
+ * the user's language.
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, store/useSettingsStore
@@ -14,11 +14,10 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - Wheel geometry (RADIUS / WINDOW_START / WINDOW_END) is tuned for 8 bubbles. STEP_ANGLE
- *     updates automatically from BASE_ITEMS.length; widening WINDOW_END past -π/6 pushes
- *     bubbles toward the right screen edge (FAB is already near it).
+ *   - Item 0 is always pinned at −π; only items 1–N go into the carousel.
+ *   - STEP_ARC = π/6 spaces 4 items evenly across the 90° arc. Adjust if item count changes.
  *   - All labels go through useT() — no hardcoded text.
- *   - Settings is not in the wheel; it lives as a persistent corner button in app/index.tsx.
+ *   - Settings is not in the menu; it lives as a persistent corner button in app/index.tsx.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -57,7 +56,7 @@ type Props = {
   onNewTask?: () => void;
 };
 
-// Warm-to-cool gradient across the wheel: creation → focus → daily tracking → social.
+// Warm-to-cool gradient: creation → focus → daily tracking → social.
 const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
   { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: '#E8934A' },
@@ -71,64 +70,61 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 
 const RADIUS = 300;
 const BUBBLE_SIZE = 56;
-const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
+const NUM_WHEEL_ITEMS = 7;                              // items 1–7 cycle through the carousel
+const STEP_ARC = Math.PI / 6;                           // 30° per slot — 4 items fill the 90° arc
+const SCROLL_SENSITIVITY = RADIUS * STEP_ARC;           // ≈ 157 px of drag per item slot
+const ARC_VIEW_SIZE = RADIUS + BUBBLE_SIZE / 2;         // 328 — gesture detection area
 
-// Viewing window: 150° arc sweeping from left (−180°) to upper-right (−30°).
-// WINDOW_END is capped at −π/6 to keep bubbles away from the right screen edge.
-const WINDOW_START = -Math.PI;     // −180° — leftmost visible edge
-const WINDOW_END   = -Math.PI / 6; // −30°  — upper-right visible edge
-const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
+// ─── Carousel sub-component (items 1–7) ──────────────────────────────────────
 
-// Normalises any angle into [−π, π].
-function normalizeAngle(a: number): number {
-  'worklet';
-  const twoPi = 2 * Math.PI;
-  return ((a % twoPi) + twoPi) % twoPi - Math.PI;
-}
-
-// Returns 0–1 opacity based on how deep inside the viewing window the angle is.
-function windowOpacity(angle: number): number {
-  'worklet';
-  const norm = normalizeAngle(angle);
-  if (norm < WINDOW_START - WINDOW_FADE || norm > WINDOW_END + WINDOW_FADE) return 0;
-  if (norm < WINDOW_START + WINDOW_FADE)
-    return (norm - (WINDOW_START - WINDOW_FADE)) / (2 * WINDOW_FADE);
-  if (norm > WINDOW_END - WINDOW_FADE)
-    return ((WINDOW_END + WINDOW_FADE) - norm) / (2 * WINDOW_FADE);
-  return 1;
-}
-
-// ─── Per-bubble sub-component ────────────────────────────────────────────────
-
-type BubbleItemViewProps = {
+type SubBubbleItemProps = {
   item: BubbleEntry;
-  baseAngle: number;
-  wheelAngle: SharedValue<number>;
+  index: number;                      // 0-based index into items 1–7
+  scrollOffset: SharedValue<number>;  // unbounded float; visual wraps via % NUM_WHEEL_ITEMS
   openProgress: SharedValue<number>;
   onPress: () => void;
-  pointerEvents: 'auto' | 'none';
+  isOpen: boolean;
 };
 
-function BubbleItemView({
+function SubBubbleItem({
   item,
-  baseAngle,
-  wheelAngle,
+  index,
+  scrollOffset,
   openProgress,
   onPress,
-  pointerEvents,
-}: BubbleItemViewProps) {
+  isOpen,
+}: SubBubbleItemProps) {
   const pressAnim = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => {
-    const currentAngle = baseAngle + wheelAngle.value;
-    const op = openProgress.value;
-    const x = Math.cos(currentAngle) * RADIUS * op;
-    const y = Math.sin(currentAngle) * RADIUS * op;
-    const scale = (0.3 + 0.7 * op) * pressAnim.value;
-    const opacity = windowOpacity(currentAngle) * op;
+    // Fractional slot position in [0, NUM_WHEEL_ITEMS)
+    const raw = (index - scrollOffset.value) % NUM_WHEEL_ITEMS;
+    const s   = ((raw % NUM_WHEEL_ITEMS) + NUM_WHEEL_ITEMS) % NUM_WHEEL_ITEMS;
+    // Values near NUM_WHEEL_ITEMS wrap back to ~−0 (fade-in from the other side)
+    const sW  = s > NUM_WHEEL_ITEMS - 0.5 ? s - NUM_WHEEL_ITEMS : s;
+
+    if (sW < -0.5 || sW > 2.5) {
+      return { opacity: 0, transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 0 }] };
+    }
+
+    // sW=0 → slot 1 (−150°), sW=1 → slot 2 (−120°), sW=2 → slot 3 (−90°)
+    const angle = -Math.PI + (sW + 1) * STEP_ARC;
+    const op    = openProgress.value;
+    const x     = Math.cos(angle) * RADIUS * op;
+    const y     = Math.sin(angle) * RADIUS * op;
+
+    // Smooth fade over ±0.5 slot at each visible boundary
+    let edgeOpacity = 1;
+    if (sW < 0) edgeOpacity = (sW + 0.5) / 0.5;
+    if (sW > 2) edgeOpacity = (2.5 - sW) / 0.5;
+
     return {
-      transform: [{ translateX: x }, { translateY: y }, { scale }],
-      opacity,
+      transform: [
+        { translateX: x },
+        { translateY: y },
+        { scale: (0.3 + 0.7 * op) * pressAnim.value },
+      ],
+      opacity: edgeOpacity * op,
     };
   });
 
@@ -142,7 +138,7 @@ function BubbleItemView({
   return (
     <Animated.View
       style={[styles.bubble, { backgroundColor: item.color }, animStyle]}
-      pointerEvents={pointerEvents}
+      pointerEvents={isOpen ? 'auto' : 'none'}
     >
       <Pressable
         style={styles.bubbleInner}
@@ -161,10 +157,10 @@ function BubbleItemView({
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
-  // wheelAngle initialised to -π so item 0 (add) lands at the leftmost window position.
-  const wheelAngle   = useSharedValue(-Math.PI);
+  const scrollOffset = useSharedValue(0);   // unbounded; items wrap via % NUM_WHEEL_ITEMS
+  const startOffset  = useSharedValue(0);
   const openProgress = useSharedValue(0);
-  const startAngle   = useSharedValue(0);
+  const pressAnim0   = useSharedValue(1);   // press feedback for pinned item 0
   const router = useRouter();
   const theme = useAppTheme();
   const t = useT();
@@ -192,18 +188,38 @@ export default function BubbleMenu({ onNewTask }: Props) {
     setTimeout(action, 150);
   }
 
-  // Spin gesture: dragging up rotates the wheel counterclockwise, revealing items
-  // further along the circle. Releases snap to the nearest item slot in ~175ms.
+  // Item 0 is pinned at −π (directly left of FAB) and never participates in the carousel.
+  const item0Style = useAnimatedStyle(() => {
+    const op = openProgress.value;
+    return {
+      transform: [
+        { translateX: -RADIUS * op },
+        { translateY: 0 },
+        { scale: (0.3 + 0.7 * op) * pressAnim0.value },
+      ],
+      opacity: op,
+    };
+  });
+
+  function handleItem0PressIn() {
+    pressAnim0.value = withSpring(0.88, { mass: 1, damping: 15, stiffness: 150 });
+  }
+  function handleItem0PressOut() {
+    pressAnim0.value = withSpring(1, { mass: 1, damping: 15, stiffness: 150 });
+  }
+
+  // Spin gesture: drag up → later items enter from the top slot (−90°).
+  // scrollOffset is unbounded; snapping to the nearest integer keeps the spring short.
   const spinGesture = Gesture.Pan()
     .onStart(() => {
-      startAngle.value = wheelAngle.value;
+      startOffset.value = scrollOffset.value;
     })
     .onUpdate((e) => {
-      wheelAngle.value = startAngle.value - e.translationY / RADIUS;
+      scrollOffset.value = startOffset.value + (-e.translationY / SCROLL_SENSITIVITY);
     })
     .onEnd(() => {
-      const snapped = Math.round(wheelAngle.value / STEP_ANGLE) * STEP_ANGLE;
-      wheelAngle.value = withSpring(snapped, { damping: 20, stiffness: 200 });
+      const snapped = Math.round(scrollOffset.value);
+      scrollOffset.value = withSpring(snapped, { damping: 20, stiffness: 200 });
     });
 
   const fabStyle = useAnimatedStyle(() => ({
@@ -219,16 +235,34 @@ export default function BubbleMenu({ onNewTask }: Props) {
       )}
 
       <GestureDetector gesture={spinGesture}>
-        <View style={styles.wheelArea} pointerEvents="box-none">
-          {items.map((item, i) => (
-            <BubbleItemView
+        <View style={styles.arcArea} pointerEvents="box-none">
+
+          {/* Item 0: pinned at −π (directly left), never spins */}
+          <Animated.View
+            style={[styles.bubble, { backgroundColor: items[0].color }, item0Style]}
+            pointerEvents={open ? 'auto' : 'none'}
+          >
+            <Pressable
+              style={styles.bubbleInner}
+              onPress={() => navigate(items[0])}
+              onPressIn={handleItem0PressIn}
+              onPressOut={handleItem0PressOut}
+            >
+              <Ionicons name={items[0].icon} size={22} color="#fff" />
+              <Text style={styles.bubbleLabel}>{items[0].label}</Text>
+            </Pressable>
+          </Animated.View>
+
+          {/* Items 1–7: spinning carousel, 3 slots visible at a time */}
+          {items.slice(1).map((item, i) => (
+            <SubBubbleItem
               key={item.route}
               item={item}
-              baseAngle={i * STEP_ANGLE}
-              wheelAngle={wheelAngle}
+              index={i}
+              scrollOffset={scrollOffset}
               openProgress={openProgress}
               onPress={() => navigate(item)}
-              pointerEvents={open ? 'auto' : 'none'}
+              isOpen={open}
             />
           ))}
         </View>
@@ -251,10 +285,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wheelArea: {
+  // Gesture detection area sized to cover the arc; bottom-right corner aligns with FAB center.
+  arcArea: {
     position: 'absolute',
-    width: RADIUS * 2 + BUBBLE_SIZE,
-    height: RADIUS * 2 + BUBBLE_SIZE,
+    width: ARC_VIEW_SIZE,
+    height: ARC_VIEW_SIZE,
     bottom: 0,
     right: 0,
   },
@@ -266,8 +301,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.fab,
   },
+  // Bubbles anchor to the bottom-right of arcArea (= FAB center) so translateX/Y
+  // move them outward from the correct origin.
   bubble: {
     position: 'absolute',
+    bottom: 0,
+    right: 0,
     width: BUBBLE_SIZE,
     height: BUBBLE_SIZE,
     borderRadius: Radius.full,
