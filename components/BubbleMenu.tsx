@@ -84,7 +84,7 @@ const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // 656 — diameter + one bubble
 // upper-right would push items off-screen.
 const WINDOW_START = -Math.PI;     // −180° — leftmost visible edge
 const WINDOW_END   = -Math.PI / 2; // −90°  — topmost visible edge (straight up)
-const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
+const DRAG_SENSITIVITY = 120;      // px of drag per radian — lower = more responsive
 
 // Normalises any angle into [−π, π].
 function normalizeAngle(a: number): number {
@@ -93,16 +93,11 @@ function normalizeAngle(a: number): number {
   return ((a % twoPi) + twoPi) % twoPi - Math.PI;
 }
 
-// Returns 0–1 opacity based on how deep inside the viewing window the angle is.
+// Returns 1 if the angle is inside the viewing window, 0 otherwise (hard cut, no fade).
 function windowOpacity(angle: number): number {
   'worklet';
   const norm = normalizeAngle(angle);
-  if (norm < WINDOW_START - WINDOW_FADE || norm > WINDOW_END + WINDOW_FADE) return 0;
-  if (norm < WINDOW_START + WINDOW_FADE)
-    return (norm - (WINDOW_START - WINDOW_FADE)) / (2 * WINDOW_FADE);
-  if (norm > WINDOW_END - WINDOW_FADE)
-    return ((WINDOW_END + WINDOW_FADE) - norm) / (2 * WINDOW_FADE);
-  return 1;
+  return norm >= WINDOW_START && norm <= WINDOW_END ? 1 : 0;
 }
 
 // ─── Per-bubble sub-component ────────────────────────────────────────────────
@@ -140,10 +135,10 @@ function BubbleItemView({
   });
 
   function handlePressIn() {
-    pressAnim.value = withSpring(0.88, { mass: 1, damping: 15, stiffness: 150 });
+    pressAnim.value = withSpring(0.88, { mass: 1, damping: 30, stiffness: 400 });
   }
   function handlePressOut() {
-    pressAnim.value = withSpring(1, { mass: 1, damping: 15, stiffness: 150 });
+    pressAnim.value = withSpring(1, { mass: 1, damping: 30, stiffness: 400 });
   }
 
   return (
@@ -189,7 +184,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   function toggle() {
     const toValue = open ? 0 : 1;
-    openProgress.value = withSpring(toValue, { damping: 15, stiffness: 150 });
+    openProgress.value = withSpring(toValue, { damping: 25, stiffness: 320 });
     setOpen((v) => !v);
   }
 
@@ -206,11 +201,12 @@ export default function BubbleMenu({ onNewTask }: Props) {
       startAngle.value = wheelAngle.value;
     })
     .onUpdate((e) => {
-      wheelAngle.value = startAngle.value - e.translationY / RADIUS;
+      wheelAngle.value = startAngle.value - e.translationY / DRAG_SENSITIVITY;
     })
-    .onEnd(() => {
-      const snapped = Math.round(wheelAngle.value / STEP_ANGLE) * STEP_ANGLE;
-      wheelAngle.value = withSpring(snapped, { damping: 20, stiffness: 200 });
+    .onEnd((e) => {
+      const projected = wheelAngle.value - (e.velocityY / DRAG_SENSITIVITY) * 0.12;
+      const snapped = Math.round(projected / STEP_ANGLE) * STEP_ANGLE;
+      wheelAngle.value = withSpring(snapped, { damping: 35, stiffness: 500 });
     });
 
   const fabStyle = useAnimatedStyle(() => ({
