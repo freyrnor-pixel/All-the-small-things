@@ -7,15 +7,16 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/HintCard, components/QuickAddSheet, components/TaskItem, constants/theme, lib/date, lib/holidays, lib/i18n, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items); settings via useSettingsStore
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
  *
  * Edit notes:
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
+ *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -31,11 +32,14 @@ import { useRouter } from 'expo-router';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useHabitStore } from '@/store/useHabitStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
+import CoverScreen from '@/components/cover/CoverScreen';
+import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -55,6 +59,7 @@ export default function HomeScreen() {
   const settings = useSettingsStore();
   const t = useT();
   const theme = useAppTheme();
+  const { isCoverScreen } = useCoverScreen();
 
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
@@ -62,6 +67,8 @@ export default function HomeScreen() {
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
+  const habits = useHabitStore((s) => s.habits);
+  const habitLogs = useHabitStore((s) => s.logs);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const isWorkModeActive = useMemo(() => {
@@ -102,6 +109,17 @@ export default function HomeScreen() {
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: Colors.cream }]} />;
+  }
+
+  if (isCoverScreen) {
+    return (
+      <CoverScreen
+        todayTasks={tasksForDate(today)}
+        toggleTask={toggleTask}
+        habits={habits}
+        logs={habitLogs}
+      />
+    );
   }
 
   const greeting = () => {
