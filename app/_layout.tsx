@@ -1,12 +1,13 @@
 /**
  * _layout.tsx — root layout & app bootstrap
  *
- * Mounts on launch: initDb() + pruneOldData(), then loads every Zustand store
- * (settings, tasks, shopping, meals, health, shared, habits, catalog). After
- * requesting notification permission it re-syncs all reminders/notifications to
- * the loaded data and language. Defines the expo-router Stack and per-screen
- * options, redirects to onboarding until setup is complete, and wraps the tree
- * in an ErrorBoundary.
+ * Mounts on launch: loads the rounded Nunito font (gating render until ready and
+ * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
+ * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
+ * habits, catalog). After requesting notification permission it re-syncs all
+ * reminders/notifications to the loaded data and language. Defines the expo-router
+ * Stack and per-screen options, redirects to onboarding until setup is complete,
+ * and wraps the tree in an ErrorBoundary.
  *
  * Connections:
  *   Imports → constants/theme, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
@@ -23,8 +24,16 @@ import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Updates from 'expo-updates';
+import {
+  useFonts,
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
 import { initDb, pruneOldData } from '@/lib/db';
 import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
@@ -37,7 +46,23 @@ import { useHealthStore } from '@/store/useHealthStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
+
+/**
+ * Apply the rounded Nunito family as the app-wide default for <Text>/<TextInput>
+ * so most copy inherits it without per-screen edits. Explicit `fontFamily` in a
+ * component's style still wins (use the Fonts.* tokens for weighted text). Runs
+ * once; merges rather than stacking onto any existing default style.
+ */
+let fontDefaultsApplied = false;
+function applyDefaultFontFamily() {
+  if (fontDefaultsApplied) return;
+  fontDefaultsApplied = true;
+  for (const Comp of [Text, TextInput] as unknown as { defaultProps?: { style?: unknown } }[]) {
+    Comp.defaultProps = Comp.defaultProps || {};
+    Comp.defaultProps.style = [{ fontFamily: Fonts.regular }, Comp.defaultProps.style];
+  }
+}
 
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -68,6 +93,13 @@ class ErrorBoundary extends Component<
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const [fontsLoaded, fontError] = useFonts({
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
   const loadSettings = useSettingsStore((s) => s.load);
   const setupComplete = useSettingsStore((s) => s.setupComplete);
   const loaded = useSettingsStore((s) => s.loaded);
@@ -127,6 +159,11 @@ export default function RootLayout() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, setupComplete]);
+
+  // Hold the UI until the rounded font is ready (or has definitively failed) so
+  // text doesn't flash in the system font first. Apply it as the global default.
+  if (!fontsLoaded && !fontError) return null;
+  applyDefaultFontFamily();
 
   return (
     <ErrorBoundary>

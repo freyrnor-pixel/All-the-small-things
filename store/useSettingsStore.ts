@@ -19,7 +19,7 @@
 import { create } from 'zustand';
 import db from '@/lib/db';
 
-export type ColorTheme = 'warm' | 'cool' | 'forest' | 'rose';
+export type ColorTheme = 'warm' | 'cool' | 'forest' | 'rose' | 'highcontrast';
 export type Language = 'en' | 'no';
 export type DarkMode = 'system' | 'on' | 'off';
 export type FontSizePref = 'small' | 'default' | 'large';

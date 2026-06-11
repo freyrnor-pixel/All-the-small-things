@@ -345,7 +345,7 @@ const en = {
   updateAvailableBody: 'A new version has been downloaded. Restart now to apply it.',
   updateRestart: 'Restart now',
   updateLater: 'Later',
-  themeNames: { warm: 'Warm', cool: 'Cool', forest: 'Forest', rose: 'Rose' },
+  themeNames: { warm: 'Warm', cool: 'Cool', forest: 'Forest', rose: 'Rose', highcontrast: 'High contrast' },
   suggestions: 'Suggestions',
   lastPaid: (price: string) => `last paid ${price}`,
   // Meals screen
@@ -838,7 +838,7 @@ const no: typeof en = {
   updateAvailableBody: 'En ny versjon er lastet ned. Start på nytt for å bruke den.',
   updateRestart: 'Start på nytt',
   updateLater: 'Senere',
-  themeNames: { warm: 'Varm', cool: 'Kjølig', forest: 'Skog', rose: 'Rose' },
+  themeNames: { warm: 'Varm', cool: 'Kjølig', forest: 'Skog', rose: 'Rose', highcontrast: 'Høy kontrast' },
   suggestions: 'Forslag',
   lastPaid: (price: string) => `betalte sist ${price}`,
   mealsTitle: 'Matretter',

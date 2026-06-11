@@ -1,11 +1,14 @@
 /**
  * theme.ts — design tokens: colour themes (light/dark) + spacing/radius/type/shadow scales.
  *
- * Defines the four named colour palettes (warm/cool/forest/rose), their dark
- * variants, and shared layout constants. `getTheme(name, isDark)` resolves a
- * palette; lib/useAppTheme.ts wraps it to react to the user's theme + dark-mode
+ * Defines the five named colour palettes (warm/cool/forest/rose + highcontrast),
+ * their dark variants, and shared layout constants. `getTheme(name, isDark)` resolves
+ * a palette; lib/useAppTheme.ts wraps it to react to the user's theme + dark-mode
  * settings. The static `Colors` export is the default warm palette.
- * `getFontSize(base, scale)` applies the user's fontSize preference to a base pt.
+ * `getSoftTheme(colors, name)` returns a gentler, lower-contrast variant for
+ * emotional/health screens. `Fonts` holds the rounded Nunito family tokens, `Layout`
+ * the shared card padding/rhythm. `getFontSize(base, scale)` applies the user's
+ * fontSize preference to a base pt.
  *
  * Connections:
  *   Imports → —
@@ -19,7 +22,7 @@
  *     which is always the light warm palette.
  *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
  */
-export type ThemeName = 'warm' | 'cool' | 'forest' | 'rose';
+export type ThemeName = 'warm' | 'cool' | 'forest' | 'rose' | 'highcontrast';
 export type FontSizeScale = 'small' | 'default' | 'large';
 
 export interface AppColors {
@@ -134,6 +137,28 @@ export const THEMES: Record<ThemeName, AppColors> = {
     border: '#EAD9DF',
     neutral: '#C0A8B5',
   },
+  // High-contrast / accessibility theme: near-black text on pure white, strong
+  // saturated accents and heavy borders for users who need maximum legibility.
+  highcontrast: {
+    cream: '#FFFFFF',
+    orange: '#B34A00',
+    orangeLight: '#FFE0C2',
+    green: '#1E7A2E',
+    greenLight: '#C2F0C8',
+    brown: '#1A1A1A',
+    brownLight: '#4A4A4A',
+    white: '#FFFFFF',
+    offWhite: '#F2F2F2',
+    gray: '#5A5A5A',
+    grayLight: '#E0E0E0',
+    text: '#000000',
+    textLight: '#2A2A2A',
+    danger: '#C00000',
+    dangerLight: '#FFD6D6',
+    shadow: 'rgba(0,0,0,0.35)',
+    border: '#000000',
+    neutral: '#5A5A5A',
+  },
 };
 
 export const THEME_META: Record<ThemeName, { label: string; emoji: string }> = {
@@ -141,6 +166,7 @@ export const THEME_META: Record<ThemeName, { label: string; emoji: string }> = {
   cool: { label: 'Kjølig', emoji: '🫐' },
   forest: { label: 'Skog', emoji: '🌿' },
   rose: { label: 'Rose', emoji: '🌸' },
+  highcontrast: { label: 'Høy kontrast', emoji: '⬛' },
 };
 
 export const DARK_THEMES: Record<ThemeName, AppColors> = {
@@ -224,11 +250,49 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     border: '#3A2830',
     neutral: '#785060',
   },
+  // High-contrast dark: pure white text on true black, bright accents, white borders.
+  highcontrast: {
+    cream: '#000000',
+    orange: '#FFB060',
+    orangeLight: '#3A2410',
+    green: '#5EE070',
+    greenLight: '#0E2A12',
+    brown: '#FFFFFF',
+    brownLight: '#CFCFCF',
+    white: '#0A0A0A',
+    offWhite: '#141414',
+    gray: '#B0B0B0',
+    grayLight: '#1F1F1F',
+    text: '#FFFFFF',
+    textLight: '#E0E0E0',
+    danger: '#FF6B6B',
+    dangerLight: '#3A0E0E',
+    shadow: 'rgba(0,0,0,0.8)',
+    border: '#FFFFFF',
+    neutral: '#B0B0B0',
+  },
 };
 
 export function getTheme(name: string, isDark = false): AppColors {
   const map = isDark ? DARK_THEMES : THEMES;
   return map[name as ThemeName] ?? (isDark ? DARK_THEMES.warm : warmColors);
+}
+
+/**
+ * Soften a palette for emotional / health screens: warms and lowers the contrast
+ * of text and surfaces so the screen reads gentler than productivity screens.
+ * Pure-function transform over any AppColors — call from useSoftTheme()/per-screen.
+ * The high-contrast theme is returned unchanged so accessibility is never reduced.
+ */
+export function getSoftTheme(c: AppColors, themeName?: string): AppColors {
+  if (themeName === 'highcontrast') return c;
+  return {
+    ...c,
+    // Lift body text slightly toward the muted tone (lower contrast, less clinical).
+    text: c.textLight,
+    // Replace alarm-red danger accents with the calm neutral on soft screens.
+    danger: c.neutral,
+  };
 }
 
 export const Colors = warmColors;
@@ -252,6 +316,21 @@ export const Spacing = {
   xxl: 48,
 };
 
+/**
+ * Shared card/layout rhythm. Use these instead of ad-hoc padding so every card
+ * breathes the same on every screen (cramped cards read as stressful).
+ *   cardPadding   — interior padding for cards (≥16 vertical, generous).
+ *   cardGap       — consistent vertical margin between stacked cards.
+ *   maxVisible    — soft cap on items shown before an "and X more…" nudge.
+ */
+export const Layout = {
+  cardPadding: 18,
+  cardPaddingV: 18,
+  cardPaddingH: 16,
+  cardGap: 14,
+  maxVisible: 5,
+};
+
 export const Radius = {
   sm: 10,
   md: 18,
@@ -259,15 +338,30 @@ export const Radius = {
   full: 999,
 };
 
+// Body text is never below 16; secondary/caption text never below 14.
 export const FontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
+  xs: 12,
+  sm: 14,
+  md: 16,
   lg: 18,
   xl: 22,
   xxl: 28,
   hero: 36,
 };
+
+/**
+ * Rounded-typeface family tokens (Nunito). Loaded in app/_layout.tsx via expo-font;
+ * the regular face is also set as the global Text default there, so most text
+ * inherits it automatically. Use these tokens directly for weighted text
+ * (headings, emphasis) since RN won't auto-map fontWeight to a named face.
+ */
+export const Fonts = {
+  regular: 'Nunito_400Regular',
+  medium: 'Nunito_500Medium',
+  semibold: 'Nunito_600SemiBold',
+  bold: 'Nunito_700Bold',
+  extrabold: 'Nunito_800ExtraBold',
+} as const;
 
 export const Shadow = {
   card: {

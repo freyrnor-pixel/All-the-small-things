@@ -1,0 +1,80 @@
+/**
+ * CompletionGlow.tsx — one-shot colour bloom overlay for task/habit completion.
+ *
+ * Absolutely-fills its (relatively-positioned) parent card and, whenever `trigger`
+ * flips to a new truthy value, blooms a soft colour glow that fades out within ~1s.
+ * Purely decorative and pointer-transparent. Respects reduce-motion: when set, it
+ * renders nothing (no flash).
+ *
+ * Usage:
+ *   <View style={{ position: 'relative' }}>
+ *     ...card content...
+ *     <CompletionGlow trigger={done} />
+ *   </View>
+ *
+ * Connections:
+ *   Imports → react-native-reanimated, lib/useAppTheme
+ *   Used by → components/TaskItem, app/habits (completion feedback)
+ *   Data    → reads reducedMotion via useAccessibility(); colour from useAppTheme().green
+ *
+ * Edit notes:
+ *   - Parent must be position:relative (or have a defined box) for the absolute fill.
+ *   - `trigger` should be a value that CHANGES on completion (e.g. a boolean or a
+ *     counter). The glow runs on rising edges only, never on mount.
+ */
+import React, { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { Radius } from '@/constants/theme';
+import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
+
+type Props = {
+  /** Changes value on completion; the glow runs on each rising edge. */
+  trigger: boolean | number;
+  /** Override the glow colour (defaults to the theme green). */
+  color?: string;
+  /** Corner radius to match the parent card. */
+  radius?: number;
+};
+
+export default function CompletionGlow({ trigger, color, radius = Radius.md }: Props) {
+  const theme = useAppTheme();
+  const { reducedMotion } = useAccessibility();
+  const opacity = useSharedValue(0);
+  const mounted = useSharedValue(false);
+
+  useEffect(() => {
+    // Skip the very first run (mount) and honour reduce-motion.
+    if (!mounted.value) {
+      mounted.value = true;
+      return;
+    }
+    if (reducedMotion) return;
+    if (!trigger) return;
+    opacity.value = withSequence(
+      withTiming(0.55, { duration: 180, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: 760, easing: Easing.in(Easing.quad) }),
+    );
+  }, [trigger, reducedMotion]);
+
+  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  if (reducedMotion) return null;
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        { backgroundColor: color ?? theme.green, borderRadius: radius },
+        animStyle,
+      ]}
+    />
+  );
+}

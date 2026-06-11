@@ -3,6 +3,7 @@
  *
  * useAppTheme() reads the user's colorTheme + darkMode from the settings store and
  * the system colour scheme, then returns the matching AppColors via getTheme().
+ * useSoftTheme() returns the same palette softened for emotional/health screens.
  * useIsDark() returns just the resolved dark/light boolean.
  * useAccessibility() returns { reducedMotion, fontScale } for animation and font scaling.
  *
@@ -19,7 +20,7 @@
  */
 import { useColorScheme } from 'react-native';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { getTheme, getFontSize, AppColors, FontSizeScale } from '@/constants/theme';
+import { getTheme, getSoftTheme, getFontSize, AppColors, FontSizeScale } from '@/constants/theme';
 
 export function useAppTheme(): AppColors {
   const colorTheme = useSettingsStore((s) => s.colorTheme);
@@ -27,6 +28,19 @@ export function useAppTheme(): AppColors {
   const systemScheme = useColorScheme();
   const isDark = darkMode === 'on' || (darkMode === 'system' && systemScheme === 'dark');
   return getTheme(colorTheme, isDark);
+}
+
+/**
+ * Like useAppTheme() but softened for emotional/health screens (warmer, lower
+ * contrast). Never softens the high-contrast accessibility theme. Use on
+ * app/health.tsx and app/habits.tsx so they read gentler than productivity screens.
+ */
+export function useSoftTheme(): AppColors {
+  const colorTheme = useSettingsStore((s) => s.colorTheme);
+  const darkMode = useSettingsStore((s) => s.darkMode);
+  const systemScheme = useColorScheme();
+  const isDark = darkMode === 'on' || (darkMode === 'system' && systemScheme === 'dark');
+  return getSoftTheme(getTheme(colorTheme, isDark), colorTheme);
 }
 
 export function useIsDark(): boolean {
