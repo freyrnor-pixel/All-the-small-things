@@ -202,6 +202,8 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN pet_name TEXT DEFAULT ''",
     "ALTER TABLE settings ADD COLUMN pet_type TEXT DEFAULT 'cat'",
     "ALTER TABLE settings ADD COLUMN pet_color TEXT DEFAULT '#A78BFA'",
+    // Left-handed mode
+    "ALTER TABLE settings ADD COLUMN left_handed INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

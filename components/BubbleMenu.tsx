@@ -2,7 +2,7 @@
  * BubbleMenu.tsx — spinning-wheel radial FAB for navigation.
  *
  * Floating action button on the home screen that opens into a spinnable ring of
- * bubbles. Only 3-4 bubbles are visible in the 150° viewing window at any time;
+ * bubbles. Only 3 bubbles are visible in the 90° viewing window at any time;
  * dragging the wheel spins it to reveal the rest. Labels resolve through `t.nav`
  * so the menu follows the user's language. Bubble colors follow the FeatureColors
  * warm-to-cool gradient (orange → blue).
@@ -10,17 +10,17 @@
  * Connections:
  *   Imports → constants/theme, lib/i18n, store/useSettingsStore
  *   Used by → app/index.tsx
- *   Data    → none (presentational); reads colorTheme from useSettingsStore for theming
+ *   Data    → none (presentational); reads colorTheme + leftHanded from useSettingsStore
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - Wheel geometry (RADIUS / WINDOW_START / WINDOW_END) is tuned for 8 bubbles. STEP_ANGLE
- *     updates automatically from BASE_ITEMS.length; widening WINDOW_END past -π/6 pushes
- *     bubbles toward the right screen edge (FAB is already near it).
+ *   - Wheel geometry (RADIUS / WINDOW_FADE) is tuned for 8 bubbles. STEP_ANGLE
+ *     updates automatically from BASE_ITEMS.length.
+ *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
  *   - Settings is not in the wheel; it lives as a persistent corner button in app/index.tsx.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -41,6 +41,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FeatureColors } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 type NavKey = keyof Translations['nav'];
@@ -77,14 +78,10 @@ const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
 // Wheel canvas: large enough to contain the full arc in all directions.
 // The FAB sits at the CENTRE of this canvas, so all translations radiate
 // correctly from the FAB without any right/bottom positioning tricks.
-const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // 656 — diameter + one bubble
+const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // diameter + one bubble
 
-// Viewing window: 90° arc from left (−180°) to straight up (−90°).
-// FAB is near the right screen edge (right: 24), so going past −90° toward
-// upper-right would push items off-screen.
-const WINDOW_START = -Math.PI;     // −180° — leftmost visible edge
-const WINDOW_END   = -Math.PI / 2; // −90°  — topmost visible edge (straight up)
-const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
+// Fade zone at each edge of the viewing window (22.5°).
+const WINDOW_FADE = Math.PI / 8;
 
 // Normalises any angle into [−π, π].
 function normalizeAngle(a: number): number {
@@ -94,14 +91,15 @@ function normalizeAngle(a: number): number {
 }
 
 // Returns 0–1 opacity based on how deep inside the viewing window the angle is.
-function windowOpacity(angle: number): number {
+// winStart < winEnd, both in [−π, π].
+function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
   const norm = normalizeAngle(angle);
-  if (norm < WINDOW_START - WINDOW_FADE || norm > WINDOW_END + WINDOW_FADE) return 0;
-  if (norm < WINDOW_START + WINDOW_FADE)
-    return (norm - (WINDOW_START - WINDOW_FADE)) / (2 * WINDOW_FADE);
-  if (norm > WINDOW_END - WINDOW_FADE)
-    return ((WINDOW_END + WINDOW_FADE) - norm) / (2 * WINDOW_FADE);
+  if (norm < winStart - WINDOW_FADE || norm > winEnd + WINDOW_FADE) return 0;
+  if (norm < winStart + WINDOW_FADE)
+    return (norm - (winStart - WINDOW_FADE)) / (2 * WINDOW_FADE);
+  if (norm > winEnd - WINDOW_FADE)
+    return ((winEnd + WINDOW_FADE) - norm) / (2 * WINDOW_FADE);
   return 1;
 }
 
@@ -112,6 +110,8 @@ type BubbleItemViewProps = {
   baseAngle: number;
   wheelAngle: SharedValue<number>;
   openProgress: SharedValue<number>;
+  windowStart: number;
+  windowEnd: number;
   onPress: () => void;
   pointerEvents: 'auto' | 'none';
 };
@@ -121,6 +121,8 @@ function BubbleItemView({
   baseAngle,
   wheelAngle,
   openProgress,
+  windowStart,
+  windowEnd,
   onPress,
   pointerEvents,
 }: BubbleItemViewProps) {
@@ -132,7 +134,7 @@ function BubbleItemView({
     const x = Math.cos(currentAngle) * RADIUS * op;
     const y = Math.sin(currentAngle) * RADIUS * op;
     const scale = (0.3 + 0.7 * op) * pressAnim.value;
-    const opacity = windowOpacity(currentAngle) * op;
+    const opacity = windowOpacity(currentAngle, windowStart, windowEnd) * op;
     return {
       transform: [{ translateX: x }, { translateY: y }, { scale }],
       opacity,
@@ -168,10 +170,22 @@ function BubbleItemView({
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
-  // wheelAngle initialised to -π so item 0 (add) lands at the leftmost window position.
+  const { leftHanded } = useSettingsStore();
+
+  // Right-handed: window from left (−π) to up (−π/2); item 0 starts at left edge.
+  // Left-handed:  window from up (−π/2) to right (0);  item 0 starts at center (−π/4).
+  const windowStart = leftHanded ? -Math.PI / 2 : -Math.PI;
+  const windowEnd   = leftHanded ? 0             : -Math.PI / 2;
+
   const wheelAngle   = useSharedValue(-Math.PI);
   const openProgress = useSharedValue(0);
   const startAngle   = useSharedValue(0);
+
+  // Reset wheel position to match the new window when handedness changes.
+  useEffect(() => {
+    wheelAngle.value = leftHanded ? -Math.PI / 4 : -Math.PI;
+  }, [leftHanded]);
+
   const router = useRouter();
   const theme = useAppTheme();
   const t = useT();
@@ -219,8 +233,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
     }],
   }));
 
+  const sideStyle = leftHanded ? { left: 24 } : { right: 24 };
+
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={[styles.container, sideStyle]} pointerEvents="box-none">
       {open && (
         <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
       )}
@@ -234,6 +250,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
               baseAngle={i * STEP_ANGLE}
               wheelAngle={wheelAngle}
               openProgress={openProgress}
+              windowStart={windowStart}
+              windowEnd={windowEnd}
               onPress={() => navigate(item)}
               pointerEvents={open ? 'auto' : 'none'}
             />
@@ -254,7 +272,6 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 32,
-    right: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -263,7 +280,7 @@ const styles = StyleSheet.create({
     width: WHEEL_SIZE,
     height: WHEEL_SIZE,
     // Centre this canvas on the FAB. FAB centre = centre of the 60×60 container.
-    // Canvas top-left = FAB_centre - WHEEL_SIZE/2 = 30 - 328 = -298.
+    // Canvas top-left = FAB_centre - WHEEL_SIZE/2 = 30 - (WHEEL_SIZE/2).
     left: FAB_SIZE / 2 - WHEEL_SIZE / 2,
     top: FAB_SIZE / 2 - WHEEL_SIZE / 2,
   },

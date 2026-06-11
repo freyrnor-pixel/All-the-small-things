@@ -400,6 +400,8 @@ const en = {
       fontSizeSmall: 'Small',
       fontSizeDefault: 'Default',
       fontSizeLarge: 'Large',
+      leftHanded: 'Left-handed mode',
+      leftHandedHint: 'Moves the menu button to the left side',
     },
     // Privacy hint card shown in settings (Proposal 3)
     privacy: {
@@ -709,6 +711,8 @@ const no: typeof en = {
       fontSizeSmall: 'Liten',
       fontSizeDefault: 'Standard',
       fontSizeLarge: 'Stor',
+      leftHanded: 'Venstrehendt modus',
+      leftHandedHint: 'Flytter menyknappen til venstre side',
     },
     privacy: {
       headline: 'Dataene dine er hos deg',

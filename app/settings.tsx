@@ -405,6 +405,19 @@ export default function SettingsScreen() {
                 </Pressable>
               ))}
             </View>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.accessibility.leftHanded}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.settings.accessibility.leftHandedHint}</Text>
+              </View>
+              <Switch
+                value={settings.leftHanded}
+                onValueChange={(v) => settings.update({ leftHanded: v })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.leftHanded ? theme.orange : theme.gray}
+              />
+            </View>
           </View>
         </View>
 

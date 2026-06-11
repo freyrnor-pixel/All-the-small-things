@@ -21,7 +21,7 @@
  *   - Previous uses router.back(); Finish button color is theme-driven.
  */
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -88,6 +88,21 @@ export default function OnboardingStep5() {
           })}
         </View>
 
+        <View style={styles.handednessCard}>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, marginRight: Spacing.md }}>
+              <Text style={styles.switchLabel}>{t.settings.accessibility.leftHanded}</Text>
+              <Text style={styles.switchHint}>{t.settings.accessibility.leftHandedHint}</Text>
+            </View>
+            <Switch
+              value={settings.leftHanded}
+              onValueChange={(v) => settings.update({ leftHanded: v })}
+              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
+              thumbColor={settings.leftHanded ? Colors.orange : Colors.gray}
+            />
+          </View>
+        </View>
+
         <View style={styles.progress}>
           {[0, 1, 2, 3, 4].map((i) => (
             <View key={i} style={[styles.dot, i === 4 && styles.dotActive]} />
@@ -142,6 +157,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkmarkText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
+  handednessCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    ...Shadow.card,
+  },
+  switchRow: { flexDirection: 'row', alignItems: 'center' },
+  switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
+  switchHint: { fontSize: FontSize.sm, color: Colors.textLight, marginTop: 2 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },
