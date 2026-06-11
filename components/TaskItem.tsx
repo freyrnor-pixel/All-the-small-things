@@ -6,7 +6,7 @@
  * done; press opens the task. Fully theme-aware via useAppTheme.
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/CompletionGlow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → app/index.tsx
  *   Data    → consumes the Task type from useTaskStore; toggle/open handled by parent callbacks (no direct store writes)
  *
@@ -14,6 +14,9 @@
  *   - All colors come from useAppTheme() and are applied inline — do NOT reintroduce static Colors/* (broke dark mode; see OLD comments inline).
  *   - Recurring-day abbreviations use t.dayLabels (localized); never hardcode day names.
  *   - The check "pop" animation runs whenever task.done becomes true (effect keyed on task.done).
+ *   - On completion (W-B): success() haptic fires + CompletionGlow blooms over the row (wrapped position:relative).
+ *   - start-at vs time-box is icon/colour-coded via FeatureColors (timer for time-box, time for start-at) — keep consistent with task-form.
+ *   - Weekly-recurring tasks show a subtle "repeat" badge even when no specific days are tagged.
  */
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -22,9 +25,11 @@ import { Task } from '@/store/useTaskStore';
 // OLD: import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 //      Colors was used for hardcoded warm-theme values that ignored the user's
 //      chosen colour theme and broke dark mode (dark text on dark backgrounds).
-import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { FeatureColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
+import { success } from '@/lib/haptics';
+import CompletionGlow from '@/components/CompletionGlow';
 
 type Props = {
   task: Task;
@@ -44,14 +49,25 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const isEssential = task.importance === 'essential';
   const checkScale = useRef(new Animated.Value(1)).current;
 
+  // Track previous done so the success haptic fires only on the rising edge
+  // (completing), not on mount or when re-opening a done task.
+  const wasDone = useRef(task.done);
   useEffect(() => {
+    if (task.done && !wasDone.current) {
+      success();
+    }
     if (task.done) {
       Animated.sequence([
         Animated.timing(checkScale, { toValue: 1.35, duration: 120, useNativeDriver: true }),
         Animated.spring(checkScale, { toValue: 1, friction: 4, useNativeDriver: true }),
       ]).start();
     }
+    wasDone.current = task.done;
   }, [task.done]);
+
+  // start-at vs time-box accent — consistent with task-form's TYPE_ACCENT.
+  const typeAccent = isTimebox ? FeatureColors.task : FeatureColors.shared;
+  const isRecurring = task.recurring === 'weekly';
 
   // OLD: const stripeColor = task.done
   //        ? '#6BAA75'
@@ -64,7 +80,9 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const checkBorderColor = muted ? theme.gray : theme.orange;
 
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <View style={styles.wrap}>
+      <CompletionGlow trigger={task.done} color={theme.green} radius={Radius.md} />
+      <Pressable style={styles.row} onPress={onPress}>
       <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
       <Animated.View style={{ transform: [{ scale: checkScale }] }}>
@@ -112,10 +130,11 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
               ]}
             >
               <View style={styles.tagContent}>
+                {/* Icon tinted by the type accent so start-at vs time-box is scannable (matches task-form). */}
                 <Ionicons
                   name={isTimebox ? 'timer-outline' : 'time-outline'}
                   size={11}
-                  color={theme.text}
+                  color={typeAccent}
                 />
                 <Text style={[styles.tagText, { color: theme.text }]}>
                   {isTimebox ? `${task.durationMinutes} min` : task.time}
@@ -123,21 +142,33 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
               </View>
             </View>
           ) : null}
-          {task.recurring === 'weekly' && task.recurringDays.length > 0 && (
+          {/* Recurring badge (W-B) — subtle, theme-coloured; shows specific days when set. */}
+          {isRecurring && (
             <View style={[styles.tagRecurring, { backgroundColor: theme.grayLight }]}>
-              <Text style={[styles.tagText, { color: theme.text }]}>
-                {/* OLD: {task.recurringDays.map((d) => DAY_LABELS[d]).join(', ')} */}
-                {task.recurringDays.map((d) => t.dayLabels[d]).join(', ')}
-              </Text>
+              <View style={styles.tagContent}>
+                <Ionicons name="repeat" size={11} color={theme.textLight} />
+                {task.recurringDays.length > 0 && (
+                  <Text style={[styles.tagText, { color: theme.text }]}>
+                    {/* OLD: {task.recurringDays.map((d) => DAY_LABELS[d]).join(', ')} */}
+                    {task.recurringDays.map((d) => t.dayLabels[d]).join(', ')}
+                  </Text>
+                )}
+              </View>
             </View>
           )}
         </View>
       </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Relatively-positioned wrapper so CompletionGlow can absolute-fill the row.
+  wrap: {
+    position: 'relative',
+    borderRadius: Radius.md,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',

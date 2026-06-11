@@ -86,6 +86,10 @@ const en = {
   importanceEssential: '⭐ Essential',
   repeatWeekly: 'Repeat weekly',
   deleteTask: 'Delete task',
+  // Task form — save confirmation (W-B). `day` is a localized reference (Today / Tomorrow / Monday…).
+  taskSavedSimple: 'Saved ✓',
+  taskSavedReminder: (time: string, day: string) => `Reminder set for ${time} on ${day} ✓`,
+  taskSavedReminderToday: (time: string) => `Reminder set for ${time} today ✓`,
   // Scan
   scanReceipt: 'Scan receipt',
   scanHintBanner: 'Point your camera at a receipt. Make sure text is clear and well-lit.',
@@ -543,6 +547,10 @@ const no: typeof en = {
   importanceEssential: '⭐ Viktig',
   repeatWeekly: 'Gjentas ukentlig',
   deleteTask: 'Slett oppgave',
+  // Task form — lagringsbekreftelse (W-B). `day` er en lokalisert referanse (I dag / Imorgen / Mandag…).
+  taskSavedSimple: 'Lagret ✓',
+  taskSavedReminder: (time: string, day: string) => `Påminnelse satt til ${time} ${day} ✓`,
+  taskSavedReminderToday: (time: string) => `Påminnelse satt til ${time} i dag ✓`,
   scanReceipt: 'Skann kvittering',
   scanHintBanner: 'Hold kameraet mot kvitteringen. Pass på at teksten er tydelig og godt belyst.',
   ocrNoItems: 'Ingen varer gjenkjent — prøv bedre lys eller legg til varer manuelt.',

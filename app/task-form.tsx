@@ -6,7 +6,7 @@
  * Presence of an `id` route param switches it into edit mode (with a delete action).
  *
  * Connections:
- *   Imports → components/DatePickerCalendar, components/HintCard, components/TimePickerWheel, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/HintCard, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useTaskStore (tasks table) via add/update/remove
  *
@@ -14,6 +14,9 @@
  *   - All visible strings go through useT(); date defaults to todayStr() (YYYY-MM-DD).
  *   - Edit vs. add is keyed off the `id` param resolved against the store; save()/del() then router.back().
  *   - recurringDays is only persisted when recurring === 'weekly' (cleared to [] otherwise).
+ *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Repeat → Importance).
+ *   - On save a ConfirmationBanner is shown, then navigation is briefly delayed (~900ms) so it's visible.
+ *     start-at vs time-box is colour/icon-coded via FeatureColors (consistent with TaskItem).
  */
 import React, { useState } from 'react';
 import {
@@ -28,20 +31,34 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTaskStore, TaskType, Importance } from '@/store/useTaskStore';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
-import { todayStr } from '@/lib/date';
+import { todayStr, dateStr } from '@/lib/date';
+import { tap } from '@/lib/haptics';
 import HintCard from '@/components/HintCard';
+import ConfirmationBanner from '@/components/ConfirmationBanner';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import TimePickerWheel from '@/components/TimePickerWheel';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 
 function nextHourStr(): string {
   const h = (new Date().getHours() + 1) % 24;
   return `${String(h).padStart(2, '0')}:00`;
 }
+
+// Icon per task type — keeps start-at vs time-box scannable (consistent with TaskItem).
+const TYPE_ICON: Record<TaskType, keyof typeof Ionicons.glyphMap> = {
+  'start-at': 'time-outline',
+  'time-box': 'timer-outline',
+};
+// Colour accent per task type (drawn from FeatureColors so it reads as the app's palette).
+const TYPE_ACCENT: Record<TaskType, string> = {
+  'start-at': FeatureColors.shared,
+  'time-box': FeatureColors.task,
+};
 
 export default function TaskFormScreen() {
   const router = useRouter();
@@ -64,6 +81,7 @@ export default function TaskFormScreen() {
   const [recurring, setRecurring] = useState(existing?.recurring ?? 'none');
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
+  const [confirm, setConfirm] = useState<string | null>(null);
 
   const { dayLabels, months } = t;
 
@@ -71,12 +89,27 @@ export default function TaskFormScreen() {
     setRecurringDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
   }
 
+  /** Build the localized "Reminder set …" / "Saved ✓" confirmation from the saved values. */
+  function confirmationMessage(savedDate: string, savedTime: string | undefined): string {
+    if (!savedTime) return t.taskSavedSimple;
+    if (savedDate === todayStr()) return t.taskSavedReminderToday(savedTime);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (savedDate === dateStr(tomorrow)) {
+      return t.taskSavedReminder(savedTime, t.tomorrow);
+    }
+    // new Date(YYYY-MM-DD).getDay(): 0=Sun … convert to Mon-0 to index dayFull.
+    const mon0 = (new Date(savedDate).getDay() + 6) % 7;
+    return t.taskSavedReminder(savedTime, t.dayFull[mon0]);
+  }
+
   function save() {
     if (!title.trim()) return;
+    const savedTime = timeEnabled ? time : undefined;
     const payload = {
       title: title.trim(),
       date,
-      time: timeEnabled ? time : undefined,
+      time: savedTime,
       taskType,
       durationMinutes: taskType === 'time-box' ? Number(duration) || 30 : undefined,
       done: existing?.done ?? false,
@@ -89,7 +122,9 @@ export default function TaskFormScreen() {
     } else {
       addTask(payload);
     }
-    router.back();
+    setConfirm(confirmationMessage(date, savedTime));
+    // Let the banner land before leaving the form.
+    setTimeout(() => router.back(), 900);
   }
 
   function del() {
@@ -172,21 +207,42 @@ export default function TaskFormScreen() {
             )}
           </View>
 
-          {/* Type */}
+          {/* Type — icon + colour accent so start-at vs time-box is scannable */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.typeLabel}</Text>
             <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-              {(['start-at', 'time-box'] as TaskType[]).map((type) => (
-                <Pressable
-                  key={type}
-                  style={[styles.seg, taskType === type && [styles.segActive, { backgroundColor: theme.white }]]}
-                  onPress={() => setTaskType(type)}
-                >
-                  <Text style={[styles.segText, { color: theme.textLight }, taskType === type && { color: theme.text, fontWeight: '600' }]}>
-                    {type === 'start-at' ? t.typeStartAt : t.typeTimeBox}
-                  </Text>
-                </Pressable>
-              ))}
+              {(['start-at', 'time-box'] as TaskType[]).map((type) => {
+                const active = taskType === type;
+                const accent = TYPE_ACCENT[type];
+                return (
+                  <Pressable
+                    key={type}
+                    style={[
+                      styles.segType,
+                      active && [styles.segActive, { backgroundColor: theme.white }],
+                    ]}
+                    onPress={() => {
+                      tap();
+                      setTaskType(type);
+                    }}
+                  >
+                    <Ionicons
+                      name={TYPE_ICON[type]}
+                      size={16}
+                      color={active ? accent : theme.gray}
+                    />
+                    <Text
+                      style={[
+                        styles.segText,
+                        { color: theme.textLight },
+                        active && { color: theme.text, fontFamily: Fonts.semibold },
+                      ]}
+                    >
+                      {type === 'start-at' ? t.typeStartAt : t.typeTimeBox}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
@@ -273,6 +329,9 @@ export default function TaskFormScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Save confirmation toast (W-B) — overlays content near the top. */}
+      <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
     </SafeAreaView>
   );
 }
@@ -307,6 +366,16 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   seg: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
+  // Type segment: icon + label inline so start-at / time-box is scannable.
+  segType: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   segActive: { ...Shadow.card },
   segText: { fontSize: FontSize.sm, textAlign: 'center' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
