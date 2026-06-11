@@ -400,10 +400,19 @@ const en = {
   notesLabel: 'Notes (optional)',
   notesPlaceholder: 'Any notes…',
   severityLabels: ['Mild', 'Slight', 'Moderate', 'Strong', 'Severe'],
+  // --- W-D additions (health) ---
+  healthSelfCareNote: 'Noting how you feel is an act of self-care.',
+  noLogsGentle: 'No entries yet — log how you’re feeling when you’re ready.',
+  // --- end W-D additions ---
   // Habits — shame-free labels (Proposal 5)
   habits: {
     streakLabel: 'day streak',
     notYetToday: 'Not yet today',
+    // --- W-D additions ---
+    doneToday: 'Done today',
+    moreOptions: 'More options',
+    fewerOptions: 'Fewer options',
+    // --- end W-D additions ---
   },
   // Onboarding privacy screen (Proposal 3)
   onboarding: {
@@ -731,6 +740,11 @@ const no: typeof en = {
   habits: {
     streakLabel: 'dagers streak',
     notYetToday: 'Ikke ennå i dag',
+    // --- W-D additions ---
+    doneToday: 'Fullført i dag',
+    moreOptions: 'Flere valg',
+    fewerOptions: 'Færre valg',
+    // --- end W-D additions ---
   },
   onboarding: {
     privacy: {
@@ -915,6 +929,10 @@ const no: typeof en = {
   notesLabel: 'Notater (valgfritt)',
   notesPlaceholder: 'Eventuelle notater…',
   severityLabels: ['Mild', 'Litt', 'Moderat', 'Kraftig', 'Alvorlig'],
+  // --- W-D additions (health) ---
+  healthSelfCareNote: 'Å legge merke til hvordan du har det er omsorg for deg selv.',
+  noLogsGentle: 'Ingen oppføringer enda — logg hvordan du føler deg når du er klar.',
+  // --- end W-D additions ---
   cover: {
     tasksToday: 'I dag',
     taskCount: (n: number) => `${n} oppgave${n !== 1 ? 'r' : ''}`,

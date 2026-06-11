@@ -15,6 +15,11 @@
  *   - All visible strings go through useT(); colour theme comes from useSettingsStore.
  *   - recurrenceDays is always saved as [] here (weekday selection not exposed in this form).
  *   - notificationTime uses the TimePickerWheel component (same as task-form).
+ *   - Essentials shown by default (W-D): Title → Frequency → Reminder. Icon, category,
+ *     the four cue→craving→response→reward steps and daily goal live behind a
+ *     "more options" disclosure; data wiring is unchanged.
+ *   - add() needs routineOrder (Omit<Habit,'id'|'createdAt'|'active'>) — pass 0 on create
+ *     (the store falls back to Date.now() when it's falsy).
  */
 import React, { useState } from 'react';
 import {
@@ -92,6 +97,13 @@ export default function HabitForm() {
     childName: existing?.childName ?? (params.childName ?? ''),
   });
 
+  // Advanced fields (icon, category, cue→craving→response→reward, daily goal) start
+  // collapsed so the default view is just the essentials: Title → Frequency → Reminder.
+  // Open by default in edit mode if any advanced field already holds a value.
+  const [showMore, setShowMore] = useState<boolean>(
+    isEdit && !!(existing && (existing.cue || existing.craving || existing.response || existing.reward || existing.dailyGoal > 1 || existing.category !== 'other'))
+  );
+
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -101,7 +113,9 @@ export default function HabitForm() {
     if (isEdit && params.id) {
       update(params.id, { ...form, recurrenceDays: [] });
     } else {
-      add({ ...form, recurrenceDays: [] });
+      // routineOrder satisfies Omit<Habit,'id'|'createdAt'|'active'>; the store
+      // replaces a falsy 0 with Date.now() so new habits append to the end.
+      add({ ...form, recurrenceDays: [], routineOrder: 0 });
     }
     router.back();
   }
@@ -175,28 +189,6 @@ export default function HabitForm() {
             ))}
           </View>
 
-          {/* Icon picker */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.habitIconLabel}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.iconRow}>
-                {HABIT_ICONS.map((icon) => (
-                  <Pressable
-                    key={icon}
-                    style={[
-                      styles.iconBtn,
-                      { backgroundColor: theme.grayLight },
-                      form.icon === icon && { backgroundColor: theme.orange },
-                    ]}
-                    onPress={() => patch('icon', icon)}
-                  >
-                    <Text style={styles.iconEmoji}>{icon}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-
           {/* Title */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.habitTitleLabel}</Text>
@@ -209,70 +201,6 @@ export default function HabitForm() {
               autoFocus={!isEdit}
               returnKeyType="next"
             />
-          </View>
-
-          {/* Category */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.category}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.chipRow}>
-                {categoryKeys.map((cat) => (
-                  <Pressable
-                    key={cat}
-                    style={[
-                      styles.chip,
-                      { backgroundColor: theme.grayLight },
-                      form.category === cat && { backgroundColor: theme.orange },
-                    ]}
-                    onPress={() => patch('category', cat)}
-                  >
-                    <Text style={[styles.chipText, form.category === cat && { color: Colors.white }]}>
-                      {t.habitCategories[cat]}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
-
-          {/* Four steps */}
-          {([
-            { key: 'cue', label: t.habitCue, placeholder: t.habitCuePlaceholder },
-            { key: 'craving', label: t.habitCraving, placeholder: t.habitCravingPlaceholder },
-            { key: 'response', label: t.habitResponse, placeholder: t.habitResponsePlaceholder },
-            { key: 'reward', label: t.habitReward, placeholder: t.habitRewardPlaceholder },
-          ] as { key: keyof FormState; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
-            <View key={key} style={styles.field}>
-              <Text style={[styles.label, { color: theme.textLight }]}>{label}</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
-                value={form[key] as string}
-                onChangeText={(v) => patch(key, v)}
-                placeholder={placeholder}
-                placeholderTextColor={theme.gray}
-                returnKeyType="next"
-              />
-            </View>
-          ))}
-
-          {/* Daily goal stepper */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.habitDailyGoal}</Text>
-            <View style={styles.stepper}>
-              <Pressable
-                style={[styles.stepperBtn, { backgroundColor: theme.grayLight }]}
-                onPress={() => patch('dailyGoal', Math.max(1, form.dailyGoal - 1))}
-              >
-                <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
-              </Pressable>
-              <Text style={[styles.stepperValue, { color: theme.text }]}>{form.dailyGoal}</Text>
-              <Pressable
-                style={[styles.stepperBtn, { backgroundColor: theme.orange }]}
-                onPress={() => patch('dailyGoal', Math.min(20, form.dailyGoal + 1))}
-              >
-                <Text style={[styles.stepperBtnText, { color: Colors.white }]}>+</Text>
-              </Pressable>
-            </View>
           </View>
 
           {/* Recurrence */}
@@ -341,6 +269,107 @@ export default function HabitForm() {
             />
           )}
 
+          {/* W-D: advanced fields collapsed behind a disclosure so the default
+              view is just the essentials (Title → Frequency → Reminder). */}
+          <Pressable
+            style={[styles.disclosure, { borderColor: theme.grayLight }]}
+            onPress={() => setShowMore((v) => !v)}
+          >
+            <Text style={[styles.disclosureText, { color: theme.textLight }]}>
+              {showMore ? `${t.habits.fewerOptions} ↑` : `${t.habits.moreOptions} ↓`}
+            </Text>
+          </Pressable>
+
+          {showMore && (
+            <>
+              {/* Icon picker */}
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: theme.textLight }]}>{t.habitIconLabel}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.iconRow}>
+                    {HABIT_ICONS.map((icon) => (
+                      <Pressable
+                        key={icon}
+                        style={[
+                          styles.iconBtn,
+                          { backgroundColor: theme.grayLight },
+                          form.icon === icon && { backgroundColor: theme.orange },
+                        ]}
+                        onPress={() => patch('icon', icon)}
+                      >
+                        <Text style={styles.iconEmoji}>{icon}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              {/* Category */}
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: theme.textLight }]}>{t.category}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.chipRow}>
+                    {categoryKeys.map((cat) => (
+                      <Pressable
+                        key={cat}
+                        style={[
+                          styles.chip,
+                          { backgroundColor: theme.grayLight },
+                          form.category === cat && { backgroundColor: theme.orange },
+                        ]}
+                        onPress={() => patch('category', cat)}
+                      >
+                        <Text style={[styles.chipText, form.category === cat && { color: Colors.white }]}>
+                          {t.habitCategories[cat]}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              {/* Four steps: cue → craving → response → reward */}
+              {([
+                { key: 'cue', label: t.habitCue, placeholder: t.habitCuePlaceholder },
+                { key: 'craving', label: t.habitCraving, placeholder: t.habitCravingPlaceholder },
+                { key: 'response', label: t.habitResponse, placeholder: t.habitResponsePlaceholder },
+                { key: 'reward', label: t.habitReward, placeholder: t.habitRewardPlaceholder },
+              ] as { key: keyof FormState; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
+                <View key={key} style={styles.field}>
+                  <Text style={[styles.label, { color: theme.textLight }]}>{label}</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.white, color: theme.text }]}
+                    value={form[key] as string}
+                    onChangeText={(v) => patch(key, v)}
+                    placeholder={placeholder}
+                    placeholderTextColor={theme.gray}
+                    returnKeyType="next"
+                  />
+                </View>
+              ))}
+
+              {/* Daily goal stepper */}
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: theme.textLight }]}>{t.habitDailyGoal}</Text>
+                <View style={styles.stepper}>
+                  <Pressable
+                    style={[styles.stepperBtn, { backgroundColor: theme.grayLight }]}
+                    onPress={() => patch('dailyGoal', Math.max(1, form.dailyGoal - 1))}
+                  >
+                    <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
+                  </Pressable>
+                  <Text style={[styles.stepperValue, { color: theme.text }]}>{form.dailyGoal}</Text>
+                  <Pressable
+                    style={[styles.stepperBtn, { backgroundColor: theme.orange }]}
+                    onPress={() => patch('dailyGoal', Math.min(20, form.dailyGoal + 1))}
+                  >
+                    <Text style={[styles.stepperBtnText, { color: Colors.white }]}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </>
+          )}
+
           {/* Delete */}
           {isEdit && (
             <Pressable style={[styles.deleteBtn, { backgroundColor: Colors.dangerLight }]} onPress={confirmDelete}>
@@ -401,6 +430,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card,
   },
   notifLabel: { fontSize: FontSize.md, fontWeight: '600' },
+  // W-D: "more options" disclosure toggle for advanced habit fields.
+  disclosure: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+  },
+  disclosureText: { fontSize: FontSize.sm, fontWeight: '600' },
   deleteBtn: {
     borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md,
   },

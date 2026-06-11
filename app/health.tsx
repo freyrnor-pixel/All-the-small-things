@@ -6,14 +6,16 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/HintCard, constants/theme, lib/date, lib/i18n, store/useHealthStore
+ *   Imports → components/HintCard, components/PressableScale, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table)
  *
  * Edit notes:
  *   - All visible strings go through useT(); dates are YYYY-MM-DD via todayStr()/dateStr().
  *   - The date field is a free-text TextInput (no picker) — it trusts the YYYY-MM-DD string entered.
- *   - SEVERITIES holds only the 1–5 colour scale; severity labels come from t.severityLabels.
+ *   - W-D: this is an emotional screen — uses useSoftTheme() for a gentler palette and
+ *     PressableScale severity targets. SEVERITY_COLORS is a soft purple→blue family
+ *     (NOT red/green — avoids alarm connotations); labels come from t.severityLabels.
  */
 import React, { useState } from 'react';
 import {
@@ -30,10 +32,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useHealthStore } from '@/store/useHealthStore';
 import HintCard from '@/components/HintCard';
+import PressableScale from '@/components/PressableScale';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
-import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
+import { useSoftTheme } from '@/lib/useAppTheme';
 
 function getWeekDates(today: string): string[] {
   const d = new Date(today + 'T12:00:00');
@@ -46,14 +49,13 @@ function getWeekDates(today: string): string[] {
   });
 }
 
-function severities(theme: AppColors) {
-  return [
-    { value: 1, color: theme.greenLight },
-    { value: 2, color: theme.green + '55' },
-    { value: 3, color: theme.orangeLight },
-    { value: 4, color: theme.dangerLight },
-    { value: 5, color: theme.danger },
-  ];
+// W-D: soft purple→blue severity family. Lighter (mild) → deeper (severe) without
+// any red/green alarm connotations. Static — these are intentionally fixed regardless
+// of the active theme so the overview chart always reads gently.
+const SEVERITY_COLORS = ['#C9D4F0', '#A9B8E8', '#8C9AE0', '#7C82D6', '#6E6BC8'];
+
+function severities() {
+  return SEVERITY_COLORS.map((color, i) => ({ value: i + 1, color }));
 }
 
 export default function HealthScreen() {
@@ -68,8 +70,8 @@ export default function HealthScreen() {
   const [severity, setSeverity] = useState(2);
   const [date, setDate] = useState(todayStr());
   const t = useT();
-  const theme = useAppTheme();
-  const SEVERITIES = severities(theme);
+  const theme = useSoftTheme();
+  const SEVERITIES = severities();
   const severityLabel = (value: number) => t.severityLabels[value - 1] ?? '';
 
   const today = todayStr();
@@ -132,7 +134,8 @@ export default function HealthScreen() {
                       <View
                         style={[
                           styles.overviewFill,
-                          { backgroundColor: theme.orange, width: `${Math.min((count / (topAilments[0]?.[1] ?? 1)) * 100, 100)}%` },
+                          // W-D: soft purple→blue bar instead of orange (matches the gentle severity family).
+                          { backgroundColor: SEVERITY_COLORS[2], width: `${Math.min((count / (topAilments[0]?.[1] ?? 1)) * 100, 100)}%` },
                         ]}
                       />
                     </View>
@@ -184,20 +187,29 @@ export default function HealthScreen() {
               autoFocus
             />
             <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.severityLabel}</Text>
+            {/* W-D: 5 large, clearly-labelled tap targets (not a slider). Stored value is 1–5. */}
             <View style={styles.severityRow}>
-              {SEVERITIES.map((s) => (
-                <Pressable
-                  key={s.value}
-                  style={[
-                    styles.severityBtn,
-                    { backgroundColor: s.color },
-                    severity === s.value && [styles.severityActive, { borderColor: theme.brown }],
-                  ]}
-                  onPress={() => setSeverity(s.value)}
-                >
-                  <Text style={[styles.severityBtnText, { color: theme.text }]}>{severityLabel(s.value)}</Text>
-                </Pressable>
-              ))}
+              {SEVERITIES.map((s) => {
+                const active = severity === s.value;
+                // Lighter severities (1–2) read better with dark text; deeper ones with white.
+                const fg = s.value >= 3 ? theme.white : theme.text;
+                return (
+                  <PressableScale
+                    key={s.value}
+                    style={[
+                      styles.severityTarget,
+                      { backgroundColor: s.color },
+                      active && [styles.severityActive, { borderColor: theme.text }],
+                    ]}
+                    onPress={() => setSeverity(s.value)}
+                  >
+                    <Text style={[styles.severityNum, { color: fg }]}>{s.value}</Text>
+                    <Text style={[styles.severityTargetLabel, { color: fg }]} numberOfLines={1}>
+                      {severityLabel(s.value)}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
             </View>
             <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.notesLabel}</Text>
             <TextInput
@@ -223,11 +235,14 @@ export default function HealthScreen() {
           </Pressable>
         )}
 
+        {/* W-D: low-weight, affirming self-care note below the log form. */}
+        <Text style={[styles.selfCareNote, { color: theme.textLight }]}>{t.healthSelfCareNote}</Text>
+
         {/* Log list */}
         <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
         {logs.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
-            <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noLogs}</Text>
+            <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noLogsGentle}</Text>
           </View>
         )}
         {logs.map((log) => {
@@ -241,7 +256,7 @@ export default function HealthScreen() {
                 </View>
                 <View style={styles.logRight}>
                   <View style={[styles.severityBadge, { backgroundColor: sev?.color }]}>
-                    <Text style={styles.severityBadgeText}>{severityLabel(log.severity)}</Text>
+                    <Text style={[styles.severityBadgeText, { color: log.severity >= 3 ? theme.white : theme.text }]}>{severityLabel(log.severity)}</Text>
                   </View>
                   <Pressable onPress={() => remove(log.id)} hitSlop={8}>
                     <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
@@ -326,19 +341,32 @@ const styles = StyleSheet.create({
   notesInput: { minHeight: 80, textAlignVertical: 'top' },
   severityRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: Spacing.xs,
     marginTop: Spacing.xs,
   },
-  severityBtn: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
+  // W-D: large, clearly-labelled severity tap targets (replaces small pills / slider).
+  severityTarget: {
+    flex: 1,
+    minHeight: 60,
+    borderRadius: Radius.md,
     borderWidth: 2,
     borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: 2,
+    gap: 2,
   },
   severityActive: { borderWidth: 2 },
-  severityBtnText: { fontSize: FontSize.xs, fontWeight: '600' },
+  severityNum: { fontSize: FontSize.lg, fontFamily: Fonts.bold, fontWeight: '700' },
+  severityTargetLabel: { fontSize: 11, fontFamily: Fonts.semibold, fontWeight: '600', textAlign: 'center' },
+  selfCareNote: {
+    fontSize: FontSize.xs,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
+    marginTop: -Spacing.xs,
+  },
   addActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/HintCard, constants/theme, lib/date, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HintCard, components/CompletionGlow, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -17,6 +17,9 @@
  *   - Edit navigates to the /habit-form modal; the empty-section CTAs pre-seed the `kind` param.
  *   - No-shame: past days with 0 progress show an empty circle in theme.neutral — no red/✗ indicators.
  *   - Missed days silently reset the streak; no separate "missed" counter displayed (Proposal 5).
+ *   - W-D: emotional screen — uses useSoftTheme(). habitColor() resolves build=green / break=blue
+ *     (NEVER red). computeStreak() derives the current streak locally from logs (no store getter
+ *     exists). Completed cards lock into a satisfied fill + success() haptic + CompletionGlow.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -31,13 +34,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useHabitStore, Habit, HabitKind } from '@/store/useHabitStore';
+import { useHabitStore, Habit, HabitKind, HabitLog } from '@/store/useHabitStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
+import CompletionGlow from '@/components/CompletionGlow';
+import { success } from '@/lib/haptics';
 import { todayStr, dateStr } from '@/lib/date';
-import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
+import { useSoftTheme } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,11 +65,47 @@ function getMonthDates(year: number, month: number): string[] {
   });
 }
 
-function progressColor(ratio: number, _kind: HabitKind, theme: AppColors): string {
-  if (ratio >= 1) return theme.green;
+// W-D: build = warm/green, break = cool/blue. NEVER red — breaking a habit is not failure.
+// Break uses a calm blue so it reads as a different (cool) family from build's green.
+const BREAK_BLUE = '#4A8EC2';
+const BREAK_BLUE_LIGHT = '#D4E6F4';
+
+function habitColor(kind: HabitKind, theme: AppColors): string {
+  return kind === 'break' ? BREAK_BLUE : theme.green;
+}
+
+function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string {
+  if (ratio >= 1) return habitColor(kind, theme);
   if (ratio > 0) return theme.orange;
   // No-shame: zero progress uses neutral regardless of habit kind — no red punishment colour.
   return theme.neutral;
+}
+
+/**
+ * Current streak: consecutive met days (count ≥ dailyGoal) ending today (or, if today
+ * isn't met yet, ending yesterday so an in-progress day never breaks the display).
+ * No store getter exists, so this is derived locally from the loaded log window.
+ */
+function computeStreak(habitId: string, goal: number, today: string, logs: HabitLog[]): number {
+  if (goal <= 0) return 0;
+  const metOn = (date: string) => {
+    const log = logs.find((l) => l.habitId === habitId && l.logDate === date);
+    return (log?.count ?? 0) >= goal;
+  };
+  let streak = 0;
+  const cursor = new Date(today + 'T12:00:00');
+  // If today isn't met, start counting from yesterday (today still in progress).
+  if (!metOn(today)) cursor.setDate(cursor.getDate() - 1);
+  // Walk backwards over the loaded window (load() keeps ~35 days of logs).
+  for (let i = 0; i < 35; i++) {
+    if (metOn(dateStr(cursor))) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -90,6 +131,28 @@ function ProgressDots({ count, goal, kind, theme }: { count: number; goal: numbe
           />
         );
       })}
+    </View>
+  );
+}
+
+// W-D: prominent streak — a bold number plus a short row of mini dots (one per recent
+// streak day, capped) so the dopamine hook reads at a glance.
+function StreakBadge({ streak, color, theme }: { streak: number; color: string; theme: AppColors }) {
+  const t = useT();
+  const dots = Math.min(streak, 7);
+  return (
+    <View style={styles.streakWrap}>
+      <View style={styles.streakHead}>
+        <Text style={[styles.streakNum, { color }]}>{streak}</Text>
+        <Text style={[styles.streakLabel, { color: theme.textLight }]}>{t.habits.streakLabel}</Text>
+      </View>
+      {streak > 0 && (
+        <View style={styles.streakDots}>
+          {Array.from({ length: dots }, (_, i) => (
+            <View key={i} style={[styles.streakDot, { backgroundColor: color }]} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -147,6 +210,24 @@ function HabitCard({
   const ratio = habit.dailyGoal > 0 ? Math.min(count / habit.dailyGoal, 1) : 0;
   const isDone = ratio >= 1;
 
+  const accent = habitColor(habit.kind, theme);
+  const doneFill = habit.kind === 'break' ? BREAK_BLUE_LIGHT : theme.greenLight;
+  const streak = useMemo(
+    () => computeStreak(habit.id, habit.dailyGoal, today, logs),
+    [habit.id, habit.dailyGoal, today, logs],
+  );
+
+  // Fire a success haptic + completion glow on the rising edge of "done today".
+  const prevDone = useRef(isDone);
+  const [glow, setGlow] = useState(0);
+  useEffect(() => {
+    if (isDone && !prevDone.current) {
+      success();
+      setGlow((g) => g + 1);
+    }
+    prevDone.current = isDone;
+  }, [isDone]);
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -179,21 +260,29 @@ function HabitCard({
         style={[
           styles.habitCard,
           { borderLeftColor: borderColor, backgroundColor: theme.white },
-          isDone && { backgroundColor: theme.greenLight },
+          // W-D: completing locks the card into a satisfied fill — build (green) / break (blue).
+          isDone && { backgroundColor: doneFill, borderLeftColor: accent },
         ]}
       >
+        {/* W-D: success bloom on the rising edge of completion (build/break-tinted). */}
+        <CompletionGlow trigger={glow} color={accent} />
+
         {/* Header row */}
         <View style={styles.cardHeader}>
           <Animated.Text style={[styles.habitIcon, { transform: [{ scale: pulseAnim }] }]}>
-            {habit.icon}
+            {isDone ? '✓' : habit.icon}
           </Animated.Text>
           <View style={styles.habitTitleWrap}>
             <Text style={[styles.habitTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
-            {isDone && (
-              <Text style={[styles.doneLabel, { color: theme.green }]}>
-                {t.habitGoalMet}
-              </Text>
-            )}
+            {/* Streak stays prominent (the dopamine hook); when done, a "done today" pill joins it. */}
+            <View style={styles.titleMetaRow}>
+              <StreakBadge streak={streak} color={accent} theme={theme} />
+              {isDone && (
+                <View style={[styles.donePill, { backgroundColor: accent }]}>
+                  <Text style={styles.donePillText}>{t.habits.doneToday}</Text>
+                </View>
+              )}
+            </View>
           </View>
           <ProgressDots count={count} goal={habit.dailyGoal} kind={habit.kind} theme={theme} />
           <Pressable
@@ -403,7 +492,7 @@ export default function HabitsScreen() {
   const lang = useSettingsStore((s) => s.language);
   const childProfiles = useSettingsStore((s) => s.childProfiles);
   const updateSettings = useSettingsStore((s) => s.update);
-  const theme = useAppTheme();
+  const theme = useSoftTheme();
   const t = useT();
 
   const profileHabits = habits.filter((h) => h.childName === selectedProfile);
@@ -673,6 +762,8 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
+    position: 'relative', // anchor for CompletionGlow's absolute fill
+    overflow: 'hidden',   // keep the glow within the rounded corners
     ...Shadow.card,
   },
   cardHeader: {
@@ -684,6 +775,20 @@ const styles = StyleSheet.create({
   habitTitleWrap: { flex: 1 },
   habitTitle: { fontSize: FontSize.md, fontWeight: '600' },
   doneLabel: { fontSize: FontSize.xs, fontWeight: '600', marginTop: 1 },
+  // W-D: streak indicator (prominent number + mini dots) + done pill.
+  titleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 2, flexWrap: 'wrap' },
+  streakWrap: { gap: 2 },
+  streakHead: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  streakNum: { fontSize: FontSize.lg, fontFamily: Fonts.extrabold, fontWeight: '800' },
+  streakLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
+  streakDots: { flexDirection: 'row', gap: 3 },
+  streakDot: { width: 6, height: 6, borderRadius: Radius.full },
+  donePill: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
+  donePillText: { fontSize: FontSize.xs, color: Colors.white, fontFamily: Fonts.bold, fontWeight: '700' },
   dots: { flexDirection: 'row', gap: 3 },
   dot: {
     width: 9, height: 9,
