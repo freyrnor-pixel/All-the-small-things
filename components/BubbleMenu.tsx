@@ -1,10 +1,11 @@
 /**
- * BubbleMenu.tsx — radial FAB that fans out navigation bubbles.
+ * BubbleMenu.tsx — spinning-wheel radial FAB for navigation.
  *
- * Floating action button on the home screen that animates open into an arc of
- * bubbles linking to the app's main screens. Labels resolve through `t.nav` so
- * the menu follows the user's language. Bubble colors follow the FeatureColors
- * warm-to-cool gradient (orange → blue across the arc).
+ * Floating action button on the home screen that opens into a spinnable ring of
+ * bubbles. Only 3-4 bubbles are visible in the 150° viewing window at any time;
+ * dragging the wheel spins it to reveal the rest. Labels resolve through `t.nav`
+ * so the menu follows the user's language. Bubble colors follow the FeatureColors
+ * warm-to-cool gradient (orange → blue).
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, store/useSettingsStore
@@ -13,18 +14,28 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - RADIUS is 300 so 8 bubbles fit across the 90° arc (-π to -π/2). END_ANGLE must stay at -π/2 (straight up) — going past it pushes bubbles off the right edge since the FAB is near the screen edge.
+ *   - Wheel geometry (RADIUS / WINDOW_START / WINDOW_END) is tuned for 8 bubbles. STEP_ANGLE
+ *     updates automatically from BASE_ITEMS.length; widening WINDOW_END past -π/6 pushes
+ *     bubbles toward the right screen edge (FAB is already near it).
  *   - All labels go through useT() — no hardcoded text.
- *   - Settings is not in the arc; it lives as a persistent corner button in app/index.tsx.
+ *   - Settings is not in the wheel; it lives as a persistent corner button in app/index.tsx.
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  Animated,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  interpolate,
+  Extrapolation,
+  SharedValue,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FeatureColors } from '@/constants/theme';
@@ -32,10 +43,9 @@ import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-
 type NavKey = keyof Translations['nav'];
 
-type BubbleItem = {
+type BubbleEntry = {
   icon: IoniconsName;
   label: string;
   route: string;
@@ -47,7 +57,7 @@ type Props = {
   onNewTask?: () => void;
 };
 
-// Warm-to-cool gradient across the arc: creation → focus → daily tracking → social.
+// Warm-to-cool gradient across the wheel: creation → focus → daily tracking → social.
 const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
   { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: '#E8934A' },
@@ -59,25 +69,107 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-// Radius bumped to 300 to space 8 bubbles across the same 90° arc without overlap.
-// END_ANGLE stays at -π/2 (straight up); going past that into positive-x pushes bubbles
-// off the right edge because the FAB is already near the screen edge.
 const RADIUS = 300;
 const BUBBLE_SIZE = 56;
-const START_ANGLE = -Math.PI;      // pointing left
-const END_ANGLE = -Math.PI / 2;    // pointing straight up
+const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
+
+// Viewing window: 150° arc sweeping from left (−180°) to upper-right (−30°).
+// WINDOW_END is capped at −π/6 to keep bubbles away from the right screen edge.
+const WINDOW_START = -Math.PI;     // −180° — leftmost visible edge
+const WINDOW_END   = -Math.PI / 6; // −30°  — upper-right visible edge
+const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
+
+// Normalises any angle into [−π, π].
+function normalizeAngle(a: number): number {
+  'worklet';
+  const twoPi = 2 * Math.PI;
+  return ((a % twoPi) + twoPi) % twoPi - Math.PI;
+}
+
+// Returns 0–1 opacity based on how deep inside the viewing window the angle is.
+function windowOpacity(angle: number): number {
+  'worklet';
+  const norm = normalizeAngle(angle);
+  if (norm < WINDOW_START - WINDOW_FADE || norm > WINDOW_END + WINDOW_FADE) return 0;
+  if (norm < WINDOW_START + WINDOW_FADE)
+    return (norm - (WINDOW_START - WINDOW_FADE)) / (2 * WINDOW_FADE);
+  if (norm > WINDOW_END - WINDOW_FADE)
+    return ((WINDOW_END + WINDOW_FADE) - norm) / (2 * WINDOW_FADE);
+  return 1;
+}
+
+// ─── Per-bubble sub-component ────────────────────────────────────────────────
+
+type BubbleItemViewProps = {
+  item: BubbleEntry;
+  baseAngle: number;
+  wheelAngle: SharedValue<number>;
+  openProgress: SharedValue<number>;
+  onPress: () => void;
+  pointerEvents: 'auto' | 'none';
+};
+
+function BubbleItemView({
+  item,
+  baseAngle,
+  wheelAngle,
+  openProgress,
+  onPress,
+  pointerEvents,
+}: BubbleItemViewProps) {
+  const pressAnim = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => {
+    const currentAngle = baseAngle + wheelAngle.value;
+    const op = openProgress.value;
+    const x = Math.cos(currentAngle) * RADIUS * op;
+    const y = Math.sin(currentAngle) * RADIUS * op;
+    const scale = (0.3 + 0.7 * op) * pressAnim.value;
+    const opacity = windowOpacity(currentAngle) * op;
+    return {
+      transform: [{ translateX: x }, { translateY: y }, { scale }],
+      opacity,
+    };
+  });
+
+  function handlePressIn() {
+    pressAnim.value = withSpring(0.88, { mass: 1, damping: 15, stiffness: 150 });
+  }
+  function handlePressOut() {
+    pressAnim.value = withSpring(1, { mass: 1, damping: 15, stiffness: 150 });
+  }
+
+  return (
+    <Animated.View
+      style={[styles.bubble, { backgroundColor: item.color }, animStyle]}
+      pointerEvents={pointerEvents}
+    >
+      <Pressable
+        style={styles.bubbleInner}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <Ionicons name={item.icon} size={22} color="#fff" />
+        <Text style={styles.bubbleLabel}>{item.label}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
-  const anim = useRef(new Animated.Value(0)).current;
-  const rotation = useRef(new Animated.Value(0)).current;
-  // pressAnims length matches BASE_ITEMS — one per bubble.
-  const pressAnims = useRef(BASE_ITEMS.map(() => new Animated.Value(1))).current;
+  // wheelAngle initialised to -π so item 0 (add) lands at the leftmost window position.
+  const wheelAngle   = useSharedValue(-Math.PI);
+  const openProgress = useSharedValue(0);
+  const startAngle   = useSharedValue(0);
   const router = useRouter();
   const theme = useAppTheme();
   const t = useT();
 
-  const items = useMemo((): BubbleItem[] =>
+  const items = useMemo((): BubbleEntry[] =>
     BASE_ITEMS.map((item) => ({
       icon: item.icon,
       label: t.nav[item.labelKey],
@@ -90,35 +182,35 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   function toggle() {
     const toValue = open ? 0 : 1;
-    Animated.parallel([
-      Animated.spring(anim, { toValue, useNativeDriver: true, tension: 60, friction: 8 }),
-      Animated.timing(rotation, { toValue, duration: 200, useNativeDriver: true }),
-    ]).start();
+    openProgress.value = withSpring(toValue, { damping: 15, stiffness: 150 });
     setOpen((v) => !v);
   }
 
-  function navigate(item: BubbleItem) {
+  function navigate(item: BubbleEntry) {
     toggle();
     const action = item.onPress ?? (() => router.push(item.route as never));
     setTimeout(action, 150);
   }
 
-  function pressIn(i: number) {
-    Animated.spring(pressAnims[i], {
-      toValue: 0.88, useNativeDriver: true, tension: 150, friction: 8,
-    }).start();
-  }
+  // Spin gesture: dragging up rotates the wheel counterclockwise, revealing items
+  // further along the circle. Releases snap to the nearest item slot in ~175ms.
+  const spinGesture = Gesture.Pan()
+    .onStart(() => {
+      startAngle.value = wheelAngle.value;
+    })
+    .onUpdate((e) => {
+      wheelAngle.value = startAngle.value - e.translationY / RADIUS;
+    })
+    .onEnd(() => {
+      const snapped = Math.round(wheelAngle.value / STEP_ANGLE) * STEP_ANGLE;
+      wheelAngle.value = withSpring(snapped, { damping: 20, stiffness: 200 });
+    });
 
-  function pressOut(i: number) {
-    Animated.spring(pressAnims[i], {
-      toValue: 1, useNativeDriver: true, tension: 150, friction: 8,
-    }).start();
-  }
-
-  const rotate = rotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '45deg'],
-  });
+  const fabStyle = useAnimatedStyle(() => ({
+    transform: [{
+      rotate: `${interpolate(openProgress.value, [0, 1], [0, 45], Extrapolation.CLAMP)}deg`,
+    }],
+  }));
 
   return (
     <View style={styles.container} pointerEvents="box-none">
@@ -126,45 +218,24 @@ export default function BubbleMenu({ onNewTask }: Props) {
         <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
       )}
 
-      {items.map((item, i) => {
-        const angle = START_ANGLE + (END_ANGLE - START_ANGLE) * (i / (BASE_ITEMS.length - 1));
-        const x = Math.cos(angle) * RADIUS;
-        const y = Math.sin(angle) * RADIUS;
-
-        const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [0, x] });
-        const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, y] });
-        const opacity = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0, 1] });
-        const fanScale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
-        const combinedScale = Animated.multiply(fanScale, pressAnims[i]);
-
-        return (
-          <Animated.View
-            key={item.route}
-            style={[
-              styles.bubble,
-              {
-                backgroundColor: item.color,
-                opacity,
-                transform: [{ translateX }, { translateY }, { scale: combinedScale }],
-              },
-            ]}
-            pointerEvents={open ? 'auto' : 'none'}
-          >
-            <Pressable
-              style={styles.bubbleInner}
+      <GestureDetector gesture={spinGesture}>
+        <View style={styles.wheelArea} pointerEvents="box-none">
+          {items.map((item, i) => (
+            <BubbleItemView
+              key={item.route}
+              item={item}
+              baseAngle={i * STEP_ANGLE}
+              wheelAngle={wheelAngle}
+              openProgress={openProgress}
               onPress={() => navigate(item)}
-              onPressIn={() => pressIn(i)}
-              onPressOut={() => pressOut(i)}
-            >
-              <Ionicons name={item.icon} size={22} color="#fff" />
-              <Text style={styles.bubbleLabel}>{item.label}</Text>
-            </Pressable>
-          </Animated.View>
-        );
-      })}
+              pointerEvents={open ? 'auto' : 'none'}
+            />
+          ))}
+        </View>
+      </GestureDetector>
 
       <Pressable style={[styles.fab, { backgroundColor: theme.orange }]} onPress={toggle}>
-        <Animated.View style={{ transform: [{ rotate }] }}>
+        <Animated.View style={fabStyle}>
           <Ionicons name="add" size={28} color="#fff" />
         </Animated.View>
       </Pressable>
@@ -179,6 +250,13 @@ const styles = StyleSheet.create({
     right: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  wheelArea: {
+    position: 'absolute',
+    width: RADIUS * 2 + BUBBLE_SIZE,
+    height: RADIUS * 2 + BUBBLE_SIZE,
+    bottom: 0,
+    right: 0,
   },
   fab: {
     width: 60,
