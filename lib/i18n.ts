@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/CompanionPet.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -42,8 +42,16 @@ const en = {
   noEssentialTasks: 'No essential tasks today — great!',
   addNew: '+ New',
   essentialsHidden: (n: number) => `+ ${n} regular task${n !== 1 ? 's' : ''} hidden →`,
-  backlog: 'Backlog',
+  backlog: 'Waiting for you',
   backlogHint: 'Every small step counts — just take one at a time.',
+  // Focus view (Proposal 1)
+  focusView: {
+    currentTask: 'Up next',
+    done: 'Done ✓',
+    skip: 'Skip for now',
+    allDone: 'All done for now!',
+    allDoneSubtitle: (n: number) => `You've completed ${n} thing${n !== 1 ? 's' : ''} — small things add up!`,
+  },
   shoppingPreview: 'Shop soon',
   seeAll: 'See all →',
   shoppingEmpty: 'Shopping list is empty — well done!',
@@ -328,6 +336,7 @@ const en = {
   nav: {
     newTask: 'New', shop: 'Shop', shared: 'Shared', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
+    focus: 'Focus',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -366,6 +375,54 @@ const en = {
   notesLabel: 'Notes (optional)',
   notesPlaceholder: 'Any notes…',
   severityLabels: ['Mild', 'Slight', 'Moderate', 'Strong', 'Severe'],
+  // Habits — shame-free labels (Proposal 5)
+  habits: {
+    streakLabel: 'day streak',
+    notYetToday: 'Not yet today',
+  },
+  // Onboarding privacy screen (Proposal 3)
+  onboarding: {
+    privacy: {
+      headline: 'Your data stays with you',
+      local: 'Everything is stored only on this device — nothing is sent anywhere.',
+      free: 'UnFocus is free and always will be.',
+      cta: 'Got it →',
+    },
+  },
+  // Accessibility settings (Proposal 4)
+  settings: {
+    accessibility: {
+      title: 'Accessibility',
+      reducedMotion: 'Reduced motion',
+      reducedMotionHint: 'Turns off animations throughout the app',
+      fontSize: 'Font size',
+      fontSizeSmall: 'Small',
+      fontSizeDefault: 'Default',
+      fontSizeLarge: 'Large',
+    },
+    // Privacy hint card shown in settings (Proposal 3)
+    privacy: {
+      headline: 'Your data stays with you',
+      local: 'Everything is stored only on this device — nothing is sent anywhere.',
+      free: 'UnFocus is free and always will be.',
+    },
+    // Companion pet (Proposal 6)
+    pet: {
+      toggle: 'Companion pet',
+      toggleSubtitle: 'A small friend that cheers you on',
+      name: 'Pet name',
+      namePlaceholder: 'Give your pet a name',
+      type: 'Pet type',
+      colour: 'Colour',
+      typeLabels: {
+        cat: 'Cat',
+        dog: 'Dog',
+        bird: 'Bird',
+        fox: 'Fox',
+        bunny: 'Bunny',
+      },
+    },
+  },
   // Hints (one per screen)
   hints: {
     home: {
@@ -404,6 +461,10 @@ const en = {
       text: 'Track habits you want to build and ones you want to break. Tap + each time you complete or resist.',
       example: 'Example: Drink water (build, 6×/day) — tap + after each glass.',
     },
+    focus: {
+      text: 'One task at a time. Tap Done when you finish, or Skip to move to the next one.',
+      example: 'Tip: use this view when you want to stop deciding and just start.',
+    },
   },
 };
 
@@ -424,8 +485,15 @@ const no: typeof en = {
   noEssentialTasks: 'Ingen viktige oppgaver i dag — bra!',
   addNew: '+ Ny',
   essentialsHidden: (n: number) => `+ ${n} vanlige oppgaver skjult →`,
-  backlog: 'Restliste',
+  backlog: 'Venter på deg',
   backlogHint: 'Hvert lite steg teller — bare ta ett om gangen.',
+  focusView: {
+    currentTask: 'Neste',
+    done: 'Ferdig ✓',
+    skip: 'Hopp over for nå',
+    allDone: 'Alt er gjort for nå!',
+    allDoneSubtitle: (n: number) => `Du har fullført ${n} ting — småting teller!`,
+  },
   shoppingPreview: 'Handle snart',
   seeAll: 'Se alt →',
   shoppingEmpty: 'Handlelisten er tom — bra jobbet!',
@@ -608,6 +676,49 @@ const no: typeof en = {
   holidaysEnabledLabel: 'Norske helligdager',
   holidaysHint: 'Helligdager behandles som helgedager — jobb-modus og varsler er av.',
   // Habits
+  habits: {
+    streakLabel: 'dagers streak',
+    notYetToday: 'Ikke ennå i dag',
+  },
+  onboarding: {
+    privacy: {
+      headline: 'Dataene dine er hos deg',
+      local: 'Alt lagres kun på denne enheten — ingenting sendes noe sted.',
+      free: 'UnFocus er gratis og vil alltid være det.',
+      cta: 'Skjønner →',
+    },
+  },
+  settings: {
+    accessibility: {
+      title: 'Tilgjengelighet',
+      reducedMotion: 'Redusert bevegelse',
+      reducedMotionHint: 'Slår av animasjoner i hele appen',
+      fontSize: 'Skriftstørrelse',
+      fontSizeSmall: 'Liten',
+      fontSizeDefault: 'Standard',
+      fontSizeLarge: 'Stor',
+    },
+    privacy: {
+      headline: 'Dataene dine er hos deg',
+      local: 'Alt lagres kun på denne enheten — ingenting sendes noe sted.',
+      free: 'UnFocus er gratis og vil alltid være det.',
+    },
+    pet: {
+      toggle: 'Følgeven',
+      toggleSubtitle: 'En liten venn som heier på deg',
+      name: 'Navn på kjæledyr',
+      namePlaceholder: 'Gi kjæledyret et navn',
+      type: 'Type kjæledyr',
+      colour: 'Farge',
+      typeLabels: {
+        cat: 'Katt',
+        dog: 'Hund',
+        bird: 'Fugl',
+        fox: 'Rev',
+        bunny: 'Kanin',
+      },
+    },
+  },
   habitsTitle: 'Vaner',
   habitBuilding: 'Bygger',
   habitBreaking: 'Bryter',
@@ -703,6 +814,7 @@ const no: typeof en = {
   nav: {
     newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
+    focus: 'Fokus',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',
@@ -775,6 +887,10 @@ const no: typeof en = {
     habits: {
       text: 'Følg vaner du vil bygge og vaner du vil bryte. Trykk + hver gang du gjennomfører eller motstår.',
       example: 'Eksempel: Drikk vann (bygg, 6×/dag) — trykk + etter hvert glass.',
+    },
+    focus: {
+      text: 'Én oppgave om gangen. Trykk Ferdig når du er klar, eller Hopp over for å gå til neste.',
+      example: 'Tips: bruk denne visningen når du vil slutte å bestemme deg og bare starte.',
     },
   },
 };

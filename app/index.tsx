@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/HintCard, components/QuickAddSheet, components/TaskItem, constants/theme, lib/date, lib/holidays, lib/i18n, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/CompanionPet, components/HintCard, components/QuickAddSheet, components/TaskItem, constants/theme, lib/date, lib/holidays, lib/i18n, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items); settings via useSettingsStore
  *
@@ -16,8 +16,10 @@
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
+ *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
+ *   - CompanionPet renders when petEnabled; justCompleted resets after 1 s.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -34,6 +36,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
+import CompanionPet from '@/components/CompanionPet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
@@ -64,6 +67,9 @@ export default function HomeScreen() {
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
+  // Pet celebration: true for 1 s after a task completion.
+  const [justCompleted, setJustCompleted] = useState(false);
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWorkModeActive = useMemo(() => {
     if (settings.workModeSessionOverride) return false;
@@ -117,6 +123,15 @@ export default function HomeScreen() {
     return `${t.days[d.getDay()]} ${d.getDate()}. ${t.months[d.getMonth()]}`;
   })();
 
+  function handleToggleTask(id: string) {
+    toggleTask(id);
+    if (settings.petEnabled) {
+      setJustCompleted(true);
+      if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
+      celebrateTimer.current = setTimeout(() => setJustCompleted(false), 1000);
+    }
+  }
+
   function handleWorkModeOverride() {
     Alert.alert(t.switchModeTitle, t.switchModeBody, [
       { text: t.cancel, style: 'cancel' },
@@ -147,12 +162,15 @@ export default function HomeScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: theme.text }]}>
               {greeting()}{settings.userName ? `, ${settings.userName}` : ''}!
             </Text>
             <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
+          {settings.petEnabled && (
+            <CompanionPet celebrating={justCompleted} />
+          )}
           <Pressable
             style={[styles.essentialsBtn, { backgroundColor: theme.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
             onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
@@ -199,7 +217,7 @@ export default function HomeScreen() {
                 <TaskItem
                   key={task.id}
                   task={task}
-                  onToggle={() => toggleTask(task.id)}
+                  onToggle={() => handleToggleTask(task.id)}
                   onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
                 />
               ))}
@@ -214,20 +232,23 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Backlog */}
+        {/* Backlog — "waiting for you" phrasing, neutral colour (no red/overdue framing) */}
         {backlog.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.textLight }]}>
-                {t.backlog} ({backlog.length})
-              </Text>
+              <View style={styles.backlogLabelRow}>
+                <Text style={[styles.sectionTitle, { color: theme.textLight }]}>{t.backlog}</Text>
+                <View style={[styles.backlogBadge, { backgroundColor: theme.neutral }]}>
+                  <Text style={styles.backlogBadgeText}>{backlog.length}</Text>
+                </View>
+              </View>
             </View>
             <View style={[styles.card, { backgroundColor: theme.offWhite, borderColor: theme.border }]}>
               {backlog.map((task) => (
                 <TaskItem
                   key={task.id}
                   task={task}
-                  onToggle={() => toggleTask(task.id)}
+                  onToggle={() => handleToggleTask(task.id)}
                   onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
                   muted
                 />
@@ -356,6 +377,16 @@ const styles = StyleSheet.create({
   shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
+  backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  backlogBadge: {
+    borderRadius: Radius.full,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backlogBadgeText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
   settingsBtn: {

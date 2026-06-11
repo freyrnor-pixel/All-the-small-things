@@ -194,6 +194,14 @@ export function initDb() {
     "ALTER TABLE habits ADD COLUMN routine_order INTEGER DEFAULT 0",
     "ALTER TABLE habits ADD COLUMN child_name TEXT DEFAULT ''",
     "ALTER TABLE settings ADD COLUMN child_profiles TEXT DEFAULT '[]'",
+    // Proposal 4 — Accessibility
+    "ALTER TABLE settings ADD COLUMN reduced_motion INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN font_size TEXT DEFAULT 'default'",
+    // Proposal 6 — Companion pet
+    "ALTER TABLE settings ADD COLUMN pet_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN pet_name TEXT DEFAULT ''",
+    "ALTER TABLE settings ADD COLUMN pet_type TEXT DEFAULT 'cat'",
+    "ALTER TABLE settings ADD COLUMN pet_color TEXT DEFAULT '#A78BFA'",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }
