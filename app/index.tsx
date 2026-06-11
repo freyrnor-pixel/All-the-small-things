@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/CompanionPet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
  *
@@ -18,9 +18,9 @@
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
- *   - CompanionPet renders when petEnabled; justCompleted resets after 1 s.
+ *   - Pet renders when petEnabled; passes completedCount so it triggers excited animation on task completion.
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -38,7 +38,7 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import BubbleMenu from '@/components/BubbleMenu';
-import CompanionPet from '@/components/CompanionPet';
+import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -74,9 +74,6 @@ export default function HomeScreen() {
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
-  // Pet celebration: true for 1 s after a task completion.
-  const [justCompleted, setJustCompleted] = useState(false);
-  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWorkModeActive = useMemo(() => {
     if (settings.workModeSessionOverride) return false;
@@ -143,11 +140,6 @@ export default function HomeScreen() {
 
   function handleToggleTask(id: string) {
     toggleTask(id);
-    if (settings.petEnabled) {
-      setJustCompleted(true);
-      if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
-      celebrateTimer.current = setTimeout(() => setJustCompleted(false), 1000);
-    }
   }
 
   function handleWorkModeOverride() {
@@ -190,7 +182,7 @@ export default function HomeScreen() {
           {/* Right column: pet (if enabled) + icon buttons */}
           <View style={styles.headerRight}>
             {settings.petEnabled && (
-              <CompanionPet celebrating={justCompleted} />
+              <Pet completedToday={completedCount} />
             )}
             <View style={styles.headerIcons}>
               <Pressable
