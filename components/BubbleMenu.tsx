@@ -268,6 +268,11 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
+    // Anchor to bottom-right so translate offsets radiate from the FAB origin.
+    // Without this, RN defaults to (0,0) = top-left of wheelArea and bubbles
+    // end up translated from the wrong origin corner.
+    right: 0,
+    bottom: 0,
     width: BUBBLE_SIZE,
     height: BUBBLE_SIZE,
     borderRadius: Radius.full,
