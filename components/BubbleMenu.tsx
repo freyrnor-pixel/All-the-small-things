@@ -70,13 +70,18 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 ];
 
 const RADIUS = 300;
+const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
 
-// Viewing window: 90° arc sweeping from left (−180°) to straight up (−90°).
-// WINDOW_END = −π/2 keeps all bubbles left-of or above the FAB. Going further
-// toward 0° (upper-right) would push items off the right screen edge because the
-// FAB is already near the right edge (right: 24).
+// Wheel canvas: large enough to contain the full arc in all directions.
+// The FAB sits at the CENTRE of this canvas, so all translations radiate
+// correctly from the FAB without any right/bottom positioning tricks.
+const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // 656 — diameter + one bubble
+
+// Viewing window: 90° arc from left (−180°) to straight up (−90°).
+// FAB is near the right screen edge (right: 24), so going past −90° toward
+// upper-right would push items off-screen.
 const WINDOW_START = -Math.PI;     // −180° — leftmost visible edge
 const WINDOW_END   = -Math.PI / 2; // −90°  — topmost visible edge (straight up)
 const WINDOW_FADE  = Math.PI / 8;  // 22.5° smooth fade zone at each edge
@@ -255,10 +260,12 @@ const styles = StyleSheet.create({
   },
   wheelArea: {
     position: 'absolute',
-    width: RADIUS * 2 + BUBBLE_SIZE,
-    height: RADIUS * 2 + BUBBLE_SIZE,
-    bottom: 0,
-    right: 0,
+    width: WHEEL_SIZE,
+    height: WHEEL_SIZE,
+    // Centre this canvas on the FAB. FAB centre = centre of the 60×60 container.
+    // Canvas top-left = FAB_centre - WHEEL_SIZE/2 = 30 - 328 = -298.
+    left: FAB_SIZE / 2 - WHEEL_SIZE / 2,
+    top: FAB_SIZE / 2 - WHEEL_SIZE / 2,
   },
   fab: {
     width: 60,
@@ -270,11 +277,11 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    // Anchor to bottom-right so translate offsets radiate from the FAB origin.
-    // Without this, RN defaults to (0,0) = top-left of wheelArea and bubbles
-    // end up translated from the wrong origin corner.
-    right: 0,
-    bottom: 0,
+    // Place bubble centre at the wheelArea centre (= FAB centre).
+    // left/top of the bubble = WHEEL_SIZE/2 - BUBBLE_SIZE/2 = RADIUS.
+    // translateX/Y then offset it to the arc position around the FAB.
+    left: RADIUS,
+    top: RADIUS,
     width: BUBBLE_SIZE,
     height: BUBBLE_SIZE,
     borderRadius: Radius.full,
