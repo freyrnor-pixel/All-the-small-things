@@ -11,7 +11,8 @@
  *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onRemove/onAdjust
  *
  * Edit notes:
- *   - The stepper only shows when amount parses as a positive number, onAdjust is provided, and the item is unchecked; otherwise a static qty is rendered.
+ *   - The stepper shows when amount is a positive integer, onAdjust is provided, and the item is unchecked. Otherwise amount+unit appear in the meta sub-row.
+ *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just check + name + (stepper) + remove.
  *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels (fromMonthlyLabel) are passed in pre-formatted/localized.
  */
 import React from 'react';
@@ -31,13 +32,24 @@ type Props = {
 export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel }: Props) {
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
+  const showStepper = isNumeric && !!onAdjust && !item.checked;
+
+  // Build meta parts: qty+unit (when no stepper), unit (when stepper active), store, tag, price
+  const metaParts: string[] = [];
+  if (!showStepper) {
+    metaParts.push(`${item.amount}${item.unit ? ' ' + item.unit : ''}`);
+  } else if (item.unit) {
+    metaParts.push(item.unit);
+  }
+  if (item.store) metaParts.push(item.store);
+  if (item.price > 0) metaParts.push(`${item.price.toFixed(0)} kr`);
 
   return (
     <View style={styles.row}>
       <Pressable
         style={[styles.check, { borderColor: theme.green }, item.checked && { backgroundColor: theme.green, borderColor: theme.green }]}
         onPress={onToggle}
-        hitSlop={4}
+        hitSlop={6}
       >
         {item.checked && <Text style={styles.checkMark}>✓</Text>}
       </Pressable>
@@ -46,25 +58,24 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
         <Text style={[styles.name, { color: theme.text }, item.checked && { color: theme.gray, textDecorationLine: 'line-through' }]}>
           {item.name}
         </Text>
-        <View style={styles.metaRow}>
-          {item.unit ? (
-            <Text style={[styles.meta, { color: theme.textLight }]}>{item.unit}</Text>
-          ) : null}
-          {item.store ? (
-            <Text style={[styles.meta, { color: theme.textLight }]}>{item.store}</Text>
-          ) : null}
-          {item.monthlySourceId && fromMonthlyLabel ? (
-            <Text style={[styles.sourceTag, { color: theme.orange }]}>{fromMonthlyLabel}</Text>
-          ) : null}
-        </View>
+        {(metaParts.length > 0 || (item.monthlySourceId && fromMonthlyLabel)) && (
+          <View style={styles.metaRow}>
+            {metaParts.map((part, i) => (
+              <Text key={i} style={[styles.meta, { color: theme.textLight }]}>{part}</Text>
+            ))}
+            {item.monthlySourceId && fromMonthlyLabel ? (
+              <Text style={[styles.sourceTag, { color: theme.orange }]}>{fromMonthlyLabel}</Text>
+            ) : null}
+          </View>
+        )}
       </View>
 
-      {/* Amount stepper */}
-      {isNumeric && onAdjust && !item.checked ? (
+      {/* Amount stepper — only for numeric unchecked items */}
+      {showStepper && (
         <View style={styles.stepper}>
           <Pressable
             style={[styles.stepBtn, { backgroundColor: theme.grayLight }]}
-            onPress={() => onAdjust(-1)}
+            onPress={() => onAdjust!(-1)}
             hitSlop={4}
           >
             <Text style={[styles.stepText, { color: theme.text }]}>−</Text>
@@ -72,20 +83,12 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
           <Text style={[styles.qty, { color: theme.text }]}>{item.amount}</Text>
           <Pressable
             style={[styles.stepBtn, { backgroundColor: theme.orange }]}
-            onPress={() => onAdjust(+1)}
+            onPress={() => onAdjust!(+1)}
             hitSlop={4}
           >
             <Text style={[styles.stepText, { color: '#fff' }]}>+</Text>
           </Pressable>
         </View>
-      ) : (
-        <Text style={[styles.staticQty, { color: theme.textLight }]}>
-          {item.amount}{item.unit ? ` ${item.unit}` : ''}
-        </Text>
-      )}
-
-      {item.price > 0 && (
-        <Text style={[styles.price, { color: theme.textLight }]}>{item.price.toFixed(0)} kr</Text>
       )}
 
       <Pressable style={styles.remove} onPress={onRemove} hitSlop={8}>
@@ -103,8 +106,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   check: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     borderRadius: Radius.full,
     borderWidth: 2,
     alignItems: 'center',
@@ -113,10 +116,10 @@ const styles = StyleSheet.create({
   checkMark: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   content: { flex: 1, minWidth: 0 },
   name: { fontSize: FontSize.md },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 1 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
   meta: { fontSize: FontSize.xs },
   sourceTag: { fontSize: FontSize.xs, fontWeight: '600' },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   stepBtn: {
     width: 26,
     height: 26,
@@ -126,8 +129,6 @@ const styles = StyleSheet.create({
   },
   stepText: { fontSize: FontSize.md, fontWeight: '700', lineHeight: 20 },
   qty: { fontSize: FontSize.sm, fontWeight: '700', minWidth: 20, textAlign: 'center' },
-  staticQty: { fontSize: FontSize.sm },
-  price: { fontSize: FontSize.xs, fontWeight: '500' },
-  remove: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  remove: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   removeText: { fontSize: 20, lineHeight: 22 },
 });

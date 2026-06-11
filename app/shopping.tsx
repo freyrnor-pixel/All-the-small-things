@@ -13,7 +13,6 @@
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
- *   - A couple of monthly-allocation status strings are still hardcoded Norwegian (search "varer planlagt") — not yet via useT().
  *   - Header Share button opens the /share-modal modal with params { kind: 's' }.
  */
 import React, { useMemo, useState } from 'react';
@@ -51,6 +50,7 @@ export default function ShoppingScreen() {
   const [tab, setTab] = useState<Tab>('weekly');
   const [adding, setAdding] = useState(false);
   const [showMonthlyPicker, setShowMonthlyPicker] = useState(false);
+  const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('1');
   const [newUnit, setNewUnit] = useState('');
@@ -85,6 +85,7 @@ export default function ShoppingScreen() {
     setNewName(name);
     setNewCategory((CATEGORY_ORDER as readonly string[]).includes(category) ? (category as Category) : 'other');
     setNewPrice(price);
+    setCategoryExpanded(false);
   }
 
   const weeklyItems = items.filter((i) => i.listType === 'weekly');
@@ -124,6 +125,7 @@ export default function ShoppingScreen() {
     setNewCategory('other');
     setNewPrice(0);
     setAdding(false);
+    setCategoryExpanded(false);
   }
 
   function handleMonthlyPickerConfirm(selections: { id: string; qty: number }[]) {
@@ -218,24 +220,27 @@ export default function ShoppingScreen() {
                 onSubmitEditing={addItem}
               />
               {suggestions.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                  <View style={styles.suggestRow}>
-                    {suggestions.map((s) => (
-                      <Pressable
-                        key={s.id}
-                        style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
-                        onPress={() => pickSuggestion(s.name, s.category, s.price)}
-                      >
-                        <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
-                        {s.price > 0 && (
-                          <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
-                            {t.lastPaid(`${s.price.toFixed(2)} kr`)}
-                          </Text>
-                        )}
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
+                <>
+                  <Text style={[styles.suggestLabel, { color: theme.textLight }]}>{t.suggestions}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    <View style={styles.suggestRow}>
+                      {suggestions.map((s) => (
+                        <Pressable
+                          key={s.id}
+                          style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
+                          onPress={() => pickSuggestion(s.name, s.category, s.price)}
+                        >
+                          <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
+                          {s.price > 0 && (
+                            <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
+                              {t.lastPaid(`${s.price.toFixed(2)} kr`)}
+                            </Text>
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </>
               )}
               <View style={styles.addRow}>
                 <View style={styles.stepperInline}>
@@ -269,28 +274,40 @@ export default function ShoppingScreen() {
                   placeholderTextColor={theme.gray}
                 />
               </View>
-              <Text style={[styles.categoryLabel, { color: theme.textLight }]}>{t.category}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.categoryRow}>
-                  {CATEGORY_ORDER.map((cat) => (
-                    <Pressable
-                      key={cat}
-                      style={[
-                        styles.categoryChip,
-                        { backgroundColor: newCategory === cat ? tabAccent : theme.grayLight },
-                      ]}
-                      onPress={() => setNewCategory(cat)}
-                    >
-                      <Text style={[
-                        styles.categoryChipText,
-                        { color: newCategory === cat ? '#fff' : theme.text },
-                      ]}>
-                        {t.shoppingCategories[cat]}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
+              <Pressable
+                style={[styles.categoryToggleBtn, { backgroundColor: theme.grayLight }]}
+                onPress={() => setCategoryExpanded((v) => !v)}
+              >
+                <Text style={[styles.categoryToggleText, { color: theme.textLight }]}>
+                  {t.category}: {t.shoppingCategories[newCategory as Category]}
+                </Text>
+                <Text style={[styles.categoryToggleChevron, { color: theme.textLight }]}>
+                  {categoryExpanded ? '▲' : '▼'}
+                </Text>
+              </Pressable>
+              {categoryExpanded && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.categoryRow}>
+                    {CATEGORY_ORDER.map((cat) => (
+                      <Pressable
+                        key={cat}
+                        style={[
+                          styles.categoryChip,
+                          { backgroundColor: newCategory === cat ? tabAccent : theme.grayLight },
+                        ]}
+                        onPress={() => { setNewCategory(cat); setCategoryExpanded(false); }}
+                      >
+                        <Text style={[
+                          styles.categoryChipText,
+                          { color: newCategory === cat ? '#fff' : theme.text },
+                        ]}>
+                          {t.shoppingCategories[cat]}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              )}
               <View style={styles.addActions}>
                 <Pressable style={styles.cancelBtn} onPress={() => setAdding(false)}>
                   <Text style={[styles.cancelBtnText, { color: theme.textLight }]}>{t.cancel}</Text>
@@ -312,7 +329,12 @@ export default function ShoppingScreen() {
           {/* Weekly tab: Monthly-source section + Weekly items */}
           {tab === 'weekly' && monthlyAvailable.length > 0 && (
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.monthlySourceSection}</Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.monthlySourceSection}</Text>
+                <Pressable onPress={() => setShowMonthlyPicker(true)} hitSlop={8}>
+                  <Text style={[styles.addAllBtn, { color: theme.orange }]}>{t.addFromMonthly}</Text>
+                </Pressable>
+              </View>
               <View style={[styles.card, { backgroundColor: theme.white }]}>
                 {monthlyAvailable.map((item, idx) => {
                   const remaining = (parseInt(item.amount, 10) || 1) - item.monthlyAllocated;
@@ -513,6 +535,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     textAlign: 'center',
   },
+  suggestLabel: { fontSize: FontSize.xs, fontWeight: '600' },
   suggestRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: 2 },
   suggestChip: {
     borderRadius: Radius.full,
@@ -522,7 +545,16 @@ const styles = StyleSheet.create({
   },
   suggestText: { fontSize: FontSize.xs, fontWeight: '600' },
   suggestPrice: { fontSize: 9 },
-  categoryLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  categoryToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  categoryToggleText: { fontSize: FontSize.xs, fontWeight: '600' },
+  categoryToggleChevron: { fontSize: FontSize.xs, fontWeight: '700' },
   categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
   categoryChip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
   categoryChipText: { fontSize: FontSize.xs, fontWeight: '600' },
@@ -535,12 +567,18 @@ const styles = StyleSheet.create({
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
   rowDivider: { height: 1 },
   section: { gap: Spacing.xs },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sectionLabel: {
     fontSize: FontSize.xs,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  addAllBtn: { fontSize: FontSize.xs, fontWeight: '700' },
   monthlySourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
