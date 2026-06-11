@@ -13,7 +13,7 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - The arc geometry (RADIUS / START_ANGLE / END_ANGLE) is tuned for 7 bubbles; adding items may cause overlap.
+ *   - RADIUS was bumped to 270 and the arc spread to 105° to keep 8 bubbles clear of each other.
  *   - All labels go through useT() — no hardcoded text.
  *   - Settings is not in the arc; it lives as a persistent corner button in app/index.tsx.
  */
@@ -47,9 +47,10 @@ type Props = {
   onNewTask?: () => void;
 };
 
-// Warm-to-cool gradient across the arc: creation → daily tracking → social.
+// Warm-to-cool gradient across the arc: creation → focus → daily tracking → social.
 const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
+  { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: '#E8934A' },
   { icon: 'camera-outline',     labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
   { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
   { icon: 'heart-outline',      labelKey: 'health',  route: '/health',    color: FeatureColors.health },
@@ -58,16 +59,17 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-// Radius sized to fit 7 bubbles (56px) without overlap across 90° arc.
-const RADIUS = 250;
+// Radius bumped to 270 and arc widened to ~105° to keep 8 bubbles clear of each other.
+const RADIUS = 270;
 const BUBBLE_SIZE = 56;
-const START_ANGLE = -Math.PI;      // pointing left
-const END_ANGLE = -Math.PI / 2;    // pointing straight up
+const START_ANGLE = -Math.PI;                        // pointing left
+const END_ANGLE = -Math.PI / 2 + Math.PI / 12;      // ~105° arc (15° past straight-up)
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
   const rotation = useRef(new Animated.Value(0)).current;
+  // pressAnims length matches BASE_ITEMS — one per bubble.
   const pressAnims = useRef(BASE_ITEMS.map(() => new Animated.Value(1))).current;
   const router = useRouter();
   const theme = useAppTheme();

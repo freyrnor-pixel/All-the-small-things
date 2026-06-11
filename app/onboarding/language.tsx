@@ -11,7 +11,7 @@
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
- *   - choose() writes `language` to settings, then router.push to "/onboarding/guided".
+ *   - choose() writes `language` to settings, then router.push to "/onboarding/privacy" (inserts privacy trust screen before guided).
  *   - OPTIONS labels are intentionally literal language names (not translated).
  */
 import React from 'react';
@@ -42,7 +42,7 @@ export default function LanguageScreen() {
 
   function choose(lang: Language) {
     settings.update({ language: lang });
-    router.push('/onboarding/guided');
+    router.push('/onboarding/privacy');
   }
 
   return (

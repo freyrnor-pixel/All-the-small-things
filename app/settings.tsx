@@ -2,9 +2,10 @@
  * settings.tsx — app settings
  *
  * Central settings screen: name, language, colour theme / dark mode, work-mode
- * and focus options, reminder + notification toggles and times, weekly/monthly
- * reset schedule, and destructive reset/clear actions. Changing reminder-,
- * notification- or language-related settings re-syncs the scheduled reminders.
+ * and focus options, reminder + notification toggles, weekly/monthly reset schedule,
+ * accessibility (reduced motion + font size), companion pet, and destructive reset
+ * actions. Changing reminder-, notification- or language-related settings re-syncs
+ * the scheduled reminders.
  *
  * Connections:
  *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
@@ -14,6 +15,9 @@
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
  *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
+ *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
+ *   - Accessibility section: reducedMotion toggle + font size three-option selector.
+ *   - Companion pet section visible only when petEnabled; colour swatches pull from active theme palette.
  */
 import React, { useState } from 'react';
 import {
@@ -30,7 +34,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useSettingsStore, Settings } from '@/store/useSettingsStore';
+import { useSettingsStore, Settings, FontSizePref, PetType } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useHabitStore } from '@/store/useHabitStore';
@@ -39,12 +43,11 @@ import { useT } from '@/lib/i18n';
 import { useAppTheme } from '@/lib/useAppTheme';
 import HintCard from '@/components/HintCard';
 import TimePickerWheel from '@/components/TimePickerWheel';
-// OLD: import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
-//      Colors (the warm/default palette) was used throughout this screen for every
-//      background, text, and border colour — meaning theme changes had no effect here.
-//      Replaced with useAppTheme() so settings matches the user's chosen theme and dark mode.
 import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
+
+const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
+const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -57,9 +60,15 @@ export default function SettingsScreen() {
   const syncHabitNotifs = useHabitStore((s) => s.syncAllHabitReminders);
   const t = useT();
   const [name, setName] = useState(settings.userName);
+  const [petNameInput, setPetNameInput] = useState(settings.petName);
   const [monthlyDateInput, setMonthlyDateInput] = useState(String(settings.monthlyResetDate));
 
   const DAY_LABELS = t.dayFull;
+
+  // Colour swatches for the pet colour picker — pulled from the active theme palette.
+  const petSwatches = [
+    theme.orange, theme.green, '#A78BFA', '#F472B6', '#60A5FA', '#34D399',
+  ];
 
   function applyAndSync(patch: Partial<Settings>) {
     settings.update(patch);
@@ -99,6 +108,16 @@ export default function SettingsScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <HintCard text={t.hints.settings.text} example={t.hints.settings.example} />
+
+        {/* Privacy trust card — mirrors onboarding/privacy for returning users */}
+        <View style={[styles.privacyCard, { backgroundColor: theme.greenLight, borderColor: theme.border }]}>
+          <Text style={styles.privacyIcon}>🔒</Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[styles.privacyHeadline, { color: theme.text }]}>{t.settings.privacy.headline}</Text>
+            <Text style={[styles.privacyLine, { color: theme.textLight }]}>{t.settings.privacy.local}</Text>
+            <Text style={[styles.privacyLine, { color: theme.textLight }]}>{t.settings.privacy.free}</Text>
+          </View>
+        </View>
 
         {/* Profile */}
         <View style={styles.section}>
@@ -241,16 +260,6 @@ export default function SettingsScreen() {
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.reminderTimeLabel}</Text>
-                {/* OLD: <TextInput
-                      style={styles.input}
-                      value={settings.reminderTime}
-                      onChangeText={(v) => applyAndSync({ reminderTime: v })}
-                      keyboardType="numbers-and-punctuation"
-                      placeholder={t.reminderTimePlaceholder}
-                      placeholderTextColor={Colors.gray}
-                    />
-                    Free-text HH:MM entry was error-prone (partial input, wrong separators).
-                    TimePickerWheel is already used in task-form for the same purpose. */}
                 <TimePickerWheel
                   value={settings.reminderTime || '08:00'}
                   onChange={(v) => applyAndSync({ reminderTime: v })}
@@ -357,6 +366,48 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Accessibility (Proposal 4) */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.accessibility.title}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.accessibility.reducedMotion}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.settings.accessibility.reducedMotionHint}</Text>
+              </View>
+              <Switch
+                value={settings.reducedMotion}
+                onValueChange={(v) => settings.update({ reducedMotion: v })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.reducedMotion ? theme.orange : theme.gray}
+              />
+            </View>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.accessibility.fontSize}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+              {(['small', 'default', 'large'] as FontSizePref[]).map((size) => (
+                <Pressable
+                  key={size}
+                  style={[styles.seg, settings.fontSize === size && [styles.segActive, { backgroundColor: theme.white }]]}
+                  onPress={() => settings.update({ fontSize: size })}
+                >
+                  <Text style={[
+                    styles.segText,
+                    { color: theme.textLight },
+                    settings.fontSize === size && { color: theme.text, fontWeight: '600' },
+                  ]}>
+                    {size === 'small'
+                      ? t.settings.accessibility.fontSizeSmall
+                      : size === 'large'
+                        ? t.settings.accessibility.fontSizeLarge
+                        : t.settings.accessibility.fontSizeDefault}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+
         {/* Work mode */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionWorkMode}</Text>
@@ -388,25 +439,6 @@ export default function SettingsScreen() {
             {settings.enforceWorkHours && (
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
-                {/* OLD: <Text style={styles.fieldLabel}>{t.workHoursLabel}</Text>
-                        <View style={styles.hoursRow}>
-                          <View style={styles.hourField}>
-                            <Text style={styles.hourLabel}>{t.workHoursFrom}</Text>
-                            <TextInput style={styles.hourInput} value={settings.workHoursStart}
-                              onChangeText={(v) => settings.update({ workHoursStart: v })}
-                              placeholder="09:00" keyboardType="numbers-and-punctuation" />
-                          </View>
-                          <Text style={styles.hourSep}>–</Text>
-                          <View style={styles.hourField}>
-                            <Text style={styles.hourLabel}>{t.workHoursTo}</Text>
-                            <TextInput style={styles.hourInput} value={settings.workHoursEnd}
-                              onChangeText={(v) => settings.update({ workHoursEnd: v })}
-                              placeholder="17:00" keyboardType="numbers-and-punctuation" />
-                          </View>
-                        </View>
-                    Side-by-side text inputs were compact but error-prone. Work hours are a
-                    one-time setup step (hidden unless enforceWorkHours is on), so the extra
-                    height from two stacked wheels is acceptable for the clarity gained. */}
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
                 <TimePickerWheel
                   value={settings.workHoursStart || '09:00'}
@@ -453,6 +485,84 @@ export default function SettingsScreen() {
                 thumbColor={settings.showHints ? theme.orange : theme.gray}
               />
             </View>
+          </View>
+        </View>
+
+        {/* Companion pet (Proposal 6) */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.pet.toggle}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.pet.toggle}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.settings.pet.toggleSubtitle}</Text>
+              </View>
+              <Switch
+                value={settings.petEnabled}
+                onValueChange={(v) => settings.update({ petEnabled: v })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.petEnabled ? theme.orange : theme.gray}
+              />
+            </View>
+
+            {settings.petEnabled && (
+              <>
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+
+                {/* Pet name */}
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.name}</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+                  value={petNameInput}
+                  onChangeText={setPetNameInput}
+                  placeholder={t.settings.pet.namePlaceholder}
+                  placeholderTextColor={theme.gray}
+                  onBlur={() => settings.update({ petName: petNameInput.trim() })}
+                  returnKeyType="done"
+                />
+
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+
+                {/* Pet type */}
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.type}</Text>
+                <View style={styles.petTypeRow}>
+                  {PET_TYPES.map((pt) => (
+                    <Pressable
+                      key={pt}
+                      style={[
+                        styles.petTypeCard,
+                        { borderColor: settings.petType === pt ? theme.orange : theme.grayLight },
+                        { backgroundColor: settings.petType === pt ? theme.orangeLight : theme.offWhite },
+                      ]}
+                      onPress={() => settings.update({ petType: pt })}
+                    >
+                      <Text style={styles.petTypeEmoji}>{PET_EMOJIS[pt]}</Text>
+                      <Text style={[styles.petTypeLabel, { color: settings.petType === pt ? theme.brown : theme.textLight }]}>
+                        {t.settings.pet.typeLabels[pt]}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+
+                {/* Colour picker */}
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.colour}</Text>
+                <View style={styles.swatchRow}>
+                  {petSwatches.map((color) => (
+                    <Pressable
+                      key={color}
+                      style={[
+                        styles.petSwatch,
+                        { backgroundColor: color },
+                        settings.petColor === color && styles.petSwatchActive,
+                      ]}
+                      onPress={() => settings.update({ petColor: color })}
+                    />
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         </View>
 
@@ -524,4 +634,26 @@ const styles = StyleSheet.create({
   },
   langFlag: { fontSize: 24 },
   langText: { fontSize: FontSize.md, fontWeight: '600' },
+  // Privacy card
+  privacyCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md,
+    borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1,
+  },
+  privacyIcon: { fontSize: 28 },
+  privacyHeadline: { fontSize: FontSize.sm, fontWeight: '700' },
+  privacyLine: { fontSize: FontSize.xs, lineHeight: 18 },
+  // Pet styles
+  petTypeRow: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'wrap' },
+  petTypeCard: {
+    flex: 1, minWidth: 56, borderWidth: 2, borderRadius: Radius.md,
+    padding: Spacing.xs, alignItems: 'center', gap: 2,
+  },
+  petTypeEmoji: { fontSize: 28 },
+  petTypeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  swatchRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+  petSwatch: {
+    width: 36, height: 36, borderRadius: Radius.full, borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  petSwatchActive: { borderColor: '#333', borderWidth: 3 },
 });

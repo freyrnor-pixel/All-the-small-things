@@ -14,6 +14,7 @@
  *   - Per-task notification scheduling lives here (syncTaskNotification); add/update auto-reschedule. Call syncAllTaskNotifications() after a settings/language change since notification copy is baked in at schedule time.
  *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
+ *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
  *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
  */
 import { create } from 'zustand';
@@ -56,6 +57,8 @@ type TaskStore = {
   tasksForDate: (date: string) => Task[];
   backlogTasks: (today: string) => Task[];
   completedCount: () => number;
+  /** First pending task for the focus view, respecting work-mode filter. */
+  focusTask: (date: string, workModeActive: boolean) => Task | null;
   /** Re-schedule every task's reminder (after a settings/language change). */
   syncAllTaskNotifications: () => void;
 };
@@ -277,6 +280,21 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   completedCount() {
     return get().tasks.filter((t) => t.done).length;
+  },
+
+  focusTask(date, workModeActive) {
+    const candidates = get().tasksForDate(date).filter((t) => {
+      if (t.done) return false;
+      if (workModeActive && t.importance !== 'essential') return false;
+      return true;
+    });
+    const sorted = candidates.sort((a, b) => {
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      if (a.time) return -1;
+      if (b.time) return 1;
+      return a.id.localeCompare(b.id);
+    });
+    return sorted[0] ?? null;
   },
 
   syncAllTaskNotifications() {

@@ -5,10 +5,11 @@
  * variants, and shared layout constants. `getTheme(name, isDark)` resolves a
  * palette; lib/useAppTheme.ts wraps it to react to the user's theme + dark-mode
  * settings. The static `Colors` export is the default warm palette.
+ * `getFontSize(base, scale)` applies the user's fontSize preference to a base pt.
  *
  * Connections:
  *   Imports → —
- *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DatePickerCalendar.tsx, components/ExpandableCard.tsx, components/HintCard.tsx, components/MonthlyPickerSheet.tsx, components/QuickAddSheet.tsx, components/ShoppingRow.tsx, components/TaskItem.tsx, components/TimePickerWheel.tsx, lib/useAppTheme.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/CompanionPet.tsx, components/DatePickerCalendar.tsx, components/ExpandableCard.tsx, components/HintCard.tsx, components/MonthlyPickerSheet.tsx, components/QuickAddSheet.tsx, components/ShoppingRow.tsx, components/TaskItem.tsx, components/TimePickerWheel.tsx, lib/useAppTheme.ts
  *   Data    → none (pure constants)
  *
  * Edit notes:
@@ -16,8 +17,10 @@
  *     ALL palettes (warm/cool/forest/rose, light AND DARK_THEMES) or getTheme returns undefined colours.
  *   - For theme-aware screens prefer useAppTheme() over the static `Colors`,
  *     which is always the light warm palette.
+ *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
  */
 export type ThemeName = 'warm' | 'cool' | 'forest' | 'rose';
+export type FontSizeScale = 'small' | 'default' | 'large';
 
 export interface AppColors {
   cream: string;
@@ -37,6 +40,15 @@ export interface AppColors {
   dangerLight: string;
   shadow: string;
   border: string;
+  /** Muted neutral tone — used for shame-free empty circles / backlog badges. */
+  neutral: string;
+}
+
+const fontScaleMap: Record<FontSizeScale, number> = { small: 0.875, default: 1, large: 1.2 };
+
+/** Apply the user's fontSize preference to any base point size. */
+export function getFontSize(base: number, scale: FontSizeScale): number {
+  return Math.round(base * fontScaleMap[scale]);
 }
 
 const warmColors: AppColors = {
@@ -57,6 +69,7 @@ const warmColors: AppColors = {
   dangerLight: '#FADADD',
   shadow: 'rgba(61,43,31,0.12)',
   border: '#E8E0D8',
+  neutral: '#C4B8AC',
 };
 
 export const THEMES: Record<ThemeName, AppColors> = {
@@ -79,6 +92,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#F8D0D0',
     shadow: 'rgba(26,58,82,0.12)',
     border: '#DDE3EC',
+    neutral: '#A8BCCA',
   },
   forest: {
     cream: '#F0F7F0',
@@ -98,6 +112,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#F5D5D0',
     shadow: 'rgba(26,61,34,0.12)',
     border: '#D8E4DA',
+    neutral: '#A0B8A6',
   },
   rose: {
     cream: '#FDF0F5',
@@ -117,6 +132,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#F5D0D8',
     shadow: 'rgba(61,26,46,0.12)',
     border: '#EAD9DF',
+    neutral: '#C0A8B5',
   },
 };
 
@@ -146,6 +162,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#3A1212',
     shadow: 'rgba(0,0,0,0.6)',
     border: '#3A3530',
+    neutral: '#786050',
   },
   cool: {
     cream: '#101822',
@@ -165,6 +182,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#2A1010',
     shadow: 'rgba(0,0,0,0.6)',
     border: '#2A3140',
+    neutral: '#506880',
   },
   forest: {
     cream: '#101A10',
@@ -184,6 +202,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#2A1010',
     shadow: 'rgba(0,0,0,0.6)',
     border: '#253029',
+    neutral: '#506858',
   },
   rose: {
     cream: '#1E1018',
@@ -203,6 +222,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     dangerLight: '#2A1020',
     shadow: 'rgba(0,0,0,0.6)',
     border: '#3A2830',
+    neutral: '#785060',
   },
 };
 

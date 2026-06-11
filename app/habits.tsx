@@ -15,6 +15,8 @@
  *   - All visible strings go through useT(); per-day keys are YYYY-MM-DD via todayStr()/dateStr() (week starts Monday).
  *   - increment/decrement key off (habitId, today) into habit_logs; counts are clamped against dailyGoal for ratio/colour.
  *   - Edit navigates to the /habit-form modal; the empty-section CTAs pre-seed the `kind` param.
+ *   - No-shame: past days with 0 progress show an empty circle in theme.neutral — no red/✗ indicators.
+ *   - Missed days silently reset the streak; no separate "missed" counter displayed (Proposal 5).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -58,10 +60,11 @@ function getMonthDates(year: number, month: number): string[] {
   });
 }
 
-function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string {
+function progressColor(ratio: number, _kind: HabitKind, theme: AppColors): string {
   if (ratio >= 1) return theme.green;
   if (ratio > 0) return theme.orange;
-  return kind === 'break' ? theme.danger : theme.gray;
+  // No-shame: zero progress uses neutral regardless of habit kind — no red punishment colour.
+  return theme.neutral;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -107,6 +110,7 @@ function WeekStrip({
         const count = log?.count ?? 0;
         const ratio = goal > 0 ? Math.min(count / goal, 1) : 0;
         const isFuture = date > today;
+        // Past zero-progress days: neutral border, transparent fill (empty circle — no shame).
         const color = isFuture ? theme.grayLight : progressColor(ratio, kind, theme);
         const filled = !isFuture && ratio > 0;
         const isToday = date === today;
@@ -187,7 +191,7 @@ function HabitCard({
             <Text style={[styles.habitTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
             {isDone && (
               <Text style={[styles.doneLabel, { color: theme.green }]}>
-                {habit.kind === 'build' ? t.habitGoalMet : t.habitBroken}
+                {t.habitGoalMet}
               </Text>
             )}
           </View>
@@ -285,12 +289,12 @@ function WeekView({
             const ratio = habit.dailyGoal > 0 ? Math.min((log?.count ?? 0) / habit.dailyGoal, 1) : 0;
             const isFuture = date > today;
             const color = isFuture ? theme.grayLight : progressColor(ratio, habit.kind, theme);
+            const filled = !isFuture && ratio > 0;
             return (
               <View key={date} style={styles.weekGridCell}>
                 <View style={[
                   styles.weekGridDot,
-                  { backgroundColor: isFuture ? 'transparent' : color, borderColor: color },
-                  isFuture && { borderColor: '#E8E2DA' },
+                  { backgroundColor: filled ? color : 'transparent', borderColor: isFuture ? theme.grayLight : color },
                 ]} />
               </View>
             );
@@ -361,6 +365,7 @@ function MonthView({
                 const log = logs.find((l) => l.habitId === habit.id && l.logDate === date);
                 const ratio = habit.dailyGoal > 0 ? Math.min((log?.count ?? 0) / habit.dailyGoal, 1) : 0;
                 const isFuture = date > today;
+                // Past zero-progress: empty circle in neutral — no shame.
                 const color = isFuture ? theme.grayLight : progressColor(ratio, habit.kind, theme);
                 const filled = !isFuture && ratio > 0;
                 return (
