@@ -18,7 +18,7 @@
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
- *   - Pet renders when petEnabled; passes completedCount so it triggers excited animation on task completion.
+ *   - Pet renders as a screen-level overlay (bottom-left) when petEnabled; passes completedCount so it triggers excited animation on task completion.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -179,11 +179,8 @@ export default function HomeScreen() {
             <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
 
-          {/* Right column: pet (if enabled) + icon buttons */}
+          {/* Right column: icon buttons */}
           <View style={styles.headerRight}>
-            {settings.petEnabled && (
-              <Pet completedToday={completedCount} />
-            )}
             <View style={styles.headerIcons}>
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
@@ -335,6 +332,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
+      {settings.petEnabled && <Pet completedToday={completedCount} />}
       <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
   );
