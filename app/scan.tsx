@@ -7,12 +7,14 @@
  * shared shopping/task payloads into the shared store.
  *
  * Connections:
- *   Imports → components/HintCard, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Imports → components/HintCard, components/PressableScale, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to THREE stores: useShoppingStore (shopping_items) + useCatalogStore.recordPurchases (purchase_log + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks)
  *
  * Edit notes:
- *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → confirm via addToList.
+ *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → reviewable checklist → confirm via addToList.
+ *   - Recognised items are ALWAYS reviewed (checkbox list) before adding; never auto-added.
+ *   - On OCR failure/empty result, a friendly message shows and the manual-entry sheet opens automatically.
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
  *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
  */
@@ -41,8 +43,9 @@ import { useCatalogStore } from '@/store/useCatalogStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
+import PressableScale from '@/components/PressableScale';
 import { decodeSharePayload } from '@/lib/share';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
 const NORWEGIAN_STORES = [
@@ -141,13 +144,20 @@ export default function ScanScreen() {
       if (items.length > 0) {
         setParsedItems(items);
       } else {
-        setOcrEmpty(true);
+        handleOcrFailure();
       }
     } catch {
-      setOcrEmpty(true);
+      handleOcrFailure();
     } finally {
       setLoading(false);
     }
+  }
+
+  // OCR found nothing — never a bare error: show a friendly note and open the
+  // manual-entry sheet right away so the user can just type it in.
+  function handleOcrFailure() {
+    setOcrEmpty(true);
+    setManualVisible(true);
   }
 
   function toggleItem(i: number) {
@@ -249,6 +259,13 @@ export default function ScanScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <HintCard text={t.hints.scan.text} example={t.hints.scan.example} />
 
+        {/* Manual-entry fallback — offered up front, before the camera */}
+        {!imageUri && parsedItems.length === 0 && (
+          <Pressable style={styles.topManualLink} onPress={() => setManualVisible(true)} hitSlop={6}>
+            <Text style={[styles.topManualLinkText, { color: theme.orange }]}>✏️  {t.typeItInInstead}</Text>
+          </Pressable>
+        )}
+
         {/* Camera hint banner */}
         {!imageUri && !loading && (
           <View style={[styles.hintBanner, { backgroundColor: theme.greenLight }]}>
@@ -300,10 +317,18 @@ export default function ScanScreen() {
           </View>
         )}
 
-        {/* Preview */}
+        {/* Preview — rounded framing guide overlays the captured receipt */}
         {imageUri && (
           <View style={[styles.previewCard, { overflow: 'hidden' }]}>
-            <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
+            <View>
+              <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
+              <View style={styles.guideOverlay} pointerEvents="none">
+                <View style={[styles.guideFrame, { borderColor: theme.white }]} />
+                <View style={styles.guideHintWrap}>
+                  <Text style={styles.guideHintText}>{t.scanGuideHint}</Text>
+                </View>
+              </View>
+            </View>
             <View style={[styles.previewActions, { backgroundColor: theme.white }]}>
               <Pressable onPress={() => { setImageUri(null); setParsedItems([]); setOcrEmpty(false); }}>
                 <Text style={[styles.retakeBtnText, { color: theme.orange }]}>{t.retakePhoto}</Text>
@@ -323,7 +348,13 @@ export default function ScanScreen() {
 
         {ocrEmpty && !loading && (
           <View style={[styles.emptyOcr, { backgroundColor: theme.offWhite }]}>
-            <Text style={[styles.emptyOcrText, { color: theme.textLight }]}>{t.ocrNoItems}</Text>
+            <Text style={[styles.emptyOcrText, { color: theme.textLight }]}>{t.ocrNoItemsFriendly}</Text>
+            <PressableScale
+              style={[styles.emptyManualBtn, { backgroundColor: theme.orange }]}
+              onPress={() => setManualVisible(true)}
+            >
+              <Text style={styles.emptyManualText}>{t.typeItInInstead}</Text>
+            </PressableScale>
           </View>
         )}
 
@@ -465,6 +496,26 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
   previewCard: { borderRadius: Radius.md, ...Shadow.card },
   preview: { width: '100%', height: 220 },
+  guideOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  guideFrame: {
+    width: '82%',
+    height: 170,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: Radius.lg,
+    backgroundColor: 'transparent',
+  },
+  guideHintWrap: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 4,
+  },
+  guideHintText: { color: '#fff', fontSize: FontSize.xs, fontFamily: Fonts.semibold },
+  topManualLink: { alignSelf: 'flex-start', paddingVertical: Spacing.xs },
+  topManualLinkText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   previewActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -473,8 +524,14 @@ const styles = StyleSheet.create({
   retakeBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
   loadingCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center' },
   loadingText: { fontSize: FontSize.md },
-  emptyOcr: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  emptyOcr: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', gap: Spacing.sm },
   emptyOcrText: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
+  emptyManualBtn: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  emptyManualText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
   parsedRow: {
     flexDirection: 'row',
     alignItems: 'center',

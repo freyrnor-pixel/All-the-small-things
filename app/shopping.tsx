@@ -7,13 +7,16 @@
  * list through the MonthlyPickerSheet.
  *
  * Connections:
- *   Imports → components/HintCard, components/MonthlyPickerSheet, components/ShoppingRow, constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore, store/useShoppingStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useCatalogStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions)
+ *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only)
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
  *   - Header Share button opens the /share-modal modal with params { kind: 's' }.
+ *   - Weekly vs monthly are visually distinguished by the per-tab accent (green vs orange) applied to section headers + a thick accent rule.
+ *   - Autocomplete suggestions render as large PressableScale chips; "clear checked" lives at the BOTTOM and reuses removeWithSource per checked item (no dedicated store action).
+ *   - weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed, so the label is t.days[(weeklyResetDay + 1) % 7].
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -29,12 +32,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import MonthlyPickerSheet from '@/components/MonthlyPickerSheet';
 import HintCard from '@/components/HintCard';
+import ConfirmationBanner from '@/components/ConfirmationBanner';
+import PressableScale from '@/components/PressableScale';
+import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { useAppTheme } from '@/lib/useAppTheme';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 const CATEGORY_ORDER = [
   'produce', 'dairy', 'meat', 'fish', 'bread', 'frozen',
@@ -56,6 +63,7 @@ export default function ShoppingScreen() {
   const [newUnit, setNewUnit] = useState('');
   const [newCategory, setNewCategory] = useState<Category>('other');
   const [newPrice, setNewPrice] = useState(0);
+  const [confirm, setConfirm] = useState<string | null>(null);
 
   const items = useShoppingStore((s) => s.items);
   const add = useShoppingStore((s) => s.add);
@@ -67,7 +75,11 @@ export default function ShoppingScreen() {
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const suggest = useCatalogStore((s) => s.suggest);
   const catalog = useCatalogStore((s) => s.items);
+  const weeklyResetDay = useSettingsStore((s) => s.weeklyResetDay);
   const t = useT();
+
+  // weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed (0=Sun).
+  const resetDayLabel = t.days[(weeklyResetDay + 1) % 7];
 
   const suggestions = useMemo(() => {
     const exact = newName.trim().toLowerCase();
@@ -135,12 +147,23 @@ export default function ShoppingScreen() {
     setShowMonthlyPicker(false);
   }
 
+  // Clear only the checked-off items in the current tab. Reuses removeWithSource
+  // so monthly allocations get released; there is no dedicated store action.
+  function clearChecked() {
+    if (checked.length === 0) return;
+    const n = checked.length;
+    checked.forEach((item) => removeWithSource(item.id));
+    success();
+    setConfirm(t.clearCheckedItems(n));
+  }
+
   // Per-tab accent colour
   const tabAccent = tab === 'weekly' ? theme.green : theme.orange;
   const tabAccentLight = tab === 'weekly' ? theme.greenLight : theme.orangeLight;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
@@ -199,11 +222,20 @@ export default function ShoppingScreen() {
         >
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
 
-          {/* Summary pill */}
-          <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
-            <Text style={[styles.summaryText, { color: theme.text }]}>
-              {t.shoppingRemaining(unchecked.length, checked.length)}
-            </Text>
+          {/* Summary + reset-day row */}
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
+              <Text style={[styles.summaryText, { color: theme.text }]}>
+                {t.shoppingRemaining(unchecked.length, checked.length)}
+              </Text>
+            </View>
+            {tab === 'weekly' && (
+              <View style={[styles.resetDayChip, { backgroundColor: theme.greenLight }]}>
+                <Text style={[styles.resetDayText, { color: theme.green }]}>
+                  {t.weeklyResetsOnShort(resetDayLabel)}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Add item form / trigger */}
@@ -222,24 +254,22 @@ export default function ShoppingScreen() {
               {suggestions.length > 0 && (
                 <>
                   <Text style={[styles.suggestLabel, { color: theme.textLight }]}>{t.suggestions}</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                    <View style={styles.suggestRow}>
-                      {suggestions.map((s) => (
-                        <Pressable
-                          key={s.id}
-                          style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
-                          onPress={() => pickSuggestion(s.name, s.category, s.price)}
-                        >
-                          <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
-                          {s.price > 0 && (
-                            <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
-                              {t.lastPaid(`${s.price.toFixed(2)} kr`)}
-                            </Text>
-                          )}
-                        </Pressable>
-                      ))}
-                    </View>
-                  </ScrollView>
+                  <View style={styles.suggestWrap}>
+                    {suggestions.map((s) => (
+                      <PressableScale
+                        key={s.id}
+                        style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
+                        onPress={() => pickSuggestion(s.name, s.category, s.price)}
+                      >
+                        <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
+                        {s.price > 0 && (
+                          <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
+                            {t.lastPaid(`${s.price.toFixed(2)} kr`)}
+                          </Text>
+                        )}
+                      </PressableScale>
+                    ))}
+                  </View>
                 </>
               )}
               <View style={styles.addRow}>
@@ -366,13 +396,16 @@ export default function ShoppingScreen() {
             </View>
           )}
 
-          {/* Alphabetical unchecked items */}
+          {/* Alphabetical unchecked items — header coloured per list (green weekly / orange monthly) */}
           {sortedUnchecked.length > 0 && (
             <View style={styles.section}>
-              {tab === 'weekly' && (
-                <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.weeklyItemsSection}</Text>
-              )}
-              <View style={[styles.card, { backgroundColor: theme.white }]}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionLabel, { color: tabAccent }]}>
+                  {tab === 'weekly' ? t.weeklyItemsSection : t.monthlyTabLabel}
+                </Text>
+                <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
+              </View>
+              <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
                 {sortedUnchecked.map((item, idx) => (
                   <View key={item.id}>
                     <ShoppingRow
@@ -412,6 +445,18 @@ export default function ShoppingScreen() {
                 ))}
               </View>
             </View>
+          )}
+
+          {/* Clear checked items — bottom of the list, only removes in-cart items */}
+          {checked.length > 0 && (
+            <PressableScale
+              style={[styles.clearCheckedBtn, { backgroundColor: theme.greenLight }]}
+              onPress={clearChecked}
+            >
+              <Text style={[styles.clearCheckedText, { color: theme.green }]}>
+                {t.clearCheckedItems(checked.length)}
+              </Text>
+            </PressableScale>
           )}
 
           {/* Reset buttons */}
@@ -500,6 +545,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
 
+  summaryRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.sm },
   summaryChip: {
     borderRadius: Radius.full,
     alignSelf: 'flex-start',
@@ -507,6 +553,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   summaryText: { fontSize: FontSize.sm, fontWeight: '500' },
+  resetDayChip: {
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  resetDayText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
 
   addTrigger: {
     borderWidth: 2,
@@ -536,15 +588,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   suggestLabel: { fontSize: FontSize.xs, fontWeight: '600' },
-  suggestRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: 2 },
+  suggestWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingVertical: 2 },
   suggestChip: {
     borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     alignItems: 'center',
   },
-  suggestText: { fontSize: FontSize.xs, fontWeight: '600' },
-  suggestPrice: { fontSize: 9 },
+  suggestText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
+  suggestPrice: { fontSize: FontSize.xs, marginTop: 1 },
   categoryToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -565,13 +617,16 @@ const styles = StyleSheet.create({
   confirmBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
+  cardAccent: { borderLeftWidth: 3 },
   rowDivider: { height: 1 },
   section: { gap: Spacing.xs },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.sm,
   },
+  sectionRule: { flex: 1, height: 2, borderRadius: Radius.full, opacity: 0.4 },
   sectionLabel: {
     fontSize: FontSize.xs,
     fontWeight: '700',
@@ -595,6 +650,8 @@ const styles = StyleSheet.create({
   },
   monthlyAddBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.xs },
 
+  clearCheckedBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  clearCheckedText: { fontFamily: Fonts.bold, fontSize: FontSize.md },
   resetBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   resetBtnText: { fontWeight: '600', fontSize: FontSize.md },
 });

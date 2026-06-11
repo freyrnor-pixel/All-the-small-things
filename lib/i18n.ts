@@ -94,6 +94,11 @@ const en = {
   scanReceipt: 'Scan receipt',
   scanHintBanner: 'Point your camera at a receipt. Make sure text is clear and well-lit.',
   ocrNoItems: 'No items recognised — try better lighting or add items manually.',
+  // --- W-C Grocery additions (scan) ---
+  ocrNoItemsFriendly: "Couldn't read any items from that photo. No worries — type it in instead.",
+  typeItInInstead: 'Type it in instead',
+  scanGuideHint: 'Line the receipt up inside the frame',
+  // --- end W-C additions ---
   store: 'Store',
   takePhoto: 'Take photo',
   chooseFromLibrary: 'Choose from library',
@@ -211,6 +216,10 @@ const en = {
   shoppingAmountPlaceholder: 'Qty',
   shoppingUnitPlaceholder: 'Unit (pcs, kg, l…)',
   inCart: 'In cart',
+  // --- W-C Grocery additions (shopping) ---
+  weeklyResetsOnShort: (day: string) => `Resets ${day}`,
+  clearCheckedItems: (n: number) => `Clear ${n} checked ${n === 1 ? 'item' : 'items'}`,
+  // --- end W-C additions ---
   addItemTrigger: '+ Add item',
   addFromMonthly: '+ From monthly',
   monthlyPickerTitle: 'Add from monthly list',
@@ -371,6 +380,14 @@ const en = {
   randomIngredientsLabel: (list: string) => `Ingredients: ${list}`,
   randomNoIngredients: 'No ingredients recorded.',
   addToShoppingList: 'Add to shopping list',
+  // --- W-C Grocery additions (meals) ---
+  surpriseMe: 'Surprise me',
+  pickRandomDishSub: 'Pick a random dish to cook',
+  addedToShoppingConfirm: 'Added to shopping ✓',
+  prepSimple: 'Quick',
+  prepMedium: 'Medium',
+  prepComplex: 'Involved',
+  // --- end W-C additions ---
   // Health screen
   healthTitle: 'Health',
   last30Days: 'Last 30 days',
@@ -554,6 +571,11 @@ const no: typeof en = {
   scanReceipt: 'Skann kvittering',
   scanHintBanner: 'Hold kameraet mot kvitteringen. Pass på at teksten er tydelig og godt belyst.',
   ocrNoItems: 'Ingen varer gjenkjent — prøv bedre lys eller legg til varer manuelt.',
+  // --- W-C Grocery additions (scan) ---
+  ocrNoItemsFriendly: 'Klarte ikke å lese noen varer fra bildet. Ingen problem — skriv dem inn i stedet.',
+  typeItInInstead: 'Skriv inn i stedet',
+  scanGuideHint: 'Plasser kvitteringen innenfor rammen',
+  // --- end W-C additions ---
   store: 'Butikk',
   takePhoto: 'Ta bilde',
   chooseFromLibrary: 'Velg fra bibliotek',
@@ -668,6 +690,10 @@ const no: typeof en = {
   shoppingAmountPlaceholder: 'Antall',
   shoppingUnitPlaceholder: 'Enhet (stk, kg, l…)',
   inCart: 'I kurven',
+  // --- W-C Grocery additions (shopping) ---
+  weeklyResetsOnShort: (day: string) => `Nullstilles ${day}`,
+  clearCheckedItems: (n: number) => `Fjern ${n} avkrysset${n === 1 ? '' : 'e'}`,
+  // --- end W-C additions ---
   addItemTrigger: '+ Legg til vare',
   addFromMonthly: '+ Fra månedsliste',
   monthlyPickerTitle: 'Legg til fra månedsliste',
@@ -870,6 +896,14 @@ const no: typeof en = {
   randomIngredientsLabel: (list: string) => `Ingredienser: ${list}`,
   randomNoIngredients: 'Ingen ingredienser registrert.',
   addToShoppingList: 'Legg i handleliste',
+  // --- W-C Grocery additions (meals) ---
+  surpriseMe: 'Overrask meg',
+  pickRandomDishSub: 'Velg en tilfeldig rett å lage',
+  addedToShoppingConfirm: 'Lagt i handlelisten ✓',
+  prepSimple: 'Rask',
+  prepMedium: 'Middels',
+  prepComplex: 'Omfattende',
+  // --- end W-C additions ---
   healthTitle: 'Helse',
   last30Days: 'Siste 30 dager',
   logSection: 'Logg',

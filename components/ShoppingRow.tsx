@@ -14,11 +14,12 @@
  *   - The stepper shows when amount is a positive integer, onAdjust is provided, and the item is unchecked. Otherwise amount+unit appear in the meta sub-row.
  *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just check + name + (stepper) + remove.
  *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels (fromMonthlyLabel) are passed in pre-formatted/localized.
+ *   - Checked rows recede: the whole row dims (opacity) and the name greys + strikes through, but the row STAYS visible until cleared.
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ShoppingItem } from '@/store/useShoppingStore';
-import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 
 type Props = {
   item: ShoppingItem;
@@ -45,7 +46,7 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
   if (item.price > 0) metaParts.push(`${item.price.toFixed(0)} kr`);
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, item.checked && styles.rowChecked]}>
       <Pressable
         style={[styles.check, { borderColor: theme.green }, item.checked && { backgroundColor: theme.green, borderColor: theme.green }]}
         onPress={onToggle}
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
+  rowChecked: { opacity: 0.55 },
   check: {
     width: 26,
     height: 26,
@@ -115,7 +117,7 @@ const styles = StyleSheet.create({
   },
   checkMark: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   content: { flex: 1, minWidth: 0 },
-  name: { fontSize: FontSize.md },
+  name: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
   meta: { fontSize: FontSize.xs },
   sourceTag: { fontSize: FontSize.xs, fontWeight: '600' },

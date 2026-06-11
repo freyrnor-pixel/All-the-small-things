@@ -6,13 +6,14 @@
  * weekly shopping list. Add/edit happens inline within the screen.
  *
  * Connections:
- *   Imports → components/ExpandableCard, components/HintCard, constants/theme, lib/i18n, store/useMealStore, store/useShoppingStore
+ *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore (shopping_items) when pushing a dish to shopping
  *
  * Edit notes:
  *   - All visible strings go through useT(); MEAL_TYPES holds only icon/colour metadata, labels come from t.mealTypes.
- *   - pushDishToShopping always adds ingredients as listType 'weekly'.
+ *   - pushDishToShopping always adds ingredients as listType 'weekly' and surfaces a ConfirmationBanner.
+ *   - Prep complexity is a derived proxy (ingredient count → 1–3 dots), NOT a DB column: 0–2 = simple, 3–5 = medium, 6+ = involved.
  */
 import React, { useState } from 'react';
 import {
@@ -32,9 +33,19 @@ import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import ExpandableCard from '@/components/ExpandableCard';
 import HintCard from '@/components/HintCard';
+import ConfirmationBanner from '@/components/ConfirmationBanner';
+import PressableScale from '@/components/PressableScale';
+import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
+
+// Prep-complexity proxy from ingredient count (no DB column). Returns 1–3 dots.
+function prepLevel(ingredientCount: number): 1 | 2 | 3 {
+  if (ingredientCount >= 6) return 3;
+  if (ingredientCount >= 3) return 2;
+  return 1;
+}
 
 // Visual metadata only — labels come from the user's language via `t.mealTypes`.
 const MEAL_TYPES: { value: MealType; icon: string; color: string }[] = [
@@ -66,6 +77,13 @@ export default function MealsScreen() {
   const [ingName, setIngName] = useState('');
   const [ingAmount, setIngAmount] = useState('1');
   const [ingUnit, setIngUnit] = useState('');
+  const [confirm, setConfirm] = useState<string | null>(null);
+
+  const prepLabels: Record<1 | 2 | 3, string> = {
+    1: t.prepSimple,
+    2: t.prepMedium,
+    3: t.prepComplex,
+  };
 
   const filtered = filterType === 'all'
     ? dishes
@@ -98,6 +116,8 @@ export default function MealsScreen() {
         price: 0,
       });
     });
+    success();
+    setConfirm(t.addedToShoppingConfirm);
   }
 
   function pickRandom(mealType?: MealType) {
@@ -123,6 +143,7 @@ export default function MealsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -168,6 +189,18 @@ export default function MealsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
+
+        {/* Prominent random picker — the headline interaction */}
+        <PressableScale
+          style={[styles.surpriseBtn, { backgroundColor: theme.green }]}
+          onPress={() => pickRandom(filterType === 'all' ? undefined : filterType)}
+          scaleTo={0.96}
+        >
+          <Text style={styles.surpriseIcon}>🎲</Text>
+          <Text style={styles.surpriseTitle}>{t.surpriseMe}</Text>
+          <Text style={styles.surpriseSub}>{t.pickRandomDishSub}</Text>
+        </PressableScale>
+
         {/* Add dish */}
         {addingDish ? (
           <View style={[styles.addCard, { backgroundColor: theme.white }]}>
@@ -216,21 +249,36 @@ export default function MealsScreen() {
         )}
 
         {/* Dishes */}
-        {filtered.map((dish) => (
+        {filtered.map((dish) => {
+          const level = prepLevel(dish.ingredients.length);
+          return (
           <ExpandableCard
             key={dish.id}
             title={dish.name}
-            subtitle={mealLabel(dish.mealType)}
+            subtitle={`${mealLabel(dish.mealType)} · ${prepLabels[level]}`}
             badge={t.ingredientsCount(dish.ingredients.length)}
             accentColor={MEAL_TYPES.find((m) => m.value === dish.mealType)?.color}
             rightAction={
-              <Pressable
-                onPress={() => pushDishToShopping(dish)}
-                style={styles.shoppingBtn}
-                hitSlop={8}
-              >
-                <Text style={styles.shoppingBtnText}>🛒</Text>
-              </Pressable>
+              <View style={styles.rightActions}>
+                <View style={styles.prepDots} accessibilityLabel={prepLabels[level]}>
+                  {[1, 2, 3].map((d) => (
+                    <View
+                      key={d}
+                      style={[
+                        styles.prepDot,
+                        { backgroundColor: d <= level ? theme.green : theme.grayLight },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Pressable
+                  onPress={() => pushDishToShopping(dish)}
+                  style={styles.shoppingBtn}
+                  hitSlop={8}
+                >
+                  <Text style={styles.shoppingBtnText}>🛒</Text>
+                </Pressable>
+              </View>
             }
           >
             {/* Ingredients list */}
@@ -290,7 +338,8 @@ export default function MealsScreen() {
               </View>
             )}
           </ExpandableCard>
-        ))}
+          );
+        })}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -331,6 +380,21 @@ const styles = StyleSheet.create({
   chipActiveText: { color: Colors.white },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.sm },
+  surpriseBtn: {
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: Spacing.sm,
+    ...Shadow.card,
+  },
+  surpriseIcon: { fontSize: 40 },
+  surpriseTitle: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.xl, marginTop: 4 },
+  surpriseSub: { color: 'rgba(255,255,255,0.9)', fontSize: FontSize.sm },
+  rightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  prepDots: { flexDirection: 'row', gap: 3, alignItems: 'center' },
+  prepDot: { width: 7, height: 7, borderRadius: Radius.full },
   addTrigger: {
     borderWidth: 2,
     borderStyle: 'dashed',
