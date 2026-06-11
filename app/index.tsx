@@ -168,17 +168,33 @@ export default function HomeScreen() {
             </Text>
             <Text style={[styles.dateLabel, { color: theme.textLight }]}>{dateLabel}</Text>
           </View>
-          {settings.petEnabled && (
-            <CompanionPet celebrating={justCompleted} />
-          )}
-          <Pressable
-            style={[styles.essentialsBtn, { backgroundColor: theme.grayLight }, settings.essentialsModeEnabled && { backgroundColor: theme.orange }]}
-            onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
-          >
-            <Text style={[styles.essentialsBtnText, { color: theme.textLight }, settings.essentialsModeEnabled && { color: '#fff' }]}>
-              {settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
-            </Text>
-          </Pressable>
+
+          {/* Right column: pet (if enabled) + icon buttons */}
+          <View style={styles.headerRight}>
+            {settings.petEnabled && (
+              <CompanionPet celebrating={justCompleted} />
+            )}
+            <View style={styles.headerIcons}>
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
+                onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
+                accessibilityLabel={settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
+              >
+                <Ionicons
+                  name={settings.essentialsModeEnabled ? 'star' : 'star-outline'}
+                  size={20}
+                  color={settings.essentialsModeEnabled ? theme.orange : theme.textLight}
+                />
+              </Pressable>
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
+                onPress={() => router.push('/settings')}
+                accessibilityLabel="Settings"
+              >
+                <Ionicons name="settings-outline" size={20} color={theme.textLight} />
+              </Pressable>
+            </View>
+          </View>
         </View>
 
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
@@ -308,14 +324,6 @@ export default function HomeScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <Pressable
-        style={[styles.settingsBtn, { backgroundColor: theme.grayLight }]}
-        onPress={() => router.push('/settings')}
-        accessibilityLabel="Settings"
-      >
-        <Ionicons name="settings-outline" size={20} color={theme.textLight} />
-      </Pressable>
-
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
       <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
@@ -347,11 +355,20 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: FontSize.xxl, fontWeight: '700' },
   dateLabel: { fontSize: FontSize.md, marginTop: 2, textTransform: 'capitalize' },
-  essentialsBtn: {
-    borderRadius: Radius.full, paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs, marginTop: 4,
+  headerRight: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginLeft: Spacing.sm,
   },
-  essentialsBtnText: { fontSize: FontSize.sm, fontWeight: '700' },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  iconBtn: {
+    width: 34, height: 34, borderRadius: Radius.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
   section: { marginBottom: Spacing.lg },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -389,9 +406,4 @@ const styles = StyleSheet.create({
   backlogBadgeText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
-  settingsBtn: {
-    position: 'absolute', top: 52, right: 16, zIndex: 10,
-    width: 36, height: 36, borderRadius: Radius.full,
-    alignItems: 'center', justifyContent: 'center',
-  },
 });
