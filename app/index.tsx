@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
   settingsBtn: {
-    position: 'absolute', top: 12, right: 16, zIndex: 10,
+    position: 'absolute', top: 52, right: 16, zIndex: 10,
     width: 36, height: 36, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
