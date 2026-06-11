@@ -2,7 +2,8 @@ name: OTA Update
 
 on:
   push:
-    branches: [claude/adhd-task-life-app-TOdFj, claude/app-opening-error-lnr0cq, claude/ota-update-notification-9cx6r1]
+    branches:
+      - claude/adhd-task-life-app-TOdFj
   workflow_dispatch:
 
 jobs:
