@@ -31,6 +31,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
   interpolate,
   Extrapolation,
   SharedValue,
@@ -70,7 +71,7 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const RADIUS = 120;
+const RADIUS = 130;
 const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
@@ -82,18 +83,22 @@ const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // diameter + one bubble
 
 const DRAG_SENSITIVITY = 120;      // px of drag per radian — lower = more responsive
 
-// Normalises any angle into [−π, π].
-function normalizeAngle(a: number): number {
-  'worklet';
-  const twoPi = 2 * Math.PI;
-  return ((a + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
-}
+const WINDOW_FADE = Math.PI / 4; // 45° — edge bubbles at 50% opacity, signal "drag for more"
 
-// Returns 1 if the angle is inside the viewing window, 0 otherwise (hard cut, no fade).
+// Returns 0–1 opacity based on signed angular distance from each window boundary.
+// Works correctly for both right-handed [−π, −π/2] and left-handed [−π/2, 0] windows
+// with no wrap-around discontinuity at ±π.
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
-  const norm = normalizeAngle(angle);
-  return norm >= winStart && norm <= winEnd ? 1 : 0;
+  const twoPi = 2 * Math.PI;
+  const wF = Math.PI / 4;
+  // Signed angular distance from each boundary: positive = past it, negative = before it.
+  const dS = ((angle - winStart + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
+  const dE = ((angle - winEnd   + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
+  if (dS < -wF || dE > wF) return 0;
+  if (dS <  wF) return (dS + wF) / (2 * wF); // ramp 0→1 across start fade zone
+  if (dE > -wF) return (wF - dE) / (2 * wF); // ramp 1→0 across end fade zone
+  return 1;
 }
 
 // ─── Per-bubble sub-component ────────────────────────────────────────────────
@@ -135,10 +140,10 @@ function BubbleItemView({
   });
 
   function handlePressIn() {
-    pressAnim.value = withSpring(0.88, { mass: 1, damping: 30, stiffness: 400 });
+    pressAnim.value = withTiming(0.94, { duration: 60 });
   }
   function handlePressOut() {
-    pressAnim.value = withSpring(1, { mass: 1, damping: 30, stiffness: 400 });
+    pressAnim.value = withSpring(1, { damping: 40, stiffness: 500 });
   }
 
   return (
