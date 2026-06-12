@@ -1,157 +1,88 @@
-# Building the UnFocus APK on your own PC
+# Build the UnFocus app on your PC
 
-This guide builds a release **APK** entirely on your machine — **no Expo cloud
-build credits used** (so it works even though the expo.dev build limit is hit).
-
-> Why a fresh native build (not an OTA update)? This release adds three **native**
-> modules — `expo-font`, `expo-haptics`, and the bundled **Nunito** font. Native
-> code can't ship over the OTA channel, so the APK must be compiled. `app.json`
-> is already bumped to **version 1.1.0 / versionCode 11** so it installs cleanly
-> over your existing 1.0.0 app without wiping your local data.
+Follow these steps in order. This builds the app on your own computer — it does
+**not** use any Expo build credits.
 
 ---
 
-## 1. One-time prerequisites
+## Step 1 — Install these 3 things (once)
 
-Install these once (skip any you already have):
+1. **Node.js** (LTS) → https://nodejs.org
+2. **Java JDK 17** → https://adoptium.net (pick version 17)
+3. **Android Studio** → https://developer.android.com/studio
+   - Open it once after installing and let it finish downloading. Then close it.
 
-| Tool | Version | Notes |
-|---|---|---|
-| **Node.js** | 20 or 22 LTS | https://nodejs.org |
-| **Git** | any | to pull the branch |
-| **JDK (Java)** | **17** | Temurin 17: https://adoptium.net — RN 0.85 needs JDK 17 |
-| **Android Studio** | latest | https://developer.android.com/studio — gives you the Android SDK + build tools |
+---
 
-After installing Android Studio, open it once and let it finish downloading the
-SDK. Then set the `ANDROID_HOME` environment variable to your SDK path:
+## Step 2 — Tell your PC where Android is (once)
 
-- **Windows** (PowerShell, run once):
-  ```powershell
-  setx ANDROID_HOME "$env:LOCALAPPDATA\Android\Sdk"
-  ```
-  Then **close and reopen** the terminal.
-- **macOS / Linux** (add to `~/.zshrc` or `~/.bashrc`):
-  ```bash
-  export ANDROID_HOME="$HOME/Library/Android/sdk"   # macOS
-  # export ANDROID_HOME="$HOME/Android/Sdk"         # Linux
-  export PATH="$PATH:$ANDROID_HOME/platform-tools"
-  ```
+Open a terminal and run the line for your system, then **close and reopen the terminal**.
 
-Verify the toolchain:
+**Windows (PowerShell):**
+```powershell
+setx ANDROID_HOME "$env:LOCALAPPDATA\Android\Sdk"
+```
+
+**Mac:**
 ```bash
-node -v        # v20.x or v22.x
-java -version  # should say 17
-adb --version  # confirms Android platform-tools are on PATH
+echo 'export ANDROID_HOME="$HOME/Library/Android/sdk"' >> ~/.zshrc
 ```
 
 ---
 
-## 2. Get the code
+## Step 3 — Get the app's code
 
 ```bash
 git clone https://github.com/freyrnor-pixel/all-the-small-things.git
 cd all-the-small-things
 git checkout claude/unfocus-design-recommendations-w2u64b
-git pull
-```
-(If you already have the repo, just `git fetch` + `git checkout` the branch + `git pull`.)
-
----
-
-## 3. Install dependencies
-
-This project needs the legacy-peer-deps flag (an Expo peer-dependency quirk):
-
-```bash
-npm install --legacy-peer-deps
 ```
 
 ---
 
-## 4. Generate the native Android project
+## Step 4 — Build it
 
-This is a managed Expo project, so the `android/` folder isn't in git — generate it:
+Copy-paste this whole block and let it run (the first time takes ~10–15 min):
 
-```bash
-npx expo prebuild --platform android --clean
-```
-
-This reads `app.json` (icons, permissions, version, plugins) and creates a native
-`android/` directory wired up with all the modules.
-
----
-
-## 5. Build the release APK
-
-**macOS / Linux:**
-```bash
-cd android
-./gradlew assembleRelease
-cd ..
-```
-
-**Windows (PowerShell or CMD):**
+**Windows:**
 ```powershell
+npm install --legacy-peer-deps
+npx expo prebuild --platform android --clean
 cd android
 .\gradlew.bat assembleRelease
 cd ..
 ```
 
-First run downloads Gradle + dependencies and takes ~5–15 min. When it finishes
-you'll see `BUILD SUCCESSFUL`.
+**Mac:**
+```bash
+npm install --legacy-peer-deps
+npx expo prebuild --platform android --clean
+cd android
+./gradlew assembleRelease
+cd ..
+```
 
-Your APK is here:
+When it says **BUILD SUCCESSFUL**, your app file is here:
 ```
 android/app/build/outputs/apk/release/app-release.apk
 ```
 
-> This is a debug-signed release APK — perfect for sideloading onto your own
-> phone. (It's fine for personal use; it is **not** signed for the Play Store.)
+---
+
+## Step 5 — Put it on your phone
+
+Easiest way: copy that `app-release.apk` file to your phone (email it to
+yourself, or use Google Drive / a USB cable), then tap it on the phone to
+install. If the phone asks, allow "install from unknown sources".
+
+Your existing tasks, habits, and lists stay intact.
 
 ---
 
-## 6. Put it on your phone
+## If something goes wrong
 
-Pick whichever is easiest:
-
-- **USB:** enable Developer Options → USB debugging on the phone, plug in, then:
-  ```bash
-  adb install -r android/app/build/outputs/apk/release/app-release.apk
-  ```
-  (`-r` reinstalls over the existing app and **keeps your data**.)
-- **No cable:** copy `app-release.apk` to the phone (email/Drive/USB transfer),
-  tap it, and allow "install from unknown sources" when prompted.
-
-That's it — open UnFocus and you'll see the new rounded font, themes, haptics,
-and all the design updates.
-
----
-
-## Troubleshooting
-
-- **"App not installed" / "package conflicts with existing"** — Android is
-  refusing a downgrade. The new build is versionCode 11; if your installed app
-  somehow has a higher code, bump `"versionCode"` in `app.json` (android section)
-  to a bigger number, re-run steps 4–5. Last resort: uninstall the old app first
-  (this **erases local data** — tasks, habits, shopping lists).
-- **`SDK location not found`** — `ANDROID_HOME` isn't set; redo step 1 and reopen
-  the terminal. (Or create `android/local.properties` with
-  `sdk.dir=/full/path/to/Android/Sdk`.)
-- **Gradle / Java version errors** — make sure `java -version` reports **17**, not
-  8/11/21. Point `JAVA_HOME` at your JDK 17 if you have several installed.
-- **`npm install` peer-dependency errors** — make sure you used
-  `--legacy-peer-deps` (step 3).
-- **Out of memory during build** — add `org.gradle.jvmargs=-Xmx4g` to
-  `android/gradle.properties` and rebuild.
-
----
-
-## Alternative: `eas build --local` (macOS / Linux only)
-
-If you prefer the EAS toolchain, this runs the build **on your machine** and does
-**not** consume cloud build credits:
-```bash
-npm install -g eas-cli
-eas build --platform android --profile preview --local
-```
-Not supported on Windows — use the Gradle steps above there.
+- **"app not installed"** → uninstall the old UnFocus first, then install again.
+  (Note: uninstalling erases your saved tasks/habits/lists.)
+- **"SDK location not found"** → you missed Step 2, or didn't reopen the terminal.
+- **Java / Gradle version error** → run `java -version`; it must say **17**.
+- **`npm install` errors** → make sure you included `--legacy-peer-deps`.
