@@ -212,7 +212,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       try {
         db.runSync(
           'UPDATE shopping_items SET monthly_allocated = MAX(0, monthly_allocated - ?) WHERE id = ?',
-          [qty, w.monthlySourceId]
+          [qty, w.monthlySourceId!] // guaranteed non-null by the monthlySourceId filter above
         );
       } catch { /* ignore */ }
     }
