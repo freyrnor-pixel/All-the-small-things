@@ -28,6 +28,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import ExpandableCard from '@/components/ExpandableCard';
@@ -152,7 +153,7 @@ export default function MealsScreen() {
         {MEAL_TYPES.map((mt) => (
           <Pressable
             key={mt.value}
-            style={[styles.chip, { backgroundColor: theme.grayLight }, filterType === mt.value && { backgroundColor: theme.orange }]}
+            style={[styles.chip, { backgroundColor: theme.grayLight }, filterType === mt.value && { backgroundColor: mt.color }]}
             onPress={() => setFilterType(mt.value)}
           >
             <Text style={[styles.chipText, { color: theme.text }, filterType === mt.value && { color: '#fff' }]}>
@@ -215,6 +216,21 @@ export default function MealsScreen() {
           </Pressable>
         )}
 
+        {/* Empty state */}
+        {filtered.length === 0 && !addingDish && (
+          <View style={[styles.emptyState, { backgroundColor: theme.white }]}>
+            <Text style={styles.emptyEmoji}>
+              {filterType === 'all' ? '🍽' : MEAL_TYPES.find((m) => m.value === filterType)?.icon}
+            </Text>
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>{t.noDishesTitle}</Text>
+            <Text style={[styles.emptyBody, { color: theme.textLight }]}>
+              {filterType === 'all'
+                ? t.noDishesBodyGeneric
+                : t.noDishesBody(mealLabel(filterType as MealType).toLowerCase())}
+            </Text>
+          </View>
+        )}
+
         {/* Dishes */}
         {filtered.map((dish) => (
           <ExpandableCard
@@ -226,7 +242,7 @@ export default function MealsScreen() {
             rightAction={
               <Pressable
                 onPress={() => pushDishToShopping(dish)}
-                style={styles.shoppingBtn}
+                style={[styles.shoppingBtn, { backgroundColor: theme.grayLight }]}
                 hitSlop={8}
               >
                 <Text style={styles.shoppingBtnText}>🛒</Text>
@@ -234,13 +250,19 @@ export default function MealsScreen() {
             }
           >
             {/* Ingredients list */}
-            {dish.ingredients.map((ing) => (
-              <View key={ing.id} style={styles.ingRow}>
+            {dish.ingredients.map((ing, i) => (
+              <View
+                key={ing.id}
+                style={[
+                  styles.ingRow,
+                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.grayLight },
+                ]}
+              >
                 <Text style={[styles.ingText, { color: theme.text }]}>
                   {ing.amount} {ing.unit} {ing.name}
                 </Text>
                 <Pressable onPress={() => removeIngredient(ing.id)} hitSlop={8}>
-                  <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
+                  <Text style={[styles.removeText, { color: theme.gray }]}>−</Text>
                 </Pressable>
               </View>
             ))}
@@ -281,10 +303,14 @@ export default function MealsScreen() {
               </View>
             ) : (
               <View style={styles.ingFooter}>
-                <Pressable onPress={() => setAddingIngredient(dish.id)}>
+                <Pressable
+                  style={[styles.ingAddBtn, { borderColor: theme.green }]}
+                  onPress={() => setAddingIngredient(dish.id)}
+                >
                   <Text style={[styles.ingAddText, { color: theme.green }]}>{t.addIngredientTrigger}</Text>
                 </Pressable>
-                <Pressable onPress={() => removeDish(dish.id)}>
+                <Pressable style={styles.deleteBtn} onPress={() => removeDish(dish.id)}>
+                  <Ionicons name="trash-outline" size={14} color={theme.danger} />
                   <Text style={[styles.deleteText, { color: theme.danger }]}>{t.deleteDish}</Text>
                 </Pressable>
               </View>
@@ -383,10 +409,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: Spacing.xs,
   },
-  ingText: { fontSize: FontSize.sm, color: Colors.text },
+  ingText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '500' },
   removeText: { fontSize: 18, color: Colors.gray },
-  shoppingBtn: { padding: Spacing.xs },
-  shoppingBtnText: { fontSize: 18 },
+  shoppingBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shoppingBtnText: { fontSize: 16 },
   ingAddCard: { marginTop: Spacing.xs },
   ingInput: {
     backgroundColor: Colors.offWhite,
@@ -402,6 +434,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: Spacing.sm,
   },
+  ingAddBtn: {
+    borderWidth: 1,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
   ingAddText: { fontSize: FontSize.sm, color: Colors.green, fontWeight: '600' },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   deleteText: { fontSize: FontSize.sm, color: Colors.danger },
+  emptyState: {
+    borderRadius: Radius.md,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    gap: Spacing.sm,
+    ...Shadow.card,
+  },
+  emptyEmoji: { fontSize: 36 },
+  emptyTitle: { fontSize: FontSize.md, fontWeight: '600' },
+  emptyBody: { fontSize: FontSize.sm, textAlign: 'center' },
 });
