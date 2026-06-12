@@ -25,6 +25,7 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Radius, Shadow, Spacing, FontSize } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
@@ -86,9 +87,9 @@ export default function ExpandableCard({
               </View>
             ) : null}
             {rightAction}
-            <Animated.Text style={[styles.arrow, { color: theme.textLight, transform: [{ rotate: arrow }] }]}>
-              ›
-            </Animated.Text>
+            <Animated.View style={{ transform: [{ rotate: arrow }] }}>
+              <Ionicons name="chevron-down" size={16} color={theme.textLight} />
+            </Animated.View>
           </View>
         </Pressable>
         {open ? <View style={[styles.body, { borderTopColor: theme.grayLight }]}>{children}</View> : null}
@@ -139,10 +140,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: FontSize.xs,
     fontWeight: '600',
-  },
-  arrow: {
-    fontSize: 20,
-    lineHeight: 24,
   },
   body: {
     paddingHorizontal: Spacing.md,
