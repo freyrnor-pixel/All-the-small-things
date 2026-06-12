@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - claude/adhd-task-life-app-TOdFj
+      - claude/merge-outstanding-changes-yqj56d
+      - claude/push-changes-ota-m5mjqf
   workflow_dispatch:
 
 jobs:
@@ -12,19 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci --legacy-peer-deps
 
       - name: Setup EAS
-        uses: expo/expo-github-action@v9
+        uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
