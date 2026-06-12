@@ -334,10 +334,12 @@ const en = {
   sharedShoppingTab: 'Shopping',
   // Notifications (shown to the user in their chosen language)
   notif: {
-    weeklyTitle: 'Time to plan your week',
-    weeklyBody: "Let's take a look at what's coming up this week. You've got this!",
-    monthlyTitle: 'Monthly shopping reset',
-    monthlyBody: 'Time to check what you have at home and refresh your monthly list.',
+    // W-F: friendlier, non-urgent weekly nudge ("want to?" energy, no pressure)
+    weeklyTitle: 'Want to plan your week?',
+    weeklyBody: "Whenever you're ready, take a peek at what's coming up. No rush — you've got this.",
+    // W-F: monthly title + body now explain the effect (the list will reset)
+    monthlyTitle: 'Heads up: monthly list resets soon',
+    monthlyBody: 'Your monthly shopping list will clear tomorrow, so check what you still need at home first.',
     taskStartTitle: (title: string) => `Reminder: ${title}`,
     taskStartBody: 'Time to get started!',
     taskBoxTitle: (title: string) => `Start: ${title}`,
@@ -944,10 +946,12 @@ const no: typeof en = {
   sharedTasksTab: 'Oppgaver',
   sharedShoppingTab: 'Handlelist',
   notif: {
-    weeklyTitle: 'Tid for ukesplanlegging!',
-    weeklyBody: 'La oss ta en titt på hva som skjer denne uken. Du klarer det!',
-    monthlyTitle: 'Månedlig handleliste',
-    monthlyBody: 'Tid for å sjekke hva du har hjemme og oppdatere månedslisten din.',
+    // W-F: vennligere, ikke-stressende ukentlig påminnelse ("har du lyst?"-tone)
+    weeklyTitle: 'Lyst til å planlegge uken?',
+    weeklyBody: 'Når det passer deg, ta en titt på hva som er på gang. Ingen hast — du klarer det.',
+    // W-F: månedlig tittel + tekst forklarer nå effekten (listen nullstilles)
+    monthlyTitle: 'Obs: månedslisten nullstilles snart',
+    monthlyBody: 'Den månedlige handlelisten din tømmes i morgen, så sjekk hva du fortsatt mangler hjemme først.',
     taskStartTitle: (title: string) => `Påminnelse: ${title}`,
     taskStartBody: 'Tid for å komme i gang!',
     taskBoxTitle: (title: string) => `Start: ${title}`,

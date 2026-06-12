@@ -14,7 +14,11 @@
  * Edit notes:
  *   - Weekday conversion: app stores 0=Mon..6=Sun, Expo wants 1=Sun..7=Sat
  *     (toExpoWeekday) — keep this mapping if you touch weekly scheduling.
- *   - parseHM falls back to 08:00 on malformed "HH:MM"; preserve that guard.
+ *   - parseHM falls back to 08:00 on malformed "HH:MM"; preserve that guard. The
+ *     user's reminderTime always wins — the fallback only covers bad input.
+ *   - Weekly + monthly share reminderTime, so the monthly reminder is staggered
+ *     by MONTHLY_OFFSET_MIN minutes (clamped to the same day) to avoid two
+ *     banners firing at the same instant when reset day and date coincide.
  */
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { getTranslations } from '@/lib/i18n';
@@ -39,6 +43,21 @@ function toExpoWeekday(mon0: number): number {
 }
 
 /**
+ * Weekly + monthly reminders share the user's reminderTime, so when a reset day
+ * and reset date land on the same calendar day they would fire at the exact same
+ * instant. We nudge the monthly reminder a few minutes later so the two banners
+ * don't collide. Kept small (and time-of-day only) so it never crosses midnight
+ * or otherwise drifts the user's chosen time meaningfully.
+ */
+const MONTHLY_OFFSET_MIN = 3;
+
+/** Add `add` minutes to [hour, minute], clamped to stay within the same day. */
+function offsetMinutes([hour, minute]: [number, number], add: number): [number, number] {
+  const total = Math.min(hour * 60 + minute + add, 23 * 60 + 59);
+  return [Math.floor(total / 60), total % 60];
+}
+
+/**
  * Re-schedule the weekly planning nudge and the monthly shopping-reset reminder
  * from the current settings. Call after changing any reminder-related setting,
  * the language, or on app start.
@@ -58,7 +77,10 @@ export async function syncReminders() {
     title: t.notif.weeklyTitle,
     body: t.notif.weeklyBody,
   });
-  await scheduleMonthlyReminder(s.monthlyResetDate, hour, minute, {
+  // Stagger the monthly reminder a few minutes past the weekly one so the two
+  // never fire at the same instant if the reset day and date coincide.
+  const [mHour, mMinute] = offsetMinutes([hour, minute], MONTHLY_OFFSET_MIN);
+  await scheduleMonthlyReminder(s.monthlyResetDate, mHour, mMinute, {
     title: t.notif.monthlyTitle,
     body: t.notif.monthlyBody,
   });
