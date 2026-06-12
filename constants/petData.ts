@@ -1,5 +1,5 @@
 /**
- * petData.ts — shared pet constants for Pet.tsx and CompanionPet.tsx
+ * petData.ts — shared pet constants for Pet.tsx
  *
  * Centralises PET_EMOJIS, PET_HABITATS, and food-chip helpers so both
  * components pull from a single source of truth.

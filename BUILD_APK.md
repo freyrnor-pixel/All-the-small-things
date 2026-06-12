@@ -51,7 +51,7 @@ adb --version  # confirms Android platform-tools are on PATH
 ```bash
 git clone https://github.com/freyrnor-pixel/all-the-small-things.git
 cd all-the-small-things
-git checkout claude/unfocus-design-recommendations-w2u64b
+git checkout claude/adhd-task-life-app-TOdFj
 git pull
 ```
 (If you already have the repo, just `git fetch` + `git checkout` the branch + `git pull`.)

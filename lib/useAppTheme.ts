@@ -9,7 +9,7 @@
  *
  * Connections:
  *   Imports → constants/theme, store/useSettingsStore
- *   Used by → app/focus.tsx, app/index.tsx, app/settings.tsx, app/shopping.tsx, app/task-form.tsx, components/CompanionPet.tsx, components/TaskItem.tsx
+ *   Used by → app/focus.tsx, app/index.tsx, app/settings.tsx, app/shopping.tsx, app/task-form.tsx, components/TaskItem.tsx
  *   Data    → reads `colorTheme`, `darkMode`, `reducedMotion`, `fontSize` from the settings Zustand store
  *
  * Edit notes:
