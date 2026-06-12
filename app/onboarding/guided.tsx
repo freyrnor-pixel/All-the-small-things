@@ -34,7 +34,8 @@ export default function GuidedScreen() {
   }
 
   function goExplore() {
-    settings.update({ showHints: true, setupComplete: true });
+    // W-E: new-user defaults — start with Essentials ON and points visible. Onboarding-only.
+    settings.update({ showHints: true, setupComplete: true, essentialsModeEnabled: true, showPoints: true });
     router.replace('/');
   }
 

@@ -104,6 +104,10 @@ export default function OnboardingStep3() {
           <Text style={styles.nextBtnText}>{t.next}</Text>
         </Pressable>
       </View>
+      {/* W-E: gentle, always-visible skip so no step feels mandatory */}
+      <Pressable style={styles.skipLink} onPress={() => router.push('/onboarding/step4')}>
+        <Text style={styles.skipLinkText}>{t.config.skipForNow}</Text>
+      </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -112,6 +116,8 @@ export default function OnboardingStep3() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   flex: { flex: 1 },
+  skipLink: { alignItems: 'center', paddingBottom: Spacing.lg },
+  skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },

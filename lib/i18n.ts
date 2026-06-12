@@ -459,6 +459,47 @@ const en = {
       },
     },
   },
+  // --- W-E Config additions (grouped settings + onboarding) ---
+  config: {
+    // Top-level skip affordance for non-essential onboarding steps
+    skipForNow: "I'll set this later",
+    // Essentials Mode (settings + onboarding "start simple" choice)
+    essentials: {
+      label: 'Start simple',
+      hint: 'Show only essential tasks. Turn off any time to see everything.',
+      onboardingTitle: 'Want to start simple?',
+      onboardingSub: 'See only the essentials at first. You can switch to the full view whenever you like.',
+      optionOn: 'Start simple',
+      optionOnDesc: 'Show only essential tasks — less overwhelm',
+      optionOff: 'Show everything',
+      optionOffDesc: 'See all your tasks from the start',
+    },
+    // Section headers for the grouped settings screen
+    sections: {
+      appearance: 'Appearance',
+      notifications: 'Notifications',
+      workMode: 'Work Mode',
+      data: 'Data',
+    },
+    // One-sentence descriptions under each setting
+    desc: {
+      language: 'Choose the language for everything in the app.',
+      name: 'Only used to greet you — never leaves your phone.',
+      theme: 'Pick a colour palette that feels right.',
+      darkMode: 'Follow your system, or force light or dark.',
+      weeklyReminders: 'A gentle weekly nudge on your shopping day.',
+      holidays: 'Show public holidays on your calendar.',
+      shoppingDefault: 'Which list opens first when you go shopping.',
+      weeklyResetDay: 'The weekday your weekly list clears itself.',
+      monthlyResetDate: 'The date your monthly list clears itself.',
+      workMode: 'Hide personal tasks so you can focus on work.',
+      autoActivate: 'Switch into work mode automatically during work hours.',
+      points: 'Count every finished task — small things add up.',
+      hints: 'Short explanations and examples on each screen.',
+      dataNote: 'These reset things. They cannot be undone.',
+    },
+  },
+  // --- end W-E Config additions ---
   // Hints (one per screen)
   // Cover screen (Galaxy Z Flip outer display)
   cover: {
@@ -787,6 +828,43 @@ const no: typeof en = {
       },
     },
   },
+  // --- W-E Config additions (grouped settings + onboarding) ---
+  config: {
+    skipForNow: 'Jeg ordner dette senere',
+    essentials: {
+      label: 'Start enkelt',
+      hint: 'Vis bare viktige oppgaver. Skru av når som helst for å se alt.',
+      onboardingTitle: 'Vil du starte enkelt?',
+      onboardingSub: 'Se bare det viktigste til å begynne med. Du kan bytte til full visning når du vil.',
+      optionOn: 'Start enkelt',
+      optionOnDesc: 'Vis bare viktige oppgaver — mindre overveldende',
+      optionOff: 'Vis alt',
+      optionOffDesc: 'Se alle oppgavene dine fra start',
+    },
+    sections: {
+      appearance: 'Utseende',
+      notifications: 'Varsler',
+      workMode: 'Jobb-modus',
+      data: 'Data',
+    },
+    desc: {
+      language: 'Velg språk for alt i appen.',
+      name: 'Brukes kun til å hilse på deg — forlater aldri telefonen.',
+      theme: 'Velg en fargepalett som føles riktig.',
+      darkMode: 'Følg systemet, eller tving lys eller mørk.',
+      weeklyReminders: 'En vennlig ukentlig påminnelse på handledagen din.',
+      holidays: 'Vis helligdager i kalenderen din.',
+      shoppingDefault: 'Hvilken liste som åpnes først når du handler.',
+      weeklyResetDay: 'Ukedagen ukeslisten din nullstiller seg selv.',
+      monthlyResetDate: 'Datoen månedslisten din nullstiller seg selv.',
+      workMode: 'Skjul private oppgaver så du kan fokusere på jobb.',
+      autoActivate: 'Bytt til jobb-modus automatisk i arbeidstiden.',
+      points: 'Tell hver fullførte oppgave — små ting teller.',
+      hints: 'Korte forklaringer og eksempler på hvert skjermbilde.',
+      dataNote: 'Disse nullstiller ting. Det kan ikke angres.',
+    },
+  },
+  // --- end W-E Config additions ---
   habitsTitle: 'Vaner',
   habitBuilding: 'Bygger',
   habitBreaking: 'Bryter',

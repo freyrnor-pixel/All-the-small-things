@@ -15,9 +15,11 @@
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
- *   - finish() sets `setupComplete:true` (the onboarding completion flag), then
- *     requests OS notification permission and, regardless of outcome, syncs
- *     reminders and task notifications; finally router.replace "/" to home.
+ *   - finish() sets `setupComplete:true` plus the new-user defaults
+ *     `essentialsModeEnabled:true` + `showPoints:true` (onboarding-only — never
+ *     mutates an existing user's saved row), then requests OS notification
+ *     permission and, regardless of outcome, syncs reminders and task
+ *     notifications; finally router.replace "/" to home.
  *   - Previous uses router.back(); Finish button color is theme-driven.
  */
 import React from 'react';
@@ -37,7 +39,10 @@ export default function OnboardingStep5() {
   const t = useT();
 
   function finish() {
-    settings.update({ setupComplete: true });
+    // W-E: new-user defaults — Essentials Mode ON + points visible by default, so new
+    // users start simple. Set here so the guided path gets them too (idempotent with
+    // the explore path). Onboarding-only — never mutates an existing user's saved row.
+    settings.update({ setupComplete: true, essentialsModeEnabled: true, showPoints: true });
     // Ask for notification permission once setup is done, then schedule the
     // reminders the user just configured during onboarding.
     requestPermissions().finally(() => {
