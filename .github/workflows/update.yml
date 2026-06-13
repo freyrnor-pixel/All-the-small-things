@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 'claude/**'
   workflow_dispatch:
 
 jobs:
@@ -33,4 +34,4 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Push update
-        run: eas update --auto --channel preview
+        run: eas update --branch preview --runtime-version 1.0.0 --message "${{ github.event.head_commit.message }}"
