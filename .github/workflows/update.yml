@@ -34,4 +34,4 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Push update
-        run: eas update --branch preview --runtime-version 1.0.0 --message "${{ github.event.head_commit.message }}"
+        run: eas update --branch preview --message "${{ github.event.head_commit.message }}"

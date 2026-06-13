@@ -105,10 +105,10 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 
 ### OTA updates (normal flow)
 - Workflow: `.github/workflows/update.yml` — triggers on every push to `main` or any `claude/**` branch
-- Runs `eas update --branch preview --runtime-version 1.0.0 --message "..."` — always publishes to EAS branch `preview`, targeting the installed APK (build 148977ec, runtime 1.0.0)
+- Runs `eas update --branch preview --message "..."` — always publishes to EAS branch `preview`
+- Runtime version is read from `runtimeVersion` in `app.json` (currently hardcoded `"1.0.0"` to target build 148977ec)
 - Apps pick it up automatically on next launch — no download needed
 - Takes ~1–2 min on CI
-- **If a new APK is built**, update `--runtime-version` in `update.yml` to match the new `version` in `app.json`
 
 ### New APK build (only when native code changes)
 - Workflow: `.github/workflows/build-android.yml` — **manual trigger only** (`workflow_dispatch`)
@@ -126,7 +126,6 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 | Camera/permission changes | Yes |
 
 ### Runtime version
-- Policy: `appVersion` — OTA updates only reach devices whose installed APK runtime version matches the update's runtime version
-- The installed APK (build 148977ec) has runtime `1.0.0`; `app.json` is currently at `1.1.0`
-- `update.yml` hardcodes `--runtime-version 1.0.0` to target the installed APK — do NOT remove this flag
-- When a new APK build is done: bump `version` in `app.json`, build the APK, then update `--runtime-version` in `update.yml` to match
+- `runtimeVersion` in `app.json` is hardcoded to `"1.0.0"` (not derived from `version` via policy)
+- This targets the installed APK (build 148977ec, runtime `1.0.0`) — do NOT change it without a new APK build
+- When native changes require a new APK: bump BOTH `version` AND `runtimeVersion` in `app.json` to the same new value, build the APK, then OTA updates will automatically target the new runtime
