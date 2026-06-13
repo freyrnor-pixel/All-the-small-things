@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 'claude/**'
   workflow_dispatch:
 
 jobs:
@@ -33,4 +34,6 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Push update
-        run: eas update --auto --channel preview
+        run: |
+          MSG=$(git log -1 --format=%s)
+          eas update --branch preview --message "$MSG"

@@ -1,24 +1,27 @@
 /**
  * meals.tsx — dish library
  *
- * Library of dishes grouped by meal type, each with an editable ingredient
- * list. Dishes (or a random pick via 🎲) can be pushed straight onto the
- * weekly shopping list. Add/edit happens inline within the screen.
+ * Library of dishes grouped by meal type. Entry shows 4 category tiles; tapping
+ * a tile drills into that category's dish list. Dish creation via modal sheet with
+ * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore
+ *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
- *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore (shopping_items) when pushing a dish to shopping
+ *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping
  *
  * Edit notes:
- *   - All visible strings go through useT(); MEAL_TYPES holds only icon/colour metadata, labels come from t.mealTypes.
+ *   - All visible strings go through useT(); MEAL_TYPES holds only icon/colour metadata.
+ *   - Category tiles show dish count per type; tapping drills into category view.
+ *   - New dish modal collects name + ingredients with catalog autocomplete via suggest().
  *   - pushDishToShopping always adds ingredients as listType 'weekly' and surfaces a ConfirmationBanner.
- *   - Prep complexity is a derived proxy (ingredient count → 1–3 dots), NOT a DB column: 0–2 = simple, 3–5 = medium, 6+ = involved.
  */
 import React, { useState } from 'react';
 import {
   Alert,
+  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -32,29 +35,24 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
+import { useCatalogStore, StoreItem } from '@/store/useCatalogStore';
 import ExpandableCard from '@/components/ExpandableCard';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
-// Prep-complexity proxy from ingredient count (no DB column). Returns 1–3 dots.
-function prepLevel(ingredientCount: number): 1 | 2 | 3 {
-  if (ingredientCount >= 6) return 3;
-  if (ingredientCount >= 3) return 2;
-  return 1;
-}
-
-// Visual metadata only — labels come from the user's language via `t.mealTypes`.
 const MEAL_TYPES: { value: MealType; icon: string; color: string }[] = [
   { value: 'breakfast', icon: '🌅', color: '#F6C344' },
   { value: 'lunch', icon: '🥙', color: '#6BAA75' },
   { value: 'dinner', icon: '🍽', color: '#F4A261' },
   { value: 'snack', icon: '🍎', color: '#7BC8A4' },
 ];
+
+type DraftIngredient = { name: string; amount: string; unit: string };
 
 export default function MealsScreen() {
   const router = useRouter();
@@ -64,58 +62,66 @@ export default function MealsScreen() {
   const addIngredient = useMealStore((s) => s.addIngredient);
   const removeIngredient = useMealStore((s) => s.removeIngredient);
   const randomDish = useMealStore((s) => s.randomDish);
+  const suggest = useCatalogStore((s) => s.suggest);
   const t = useT();
   const theme = useAppTheme();
   const addToShopping = useShoppingStore((s) => s.add);
   const mealLabel = (v: MealType) => t.mealTypes[v];
 
-  const [filterType, setFilterType] = useState<MealType | 'all'>('all');
-  const [addingDish, setAddingDish] = useState(false);
-  const [newDishName, setNewDishName] = useState('');
-  const [newDishType, setNewDishType] = useState<MealType>('dinner');
+  const [activeCategory, setActiveCategory] = useState<MealType | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
 
-  const [addingIngredient, setAddingIngredient] = useState<string | null>(null);
+  // New dish modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [dishName, setDishName] = useState('');
+  const [dishType, setDishType] = useState<MealType>('dinner');
+  const [draftIngredients, setDraftIngredients] = useState<DraftIngredient[]>([]);
   const [ingName, setIngName] = useState('');
   const [ingAmount, setIngAmount] = useState('1');
   const [ingUnit, setIngUnit] = useState('');
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<StoreItem[]>([]);
 
-  const prepLabels: Record<1 | 2 | 3, string> = {
-    1: t.prepSimple,
-    2: t.prepMedium,
-    3: t.prepComplex,
-  };
-
-  const filtered = filterType === 'all'
-    ? dishes
-    : dishes.filter((d) => d.mealType === filterType);
-
-  function saveNewDish() {
-    if (!newDishName.trim()) return;
-    addDish({ name: newDishName.trim(), mealType: newDishType });
-    setNewDishName('');
-    setAddingDish(false);
-  }
-
-  function saveIngredient(dishId: string) {
-    if (!ingName.trim()) return;
-    addIngredient({ dishId, name: ingName.trim(), amount: ingAmount, unit: ingUnit });
+  function openModal(type: MealType) {
+    setDishType(type);
+    setDishName('');
+    setDraftIngredients([]);
     setIngName('');
     setIngAmount('1');
     setIngUnit('');
-    setAddingIngredient(null);
+    setSuggestions([]);
+    setModalVisible(true);
+  }
+
+  function addDraftIngredient() {
+    if (!ingName.trim()) return;
+    setDraftIngredients((prev) => [...prev, { name: ingName.trim(), amount: ingAmount, unit: ingUnit }]);
+    setIngName('');
+    setIngAmount('1');
+    setIngUnit('');
+    setSuggestions([]);
+  }
+
+  function removeDraftIngredient(idx: number) {
+    setDraftIngredients((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function saveDish() {
+    if (!dishName.trim()) return;
+    const dish = addDish({ name: dishName.trim(), mealType: dishType });
+    draftIngredients.forEach((ing) => {
+      addIngredient({ dishId: dish.id, name: ing.name, amount: ing.amount, unit: ing.unit });
+    });
+    setModalVisible(false);
+  }
+
+  function onIngNameChange(text: string) {
+    setIngName(text);
+    setSuggestions(text.length >= 2 ? suggest(text, 5) : []);
   }
 
   function pushDishToShopping(dish: Dish) {
     dish.ingredients.forEach((ing) => {
-      addToShopping({
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        listType: 'weekly',
-        store: '',
-        price: 0,
-      });
+      addToShopping({ name: ing.name, amount: ing.amount, unit: ing.unit, listType: 'weekly', store: '', price: 0 });
     });
     success();
     setConfirm(t.addedToShoppingConfirm);
@@ -142,383 +148,344 @@ export default function MealsScreen() {
     );
   }
 
+  const categoryDishes = activeCategory ? dishes.filter((d) => d.mealType === activeCategory) : [];
+  const activeMeta = MEAL_TYPES.find((m) => m.value === activeCategory);
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={activeCategory ? () => setActiveCategory(null) : () => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.mealsTitle}</Text>
-        <Pressable style={[styles.randomBtn, { backgroundColor: theme.white }]} onPress={() => pickRandom()}>
+        <Text style={[styles.title, { color: theme.text }]}>
+          {activeCategory ? mealLabel(activeCategory) : t.mealsTitle}
+        </Text>
+        <Pressable style={[styles.randomBtn, { backgroundColor: theme.white, ...Shadow.card }]} onPress={() => pickRandom(activeCategory ?? undefined)}>
           <Text style={styles.randomBtnText}>🎲</Text>
         </Pressable>
       </View>
 
-      {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        <Pressable
-          style={[styles.chip, { backgroundColor: theme.grayLight }, filterType === 'all' && { backgroundColor: theme.orange }]}
-          onPress={() => setFilterType('all')}
-        >
-          <Text style={[styles.chipText, { color: theme.text }, filterType === 'all' && { color: '#fff' }]}>{t.mealAll}</Text>
-        </Pressable>
-        {MEAL_TYPES.map((mt) => (
-          <Pressable
-            key={mt.value}
-            style={[styles.chip, { backgroundColor: theme.grayLight }, filterType === mt.value && { backgroundColor: mt.color }]}
-            onPress={() => setFilterType(mt.value)}
+      {/* Category tile view */}
+      {!activeCategory && (
+        <ScrollView contentContainerStyle={styles.tileGrid} showsVerticalScrollIndicator={false}>
+          <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
+
+          <PressableScale
+            style={[styles.surpriseBtn, { backgroundColor: theme.green }]}
+            onPress={() => pickRandom()}
+            scaleTo={0.96}
           >
-            <Text style={[styles.chipText, { color: theme.text }, filterType === mt.value && { color: '#fff' }]}>
-              {mt.icon} {mealLabel(mt.value)}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+            <Text style={styles.surpriseIcon}>🎲</Text>
+            <Text style={styles.surpriseTitle}>{t.surpriseMe}</Text>
+            <Text style={styles.surpriseSub}>{t.pickRandomDishSub}</Text>
+          </PressableScale>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
+          <View style={styles.tilesRow}>
+            {MEAL_TYPES.map((mt) => {
+              const count = dishes.filter((d) => d.mealType === mt.value).length;
+              return (
+                <Pressable
+                  key={mt.value}
+                  style={[styles.tile, { backgroundColor: mt.color }]}
+                  onPress={() => setActiveCategory(mt.value)}
+                >
+                  <Text style={styles.tileIcon}>{mt.icon}</Text>
+                  <Text style={styles.tileLabel}>{mealLabel(mt.value)}</Text>
+                  <Text style={styles.tileCount}>{count} {t.ingredientsCount(count).replace(/\d+\s*/, '')}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+      )}
 
-        {/* Prominent random picker — the headline interaction */}
-        <PressableScale
-          style={[styles.surpriseBtn, { backgroundColor: theme.green }]}
-          onPress={() => pickRandom(filterType === 'all' ? undefined : filterType)}
-          scaleTo={0.96}
-        >
-          <Text style={styles.surpriseIcon}>🎲</Text>
-          <Text style={styles.surpriseTitle}>{t.surpriseMe}</Text>
-          <Text style={styles.surpriseSub}>{t.pickRandomDishSub}</Text>
-        </PressableScale>
+      {/* Category dish list */}
+      {activeCategory && (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {categoryDishes.length === 0 && (
+              <View style={[styles.emptyState, { backgroundColor: theme.white }]}>
+                <Text style={styles.emptyEmoji}>{activeMeta?.icon}</Text>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>{t.noDishesTitle}</Text>
+                <Text style={[styles.emptyBody, { color: theme.textLight }]}>
+                  {t.noDishesBody(mealLabel(activeCategory).toLowerCase())}
+                </Text>
+              </View>
+            )}
 
-        {/* Add dish */}
-        {addingDish ? (
-          <View style={[styles.addCard, { backgroundColor: theme.white }]}>
-            {/* Meal type row — pick type first so the name field stays visible above keyboard */}
+            {categoryDishes.map((dish) => (
+              <ExpandableCard
+                key={dish.id}
+                title={dish.name}
+                subtitle={mealLabel(dish.mealType)}
+                badge={t.ingredientsCount(dish.ingredients.length)}
+                accentColor={activeMeta?.color}
+                rightAction={
+                  <Pressable
+                    onPress={() => pushDishToShopping(dish)}
+                    style={[styles.shoppingBtn, { backgroundColor: theme.grayLight }]}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.shoppingBtnText}>🛒</Text>
+                  </Pressable>
+                }
+              >
+                {dish.ingredients.map((ing, i) => (
+                  <View
+                    key={ing.id}
+                    style={[
+                      styles.ingRow,
+                      i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.grayLight },
+                    ]}
+                  >
+                    <Text style={[styles.ingText, { color: theme.text }]}>
+                      {ing.amount} {ing.unit} {ing.name}
+                    </Text>
+                    <Pressable onPress={() => removeIngredient(ing.id)} hitSlop={8}>
+                      <Text style={[styles.removeText, { color: theme.gray }]}>−</Text>
+                    </Pressable>
+                  </View>
+                ))}
+                <View style={styles.ingFooter}>
+                  <Pressable style={styles.deleteBtn} onPress={() => removeDish(dish.id)}>
+                    <Ionicons name="trash-outline" size={14} color={theme.danger} />
+                    <Text style={[styles.deleteText, { color: theme.danger }]}>{t.deleteDish}</Text>
+                  </Pressable>
+                </View>
+              </ExpandableCard>
+            ))}
+
+            <Pressable style={[styles.addTrigger, { borderColor: activeMeta?.color ?? theme.green }]} onPress={() => openModal(activeCategory)}>
+              <Text style={[styles.addTriggerText, { color: activeMeta?.color ?? theme.green }]}>{t.newDishTrigger}</Text>
+            </Pressable>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
+
+      {/* New dish modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setModalVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
+          <View style={[styles.sheet, { backgroundColor: theme.white }]}>
+            <View style={styles.sheetHandle} />
+
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.newDishTrigger}</Text>
+
+            {/* Meal type picker */}
             <View style={styles.typeRow}>
               {MEAL_TYPES.map((mt) => (
                 <Pressable
                   key={mt.value}
-                  style={[
-                    styles.typePill,
-                    { backgroundColor: theme.grayLight },
-                    newDishType === mt.value && { backgroundColor: theme.orange },
-                  ]}
-                  onPress={() => setNewDishType(mt.value)}
+                  style={[styles.typePill, { backgroundColor: dishType === mt.value ? mt.color : theme.grayLight }]}
+                  onPress={() => setDishType(mt.value)}
                 >
                   <Text style={styles.typePillIcon}>{mt.icon}</Text>
-                  <Text style={[styles.typePillLabel, { color: theme.text }, newDishType === mt.value && { color: '#fff' }]}>
+                  <Text style={[styles.typePillLabel, { color: dishType === mt.value ? '#fff' : theme.text }]}>
                     {mealLabel(mt.value)}
                   </Text>
                 </Pressable>
               ))}
             </View>
-            <View style={styles.addRow}>
-              <TextInput
-                style={[styles.addInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
-                value={newDishName}
-                onChangeText={setNewDishName}
-                placeholder={t.dishNamePlaceholder}
-                placeholderTextColor={theme.gray}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={saveNewDish}
-              />
-              <Pressable style={[styles.confirmBtn, { backgroundColor: theme.orange }]} onPress={saveNewDish}>
-                <Text style={styles.confirmBtnText}>{t.save}</Text>
-              </Pressable>
-              <Pressable onPress={() => setAddingDish(false)} style={styles.cancelBtn}>
-                <Text style={[styles.cancelText, { color: theme.textLight }]}>✕</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <Pressable style={[styles.addTrigger, { borderColor: theme.green }]} onPress={() => setAddingDish(true)}>
-            <Text style={[styles.addTriggerText, { color: theme.green }]}>{t.newDishTrigger}</Text>
-          </Pressable>
-        )}
 
-        {/* Empty state */}
-        {filtered.length === 0 && !addingDish && (
-          <View style={[styles.emptyState, { backgroundColor: theme.white }]}>
-            <Text style={styles.emptyEmoji}>
-              {filterType === 'all' ? '🍽' : MEAL_TYPES.find((m) => m.value === filterType)?.icon}
-            </Text>
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>{t.noDishesTitle}</Text>
-            <Text style={[styles.emptyBody, { color: theme.textLight }]}>
-              {filterType === 'all'
-                ? t.noDishesBodyGeneric
-                : t.noDishesBody(mealLabel(filterType as MealType).toLowerCase())}
-            </Text>
-          </View>
-        )}
+            {/* Dish name */}
+            <TextInput
+              style={[styles.nameInput, { backgroundColor: theme.offWhite, color: theme.text, borderColor: theme.orange }]}
+              value={dishName}
+              onChangeText={setDishName}
+              placeholder={t.dishNamePlaceholder}
+              placeholderTextColor={theme.gray}
+              autoFocus
+              returnKeyType="next"
+            />
 
-        {/* Dishes */}
-        {filtered.map((dish) => {
-          const level = prepLevel(dish.ingredients.length);
-          return (
-          <ExpandableCard
-            key={dish.id}
-            title={dish.name}
-            subtitle={`${mealLabel(dish.mealType)} · ${prepLabels[level]}`}
-            badge={t.ingredientsCount(dish.ingredients.length)}
-            accentColor={MEAL_TYPES.find((m) => m.value === dish.mealType)?.color}
-            rightAction={
-              <View style={styles.rightActions}>
-                <View style={styles.prepDots} accessibilityLabel={prepLabels[level]}>
-                  {[1, 2, 3].map((d) => (
-                    <View
-                      key={d}
-                      style={[
-                        styles.prepDot,
-                        { backgroundColor: d <= level ? theme.green : theme.grayLight },
-                      ]}
-                    />
-                  ))}
-                </View>
-                <Pressable
-                  onPress={() => pushDishToShopping(dish)}
-                  style={[styles.shoppingBtn, { backgroundColor: theme.grayLight }]}
-                  hitSlop={8}
-                >
-                  <Text style={styles.shoppingBtnText}>🛒</Text>
-                </Pressable>
-              </View>
-            }
-          >
-            {/* Ingredients list */}
-            {dish.ingredients.map((ing, i) => (
-              <View
-                key={ing.id}
-                style={[
-                  styles.ingRow,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.grayLight },
-                ]}
-              >
-                <Text style={[styles.ingText, { color: theme.text }]}>
-                  {ing.amount} {ing.unit} {ing.name}
-                </Text>
-                <Pressable onPress={() => removeIngredient(ing.id)} hitSlop={8}>
+            {/* Draft ingredients */}
+            {draftIngredients.map((ing, idx) => (
+              <View key={idx} style={[styles.draftRow, { borderBottomColor: theme.grayLight }]}>
+                <Text style={[styles.draftText, { color: theme.text }]}>{ing.amount} {ing.unit} {ing.name}</Text>
+                <Pressable onPress={() => removeDraftIngredient(idx)} hitSlop={8}>
                   <Text style={[styles.removeText, { color: theme.gray }]}>−</Text>
                 </Pressable>
               </View>
             ))}
 
-            {/* Add ingredient inline */}
-            {addingIngredient === dish.id ? (
-              <View style={styles.ingAddCard}>
-                <View style={styles.ingAmountRow}>
-                  <TextInput
-                    style={[styles.ingInput, { width: 52, backgroundColor: theme.offWhite, color: theme.text }]}
-                    value={ingAmount}
-                    onChangeText={setIngAmount}
-                    keyboardType="decimal-pad"
-                    placeholder={t.shoppingAmountPlaceholder}
-                    placeholderTextColor={theme.gray}
-                  />
-                  <TextInput
-                    style={[styles.ingInput, { width: 60, backgroundColor: theme.offWhite, color: theme.text }]}
-                    value={ingUnit}
-                    onChangeText={setIngUnit}
-                    placeholder={t.shoppingUnitPlaceholder}
-                    placeholderTextColor={theme.gray}
-                  />
-                  <TextInput
-                    style={[styles.ingInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
-                    value={ingName}
-                    onChangeText={setIngName}
-                    placeholder={t.ingredientPlaceholder}
-                    placeholderTextColor={theme.gray}
-                    autoFocus
-                    returnKeyType="done"
-                    onSubmitEditing={() => saveIngredient(dish.id)}
-                  />
-                  <Pressable style={[styles.confirmBtn, { backgroundColor: theme.orange }]} onPress={() => saveIngredient(dish.id)}>
-                    <Text style={styles.confirmBtnText}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.ingFooter}>
-                <Pressable
-                  style={[styles.ingAddBtn, { borderColor: theme.green }]}
-                  onPress={() => setAddingIngredient(dish.id)}
-                >
-                  <Text style={[styles.ingAddText, { color: theme.green }]}>{t.addIngredientTrigger}</Text>
-                </Pressable>
-                <Pressable style={styles.deleteBtn} onPress={() => removeDish(dish.id)}>
-                  <Ionicons name="trash-outline" size={14} color={theme.danger} />
-                  <Text style={[styles.deleteText, { color: theme.danger }]}>{t.deleteDish}</Text>
-                </Pressable>
-              </View>
-            )}
-          </ExpandableCard>
-          );
-        })}
+            {/* Add ingredient row */}
+            <View style={styles.ingAddRow}>
+              <TextInput
+                style={[styles.amountInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                value={ingAmount}
+                onChangeText={setIngAmount}
+                keyboardType="decimal-pad"
+                placeholder="1"
+                placeholderTextColor={theme.gray}
+              />
+              <TextInput
+                style={[styles.unitInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                value={ingUnit}
+                onChangeText={setIngUnit}
+                placeholder={t.shoppingUnitPlaceholder}
+                placeholderTextColor={theme.gray}
+              />
+              <TextInput
+                style={[styles.ingNameInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                value={ingName}
+                onChangeText={onIngNameChange}
+                placeholder={t.ingredientPlaceholder}
+                placeholderTextColor={theme.gray}
+                returnKeyType="done"
+                onSubmitEditing={addDraftIngredient}
+              />
+              <Pressable style={[styles.addIngBtn, { backgroundColor: theme.orange }]} onPress={addDraftIngredient}>
+                <Text style={styles.addIngBtnText}>+</Text>
+              </Pressable>
+            </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-      </KeyboardAvoidingView>
+            {/* Autocomplete suggestions */}
+            {suggestions.length > 0 && (
+              <FlatList
+                data={suggestions}
+                keyExtractor={(item) => item.name}
+                style={[styles.suggestList, { backgroundColor: theme.white, borderColor: theme.grayLight }]}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={[styles.suggestRow, { borderBottomColor: theme.grayLight }]}
+                    onPress={() => {
+                      setIngName(item.name);
+                      setIngUnit(item.unit ?? '');
+                      setSuggestions([]);
+                    }}
+                  >
+                    <Text style={[styles.suggestText, { color: theme.text }]}>{item.name}</Text>
+                    {item.price > 0 && (
+                      <Text style={[styles.suggestMeta, { color: theme.textLight }]}>{item.price} kr</Text>
+                    )}
+                  </Pressable>
+                )}
+              />
+            )}
+
+            {/* Sheet footer */}
+            <View style={styles.sheetFooter}>
+              <Pressable style={[styles.cancelSheetBtn, { borderColor: theme.grayLight }]} onPress={() => setModalVisible(false)}>
+                <Text style={[styles.cancelSheetText, { color: theme.textLight }]}>{t.cancel}</Text>
+              </Pressable>
+              <Pressable style={[styles.saveBtn, { backgroundColor: dishName.trim() ? theme.orange : theme.grayLight }]} onPress={saveDish}>
+                <Text style={[styles.saveBtnText, { color: dishName.trim() ? '#fff' : theme.gray }]}>{t.save}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.md,
   },
-  back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
+  back: { fontSize: FontSize.md, fontWeight: '600' },
+  title: { fontSize: FontSize.xl, fontWeight: '700' },
   randomBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadow.card,
+    width: 40, height: 40, borderRadius: Radius.full,
+    alignItems: 'center', justifyContent: 'center',
   },
   randomBtnText: { fontSize: 20 },
-  filterRow: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.sm },
-  chip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight,
+  tileGrid: { padding: Spacing.md, gap: Spacing.md },
+  tilesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
+  tile: {
+    width: '47%', flexGrow: 1,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    gap: Spacing.xs,
+    ...Shadow.card,
   },
-  chipActive: { backgroundColor: Colors.orange },
-  chipText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '500' },
-  chipActiveText: { color: Colors.white },
-  scroll: { flex: 1 },
-  content: { padding: Spacing.md, gap: Spacing.sm },
+  tileIcon: { fontSize: 40 },
+  tileLabel: { fontSize: FontSize.md, fontWeight: '700', color: '#fff' },
+  tileCount: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.85)' },
   surpriseBtn: {
     borderRadius: Radius.lg,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,
     alignItems: 'center',
     gap: 2,
-    marginBottom: Spacing.sm,
     ...Shadow.card,
   },
   surpriseIcon: { fontSize: 40 },
-  surpriseTitle: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.xl, marginTop: 4 },
+  surpriseTitle: { color: '#fff', fontWeight: '700', fontSize: FontSize.xl, marginTop: 4 },
   surpriseSub: { color: 'rgba(255,255,255,0.9)', fontSize: FontSize.sm },
-  rightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  prepDots: { flexDirection: 'row', gap: 3, alignItems: 'center' },
-  prepDot: { width: 7, height: 7, borderRadius: Radius.full },
-  addTrigger: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: Colors.green,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  addTriggerText: { fontSize: FontSize.md, color: Colors.green, fontWeight: '600' },
-  addCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    gap: Spacing.sm,
-    ...Shadow.card,
-  },
-  typeRow: { flexDirection: 'row', gap: Spacing.xs },
-  typePill: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  typePillIcon: { fontSize: 16 },
-  typePillLabel: { fontSize: FontSize.xs, fontWeight: '500' },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  addInput: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    fontSize: FontSize.md,
-    color: Colors.text,
-  },
-  cancelBtn: { padding: Spacing.xs },
-  cancelText: { fontSize: FontSize.md, color: Colors.textLight },
-  confirmBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  confirmBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
-  ingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-  },
-  ingText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '500' },
-  removeText: { fontSize: 18, color: Colors.gray },
-  shoppingBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  content: { padding: Spacing.md, gap: Spacing.sm },
+  shoppingBtn: { width: 28, height: 28, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   shoppingBtnText: { fontSize: 16 },
-  ingAddCard: { marginTop: Spacing.xs },
-  ingInput: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    fontSize: FontSize.sm,
-    color: Colors.text,
-  },
-  ingAmountRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  ingFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  ingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.xs },
+  ingText: { fontSize: FontSize.sm, fontWeight: '500' },
+  removeText: { fontSize: 18 },
+  ingFooter: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: Spacing.sm },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  deleteText: { fontSize: FontSize.sm },
+  addTrigger: {
+    borderWidth: 2, borderStyle: 'dashed',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
     marginTop: Spacing.sm,
   },
-  ingAddBtn: {
-    borderWidth: 1,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-  },
-  ingAddText: { fontSize: FontSize.sm, color: Colors.green, fontWeight: '600' },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  deleteText: { fontSize: FontSize.sm, color: Colors.danger },
-  emptyState: {
-    borderRadius: Radius.md,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    gap: Spacing.sm,
-    ...Shadow.card,
-  },
+  addTriggerText: { fontSize: FontSize.md, fontWeight: '600' },
+  emptyState: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm, ...Shadow.card },
   emptyEmoji: { fontSize: 36 },
   emptyTitle: { fontSize: FontSize.md, fontWeight: '600' },
   emptyBody: { fontSize: FontSize.sm, textAlign: 'center' },
+
+  // Modal / sheet
+  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheetWrapper: { justifyContent: 'flex-end' },
+  sheet: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    paddingBottom: Spacing.xxl,
+    maxHeight: '90%',
+    ...Shadow.card,
+  },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc', alignSelf: 'center', marginBottom: 4 },
+  sheetTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  typeRow: { flexDirection: 'row', gap: Spacing.xs },
+  typePill: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center', gap: 2 },
+  typePillIcon: { fontSize: 16 },
+  typePillLabel: { fontSize: FontSize.xs, fontWeight: '500' },
+  nameInput: {
+    borderWidth: 2, borderRadius: Radius.sm,
+    padding: Spacing.md,
+    fontSize: FontSize.md,
+  },
+  draftRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: Spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  draftText: { fontSize: FontSize.sm },
+  ingAddRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  amountInput: { width: 48, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm, textAlign: 'center' },
+  unitInput: { width: 56, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
+  ingNameInput: { flex: 1, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
+  addIngBtn: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  addIngBtnText: { color: '#fff', fontSize: FontSize.lg, fontWeight: '700' },
+  suggestList: { maxHeight: 160, borderWidth: 1, borderRadius: Radius.sm },
+  suggestRow: { padding: Spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between' },
+  suggestText: { fontSize: FontSize.sm },
+  suggestMeta: { fontSize: FontSize.xs },
+  sheetFooter: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
+  cancelSheetBtn: { flex: 1, borderWidth: 1, borderRadius: Radius.full, padding: Spacing.md, alignItems: 'center' },
+  cancelSheetText: { fontSize: FontSize.md, fontWeight: '600' },
+  saveBtn: { flex: 2, borderRadius: Radius.full, padding: Spacing.md, alignItems: 'center', ...Shadow.card },
+  saveBtnText: { fontSize: FontSize.md, fontWeight: '700' },
 });

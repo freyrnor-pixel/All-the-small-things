@@ -15,7 +15,7 @@
  *   - Next button → router.push "/onboarding/step4"; Previous uses router.back().
  *   - `dateInput` is local edit state seeded from settings.monthlyResetDate.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -29,6 +29,12 @@ export default function OnboardingStep3() {
   const t = useT();
   const [dateInput, setDateInput] = useState(String(settings.monthlyResetDate));
 
+  // Weekly reset defaults to Monday (index 0) — no user choice needed in onboarding.
+  useEffect(() => {
+    settings.update({ weeklyResetDay: 0 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
@@ -37,26 +43,6 @@ export default function OnboardingStep3() {
           <Text style={styles.emoji}>🛒</Text>
           <Text style={styles.heading}>{t.shoppingOnboarding}</Text>
           <Text style={styles.sub}>{t.shoppingOnboardingSub}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t.shoppingDayQuestion}</Text>
-          <View style={styles.dayRow}>
-            {t.dayLabels.map((label, i) => (
-              <Pressable
-                key={i}
-                style={[styles.dayChip, settings.weeklyResetDay === i && styles.dayChipActive]}
-                onPress={() => settings.update({ weeklyResetDay: i })}
-              >
-                <Text style={[styles.dayText, settings.weeklyResetDay === i && styles.dayTextActive]}>
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <Text style={styles.hint}>
-            {t.weeklyResetsOn(t.dayFull[settings.weeklyResetDay])}
-          </Text>
         </View>
 
         <View style={styles.card}>

@@ -104,8 +104,9 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 ## Builds and updates
 
 ### OTA updates (normal flow)
-- Workflow: `.github/workflows/update.yml` — triggers on every push to `claude/adhd-task-life-app-TOdFj`
-- Runs `eas update --auto --channel preview` — pushes the JS bundle silently to all installed apps
+- Workflow: `.github/workflows/update.yml` — triggers on every push to `main` or any `claude/**` branch
+- Runs `eas update --branch preview --message "..."` — always publishes to EAS branch `preview`
+- Runtime version is read from `runtimeVersion` in `app.json` (currently hardcoded `"1.0.0"` to target build 148977ec)
 - Apps pick it up automatically on next launch — no download needed
 - Takes ~1–2 min on CI
 
@@ -125,5 +126,6 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 | Camera/permission changes | Yes |
 
 ### Runtime version
-- Policy: `appVersion` — OTA updates apply to apps whose `version` matches `app.json`
-- Bump `version` in `app.json` whenever you do a new build with breaking native changes
+- `runtimeVersion` in `app.json` is hardcoded to `"1.0.0"` (not derived from `version` via policy)
+- This targets the installed APK (build 148977ec, runtime `1.0.0`) — do NOT change it without a new APK build
+- When native changes require a new APK: bump BOTH `version` AND `runtimeVersion` in `app.json` to the same new value, build the APK, then OTA updates will automatically target the new runtime

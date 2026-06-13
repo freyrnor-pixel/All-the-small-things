@@ -35,6 +35,7 @@ export default function OnboardingWelcome() {
   const update = useSettingsStore((s) => s.update);
   const t = useT();
   const [name, setName] = useState('');
+  const [nameFocused, setNameFocused] = useState(false);
 
   function next() {
     update({ userName: name.trim() });
@@ -52,6 +53,25 @@ export default function OnboardingWelcome() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Name at the top — first impression */}
+          <View style={styles.card}>
+            <Text style={styles.label}>{t.whatsYourName}</Text>
+            <TextInput
+              style={styles.input}
+              value={nameFocused ? name : name}
+              onChangeText={setName}
+              placeholder={nameFocused ? '' : t.namePlaceholder}
+              placeholderTextColor={Colors.gray}
+              selectionColor={Colors.orange}
+              returnKeyType="done"
+              onSubmitEditing={next}
+              onFocus={() => setNameFocused(true)}
+              onBlur={() => setNameFocused(false)}
+              autoFocus={false}
+            />
+            <Text style={styles.hint}>{t.nameHint}</Text>
+          </View>
+
           <View style={styles.top}>
             <Text style={styles.emoji}>🌿</Text>
             <Text style={styles.heading}>{t.welcomeHeading}</Text>
@@ -67,19 +87,8 @@ export default function OnboardingWelcome() {
             ))}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.label}>{t.whatsYourName}</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder={t.namePlaceholder}
-              placeholderTextColor={Colors.gray}
-              selectionColor={Colors.orange}
-              returnKeyType="done"
-              onSubmitEditing={next}
-            />
-            <Text style={styles.hint}>{t.nameHint}</Text>
+          <View style={[styles.noteBox, { backgroundColor: Colors.greenLight }]}>
+            <Text style={styles.noteText}>{t.onboardingSettingsNote}</Text>
           </View>
 
           <View style={styles.progress}>
@@ -145,6 +154,8 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   hint: { fontSize: FontSize.xs, color: Colors.textLight, lineHeight: 18 },
+  noteBox: { borderRadius: Radius.md, padding: Spacing.md },
+  noteText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20, textAlign: 'center' },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },

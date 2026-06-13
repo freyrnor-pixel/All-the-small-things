@@ -25,22 +25,25 @@ import { getTheme, getSoftTheme, getFontSize, AppColors, FontSizeScale } from '@
 export function useAppTheme(): AppColors {
   const colorTheme = useSettingsStore((s) => s.colorTheme);
   const darkMode = useSettingsStore((s) => s.darkMode);
+  const customPrimaryColor = useSettingsStore((s) => s.customPrimaryColor);
+  const customSecondaryColor = useSettingsStore((s) => s.customSecondaryColor);
   const systemScheme = useColorScheme();
   const isDark = darkMode === 'on' || (darkMode === 'system' && systemScheme === 'dark');
-  return getTheme(colorTheme, isDark);
+  return getTheme(colorTheme, isDark, { primary: customPrimaryColor, secondary: customSecondaryColor });
 }
 
 /**
- * Like useAppTheme() but softened for emotional/health screens (warmer, lower
- * contrast). Never softens the high-contrast accessibility theme. Use on
- * app/health.tsx and app/habits.tsx so they read gentler than productivity screens.
+ * Like useAppTheme() but softened for emotional/health screens (warmer, lower contrast).
+ * Use on app/health.tsx and app/habits.tsx so they read gentler than productivity screens.
  */
 export function useSoftTheme(): AppColors {
   const colorTheme = useSettingsStore((s) => s.colorTheme);
   const darkMode = useSettingsStore((s) => s.darkMode);
+  const customPrimaryColor = useSettingsStore((s) => s.customPrimaryColor);
+  const customSecondaryColor = useSettingsStore((s) => s.customSecondaryColor);
   const systemScheme = useColorScheme();
   const isDark = darkMode === 'on' || (darkMode === 'system' && systemScheme === 'dark');
-  return getSoftTheme(getTheme(colorTheme, isDark), colorTheme);
+  return getSoftTheme(getTheme(colorTheme, isDark, { primary: customPrimaryColor, secondary: customSecondaryColor }));
 }
 
 export function useIsDark(): boolean {
