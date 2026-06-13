@@ -204,6 +204,11 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN pet_color TEXT DEFAULT '#A78BFA'",
     // Left-handed mode
     "ALTER TABLE settings ADD COLUMN left_handed INTEGER DEFAULT 0",
+    // 1.1.0 — custom theme colors
+    "ALTER TABLE settings ADD COLUMN custom_primary_color TEXT DEFAULT '#3B82F6'",
+    "ALTER TABLE settings ADD COLUMN custom_secondary_color TEXT DEFAULT '#10B981'",
+    // 1.1.0 — inventory tracking for shopping items
+    "ALTER TABLE shopping_items ADD COLUMN inventory_qty REAL DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

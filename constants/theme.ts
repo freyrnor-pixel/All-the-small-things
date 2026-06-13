@@ -1,14 +1,13 @@
 /**
  * theme.ts — design tokens: colour themes (light/dark) + spacing/radius/type/shadow scales.
  *
- * Defines the five named colour palettes (warm/cool/forest/rose + highcontrast),
- * their dark variants, and shared layout constants. `getTheme(name, isDark)` resolves
- * a palette; lib/useAppTheme.ts wraps it to react to the user's theme + dark-mode
- * settings. The static `Colors` export is the default warm palette.
- * `getSoftTheme(colors, name)` returns a gentler, lower-contrast variant for
- * emotional/health screens. `Fonts` holds the rounded Nunito family tokens, `Layout`
- * the shared card padding/rhythm. `getFontSize(base, scale)` applies the user's
- * fontSize preference to a base pt.
+ * Defines five named colour palettes (default/tech/gothic/nature/custom),
+ * their dark variants, and shared layout constants. `getTheme(name, isDark, customColors)`
+ * resolves a palette; lib/useAppTheme.ts wraps it to react to the user's theme + dark-mode
+ * settings. The static `Colors` export is the default theme's light palette.
+ * `getSoftTheme(colors)` returns a gentler, lower-contrast variant for emotional/health screens.
+ * `Fonts` holds the rounded Nunito family tokens, `Layout` the shared card padding/rhythm.
+ * `getFontSize(base, scale)` applies the user's fontSize preference to a base pt.
  *
  * Connections:
  *   Imports → —
@@ -17,12 +16,13 @@
  *
  * Edit notes:
  *   - Every theme must implement the full AppColors interface — add a new key to
- *     ALL palettes (warm/cool/forest/rose, light AND DARK_THEMES) or getTheme returns undefined colours.
+ *     ALL palettes (THEMES + DARK_THEMES) or getTheme returns undefined colours.
  *   - For theme-aware screens prefer useAppTheme() over the static `Colors`,
- *     which is always the light warm palette.
+ *     which is always the light default palette.
  *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
+ *   - The 'custom' theme is computed from user's primary/secondary colors via buildCustomTheme().
  */
-export type ThemeName = 'warm' | 'cool' | 'forest' | 'rose' | 'highcontrast';
+export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
 
 export interface AppColors {
@@ -54,257 +54,335 @@ export function getFontSize(base: number, scale: FontSizeScale): number {
   return Math.round(base * fontScaleMap[scale]);
 }
 
-const warmColors: AppColors = {
-  cream: '#FDF6EC',
-  orange: '#F4A261',
-  orangeLight: '#FDDCBC',
-  green: '#6BAA75',
-  greenLight: '#C8E6CC',
-  brown: '#8B5E3C',
-  brownLight: '#C49A6C',
-  white: '#FFFFFF',
-  offWhite: '#FAF3E8',
-  gray: '#9E9E9E',
-  grayLight: '#F0EDE8',
-  text: '#3D2B1F',
-  textLight: '#7A6252',
-  danger: '#E07070',
-  dangerLight: '#FADADD',
-  shadow: 'rgba(61,43,31,0.12)',
-  border: '#E8E0D8',
-  neutral: '#C4B8AC',
-};
+// ─── Colour manipulation helpers for the custom theme ───────────────────────
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return [100, 100, 100];
+  return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b]
+    .map((v) => Math.min(255, Math.max(0, Math.round(v))).toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function lighten(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
+}
+
+function darken(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
+}
+
+function buildCustomTheme(primary: string, secondary: string, isDark: boolean): AppColors {
+  if (isDark) {
+    return {
+      cream: '#0C0C14',
+      orange: lighten(primary, 0.2),
+      orangeLight: darken(primary, 0.6),
+      green: lighten(secondary, 0.2),
+      greenLight: darken(secondary, 0.6),
+      brown: lighten(primary, 0.4),
+      brownLight: darken(primary, 0.5),
+      white: '#141420',
+      offWhite: '#0E0E1A',
+      gray: '#6A6A80',
+      grayLight: '#1E1E30',
+      text: '#EEEEF8',
+      textLight: '#9090B0',
+      danger: '#F87171',
+      dangerLight: '#280808',
+      shadow: 'rgba(0,0,0,0.6)',
+      border: darken(primary, 0.4),
+      neutral: '#505068',
+    };
+  }
+  return {
+    cream: lighten(primary, 0.92),
+    orange: primary,
+    orangeLight: lighten(primary, 0.7),
+    green: secondary,
+    greenLight: lighten(secondary, 0.7),
+    brown: darken(primary, 0.3),
+    brownLight: lighten(primary, 0.4),
+    white: '#FFFFFF',
+    offWhite: lighten(primary, 0.85),
+    gray: '#8A8A9A',
+    grayLight: lighten(primary, 0.88),
+    text: darken(primary, 0.6),
+    textLight: darken(primary, 0.3),
+    danger: '#E05050',
+    dangerLight: '#FFE0E0',
+    shadow: `rgba(0,0,0,0.12)`,
+    border: lighten(primary, 0.6),
+    neutral: lighten(primary, 0.5),
+  };
+}
+
+// ─── Light themes ────────────────────────────────────────────────────────────
 
 export const THEMES: Record<ThemeName, AppColors> = {
-  warm: warmColors,
-  cool: {
-    cream: '#EEF6FB',
-    orange: '#4A8EC2',
-    orangeLight: '#BADAEF',
-    green: '#4A9E8C',
-    greenLight: '#BAE0DA',
-    brown: '#2C5978',
-    brownLight: '#7AABCA',
+  // Blue seams with white — clean, focused, calm.
+  default: {
+    cream: '#F5F8FF',
+    orange: '#3B82F6',
+    orangeLight: '#BFDBFE',
+    green: '#10B981',
+    greenLight: '#A7F3D0',
+    brown: '#1E40AF',
+    brownLight: '#93C5FD',
     white: '#FFFFFF',
-    offWhite: '#E8F2F9',
-    gray: '#8A9EAA',
-    grayLight: '#DDE8EF',
-    text: '#1A3A52',
-    textLight: '#4A6A80',
-    danger: '#C05050',
-    dangerLight: '#F8D0D0',
-    shadow: 'rgba(26,58,82,0.12)',
-    border: '#DDE3EC',
-    neutral: '#A8BCCA',
+    offWhite: '#EEF2FF',
+    gray: '#94A3B8',
+    grayLight: '#E8EEFB',
+    text: '#1E293B',
+    textLight: '#64748B',
+    danger: '#EF4444',
+    dangerLight: '#FEE2E2',
+    shadow: 'rgba(30,41,59,0.12)',
+    border: '#DBEAFE',
+    neutral: '#A8B8D8',
   },
-  forest: {
-    cream: '#F0F7F0',
-    orange: '#5E9E6A',
-    orangeLight: '#BEE0C2',
-    green: '#4A7D57',
-    greenLight: '#AECFB5',
-    brown: '#3A5E42',
-    brownLight: '#8CB898',
+  // Sky blue with blue-tinted white and grey details — modern, airy.
+  tech: {
+    cream: '#F0F5FC',
+    orange: '#0EA5E9',
+    orangeLight: '#BAE6FD',
+    green: '#06B6D4',
+    greenLight: '#CFFAFE',
+    brown: '#0369A1',
+    brownLight: '#7DD3FC',
     white: '#FFFFFF',
-    offWhite: '#E8F2EA',
-    gray: '#8AA694',
-    grayLight: '#DBE8DC',
-    text: '#1A3D22',
-    textLight: '#4A6E52',
-    danger: '#C06050',
-    dangerLight: '#F5D5D0',
-    shadow: 'rgba(26,61,34,0.12)',
-    border: '#D8E4DA',
-    neutral: '#A0B8A6',
+    offWhite: '#E8F1FB',
+    gray: '#6B8090',
+    grayLight: '#D8E8F5',
+    text: '#0C1A28',
+    textLight: '#4A6070',
+    danger: '#F43F5E',
+    dangerLight: '#FFE4E6',
+    shadow: 'rgba(12,26,40,0.12)',
+    border: '#C0D8F0',
+    neutral: '#8AAAC0',
   },
-  rose: {
-    cream: '#FDF0F5',
-    orange: '#D4688A',
-    orangeLight: '#EFBFD0',
-    green: '#6A9E8A',
-    greenLight: '#C0DEDA',
-    brown: '#8A3D62',
-    brownLight: '#C49AB5',
+  // Soft purple tones in light mode; dark mode is the true gothic look.
+  gothic: {
+    cream: '#F5F0FF',
+    orange: '#7C3AED',
+    orangeLight: '#EDE9FE',
+    green: '#8B5CF6',
+    greenLight: '#F5F3FF',
+    brown: '#5B21B6',
+    brownLight: '#C4B5FD',
     white: '#FFFFFF',
-    offWhite: '#FAE8F0',
-    gray: '#AA8A9A',
-    grayLight: '#EFE0E8',
-    text: '#3D1A2E',
-    textLight: '#7A4A62',
-    danger: '#C06070',
-    dangerLight: '#F5D0D8',
-    shadow: 'rgba(61,26,46,0.12)',
-    border: '#EAD9DF',
-    neutral: '#C0A8B5',
+    offWhite: '#F0EAFF',
+    gray: '#7C6A9E',
+    grayLight: '#EAE5F8',
+    text: '#200E40',
+    textLight: '#6B5A8A',
+    danger: '#E11D48',
+    dangerLight: '#FFE4E6',
+    shadow: 'rgba(32,14,64,0.12)',
+    border: '#DDD6FE',
+    neutral: '#A890C8',
   },
-  // High-contrast / accessibility theme: near-black text on pure white, strong
-  // saturated accents and heavy borders for users who need maximum legibility.
-  highcontrast: {
-    cream: '#FFFFFF',
-    orange: '#B34A00',
-    orangeLight: '#FFE0C2',
-    green: '#1E7A2E',
-    greenLight: '#C2F0C8',
-    brown: '#1A1A1A',
-    brownLight: '#4A4A4A',
+  // Green seams with white, orange details — earthy, grounded.
+  nature: {
+    cream: '#F2FAF4',
+    orange: '#16A34A',
+    orangeLight: '#BBF7D0',
+    green: '#15803D',
+    greenLight: '#DCFCE7',
+    brown: '#EA580C',
+    brownLight: '#FED7AA',
     white: '#FFFFFF',
-    offWhite: '#F2F2F2',
-    gray: '#5A5A5A',
-    grayLight: '#E0E0E0',
-    text: '#000000',
-    textLight: '#2A2A2A',
-    danger: '#C00000',
-    dangerLight: '#FFD6D6',
-    shadow: 'rgba(0,0,0,0.35)',
-    border: '#000000',
-    neutral: '#5A5A5A',
+    offWhite: '#E8F5EC',
+    gray: '#7A9E84',
+    grayLight: '#D8EEE0',
+    text: '#0D3018',
+    textLight: '#4A7A58',
+    danger: '#DC2626',
+    dangerLight: '#FEE2E2',
+    shadow: 'rgba(13,48,24,0.12)',
+    border: '#C0E8CC',
+    neutral: '#8CB89A',
+  },
+  // Placeholder — replaced at runtime by buildCustomTheme() using user's chosen colors.
+  custom: {
+    cream: '#F8F8F8',
+    orange: '#6B6B8A',
+    orangeLight: '#E0E0F0',
+    green: '#5A8A6B',
+    greenLight: '#D0F0D8',
+    brown: '#3A3A5A',
+    brownLight: '#AAAAC8',
+    white: '#FFFFFF',
+    offWhite: '#F0F0F8',
+    gray: '#8A8A9A',
+    grayLight: '#E8E8F0',
+    text: '#1A1A2E',
+    textLight: '#6A6A80',
+    danger: '#E05050',
+    dangerLight: '#FFE0E0',
+    shadow: 'rgba(0,0,0,0.12)',
+    border: '#D0D0E0',
+    neutral: '#9090A8',
   },
 };
 
 export const THEME_META: Record<ThemeName, { label: string; emoji: string }> = {
-  warm: { label: 'Varm', emoji: '🍊' },
-  cool: { label: 'Kjølig', emoji: '🫐' },
-  forest: { label: 'Skog', emoji: '🌿' },
-  rose: { label: 'Rose', emoji: '🌸' },
-  highcontrast: { label: 'Høy kontrast', emoji: '⬛' },
+  default: { label: 'Default', emoji: '🔵' },
+  tech: { label: 'Tech', emoji: '💻' },
+  gothic: { label: 'Gothic', emoji: '🌑' },
+  nature: { label: 'Nature', emoji: '🌿' },
+  custom: { label: 'Custom', emoji: '🎨' },
 };
+
+// ─── Dark themes ─────────────────────────────────────────────────────────────
 
 export const DARK_THEMES: Record<ThemeName, AppColors> = {
-  warm: {
-    cream: '#1A1410',
-    orange: '#F4A261',
-    orangeLight: '#3D2010',
-    green: '#6BAA75',
-    greenLight: '#152515',
-    brown: '#C49A6C',
-    brownLight: '#4A2810',
-    white: '#242018',
-    offWhite: '#1D1810',
-    gray: '#8A7060',
-    grayLight: '#2E2420',
-    text: '#F0E8D8',
-    textLight: '#B09070',
-    danger: '#E07070',
-    dangerLight: '#3A1212',
+  default: {
+    cream: '#0A0F1C',
+    orange: '#60A5FA',
+    orangeLight: '#1E3A60',
+    green: '#34D399',
+    greenLight: '#0D2A1A',
+    brown: '#93C5FD',
+    brownLight: '#1A3060',
+    white: '#121928',
+    offWhite: '#0E1524',
+    gray: '#6A8AA0',
+    grayLight: '#1A2540',
+    text: '#E8F0FC',
+    textLight: '#93BCDC',
+    danger: '#FC8181',
+    dangerLight: '#2A0A0A',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#3A3530',
-    neutral: '#786050',
+    border: '#1E3A60',
+    neutral: '#5A7898',
   },
-  cool: {
-    cream: '#101822',
-    orange: '#5FA8D8',
-    orangeLight: '#102030',
-    green: '#4A9E8C',
-    greenLight: '#0E2018',
-    brown: '#7AABCA',
-    brownLight: '#152535',
-    white: '#182535',
-    offWhite: '#121E2B',
-    gray: '#6A8E9E',
-    grayLight: '#1E3040',
-    text: '#D8EAF8',
-    textLight: '#7AABCA',
-    danger: '#C05050',
-    dangerLight: '#2A1010',
+  tech: {
+    cream: '#080E16',
+    orange: '#38BDF8',
+    orangeLight: '#0A2030',
+    green: '#22D3EE',
+    greenLight: '#081820',
+    brown: '#7DD3FC',
+    brownLight: '#0C1A28',
+    white: '#101822',
+    offWhite: '#0C1420',
+    gray: '#4A6070',
+    grayLight: '#141E2A',
+    text: '#D0E8F8',
+    textLight: '#6AA8C8',
+    danger: '#FB7185',
+    dangerLight: '#280810',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#2A3140',
-    neutral: '#506880',
+    border: '#142030',
+    neutral: '#3A5870',
   },
-  forest: {
-    cream: '#101A10',
-    orange: '#6EAE7A',
-    orangeLight: '#102015',
-    green: '#4A7D57',
-    greenLight: '#0E2012',
-    brown: '#8CB898',
-    brownLight: '#1A2E1E',
-    white: '#181E18',
-    offWhite: '#121812',
-    gray: '#6A9070',
-    grayLight: '#1E2E1E',
-    text: '#D0EAD8',
-    textLight: '#8CB898',
-    danger: '#C06050',
-    dangerLight: '#2A1010',
+  // Full dark gothic — the primary intended look for this theme.
+  gothic: {
+    cream: '#0E0818',
+    orange: '#A855F7',
+    orangeLight: '#2A1050',
+    green: '#C084FC',
+    greenLight: '#1A0830',
+    brown: '#E9D5FF',
+    brownLight: '#3A1870',
+    white: '#180C28',
+    offWhite: '#120820',
+    gray: '#7850A0',
+    grayLight: '#200E38',
+    text: '#F3E8FF',
+    textLight: '#C4A0E8',
+    danger: '#F472B6',
+    dangerLight: '#2A0820',
+    shadow: 'rgba(0,0,0,0.7)',
+    border: '#3A1860',
+    neutral: '#6840A0',
+  },
+  nature: {
+    cream: '#08140A',
+    orange: '#22C55E',
+    orangeLight: '#0A2810',
+    green: '#16A34A',
+    greenLight: '#061608',
+    brown: '#FB923C',
+    brownLight: '#2A1408',
+    white: '#101C12',
+    offWhite: '#0C160E',
+    gray: '#4A7050',
+    grayLight: '#101E12',
+    text: '#D0F0D8',
+    textLight: '#6AB87A',
+    danger: '#F87171',
+    dangerLight: '#280808',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#253029',
-    neutral: '#506858',
+    border: '#142818',
+    neutral: '#387048',
   },
-  rose: {
-    cream: '#1E1018',
-    orange: '#D4688A',
-    orangeLight: '#380E20',
-    green: '#6A9E8A',
-    greenLight: '#152018',
-    brown: '#C49AB5',
-    brownLight: '#4A1830',
-    white: '#261520',
-    offWhite: '#1E1018',
-    gray: '#9A7080',
-    grayLight: '#2E1E28',
-    text: '#F0D8E8',
-    textLight: '#C49AB5',
-    danger: '#C06070',
-    dangerLight: '#2A1020',
+  // Placeholder — replaced at runtime by buildCustomTheme().
+  custom: {
+    cream: '#0C0C14',
+    orange: '#8888AA',
+    orangeLight: '#1E1E30',
+    green: '#669A77',
+    greenLight: '#0E1E12',
+    brown: '#AAAACC',
+    brownLight: '#181828',
+    white: '#141420',
+    offWhite: '#0E0E1A',
+    gray: '#6A6A80',
+    grayLight: '#1E1E30',
+    text: '#EEEEF8',
+    textLight: '#9090B0',
+    danger: '#F87171',
+    dangerLight: '#280808',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#3A2830',
-    neutral: '#785060',
-  },
-  // High-contrast dark: pure white text on true black, bright accents, white borders.
-  highcontrast: {
-    cream: '#000000',
-    orange: '#FFB060',
-    orangeLight: '#3A2410',
-    green: '#5EE070',
-    greenLight: '#0E2A12',
-    brown: '#FFFFFF',
-    brownLight: '#CFCFCF',
-    white: '#0A0A0A',
-    offWhite: '#141414',
-    gray: '#B0B0B0',
-    grayLight: '#1F1F1F',
-    text: '#FFFFFF',
-    textLight: '#E0E0E0',
-    danger: '#FF6B6B',
-    dangerLight: '#3A0E0E',
-    shadow: 'rgba(0,0,0,0.8)',
-    border: '#FFFFFF',
-    neutral: '#B0B0B0',
+    border: '#252540',
+    neutral: '#505068',
   },
 };
 
-export function getTheme(name: string, isDark = false): AppColors {
+export function getTheme(
+  name: string,
+  isDark = false,
+  customColors?: { primary: string; secondary: string }
+): AppColors {
+  if (name === 'custom' && customColors) {
+    return buildCustomTheme(customColors.primary, customColors.secondary, isDark);
+  }
   const map = isDark ? DARK_THEMES : THEMES;
-  return map[name as ThemeName] ?? (isDark ? DARK_THEMES.warm : warmColors);
+  return map[name as ThemeName] ?? (isDark ? DARK_THEMES.default : THEMES.default);
 }
 
 /**
  * Soften a palette for emotional / health screens: warms and lowers the contrast
  * of text and surfaces so the screen reads gentler than productivity screens.
- * Pure-function transform over any AppColors — call from useSoftTheme()/per-screen.
- * The high-contrast theme is returned unchanged so accessibility is never reduced.
+ * Pure-function transform over any AppColors.
  */
-export function getSoftTheme(c: AppColors, themeName?: string): AppColors {
-  if (themeName === 'highcontrast') return c;
+export function getSoftTheme(c: AppColors): AppColors {
   return {
     ...c,
-    // Lift body text slightly toward the muted tone (lower contrast, less clinical).
     text: c.textLight,
-    // Replace alarm-red danger accents with the calm neutral on soft screens.
     danger: c.neutral,
   };
 }
 
-export const Colors = warmColors;
+export const Colors = THEMES.default;
 
 export const FeatureColors = {
-  task:    '#F4A261',
-  scan:    '#E8C46A',
-  habits:  '#8CC97E',
-  health:  '#6BAA75',
-  meals:   '#56B89E',
-  shop:    '#4AAFCA',
-  shared:  '#5590D4',
+  task:    '#3B82F6',
+  scan:    '#F59E0B',
+  habits:  '#10B981',
+  health:  '#22C55E',
+  meals:   '#06B6D4',
+  shop:    '#0EA5E9',
+  shared:  '#6366F1',
 } as const;
 
 export const Spacing = {
@@ -318,10 +396,7 @@ export const Spacing = {
 
 /**
  * Shared card/layout rhythm. Use these instead of ad-hoc padding so every card
- * breathes the same on every screen (cramped cards read as stressful).
- *   cardPadding   — interior padding for cards (≥16 vertical, generous).
- *   cardGap       — consistent vertical margin between stacked cards.
- *   maxVisible    — soft cap on items shown before an "and X more…" nudge.
+ * breathes the same on every screen.
  */
 export const Layout = {
   cardPadding: 18,
@@ -351,9 +426,7 @@ export const FontSize = {
 
 /**
  * Rounded-typeface family tokens (Nunito). Loaded in app/_layout.tsx via expo-font;
- * the regular face is also set as the global Text default there, so most text
- * inherits it automatically. Use these tokens directly for weighted text
- * (headings, emphasis) since RN won't auto-map fontWeight to a named face.
+ * the regular face is also set as the global Text default there.
  */
 export const Fonts = {
   regular: 'Nunito_400Regular',
@@ -366,9 +439,16 @@ export const Fonts = {
 export const Shadow = {
   card: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeavy: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.13,
+    shadowRadius: 12,
     elevation: 5,
   },
   fab: {
@@ -378,4 +458,19 @@ export const Shadow = {
     shadowRadius: 16,
     elevation: 12,
   },
+  button: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 };
+
+/** 20 preset colors for the custom theme color picker (5 × 4 grid). */
+export const CUSTOM_COLOR_PRESETS = [
+  '#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16',
+  '#22C55E', '#10B981', '#06B6D4', '#0EA5E9', '#3B82F6',
+  '#6366F1', '#8B5CF6', '#A855F7', '#EC4899', '#F43F5E',
+  '#78716C', '#6B7280', '#374151', '#1E293B', '#000000',
+];

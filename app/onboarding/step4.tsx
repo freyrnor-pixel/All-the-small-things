@@ -1,32 +1,22 @@
 /**
- * step4.tsx — Notification preferences (guided step 4 of 5)
+ * step4.tsx — Notification confirmation (guided step 4 of 5)
  *
- * Toggles weekly shopping reminders (with a reminder time) and per-task
- * notifications. Only records preferences here — scheduling happens in step5.
+ * Informs the user that task notifications and weekly shopping reminders are
+ * enabled by default. No toggles — they can adjust in Settings later.
+ * The actual OS permission request fires in step5 on finish.
  *
  * Connections:
  *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
  *   Used by → Expo Router route "/onboarding/step4"
- *   Data    → useSettingsStore (writes `remindersEnabled`, `reminderTime`,
- *             `taskNotificationsEnabled`)
+ *   Data    → useSettingsStore (sets remindersEnabled + taskNotificationsEnabled defaults)
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
  *   - No OS permission prompt or scheduling here — step5.finish() does that.
  *   - next() → router.push "/onboarding/step5"; Previous uses router.back().
  */
-import React from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import React, { useEffect } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -38,14 +28,19 @@ export default function OnboardingStep4() {
   const settings = useSettingsStore();
   const t = useT();
 
-  function next() {
-    router.push('/onboarding/step5');
-  }
+  // Notifications are ON by default; shopping reminder fires Saturday 14:00.
+  useEffect(() => {
+    settings.update({
+      remindersEnabled: true,
+      taskNotificationsEnabled: true,
+      reminderTime: '14:00',
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
           <Text style={styles.emoji}>🔔</Text>
           <Text style={styles.heading}>{t.notificationsOnboarding}</Text>
@@ -53,48 +48,19 @@ export default function OnboardingStep4() {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.switchRow}>
-            <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>{t.weeklyRemindersOnboarding}</Text>
-              <Text style={styles.switchHint}>{t.weeklyRemindersHint}</Text>
-            </View>
-            <Switch
-              value={settings.remindersEnabled}
-              onValueChange={(v) => settings.update({ remindersEnabled: v })}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={settings.remindersEnabled ? Colors.orange : Colors.gray}
-            />
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>✅</Text>
+            <Text style={styles.infoText}>{t.taskNotifications} — {t.taskNotificationsHintOnboarding}</Text>
           </View>
-
-          {settings.remindersEnabled && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.fieldLabel}>{t.timeLabelOnboarding}</Text>
-              <TextInput
-                style={styles.input}
-                value={settings.reminderTime}
-                onChangeText={(v) => settings.update({ reminderTime: v })}
-                placeholder={t.timePlaceholder}
-                placeholderTextColor={Colors.gray}
-                keyboardType="numbers-and-punctuation"
-              />
-            </>
-          )}
-
           <View style={styles.divider} />
-
-          <View style={styles.switchRow}>
-            <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>{t.taskNotifications}</Text>
-              <Text style={styles.switchHint}>{t.taskNotificationsHintOnboarding}</Text>
-            </View>
-            <Switch
-              value={settings.taskNotificationsEnabled}
-              onValueChange={(v) => settings.update({ taskNotificationsEnabled: v })}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={settings.taskNotificationsEnabled ? Colors.orange : Colors.gray}
-            />
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>🛒</Text>
+            <Text style={styles.infoText}>{t.weeklyRemindersOnboarding} — {t.weeklyRemindersHint}</Text>
           </View>
+        </View>
+
+        <View style={[styles.noteBox, { backgroundColor: Colors.greenLight }]}>
+          <Text style={styles.noteText}>{t.onboardingSettingsNote}</Text>
         </View>
 
         <View style={styles.progress}>
@@ -102,48 +68,34 @@ export default function OnboardingStep4() {
             <View key={i} style={[styles.dot, i === 3 && styles.dotActive]} />
           ))}
         </View>
-        </ScrollView>
+      </ScrollView>
 
-        <View style={styles.footer}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>{t.previous}</Text>
-          </Pressable>
-          <Pressable style={styles.nextBtn} onPress={next}>
-            <Text style={styles.nextBtnText}>{t.next}</Text>
-          </Pressable>
-        </View>
-        {/* W-E: gentle, always-visible skip so no step feels mandatory */}
-        <Pressable style={styles.skipLink} onPress={next}>
-          <Text style={styles.skipLinkText}>{t.config.skipForNow}</Text>
+      <View style={styles.footer}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>{t.previous}</Text>
         </Pressable>
-      </KeyboardAvoidingView>
+        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step5')}>
+          <Text style={styles.nextBtnText}>{t.next}</Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
-  skipLink: { alignItems: 'center', paddingBottom: Spacing.lg },
-  skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLeft: { flex: 1, marginRight: Spacing.md },
-  switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
-  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.md },
-  fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: 4 },
-  input: {
-    backgroundColor: Colors.offWhite,
-    borderRadius: Radius.sm,
-    padding: Spacing.sm,
-    fontSize: FontSize.md,
-    color: Colors.text,
-  },
+  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  infoIcon: { fontSize: 20 },
+  infoText: { flex: 1, fontSize: FontSize.md, color: Colors.text, lineHeight: 22 },
+  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.xs },
+  noteBox: { borderRadius: Radius.md, padding: Spacing.md },
+  noteText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20, textAlign: 'center' },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },

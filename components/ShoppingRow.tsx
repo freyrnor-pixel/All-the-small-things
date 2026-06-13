@@ -28,22 +28,27 @@ type Props = {
   onRemove: () => void;
   onAdjust?: (delta: number) => void;
   fromMonthlyLabel?: string;
+  monthlyTotal?: number;
+  inStockLabel?: string;
+  monthlyLeftLabel?: string;
 };
 
-export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel }: Props) {
+export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel, monthlyTotal, inStockLabel, monthlyLeftLabel }: Props) {
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
   const showStepper = isNumeric && !!onAdjust && !item.checked;
 
-  // Build meta parts: qty+unit (when no stepper), unit (when stepper active), store, tag, price
+  const priceTotal = item.price > 0 && isNumeric ? item.price * qty : null;
+
+  // Build meta parts: qty+unit (when no stepper), unit (when stepper active), store, inventory, monthly left, price
   const metaParts: string[] = [];
   if (!showStepper) {
     metaParts.push(`${item.amount}${item.unit ? ' ' + item.unit : ''}`);
   } else if (item.unit) {
     metaParts.push(item.unit);
   }
-  if (item.store) metaParts.push(item.store);
-  if (item.price > 0) metaParts.push(`${item.price.toFixed(0)} kr`);
+  if (item.price > 0) metaParts.push(`${item.price.toFixed(0)} kr/stk`);
+  if (priceTotal !== null) metaParts.push(`= ${priceTotal.toFixed(0)} kr`);
 
   return (
     <View style={[styles.row, item.checked && styles.rowChecked]}>
@@ -59,12 +64,18 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
         <Text style={[styles.name, { color: theme.text }, item.checked && { color: theme.gray, textDecorationLine: 'line-through' }]}>
           {item.name}
         </Text>
-        {(metaParts.length > 0 || (item.monthlySourceId && fromMonthlyLabel)) && (
+        {(metaParts.length > 0 || (item.monthlySourceId && fromMonthlyLabel) || item.inventoryQty > 0 || monthlyLeftLabel) && (
           <View style={styles.metaRow}>
             {metaParts.map((part, i) => (
               <Text key={i} style={[styles.meta, { color: theme.textLight }]}>{part}</Text>
             ))}
-            {item.monthlySourceId && fromMonthlyLabel ? (
+            {item.inventoryQty > 0 && inStockLabel ? (
+              <Text style={[styles.meta, { color: theme.green }]}>{inStockLabel}: {item.inventoryQty}</Text>
+            ) : null}
+            {item.monthlySourceId && monthlyLeftLabel ? (
+              <Text style={[styles.sourceTag, { color: theme.orange }]}>{monthlyLeftLabel}</Text>
+            ) : null}
+            {item.monthlySourceId && fromMonthlyLabel && !monthlyLeftLabel ? (
               <Text style={[styles.sourceTag, { color: theme.orange }]}>{fromMonthlyLabel}</Text>
             ) : null}
           </View>

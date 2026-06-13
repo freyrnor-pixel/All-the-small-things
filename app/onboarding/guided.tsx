@@ -59,10 +59,9 @@ export default function GuidedScreen() {
           </Pressable>
 
           <Pressable style={[styles.option, styles.optionSecondary]} onPress={goExplore}>
-            <Text style={styles.optionIcon}>🚀</Text>
             <View style={styles.optionText}>
               <Text style={[styles.optionLabel, styles.optionLabelSecondary]}>{t.exploreBtn}</Text>
-              <Text style={styles.optionDesc}>{t.exploreDesc}</Text>
+              <Text style={[styles.optionDesc, { color: Colors.textLight }]}>{t.exploreDesc}</Text>
             </View>
             <Text style={[styles.arrow, styles.arrowSecondary]}>→</Text>
           </Pressable>

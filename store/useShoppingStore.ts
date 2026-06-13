@@ -31,6 +31,7 @@ export type ShoppingItem = {
   category: string;
   monthlyAllocated: number;
   monthlySourceId?: string;
+  inventoryQty: number;
 };
 
 type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId'> & {
@@ -64,6 +65,7 @@ function rowToItem(row: Record<string, unknown>): ShoppingItem {
     category: (row.category as string) || 'other',
     monthlyAllocated: (row.monthly_allocated as number) || 0,
     monthlySourceId: (row.monthly_source_id as string) || undefined,
+    inventoryQty: (row.inventory_qty as number) || 0,
   };
 }
 
@@ -91,7 +93,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category]
     );
     set((s) => ({
-      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined }],
+      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined, inventoryQty: 0 }],
     }));
   },
 
@@ -102,12 +104,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     db.runSync(
       `UPDATE shopping_items
          SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=?, category=?,
-             monthly_allocated=?, monthly_source_id=?
+             monthly_allocated=?, monthly_source_id=?, inventory_qty=?
        WHERE id=?`,
       [
         next.name, next.amount, next.unit, next.listType,
         next.checked ? 1 : 0, next.store, next.price, next.category,
-        next.monthlyAllocated, next.monthlySourceId ?? null, id,
+        next.monthlyAllocated, next.monthlySourceId ?? null, next.inventoryQty ?? 0, id,
       ]
     );
     set((s) => ({ items: s.items.map((i) => (i.id === id ? next : i)) }));

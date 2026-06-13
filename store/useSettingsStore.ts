@@ -19,7 +19,7 @@
 import { create } from 'zustand';
 import db from '@/lib/db';
 
-export type ColorTheme = 'warm' | 'cool' | 'forest' | 'rose' | 'highcontrast';
+export type ColorTheme = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type Language = 'en' | 'no';
 export type DarkMode = 'system' | 'on' | 'off';
 export type FontSizePref = 'small' | 'default' | 'large';
@@ -57,6 +57,9 @@ export type Settings = {
   petColor: string;
   // Left-handed mode
   leftHanded: boolean;
+  // Custom theme colors
+  customPrimaryColor: string;
+  customSecondaryColor: string;
 };
 
 type SettingsStore = Settings & {
@@ -68,6 +71,17 @@ type SettingsStore = Settings & {
   setWorkModeSessionOverride: (v: boolean) => void;
 };
 
+/** Maps old theme names (1.0.0) to new ones (1.1.0). Returns null if name is already valid. */
+function migrateThemeName(name: string | null): ColorTheme {
+  if (!name) return 'default';
+  const map: Record<string, ColorTheme> = {
+    warm: 'default', cool: 'tech', forest: 'nature', rose: 'nature', highcontrast: 'default',
+  };
+  if (name in map) return map[name];
+  const valid: ColorTheme[] = ['default', 'tech', 'gothic', 'nature', 'custom'];
+  return valid.includes(name as ColorTheme) ? (name as ColorTheme) : 'default';
+}
+
 export const useSettingsStore = create<SettingsStore>((set) => ({
   userName: '',
   weeklyResetDay: 1,
@@ -77,9 +91,9 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   reminderTime: '08:00',
   taskNotificationsEnabled: true,
   setupComplete: false,
-  colorTheme: 'warm',
+  colorTheme: 'default',
   workModeEnabled: false,
-  workHoursStart: '09:00',
+  workHoursStart: '07:00',
   workHoursEnd: '17:00',
   enforceWorkHours: false,
   workDays: [0, 1, 2, 3, 4],
@@ -97,6 +111,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   petType: 'cat' as PetType,
   petColor: '#A78BFA',
   leftHanded: false,
+  customPrimaryColor: '#3B82F6',
+  customSecondaryColor: '#10B981',
   loaded: false,
   workModeSessionOverride: false,
 
@@ -131,6 +147,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         pet_type: string | null;
         pet_color: string | null;
         left_handed: number | null;
+        custom_primary_color: string | null;
+        custom_secondary_color: string | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -142,9 +160,9 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         reminderTime: row.reminder_time,
         taskNotificationsEnabled: row.task_notifications_enabled === 1,
         setupComplete: row.setup_complete === 1,
-        colorTheme: (row.color_theme as ColorTheme) ?? 'warm',
+        colorTheme: migrateThemeName(row.color_theme) ?? 'default',
         workModeEnabled: row.work_mode_enabled === 1,
-        workHoursStart: row.work_hours_start ?? '09:00',
+        workHoursStart: row.work_hours_start ?? '07:00',
         workHoursEnd: row.work_hours_end ?? '17:00',
         enforceWorkHours: row.enforce_work_hours === 1,
         workDays: (() => { try { return JSON.parse(row.work_days ?? '[0,1,2,3,4]'); } catch { return [0,1,2,3,4]; } })(),
@@ -162,6 +180,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         petType: (row.pet_type as PetType) ?? 'cat',
         petColor: row.pet_color ?? '#A78BFA',
         leftHanded: row.left_handed === 1,
+        customPrimaryColor: row.custom_primary_color ?? '#3B82F6',
+        customSecondaryColor: row.custom_secondary_color ?? '#10B981',
         loaded: true,
       });
     } catch {
@@ -184,7 +204,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             holidays_enabled = ?, dark_mode = ?, child_profiles = ?,
             reduced_motion = ?, font_size = ?,
             pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?,
-            left_handed = ?
+            left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -215,6 +235,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.petType,
             next.petColor,
             next.leftHanded ? 1 : 0,
+            next.customPrimaryColor,
+            next.customSecondaryColor,
           ]
         );
       } catch {

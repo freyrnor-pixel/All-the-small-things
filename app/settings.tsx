@@ -45,7 +45,7 @@ import { useAppTheme } from '@/lib/useAppTheme';
 import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
 import TimePickerWheel from '@/components/TimePickerWheel';
-import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName, CUSTOM_COLOR_PRESETS } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
@@ -190,7 +190,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Color theme (Appearance) */}
+        {/* Color theme (Appearance) — 2-column grid, custom theme color pickers */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionColorTheme}</Text>
           <View style={[styles.card, { backgroundColor: theme.white }]}>
@@ -199,26 +199,31 @@ export default function SettingsScreen() {
                 const meta = THEME_META[key];
                 const th = THEMES[key];
                 const isActive = settings.colorTheme === key;
+                const primaryColor = key === 'custom' ? settings.customPrimaryColor : th.orange;
+                const secondaryColor = key === 'custom' ? settings.customSecondaryColor : th.green;
                 return (
                   <Pressable
                     key={key}
                     style={[
                       styles.themeOption,
-                      { borderColor: isActive ? th.orange : theme.grayLight },
-                      isActive && styles.themeOptionActive,
+                      { borderColor: isActive ? primaryColor : theme.grayLight },
+                      isActive && { borderWidth: 2.5 },
                     ]}
-                    onPress={() => settings.update({ colorTheme: key })}
+                    onPress={() => {
+                      settings.update({ colorTheme: key });
+                      if (key === 'gothic') settings.update({ darkMode: 'on' });
+                    }}
                   >
                     <View style={styles.themeSwatches}>
                       <View style={[styles.swatch, { backgroundColor: th.cream }]} />
-                      <View style={[styles.swatch, { backgroundColor: th.orange }]} />
-                      <View style={[styles.swatch, { backgroundColor: th.green }]} />
+                      <View style={[styles.swatch, { backgroundColor: primaryColor }]} />
+                      <View style={[styles.swatch, { backgroundColor: secondaryColor }]} />
                     </View>
                     <Text style={styles.themeEmoji}>{meta.emoji}</Text>
                     <Text style={[
                       styles.themeLabel,
                       { color: theme.textLight },
-                      isActive && { color: th.orange, fontWeight: '700' },
+                      isActive && { color: primaryColor, fontWeight: '700' },
                     ]}>
                       {t.themeNames[key]}
                     </Text>
@@ -226,33 +231,62 @@ export default function SettingsScreen() {
                 );
               })}
             </View>
+
+            {/* Custom theme color pickers */}
+            {settings.colorTheme === 'custom' && (
+              <>
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.customThemePrimary}</Text>
+                <View style={styles.colorGrid}>
+                  {CUSTOM_COLOR_PRESETS.map((color) => (
+                    <Pressable
+                      key={color + 'p'}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: color },
+                        settings.customPrimaryColor === color && styles.colorSwatchActive,
+                      ]}
+                      onPress={() => settings.update({ customPrimaryColor: color })}
+                    />
+                  ))}
+                </View>
+                <Text style={[styles.fieldLabel, { color: theme.textLight, marginTop: Spacing.md }]}>{t.customThemeSecondary}</Text>
+                <View style={styles.colorGrid}>
+                  {CUSTOM_COLOR_PRESETS.map((color) => (
+                    <Pressable
+                      key={color + 's'}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: color },
+                        settings.customSecondaryColor === color && styles.colorSwatchActive,
+                      ]}
+                      onPress={() => settings.update({ customSecondaryColor: color })}
+                    />
+                  ))}
+                </View>
+              </>
+            )}
+
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.theme}</Text>
           </View>
         </View>
 
-        {/* Dark mode (Appearance) */}
+        {/* Dark mode (Appearance) — simple toggle: off=system, on=force dark */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionAppearance}</Text>
           <View style={[styles.card, { backgroundColor: theme.white }]}>
-            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
-            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-              {(['system', 'off', 'on'] as DarkMode[]).map((mode) => (
-                <Pressable
-                  key={mode}
-                  style={[styles.seg, settings.darkMode === mode && [styles.segActive, { backgroundColor: theme.white }]]}
-                  onPress={() => settings.update({ darkMode: mode })}
-                >
-                  <Text style={[
-                    styles.segText,
-                    { color: theme.textLight },
-                    settings.darkMode === mode && { color: theme.text, fontWeight: '600' },
-                  ]}>
-                    {mode === 'system' ? t.darkModeSystem : mode === 'on' ? t.darkModeOn : t.darkModeOff}
-                  </Text>
-                </Pressable>
-              ))}
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.darkModeLabel}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.config.desc.darkMode}</Text>
+              </View>
+              <Switch
+                value={settings.darkMode === 'on'}
+                onValueChange={(v) => settings.update({ darkMode: v ? 'on' : 'system' })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.darkMode === 'on' ? theme.orange : theme.gray}
+              />
             </View>
-            <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.darkMode}</Text>
           </View>
         </View>
 
@@ -692,13 +726,15 @@ const styles = StyleSheet.create({
   switchHint: { fontSize: FontSize.xs, marginTop: 2 },
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
-  themeGrid: { flexDirection: 'row', gap: Spacing.sm },
-  themeOption: { flex: 1, borderRadius: Radius.md, borderWidth: 2, padding: Spacing.sm, alignItems: 'center', gap: 4 },
-  themeOptionActive: { borderWidth: 2 },
+  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  themeOption: { width: '30%', flexGrow: 1, borderRadius: Radius.md, borderWidth: 2, padding: Spacing.sm, alignItems: 'center', gap: 4 },
   themeSwatches: { flexDirection: 'row', gap: 3 },
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
   themeEmoji: { fontSize: 20 },
   themeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
+  colorSwatch: { width: 32, height: 32, borderRadius: Radius.sm, borderWidth: 2, borderColor: 'transparent' },
+  colorSwatchActive: { borderColor: '#333', borderWidth: 3 },
   langRow: { flexDirection: 'row', gap: Spacing.md },
   langChip: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,

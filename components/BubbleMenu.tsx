@@ -1,13 +1,11 @@
 /**
  * BubbleMenu.tsx — spinning-wheel radial FAB for navigation.
  *
- * Floating action button on the home screen that opens into a spinnable ring of
- * bubbles. Only 3 bubbles are visible in the 90° viewing window at any time;
- * dragging the wheel spins it to reveal the rest. BASE_ITEMS is ordered
- * "primary + more": the everyday actions (Tasks · Shopping · Habits · Focus) sit
- * first in the window, while Health/Meals/Scan/Shared are demoted to the end and
- * reached by spinning. Labels resolve through `t.nav` so the menu follows the
- * user's language. Bubble colors follow the FeatureColors warm-to-cool gradient.
+ * Floating action button that opens into a spinnable arc of bubbles. The arc
+ * shows 3 full + 2 half-visible bubbles at any time (wider than the old 90°
+ * window). Dragging the wheel rotates it through a clamped range (4 × 45° = π),
+ * reaching all 8 items without a full 360° spin. Release snaps with a lottery-
+ * wheel feel: a short ease-out coast before the spring settles.
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/haptics, store/useSettingsStore
@@ -16,14 +14,9 @@
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *     Keep the everyday actions first in the array so they land in the viewing window.
- *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE
- *     updates automatically from BASE_ITEMS.length.
+ *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE updates from BASE_ITEMS.length.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
- *   - tap() haptic fires on the FAB toggle and on every bubble press.
- *   - The FAB shows an explicit X (close) icon when open; the dimmed-background tap also closes.
- *   - Settings is not in the wheel; it lives as a persistent corner button in app/index.tsx.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -37,8 +30,10 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withSequence,
   interpolate,
   Extrapolation,
+  Easing,
   SharedValue,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -65,18 +60,11 @@ type Props = {
   onNewTask?: () => void;
 };
 
-// "Primary + more" wheel order: the first 4 bubbles in the viewing window are the
-// everyday actions (Tasks · Shopping · Habits · Focus); spinning reveals the rest.
-// Scan / Health / Meals / Shared are intentionally demoted to the END so they read
-// as secondary "reach by spinning" items. (Settings is not in the wheel — it lives
-// as a persistent corner button in app/index.tsx.)
 const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
-  // Primary — everyday actions, shown first in the window
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
   { icon: 'cart-outline',       labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
   { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
   { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: '#E8934A' },
-  // Secondary — demoted, reachable by spinning the wheel
   { icon: 'heart-outline',      labelKey: 'health',  route: '/health',    color: FeatureColors.health },
   { icon: 'restaurant-outline', labelKey: 'meals',   route: '/meals',     color: FeatureColors.meals },
   { icon: 'camera-outline',     labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
@@ -86,30 +74,33 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 const RADIUS = 130;
 const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
-const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
+const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
-// Wheel canvas: large enough to contain the full arc in all directions.
-// The FAB sits at the CENTRE of this canvas, so all translations radiate
-// correctly from the FAB without any right/bottom positioning tricks.
-const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // diameter + one bubble
+const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
 
-const DRAG_SENSITIVITY = 120;      // px of drag per radian — lower = more responsive
+const DRAG_SENSITIVITY = 140; // px per radian — slightly higher for the clamped range
 
-const WINDOW_FADE = Math.PI / 4; // 45° — edge bubbles at 50% opacity, signal "drag for more"
+// Window shows 3 full + 2 half-visible bubbles = 3π/4 (135°) wide.
+// Right-handed: from −π (left) sweeping up to −π/4 (upper-right).
+// The WINDOW_FADE zone = half a step on each edge → items at the boundary are 50% visible.
+const WINDOW_FADE = STEP_ANGLE / 2; // ~22.5°
 
-// Returns 0–1 opacity based on signed angular distance from each window boundary.
-// Works correctly for both right-handed [−π, −π/2] and left-handed [−π/2, 0] windows
-// with no wrap-around discontinuity at ±π.
+// Clamped rotation: 4 × STEP_ANGLE = π (180°) total travel, enough to reach all 8 items.
+// Right-handed clamps wheelAngle in [MIN_WHEEL, MAX_WHEEL].
+const MIN_WHEEL_RH = -2 * Math.PI;
+const MAX_WHEEL_RH = -Math.PI;
+const MIN_WHEEL_LH = 0;
+const MAX_WHEEL_LH = Math.PI;
+
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
   const twoPi = 2 * Math.PI;
-  const wF = Math.PI / 4;
-  // Signed angular distance from each boundary: positive = past it, negative = before it.
+  const wF = WINDOW_FADE;
   const dS = ((angle - winStart + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
   const dE = ((angle - winEnd   + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
   if (dS < -wF || dE > wF) return 0;
-  if (dS <  wF) return (dS + wF) / (2 * wF); // ramp 0→1 across start fade zone
-  if (dE > -wF) return (wF - dE) / (2 * wF); // ramp 1→0 across end fade zone
+  if (dS <  wF) return (dS + wF) / (2 * wF);
+  if (dE > -wF) return (wF - dE) / (2 * wF);
   return 1;
 }
 
@@ -127,14 +118,7 @@ type BubbleItemViewProps = {
 };
 
 function BubbleItemView({
-  item,
-  baseAngle,
-  wheelAngle,
-  openProgress,
-  windowStart,
-  windowEnd,
-  onPress,
-  pointerEvents,
+  item, baseAngle, wheelAngle, openProgress, windowStart, windowEnd, onPress, pointerEvents,
 }: BubbleItemViewProps) {
   const pressAnim = useSharedValue(1);
 
@@ -145,30 +129,15 @@ function BubbleItemView({
     const y = Math.sin(currentAngle) * RADIUS * op;
     const scale = (0.3 + 0.7 * op) * pressAnim.value;
     const opacity = windowOpacity(currentAngle, windowStart, windowEnd) * op;
-    return {
-      transform: [{ translateX: x }, { translateY: y }, { scale }],
-      opacity,
-    };
+    return { transform: [{ translateX: x }, { translateY: y }, { scale }], opacity };
   });
 
-  function handlePressIn() {
-    pressAnim.value = withTiming(0.94, { duration: 60 });
-  }
-  function handlePressOut() {
-    pressAnim.value = withSpring(1, { damping: 40, stiffness: 500 });
-  }
+  function handlePressIn() { pressAnim.value = withTiming(0.94, { duration: 60 }); }
+  function handlePressOut() { pressAnim.value = withSpring(1, { damping: 40, stiffness: 700 }); }
 
   return (
-    <Animated.View
-      style={[styles.bubble, { backgroundColor: item.color }, animStyle]}
-      pointerEvents={pointerEvents}
-    >
-      <Pressable
-        style={styles.bubbleInner}
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
+    <Animated.View style={[styles.bubble, { backgroundColor: item.color }, animStyle]} pointerEvents={pointerEvents}>
+      <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
         <Ionicons name={item.icon} size={22} color="#fff" />
         <Text style={styles.bubbleLabel}>{item.label}</Text>
       </Pressable>
@@ -182,18 +151,17 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const { leftHanded } = useSettingsStore();
 
-  // Right-handed: window from left (−π) to up (−π/2); item 0 starts at left edge.
-  // Left-handed:  window from up (−π/2) to right (0);  item 0 starts at center (−π/4).
-  const windowStart = leftHanded ? -Math.PI / 2 : -Math.PI;
-  const windowEnd   = leftHanded ? 0             : -Math.PI / 2;
+  // Right-handed: window from −π (left) to −π/4 (upper-right), 3π/4 wide.
+  // Left-handed:  window from π/4 (upper-left) to π (right), mirrored.
+  const windowStart = leftHanded ? Math.PI / 4 : -Math.PI;
+  const windowEnd   = leftHanded ? Math.PI      : -Math.PI / 4;
 
-  const wheelAngle   = useSharedValue(-Math.PI);
+  const wheelAngle   = useSharedValue(leftHanded ? Math.PI / 4 : -Math.PI);
   const openProgress = useSharedValue(0);
   const startAngle   = useSharedValue(0);
 
-  // Reset wheel position to match the new window when handedness changes.
   useEffect(() => {
-    wheelAngle.value = leftHanded ? -Math.PI / 4 : -Math.PI;
+    wheelAngle.value = leftHanded ? Math.PI / 4 : -Math.PI;
   }, [leftHanded]);
 
   const router = useRouter();
@@ -214,32 +182,41 @@ export default function BubbleMenu({ onNewTask }: Props) {
   function toggle() {
     tap();
     const toValue = open ? 0 : 1;
-    openProgress.value = withSpring(toValue, { damping: 25, stiffness: 320 });
+    // Snappy open/close
+    openProgress.value = withSpring(toValue, { damping: 20, stiffness: 400 });
     setOpen((v) => !v);
   }
 
   function navigate(item: BubbleEntry) {
     tap();
-    // Mirror toggle()'s close animation without re-firing the FAB haptic.
-    openProgress.value = withSpring(0, { damping: 25, stiffness: 320 });
+    openProgress.value = withSpring(0, { damping: 20, stiffness: 400 });
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
-    setTimeout(action, 150);
+    setTimeout(action, 130);
   }
 
-  // Spin gesture: dragging up rotates the wheel counterclockwise, revealing items
-  // further along the circle. Releases snap to the nearest item slot in ~175ms.
+  const minWheel = leftHanded ? MIN_WHEEL_LH : MIN_WHEEL_RH;
+  const maxWheel = leftHanded ? MAX_WHEEL_LH : MAX_WHEEL_RH;
+
+  // Lottery-wheel feel: coast to a projected position, then spring-snap.
   const spinGesture = Gesture.Pan()
-    .onStart(() => {
-      startAngle.value = wheelAngle.value;
-    })
+    .onStart(() => { startAngle.value = wheelAngle.value; })
     .onUpdate((e) => {
-      wheelAngle.value = startAngle.value - e.translationY / DRAG_SENSITIVITY;
+      const raw = startAngle.value - e.translationY / DRAG_SENSITIVITY;
+      wheelAngle.value = Math.max(minWheel, Math.min(maxWheel, raw));
     })
     .onEnd((e) => {
-      const projected = wheelAngle.value - (e.velocityY / DRAG_SENSITIVITY) * 0.12;
-      const snapped = Math.round(projected / STEP_ANGLE) * STEP_ANGLE;
-      wheelAngle.value = withSpring(snapped, { damping: 35, stiffness: 500 });
+      const velocity = leftHanded ? e.velocityY : -e.velocityY;
+      const coast = wheelAngle.value + (velocity / DRAG_SENSITIVITY) * 0.10;
+      const clamped = Math.max(minWheel, Math.min(maxWheel, coast));
+      const snapped = Math.max(minWheel, Math.min(maxWheel,
+        Math.round(clamped / STEP_ANGLE) * STEP_ANGLE));
+
+      // Coast briefly (lottery spin inertia), then spring to nearest slot.
+      wheelAngle.value = withSequence(
+        withTiming(clamped, { duration: 180, easing: Easing.out(Easing.cubic) }),
+        withSpring(snapped, { damping: 28, stiffness: 600 })
+      );
     });
 
   const fabStyle = useAnimatedStyle(() => ({
@@ -252,9 +229,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   return (
     <View style={[styles.container, sideStyle]} pointerEvents="box-none">
-      {open && (
-        <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
-      )}
+      {open && <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />}
 
       <GestureDetector gesture={spinGesture}>
         <View style={styles.wheelArea} pointerEvents={open ? 'auto' : 'none'}>
@@ -282,8 +257,6 @@ export default function BubbleMenu({ onNewTask }: Props) {
         accessibilityState={{ expanded: open }}
       >
         <Animated.View style={fabStyle}>
-          {/* Explicit X when open so the close affordance is unmistakable;
-              the 45° rotation animates the swap tastefully. */}
           <Ionicons name={open ? 'close' : 'add'} size={28} color="#fff" />
         </Animated.View>
       </Pressable>
@@ -302,8 +275,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: WHEEL_SIZE,
     height: WHEEL_SIZE,
-    // Centre this canvas on the FAB. FAB centre = centre of the 60×60 container.
-    // Canvas top-left = FAB_centre - WHEEL_SIZE/2 = 30 - (WHEEL_SIZE/2).
     left: FAB_SIZE / 2 - WHEEL_SIZE / 2,
     top: FAB_SIZE / 2 - WHEEL_SIZE / 2,
   },
@@ -317,9 +288,6 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    // Place bubble centre at the wheelArea centre (= FAB centre).
-    // left/top of the bubble = WHEEL_SIZE/2 - BUBBLE_SIZE/2 = RADIUS.
-    // translateX/Y then offset it to the arc position around the FAB.
     left: RADIUS,
     top: RADIUS,
     width: BUBBLE_SIZE,
@@ -327,7 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadow.card,
+    ...Shadow.cardHeavy,
   },
   bubbleInner: {
     alignItems: 'center',

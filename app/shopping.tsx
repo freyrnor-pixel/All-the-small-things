@@ -21,6 +21,8 @@
 import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,7 +57,8 @@ export default function ShoppingScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const [tab, setTab] = useState<Tab>('weekly');
-  const [adding, setAdding] = useState(false);
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [addSheetTab, setAddSheetTab] = useState<'freely' | 'monthly'>('freely');
   const [showMonthlyPicker, setShowMonthlyPicker] = useState(false);
   const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [newName, setNewName] = useState('');
@@ -136,7 +139,7 @@ export default function ShoppingScreen() {
     setNewUnit('');
     setNewCategory('other');
     setNewPrice(0);
-    setAdding(false);
+    setShowAddSheet(false);
     setCategoryExpanded(false);
   }
 
@@ -238,123 +241,7 @@ export default function ShoppingScreen() {
             )}
           </View>
 
-          {/* Add item form / trigger */}
-          {adding ? (
-            <View style={[styles.addCard, { backgroundColor: theme.white }]}>
-              <TextInput
-                style={[styles.addInput, { backgroundColor: theme.offWhite, color: theme.text }]}
-                value={newName}
-                onChangeText={setNewName}
-                placeholder={t.shoppingItemPlaceholder}
-                placeholderTextColor={theme.gray}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={addItem}
-              />
-              {suggestions.length > 0 && (
-                <>
-                  <Text style={[styles.suggestLabel, { color: theme.textLight }]}>{t.suggestions}</Text>
-                  <View style={styles.suggestWrap}>
-                    {suggestions.map((s) => (
-                      <PressableScale
-                        key={s.id}
-                        style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
-                        onPress={() => pickSuggestion(s.name, s.category, s.price)}
-                      >
-                        <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
-                        {s.price > 0 && (
-                          <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
-                            {t.lastPaid(`${s.price.toFixed(2)} kr`)}
-                          </Text>
-                        )}
-                      </PressableScale>
-                    ))}
-                  </View>
-                </>
-              )}
-              <View style={styles.addRow}>
-                <View style={styles.stepperInline}>
-                  <Pressable
-                    style={[styles.inlineStepBtn, { backgroundColor: theme.grayLight }]}
-                    onPress={() => setNewAmount(String(Math.max(1, (parseInt(newAmount, 10) || 1) - 1)))}
-                  >
-                    <Text style={[styles.inlineStepText, { color: theme.text }]}>−</Text>
-                  </Pressable>
-                  <TextInput
-                    style={[styles.amountInput, { backgroundColor: theme.offWhite, color: theme.text }]}
-                    value={newAmount}
-                    onChangeText={setNewAmount}
-                    keyboardType="decimal-pad"
-                    placeholder="1"
-                    placeholderTextColor={theme.gray}
-                    selectTextOnFocus
-                  />
-                  <Pressable
-                    style={[styles.inlineStepBtn, { backgroundColor: theme.orange }]}
-                    onPress={() => setNewAmount(String((parseInt(newAmount, 10) || 1) + 1))}
-                  >
-                    <Text style={[styles.inlineStepText, { color: '#fff' }]}>+</Text>
-                  </Pressable>
-                </View>
-                <TextInput
-                  style={[styles.addInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
-                  value={newUnit}
-                  onChangeText={setNewUnit}
-                  placeholder={t.shoppingUnitPlaceholder}
-                  placeholderTextColor={theme.gray}
-                />
-              </View>
-              <Pressable
-                style={[styles.categoryToggleBtn, { backgroundColor: theme.grayLight }]}
-                onPress={() => setCategoryExpanded((v) => !v)}
-              >
-                <Text style={[styles.categoryToggleText, { color: theme.textLight }]}>
-                  {t.category}: {t.shoppingCategories[newCategory as Category]}
-                </Text>
-                <Text style={[styles.categoryToggleChevron, { color: theme.textLight }]}>
-                  {categoryExpanded ? '▲' : '▼'}
-                </Text>
-              </Pressable>
-              {categoryExpanded && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.categoryRow}>
-                    {CATEGORY_ORDER.map((cat) => (
-                      <Pressable
-                        key={cat}
-                        style={[
-                          styles.categoryChip,
-                          { backgroundColor: newCategory === cat ? tabAccent : theme.grayLight },
-                        ]}
-                        onPress={() => { setNewCategory(cat); setCategoryExpanded(false); }}
-                      >
-                        <Text style={[
-                          styles.categoryChipText,
-                          { color: newCategory === cat ? '#fff' : theme.text },
-                        ]}>
-                          {t.shoppingCategories[cat]}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
-              )}
-              <View style={styles.addActions}>
-                <Pressable style={styles.cancelBtn} onPress={() => setAdding(false)}>
-                  <Text style={[styles.cancelBtnText, { color: theme.textLight }]}>{t.cancel}</Text>
-                </Pressable>
-                <Pressable style={[styles.confirmBtn, { backgroundColor: tabAccent }]} onPress={addItem}>
-                  <Text style={styles.confirmBtnText}>{t.addItemBtn}</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              style={[styles.addTrigger, { borderColor: tabAccent }]}
-              onPress={() => setAdding(true)}
-            >
-              <Text style={[styles.addTriggerText, { color: tabAccent }]}>{t.addItemTrigger}</Text>
-            </Pressable>
-          )}
+          {/* no inline add form — use FAB button below */}
 
           {/* Weekly tab: Monthly-source section + Weekly items */}
           {tab === 'weekly' && monthlyAvailable.length > 0 && (
@@ -415,6 +302,8 @@ export default function ShoppingScreen() {
                       onRemove={() => removeWithSource(item.id)}
                       onAdjust={(d) => adjustAmount(item.id, d)}
                       fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
+                      inStockLabel={t.inStockLabel}
+                      monthlyLeftLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
                     />
                     {idx < sortedUnchecked.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
@@ -480,6 +369,183 @@ export default function ShoppingScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* FAB */}
+      <Pressable
+        style={[styles.fab, { backgroundColor: tabAccent }]}
+        onPress={() => { setAddSheetTab('freely'); setShowAddSheet(true); }}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </Pressable>
+
+      {/* Add sheet modal */}
+      <Modal visible={showAddSheet} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowAddSheet(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowAddSheet(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
+          <View style={[styles.addSheet, { backgroundColor: theme.white }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.addSheetTitle}</Text>
+
+            {/* Sheet tabs */}
+            <View style={[styles.sheetTabRow, { backgroundColor: theme.grayLight }]}>
+              {(['freely', 'monthly'] as const).map((st) => (
+                <Pressable
+                  key={st}
+                  style={[styles.sheetTab, addSheetTab === st && { backgroundColor: theme.white }]}
+                  onPress={() => setAddSheetTab(st)}
+                >
+                  <Text style={[styles.sheetTabText, { color: addSheetTab === st ? tabAccent : theme.textLight }]}>
+                    {st === 'freely' ? t.addFreelyTab : t.addFromMonthlyTab}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {addSheetTab === 'freely' && (
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <View style={{ gap: Spacing.sm }}>
+                  <TextInput
+                    style={[styles.addInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                    value={newName}
+                    onChangeText={setNewName}
+                    placeholder={t.shoppingItemPlaceholder}
+                    placeholderTextColor={theme.gray}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={addItem}
+                  />
+                  {suggestions.length > 0 && (
+                    <>
+                      <Text style={[styles.suggestLabel, { color: theme.textLight }]}>{t.suggestions}</Text>
+                      <View style={styles.suggestWrap}>
+                        {suggestions.map((s) => (
+                          <PressableScale
+                            key={s.id}
+                            style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
+                            onPress={() => pickSuggestion(s.name, s.category, s.price)}
+                          >
+                            <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
+                            {s.price > 0 && (
+                              <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
+                                {t.lastPaid(`${s.price.toFixed(2)} kr`)}
+                              </Text>
+                            )}
+                          </PressableScale>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                  <View style={styles.addRow}>
+                    <View style={styles.stepperInline}>
+                      <Pressable
+                        style={[styles.inlineStepBtn, { backgroundColor: theme.grayLight }]}
+                        onPress={() => setNewAmount(String(Math.max(1, (parseInt(newAmount, 10) || 1) - 1)))}
+                      >
+                        <Text style={[styles.inlineStepText, { color: theme.text }]}>−</Text>
+                      </Pressable>
+                      <TextInput
+                        style={[styles.amountInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                        value={newAmount}
+                        onChangeText={setNewAmount}
+                        keyboardType="decimal-pad"
+                        placeholder="1"
+                        placeholderTextColor={theme.gray}
+                        selectTextOnFocus
+                      />
+                      <Pressable
+                        style={[styles.inlineStepBtn, { backgroundColor: theme.orange }]}
+                        onPress={() => setNewAmount(String((parseInt(newAmount, 10) || 1) + 1))}
+                      >
+                        <Text style={[styles.inlineStepText, { color: '#fff' }]}>+</Text>
+                      </Pressable>
+                    </View>
+                    <TextInput
+                      style={[styles.addInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
+                      value={newUnit}
+                      onChangeText={setNewUnit}
+                      placeholder={t.shoppingUnitPlaceholder}
+                      placeholderTextColor={theme.gray}
+                    />
+                  </View>
+                  <Pressable
+                    style={[styles.categoryToggleBtn, { backgroundColor: theme.grayLight }]}
+                    onPress={() => setCategoryExpanded((v) => !v)}
+                  >
+                    <Text style={[styles.categoryToggleText, { color: theme.textLight }]}>
+                      {t.category}: {t.shoppingCategories[newCategory as Category]}
+                    </Text>
+                    <Text style={[styles.categoryToggleChevron, { color: theme.textLight }]}>
+                      {categoryExpanded ? '▲' : '▼'}
+                    </Text>
+                  </Pressable>
+                  {categoryExpanded && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={styles.categoryRow}>
+                        {CATEGORY_ORDER.map((cat) => (
+                          <Pressable
+                            key={cat}
+                            style={[styles.categoryChip, { backgroundColor: newCategory === cat ? tabAccent : theme.grayLight }]}
+                            onPress={() => { setNewCategory(cat); setCategoryExpanded(false); }}
+                          >
+                            <Text style={[styles.categoryChipText, { color: newCategory === cat ? '#fff' : theme.text }]}>
+                              {t.shoppingCategories[cat]}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  )}
+                  <View style={styles.addActions}>
+                    <Pressable style={styles.cancelBtn} onPress={() => setShowAddSheet(false)}>
+                      <Text style={[styles.cancelBtnText, { color: theme.textLight }]}>{t.cancel}</Text>
+                    </Pressable>
+                    <Pressable style={[styles.confirmBtn, { backgroundColor: tabAccent }]} onPress={addItem}>
+                      <Text style={styles.confirmBtnText}>{t.addItemBtn}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+
+            {addSheetTab === 'monthly' && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {monthlyAvailable.length === 0 ? (
+                  <Text style={[styles.suggestLabel, { color: theme.textLight, textAlign: 'center', paddingVertical: Spacing.lg }]}>
+                    {t.noMonthlyItems}
+                  </Text>
+                ) : (
+                  monthlyAvailable.map((item, idx) => {
+                    const remaining = (parseInt(item.amount, 10) || 1) - item.monthlyAllocated;
+                    return (
+                      <View key={item.id}>
+                        <View style={styles.monthlySourceRow}>
+                          <View style={styles.monthlySourceInfo}>
+                            <Text style={[styles.monthlySourceName, { color: theme.text }]} numberOfLines={1}>
+                              {item.name}
+                            </Text>
+                            <Text style={[styles.monthlySourceMeta, { color: theme.textLight }]}>
+                              {t.monthlyRemaining(remaining, item.unit)}
+                            </Text>
+                          </View>
+                          <Pressable
+                            style={[styles.monthlyAddBtn, { backgroundColor: theme.orange }]}
+                            onPress={() => { addFromMonthly(item.id, 1); success(); }}
+                          >
+                            <Text style={styles.monthlyAddBtnText}>{t.addOneToWeekly}</Text>
+                          </Pressable>
+                        </View>
+                        {idx < monthlyAvailable.length - 1 && (
+                          <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Monthly picker sheet */}
       <MonthlyPickerSheet
@@ -654,4 +720,36 @@ const styles = StyleSheet.create({
   clearCheckedText: { fontFamily: Fonts.bold, fontSize: FontSize.md },
   resetBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   resetBtnText: { fontWeight: '600', fontSize: FontSize.md },
+
+  fab: {
+    position: 'absolute',
+    right: Spacing.xl,
+    bottom: Spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
+  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheetWrapper: { justifyContent: 'flex-end' },
+  addSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    paddingBottom: Spacing.xl,
+    maxHeight: '85%',
+  },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc', alignSelf: 'center', marginBottom: 4 },
+  sheetTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  sheetTabRow: { flexDirection: 'row', borderRadius: Radius.sm, padding: 3 },
+  sheetTab: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.sm - 1 },
+  sheetTabText: { fontSize: FontSize.sm, fontWeight: '600' },
 });

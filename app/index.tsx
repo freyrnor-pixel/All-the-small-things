@@ -53,7 +53,8 @@ import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useIsDark } from '@/lib/useAppTheme';
+import { StatusBar } from 'expo-status-bar';
 
 function isWithinWorkHours(start: string, end: string): boolean {
   const now = new Date();
@@ -70,6 +71,7 @@ export default function HomeScreen() {
   const t = useT();
   const theme = useAppTheme();
   const { isCoverScreen } = useCoverScreen();
+  const isDark = useIsDark();
 
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
@@ -138,6 +140,11 @@ export default function HomeScreen() {
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
 
+  // Progress: completed vs. total tasks for today (including done ones)
+  const totalToday = allTodayTasks.length;
+  const completedToday = allTodayTasks.filter((t) => t.done).length;
+  const progressRatio = totalToday > 0 ? completedToday / totalToday : 0;
+
   const weeklyPending = useMemo(
     () => shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked),
     [shoppingItems]
@@ -184,6 +191,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
       {isWorkModeActive && (
         <View style={[styles.workBanner, { backgroundColor: theme.orange }]}>
           <Text style={styles.workBannerText}>{t.workBanner}</Text>
@@ -216,15 +224,25 @@ export default function HomeScreen() {
           <View style={styles.headerRight}>
             <View style={styles.headerIcons}>
               <Pressable
-                style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
+                style={[
+                  styles.iconBtn,
+                  styles.focusBtn,
+                  {
+                    backgroundColor: settings.essentialsModeEnabled ? theme.orangeLight : theme.grayLight,
+                    borderColor: settings.essentialsModeEnabled ? theme.orange : 'transparent',
+                  },
+                ]}
                 onPress={() => settings.update({ essentialsModeEnabled: !settings.essentialsModeEnabled })}
                 accessibilityLabel={settings.essentialsModeEnabled ? t.focusActive : t.focusInactive}
               >
                 <Ionicons
                   name={settings.essentialsModeEnabled ? 'star' : 'star-outline'}
-                  size={20}
+                  size={16}
                   color={settings.essentialsModeEnabled ? theme.orange : theme.textLight}
                 />
+                <Text style={[styles.focusBtnLabel, { color: settings.essentialsModeEnabled ? theme.orange : theme.textLight }]}>
+                  {t.focusLabel}
+                </Text>
               </Pressable>
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
@@ -237,13 +255,20 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Daily progress bar — 4px line, fills as tasks complete */}
+        {totalToday > 0 && (
+          <View style={[styles.progressTrack, { backgroundColor: theme.grayLight }]}>
+            <View style={[styles.progressFill, { backgroundColor: theme.green, width: `${Math.round(progressRatio * 100)}%` }]} />
+          </View>
+        )}
+
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
 
         {/* Today's tasks */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {settings.essentialsModeEnabled ? t.essentialTasksToday : t.tasksToday}
+              {settings.essentialsModeEnabled ? t.essentialTasksToday : t.dailyOverview}
             </Text>
             <View style={styles.sectionActions}>
               <Pressable
@@ -420,6 +445,15 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
+  focusBtn: {
+    width: 'auto', paddingHorizontal: Spacing.sm, paddingVertical: 4,
+    borderRadius: Radius.full, flexDirection: 'row', gap: 3, borderWidth: 1.5,
+  },
+  focusBtnLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  progressTrack: {
+    height: 4, borderRadius: Radius.full, marginBottom: Spacing.md, overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: Radius.full },
   section: { marginBottom: Spacing.lg },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
