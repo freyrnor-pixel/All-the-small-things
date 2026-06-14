@@ -124,7 +124,7 @@ export default function TaskFormScreen() {
     }
     setConfirm(confirmationMessage(date, savedTime));
     // Let the banner land before leaving the form.
-    setTimeout(() => router.back(), 900);
+    setTimeout(() => router.back(), 300);
   }
 
   function del() {

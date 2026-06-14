@@ -100,12 +100,12 @@ export default function OnboardingStep3() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>{t.previous}</Text>
         </Pressable>
-        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step4')}>
+        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step5')}>
           <Text style={styles.nextBtnText}>{t.next}</Text>
         </Pressable>
       </View>
       {/* W-E: gentle, always-visible skip so no step feels mandatory */}
-      <Pressable style={styles.skipLink} onPress={() => router.push('/onboarding/step4')}>
+      <Pressable style={styles.skipLink} onPress={() => router.push('/onboarding/step5')}>
         <Text style={styles.skipLinkText}>{t.config.skipForNow}</Text>
       </Pressable>
       </KeyboardAvoidingView>

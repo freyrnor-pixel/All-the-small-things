@@ -42,7 +42,7 @@ export default function OnboardingStep5() {
     // W-E: new-user defaults — Essentials Mode ON + points visible by default, so new
     // users start simple. Set here so the guided path gets them too (idempotent with
     // the explore path). Onboarding-only — never mutates an existing user's saved row.
-    settings.update({ setupComplete: true, essentialsModeEnabled: true, showPoints: true });
+    settings.update({ setupComplete: true, essentialsModeEnabled: false, showPoints: true });
     // Ask for notification permission once setup is done, then schedule the
     // reminders the user just configured during onboarding.
     requestPermissions().finally(() => {

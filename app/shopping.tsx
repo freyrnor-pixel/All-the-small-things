@@ -57,11 +57,10 @@ export default function ShoppingScreen() {
   const [tab, setTab] = useState<Tab>('weekly');
   const [adding, setAdding] = useState(false);
   const [showMonthlyPicker, setShowMonthlyPicker] = useState(false);
-  const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('1');
   const [newUnit, setNewUnit] = useState('');
-  const [newCategory, setNewCategory] = useState<Category>('other');
+  const [newCategory] = useState<Category>('other');
   const [newPrice, setNewPrice] = useState(0);
   const [confirm, setConfirm] = useState<string | null>(null);
 
@@ -73,7 +72,6 @@ export default function ShoppingScreen() {
   const addFromMonthly = useShoppingStore((s) => s.addFromMonthly);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
-  const suggest = useCatalogStore((s) => s.suggest);
   const catalog = useCatalogStore((s) => s.items);
   const weeklyResetDay = useSettingsStore((s) => s.weeklyResetDay);
   const t = useT();
@@ -82,22 +80,19 @@ export default function ShoppingScreen() {
   const resetDayLabel = t.days[(weeklyResetDay + 1) % 7];
 
   const suggestions = useMemo(() => {
-    const exact = newName.trim().toLowerCase();
-    if (!exact) {
-      // Show popular seed items as quick picks when input is empty
-      const alreadyAdded = new Set(items.map((i) => i.name.toLowerCase()));
-      return catalog
-        .filter((i) => !alreadyAdded.has(i.name.toLowerCase()))
-        .slice(0, 10);
-    }
-    return suggest(newName).filter((s) => s.name.toLowerCase() !== exact);
-  }, [newName, catalog, suggest, items]);
+    const alreadyAdded = new Set(items.map((i) => i.name.toLowerCase()));
+    const query = newName.trim().toLowerCase();
+    const pool = catalog
+      .filter((i) => !alreadyAdded.has(i.name.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!query) return pool.slice(0, 30);
+    // Prioritise prefix matches (first letter, then second, etc.) then substring
+    return pool.filter((i) => i.name.toLowerCase().startsWith(query) || i.name.toLowerCase().includes(query));
+  }, [newName, catalog, items]);
 
-  function pickSuggestion(name: string, category: string, price: number) {
+  function pickSuggestion(name: string, _category: string, price: number) {
     setNewName(name);
-    setNewCategory((CATEGORY_ORDER as readonly string[]).includes(category) ? (category as Category) : 'other');
     setNewPrice(price);
-    setCategoryExpanded(false);
   }
 
   const weeklyItems = items.filter((i) => i.listType === 'weekly');
@@ -134,10 +129,8 @@ export default function ShoppingScreen() {
     setNewName('');
     setNewAmount('1');
     setNewUnit('');
-    setNewCategory('other');
     setNewPrice(0);
     setAdding(false);
-    setCategoryExpanded(false);
   }
 
   function handleMonthlyPickerConfirm(selections: { id: string; qty: number }[]) {
@@ -220,15 +213,15 @@ export default function ShoppingScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
-
-          {/* Summary + reset-day row */}
+          {/* Summary + reset-day row — only show remaining count on weekly tab */}
           <View style={styles.summaryRow}>
-            <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
-              <Text style={[styles.summaryText, { color: theme.text }]}>
-                {t.shoppingRemaining(unchecked.length, checked.length)}
-              </Text>
-            </View>
+            {tab === 'weekly' && (
+              <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
+                <Text style={[styles.summaryText, { color: theme.text }]}>
+                  {t.shoppingRemaining(unchecked.length, checked.length)}
+                </Text>
+              </View>
+            )}
             {tab === 'weekly' && (
               <View style={[styles.resetDayChip, { backgroundColor: theme.greenLight }]}>
                 <Text style={[styles.resetDayText, { color: theme.green }]}>
@@ -252,25 +245,30 @@ export default function ShoppingScreen() {
                 onSubmitEditing={addItem}
               />
               {suggestions.length > 0 && (
-                <>
-                  <Text style={[styles.suggestLabel, { color: theme.textLight }]}>{t.suggestions}</Text>
-                  <View style={styles.suggestWrap}>
-                    {suggestions.map((s) => (
-                      <PressableScale
-                        key={s.id}
-                        style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
+                <ScrollView
+                  style={[styles.suggestList, { backgroundColor: theme.offWhite }]}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {suggestions.map((s, idx) => (
+                    <View key={s.id}>
+                      <Pressable
+                        style={styles.suggestRow}
                         onPress={() => pickSuggestion(s.name, s.category, s.price)}
                       >
-                        <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
+                        <Text style={[styles.suggestRowText, { color: theme.text }]}>{s.name}</Text>
                         {s.price > 0 && (
                           <Text style={[styles.suggestPrice, { color: theme.textLight }]}>
-                            {t.lastPaid(`${s.price.toFixed(2)} kr`)}
+                            {s.price.toFixed(2)} kr
                           </Text>
                         )}
-                      </PressableScale>
-                    ))}
-                  </View>
-                </>
+                      </Pressable>
+                      {idx < suggestions.length - 1 && (
+                        <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
               )}
               <View style={styles.addRow}>
                 <View style={styles.stepperInline}>
@@ -304,40 +302,6 @@ export default function ShoppingScreen() {
                   placeholderTextColor={theme.gray}
                 />
               </View>
-              <Pressable
-                style={[styles.categoryToggleBtn, { backgroundColor: theme.grayLight }]}
-                onPress={() => setCategoryExpanded((v) => !v)}
-              >
-                <Text style={[styles.categoryToggleText, { color: theme.textLight }]}>
-                  {t.category}: {t.shoppingCategories[newCategory as Category]}
-                </Text>
-                <Text style={[styles.categoryToggleChevron, { color: theme.textLight }]}>
-                  {categoryExpanded ? '▲' : '▼'}
-                </Text>
-              </Pressable>
-              {categoryExpanded && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.categoryRow}>
-                    {CATEGORY_ORDER.map((cat) => (
-                      <Pressable
-                        key={cat}
-                        style={[
-                          styles.categoryChip,
-                          { backgroundColor: newCategory === cat ? tabAccent : theme.grayLight },
-                        ]}
-                        onPress={() => { setNewCategory(cat); setCategoryExpanded(false); }}
-                      >
-                        <Text style={[
-                          styles.categoryChipText,
-                          { color: newCategory === cat ? '#fff' : theme.text },
-                        ]}>
-                          {t.shoppingCategories[cat]}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
-              )}
               <View style={styles.addActions}>
                 <Pressable style={styles.cancelBtn} onPress={() => setAdding(false)}>
                   <Text style={[styles.cancelBtnText, { color: theme.textLight }]}>{t.cancel}</Text>
@@ -414,7 +378,6 @@ export default function ShoppingScreen() {
                       onToggle={() => toggle(item.id)}
                       onRemove={() => removeWithSource(item.id)}
                       onAdjust={(d) => adjustAmount(item.id, d)}
-                      fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
                     />
                     {idx < sortedUnchecked.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
@@ -587,29 +550,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     textAlign: 'center',
   },
-  suggestLabel: { fontSize: FontSize.xs, fontWeight: '600' },
-  suggestWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingVertical: 2 },
-  suggestChip: {
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-  suggestText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
-  suggestPrice: { fontSize: FontSize.xs, marginTop: 1 },
-  categoryToggleBtn: {
+  suggestList: { borderRadius: Radius.sm, maxHeight: 200, overflow: 'hidden' },
+  suggestRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: Radius.sm,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.sm,
   },
-  categoryToggleText: { fontSize: FontSize.xs, fontWeight: '600' },
-  categoryToggleChevron: { fontSize: FontSize.xs, fontWeight: '700' },
-  categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
-  categoryChip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
-  categoryChipText: { fontSize: FontSize.xs, fontWeight: '600' },
+  suggestRowText: { fontSize: FontSize.md, flex: 1 },
+  suggestPrice: { fontSize: FontSize.xs, marginLeft: Spacing.sm },
   addActions: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
   cancelBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   cancelBtnText: { fontSize: FontSize.md },
