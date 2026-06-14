@@ -214,14 +214,14 @@ export default function BubbleMenu({ onNewTask }: Props) {
   function toggle() {
     tap();
     const toValue = open ? 0 : 1;
-    openProgress.value = withSpring(toValue, { damping: 40, stiffness: 280 });
+    openProgress.value = withSpring(toValue, { damping: 25, stiffness: 320 });
     setOpen((v) => !v);
   }
 
   function navigate(item: BubbleEntry) {
     tap();
     // Mirror toggle()'s close animation without re-firing the FAB haptic.
-    openProgress.value = withSpring(0, { damping: 40, stiffness: 280 });
+    openProgress.value = withSpring(0, { damping: 25, stiffness: 320 });
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
     setTimeout(action, 150);
@@ -229,22 +229,17 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   // Spin gesture: dragging up rotates the wheel counterclockwise, revealing items
   // further along the circle. Releases snap to the nearest item slot in ~175ms.
-  // Left drag is clamped at -π (the natural start position) so the wheel can't
-  // be spun past the first item; right drag has a soft ceiling at the last item.
-  const maxAngle = -Math.PI + (BASE_ITEMS.length - 1) * STEP_ANGLE;
   const spinGesture = Gesture.Pan()
     .onStart(() => {
       startAngle.value = wheelAngle.value;
     })
     .onUpdate((e) => {
-      const raw = startAngle.value - e.translationY / DRAG_SENSITIVITY;
-      wheelAngle.value = Math.max(-Math.PI, Math.min(maxAngle, raw));
+      wheelAngle.value = startAngle.value - e.translationY / DRAG_SENSITIVITY;
     })
     .onEnd((e) => {
-      const projected = wheelAngle.value - (e.velocityY / DRAG_SENSITIVITY) * 0.08;
-      const clamped = Math.max(-Math.PI, Math.min(maxAngle, projected));
-      const snapped = Math.round(clamped / STEP_ANGLE) * STEP_ANGLE;
-      wheelAngle.value = withSpring(snapped, { damping: 60, stiffness: 350 });
+      const projected = wheelAngle.value - (e.velocityY / DRAG_SENSITIVITY) * 0.12;
+      const snapped = Math.round(projected / STEP_ANGLE) * STEP_ANGLE;
+      wheelAngle.value = withSpring(snapped, { damping: 35, stiffness: 500 });
     });
 
   const fabStyle = useAnimatedStyle(() => ({

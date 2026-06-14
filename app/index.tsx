@@ -71,6 +71,7 @@ export default function HomeScreen() {
   const theme = useAppTheme();
   const { isCoverScreen } = useCoverScreen();
 
+  const tasks = useTaskStore((s) => s.tasks);
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
   const completedCountFn = useTaskStore((s) => s.completedCount);
@@ -124,7 +125,7 @@ export default function HomeScreen() {
       if (b.time) return 1;
       return 0;
     });
-  }, [tasksForDate, today]);
+  }, [tasks, tasksForDate, today]);
 
   const visibleTodayTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((task) => task.importance === 'essential')
@@ -135,8 +136,8 @@ export default function HomeScreen() {
   const todayTasks = visibleTodayTasks.slice(0, Layout.maxVisible);
   const hiddenTodayCount = visibleTodayTasks.length - todayTasks.length;
 
-  const backlog = backlogTasksFn(today);
-  const completedCount = completedCountFn();
+  const backlog = useMemo(() => backlogTasksFn(today), [tasks, backlogTasksFn, today]);
+  const completedCount = useMemo(() => completedCountFn(), [tasks, completedCountFn]);
 
   const weeklyPending = useMemo(
     () => shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked),
