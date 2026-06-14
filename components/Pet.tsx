@@ -30,6 +30,7 @@ import Reanimated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -125,6 +126,7 @@ type Props = { completedToday: number };
 
 export default function Pet({ completedToday }: Props) {
   const theme    = useAppTheme();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const petType  = useSettingsStore((s) => s.petType);
   const petColor = useSettingsStore((s) => s.petColor);
   const habitat  = PET_HABITATS[petType] ?? PET_HABITATS.cat;
@@ -262,7 +264,7 @@ export default function Pet({ completedToday }: Props) {
   });
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={[styles.container, { bottom: bottomInset + 12 }]} pointerEvents="box-none">
       {/* Speech bubble */}
       {showBubble && (
         <Animated.View
@@ -337,7 +339,6 @@ export default function Pet({ completedToday }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 32,
     left: 20,
     alignItems: 'center',
     zIndex: 10,

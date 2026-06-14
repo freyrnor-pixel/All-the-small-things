@@ -190,6 +190,7 @@ export default function HomeScreen() {
   }
 
   return (
+    <View style={[styles.screen, { backgroundColor: theme.cream }]}>
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
       {isWorkModeActive && (
@@ -398,13 +399,15 @@ export default function HomeScreen() {
       </ScrollView>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
-      {settings.petEnabled && <Pet completedToday={completedCount} />}
-      <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
+    {settings.petEnabled && <Pet completedToday={completedCount} />}
+    <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   safe: { flex: 1 },
   workBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

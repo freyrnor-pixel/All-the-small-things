@@ -39,6 +39,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Radius, Shadow, FeatureColors } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
@@ -150,6 +151,7 @@ function BubbleItemView({
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const { leftHanded } = useSettingsStore();
+  const { bottom: bottomInset } = useSafeAreaInsets();
 
   // Right-handed: window from −π (left) to −π/4 (upper-right), 3π/4 wide.
   // Left-handed:  window from π/4 (upper-left) to π (right), mirrored.
@@ -226,9 +228,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
   }));
 
   const sideStyle = leftHanded ? { left: 24 } : { right: 24 };
+  const bottomStyle = { bottom: bottomInset + 12 };
 
   return (
-    <View style={[styles.container, sideStyle]} pointerEvents="box-none">
+    <View style={[styles.container, sideStyle, bottomStyle]} pointerEvents="box-none">
       {open && <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />}
 
       <GestureDetector gesture={spinGesture}>
@@ -267,7 +270,6 @@ export default function BubbleMenu({ onNewTask }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },

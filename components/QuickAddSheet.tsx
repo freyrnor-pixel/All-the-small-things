@@ -30,6 +30,7 @@ import {
 import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
@@ -41,6 +42,7 @@ type Props = {
 };
 
 export default function QuickAddSheet({ visible, onClose }: Props) {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const addTask = useTaskStore((s) => s.add);
   const theme = useAppTheme();
   const t = useT();
@@ -101,7 +103,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.kvWrapper}
       >
-        <View style={[styles.sheet, { backgroundColor: theme.white }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
           <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
 
           <TextInput
