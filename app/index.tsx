@@ -237,8 +237,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <HintCard text={t.hints.home.text} example={t.hints.home.example} />
-
         {/* Today's tasks */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
