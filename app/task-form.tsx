@@ -18,7 +18,7 @@
  *   - On save a ConfirmationBanner is shown, then navigation is briefly delayed (~900ms) so it's visible.
  *     start-at vs time-box is colour/icon-coded via FeatureColors (consistent with TaskItem).
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -38,7 +38,6 @@ import { useAppTheme } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { tap } from '@/lib/haptics';
-import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import TimePickerWheel from '@/components/TimePickerWheel';
@@ -84,6 +83,20 @@ export default function TaskFormScreen() {
   const [confirm, setConfirm] = useState<string | null>(null);
 
   const { dayLabels, months } = t;
+
+  const [calExpanded, setCalExpanded] = useState(false);
+
+  // Build Mon–Sun chips for the current week
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    // Monday = 0 in our display
+    const mon0 = (today.getDay() + 6) % 7; // days since Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - mon0 + i);
+      return { label: dateStr(d).slice(5), value: dateStr(d), dayIdx: i };
+    });
+  }, []);
 
   function toggleDay(d: number) {
     setRecurringDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -171,16 +184,45 @@ export default function TaskFormScreen() {
             />
           </View>
 
-          {/* Date — calendar */}
+          {/* Date — week chips + expandable full calendar */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.dateLabel}</Text>
-            <DatePickerCalendar
-              value={date}
-              onChange={setDate}
-              theme={theme}
-              dayLabels={dayLabels}
-              monthLabels={months}
-            />
+            <View style={styles.weekRow}>
+              {weekDays.map((wd) => {
+                const active = date === wd.value;
+                return (
+                  <Pressable
+                    key={wd.value}
+                    style={[styles.weekChip, { backgroundColor: theme.grayLight }, active && { backgroundColor: theme.orange }]}
+                    onPress={() => { tap(); setDate(wd.value); setCalExpanded(false); }}
+                  >
+                    <Text style={[styles.weekChipDay, { color: theme.textLight }, active && { color: Colors.white }]}>
+                      {dayLabels[wd.dayIdx].slice(0, 2)}
+                    </Text>
+                    <Text style={[styles.weekChipDate, { color: theme.text }, active && { color: Colors.white }]}>
+                      {wd.label.replace('-', '/')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              style={[styles.calToggleBtn, { backgroundColor: theme.white }]}
+              onPress={() => setCalExpanded((v) => !v)}
+            >
+              <Text style={[styles.calToggleText, { color: theme.textLight }]}>
+                {calExpanded ? '▲ ' : '▼ '}{date}
+              </Text>
+            </Pressable>
+            {calExpanded && (
+              <DatePickerCalendar
+                value={date}
+                onChange={(d) => { setDate(d); setCalExpanded(false); }}
+                theme={theme}
+                dayLabels={dayLabels}
+                monthLabels={months}
+              />
+            )}
           </View>
 
           {/* Time — scroll wheel */}
@@ -394,4 +436,10 @@ const styles = StyleSheet.create({
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
   deleteBtnText: { fontWeight: '700', fontSize: FontSize.md },
+  weekRow: { flexDirection: 'row', gap: 4, flexWrap: 'nowrap' },
+  weekChip: { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm, borderRadius: Radius.sm },
+  weekChipDay: { fontSize: FontSize.xs, fontWeight: '600' },
+  weekChipDate: { fontSize: 10 },
+  calToggleBtn: { borderRadius: Radius.sm, padding: Spacing.sm, alignItems: 'center', ...Shadow.card, marginTop: 2 },
+  calToggleText: { fontSize: FontSize.sm },
 });

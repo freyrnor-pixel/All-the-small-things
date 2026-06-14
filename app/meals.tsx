@@ -15,7 +15,7 @@
  *   - pushDishToShopping always adds ingredients as listType 'weekly' and surfaces a ConfirmationBanner.
  *   - Prep complexity is a derived proxy (ingredient count → 1–3 dots), NOT a DB column: 0–2 = simple, 3–5 = medium, 6+ = involved.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -31,6 +31,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
+import { useCatalogStore } from '@/store/useCatalogStore';
 import ExpandableCard from '@/components/ExpandableCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import { success } from '@/lib/haptics';
@@ -79,6 +80,8 @@ export default function MealsScreen() {
   const [ingUnit, setIngUnit] = useState('');
   const [showUnitPicker, setShowUnitPicker] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const catalogSuggest = useCatalogStore((s) => s.suggest);
+  const ingSuggestions = useMemo(() => catalogSuggest(ingName, 8), [ingName, catalogSuggest]);
 
   const prepLabels: Record<1 | 2 | 3, string> = {
     1: t.prepSimple,
@@ -317,6 +320,23 @@ export default function MealsScreen() {
                     <Text style={styles.confirmBtnText}>+</Text>
                   </Pressable>
                 </View>
+                {ingSuggestions.length > 0 && !showUnitPicker && (
+                  <ScrollView style={[styles.ingSuggestList, { backgroundColor: theme.white }]} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                    {ingSuggestions.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        style={[styles.ingSuggestRow, { borderBottomColor: theme.grayLight }]}
+                        onPress={() => {
+                          setIngName(s.name);
+                          if (s.price > 0) { /* price info for reference */ }
+                        }}
+                      >
+                        <Text style={[styles.ingSuggestName, { color: theme.text }]}>{s.name}</Text>
+                        {s.price > 0 && <Text style={[styles.ingSuggestPrice, { color: theme.textLight }]}>{s.price.toFixed(2)} kr</Text>}
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
                 {showUnitPicker && (
                   <View style={[styles.unitDropdown, { backgroundColor: theme.white }]}>
                     {UNIT_OPTIONS.map((u) => (
@@ -506,4 +526,8 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 36 },
   emptyTitle: { fontSize: FontSize.md, fontWeight: '600' },
   emptyBody: { fontSize: FontSize.sm, textAlign: 'center' },
+  ingSuggestList: { maxHeight: 160, borderRadius: Radius.sm, marginTop: 4, ...Shadow.card },
+  ingSuggestRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.sm, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  ingSuggestName: { fontSize: FontSize.sm },
+  ingSuggestPrice: { fontSize: FontSize.xs },
 });
