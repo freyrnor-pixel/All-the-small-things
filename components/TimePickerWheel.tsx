@@ -105,6 +105,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
           contentContainerStyle={styles.listPad}
           onMomentumScrollEnd={onHourEnd}
           onScrollEndDrag={onHourEnd}
+          nestedScrollEnabled
           renderItem={({ item }) => {
             const active = item === displayHour;
             return (
@@ -137,6 +138,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
           contentContainerStyle={styles.listPad}
           onMomentumScrollEnd={onMinEnd}
           onScrollEndDrag={onMinEnd}
+          nestedScrollEnabled
           renderItem={({ item }) => {
             const active = item === displayMin;
             return (

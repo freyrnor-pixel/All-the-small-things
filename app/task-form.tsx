@@ -155,9 +155,8 @@ export default function TaskFormScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
         >
-          <HintCard text={t.hints.taskForm.text} example={t.hints.taskForm.example} />
-
           {/* Title */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.taskTitleLabel}</Text>

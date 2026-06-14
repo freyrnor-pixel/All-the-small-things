@@ -82,83 +82,74 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   return (
     <View style={styles.wrap}>
       <CompletionGlow trigger={task.done} color={theme.green} radius={Radius.md} />
-      <Pressable style={styles.row} onPress={onPress}>
-      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
+      <View style={styles.row}>
+        <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
-      <Animated.View style={{ transform: [{ scale: checkScale }] }}>
-        <Pressable
-          // OLD: style={[styles.check, muted && styles.checkMuted, task.done && styles.checkDone]}
-          //      checkMuted and checkDone were StyleSheet entries with Colors.orange/gray hardcoded.
-          style={[
-            styles.check,
-            { borderColor: checkBorderColor },
-            task.done && { backgroundColor: theme.orange, borderColor: theme.orange },
-          ]}
-          onPress={onToggle}
-        >
-          {task.done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-        </Pressable>
-      </Animated.View>
-
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text
-            // OLD: style={[styles.title, muted && styles.titleMuted, task.done && styles.done]}
-            //      titleMuted and done were static StyleSheet entries using Colors.gray/Colors.text,
-            //      which are always light-mode warm values regardless of theme or dark mode.
+        <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+          <Pressable
             style={[
-              styles.title,
-              { color: theme.text },
-              muted && { color: theme.gray, fontWeight: '400' },
-              task.done && { color: theme.gray, textDecorationLine: 'line-through' },
+              styles.check,
+              { borderColor: checkBorderColor },
+              task.done && { backgroundColor: theme.orange, borderColor: theme.orange },
             ]}
+            onPress={onToggle}
+            hitSlop={8}
           >
-            {task.title}
-          </Text>
-          {isEssential && !task.done && (
-            <Ionicons name="star" size={14} color={theme.orange} />
-          )}
-        </View>
-        <View style={styles.meta}>
-          {task.time ? (
-            <View
-              // OLD: style={[styles.tag, isTimebox ? styles.tagTimebox : styles.tagStartAt]}
-              //      tagTimebox used Colors.orangeLight, tagStartAt used Colors.greenLight — both hardcoded.
-              style={[styles.tag, isTimebox
-                ? { backgroundColor: theme.orangeLight }
-                : { backgroundColor: theme.greenLight }
+            {task.done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+          </Pressable>
+        </Animated.View>
+
+        <Pressable style={styles.content} onPress={onPress}>
+          <View style={styles.titleRow}>
+            <Text
+              style={[
+                styles.title,
+                { color: theme.text },
+                muted && { color: theme.gray, fontWeight: '400' },
+                task.done && { color: theme.gray, textDecorationLine: 'line-through' },
               ]}
             >
-              <View style={styles.tagContent}>
-                {/* Icon tinted by the type accent so start-at vs time-box is scannable (matches task-form). */}
-                <Ionicons
-                  name={isTimebox ? 'timer-outline' : 'time-outline'}
-                  size={11}
-                  color={typeAccent}
-                />
-                <Text style={[styles.tagText, { color: theme.text }]}>
-                  {isTimebox ? `${task.durationMinutes} min` : task.time}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-          {/* Recurring badge (W-B) — subtle, theme-coloured; shows specific days when set. */}
-          {isRecurring && (
-            <View style={[styles.tagRecurring, { backgroundColor: theme.grayLight }]}>
-              <View style={styles.tagContent}>
-                <Ionicons name="repeat" size={11} color={theme.textLight} />
-                {task.recurringDays.length > 0 && (
+              {task.title}
+            </Text>
+            {isEssential && !task.done && (
+              <Ionicons name="star" size={14} color={theme.orange} />
+            )}
+          </View>
+          <View style={styles.meta}>
+            {task.time ? (
+              <View
+                style={[styles.tag, isTimebox
+                  ? { backgroundColor: theme.orangeLight }
+                  : { backgroundColor: theme.greenLight }
+                ]}
+              >
+                <View style={styles.tagContent}>
+                  <Ionicons
+                    name={isTimebox ? 'timer-outline' : 'time-outline'}
+                    size={11}
+                    color={typeAccent}
+                  />
                   <Text style={[styles.tagText, { color: theme.text }]}>
-                    {/* OLD: {task.recurringDays.map((d) => DAY_LABELS[d]).join(', ')} */}
-                    {task.recurringDays.map((d) => t.dayLabels[d]).join(', ')}
+                    {isTimebox ? `${task.durationMinutes} min` : task.time}
                   </Text>
-                )}
+                </View>
               </View>
-            </View>
-          )}
-        </View>
+            ) : null}
+            {isRecurring && (
+              <View style={[styles.tagRecurring, { backgroundColor: theme.grayLight }]}>
+                <View style={styles.tagContent}>
+                  <Ionicons name="repeat" size={11} color={theme.textLight} />
+                  {task.recurringDays.length > 0 && (
+                    <Text style={[styles.tagText, { color: theme.text }]}>
+                      {task.recurringDays.map((d) => t.dayLabels[d]).join(', ')}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+          </View>
+        </Pressable>
       </View>
-      </Pressable>
     </View>
   );
 }
