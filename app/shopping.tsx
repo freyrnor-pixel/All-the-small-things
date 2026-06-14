@@ -28,6 +28,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -63,6 +65,13 @@ export default function ShoppingScreen() {
   const [newCategory] = useState<Category>('other');
   const [newPrice, setNewPrice] = useState(0);
   const [confirm, setConfirm] = useState<string | null>(null);
+
+  const swipeDown = Gesture.Pan()
+    .onEnd((e) => {
+      if (e.translationY > 80 && Math.abs(e.translationX) < 60) {
+        runOnJS(router.back)();
+      }
+    });
 
   const items = useShoppingStore((s) => s.items);
   const add = useShoppingStore((s) => s.add);
@@ -157,6 +166,13 @@ export default function ShoppingScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
+      {/* Drag handle + swipe-down to go back */}
+      <GestureDetector gesture={swipeDown}>
+        <View style={[styles.dragHandle, { backgroundColor: theme.white }]}>
+          <View style={[styles.dragBar, { backgroundColor: theme.grayLight }]} />
+        </View>
+      </GestureDetector>
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
@@ -467,6 +483,8 @@ export default function ShoppingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  dragHandle: { alignItems: 'center', paddingVertical: Spacing.sm },
+  dragBar: { width: 40, height: 4, borderRadius: Radius.full },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

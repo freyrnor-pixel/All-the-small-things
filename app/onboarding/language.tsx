@@ -49,9 +49,8 @@ export default function LanguageScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🌐</Text>
+          <Text style={styles.appName}>UnFocus</Text>
           <Text style={styles.heading}>{t.chooseLanguage}</Text>
-          <Text style={styles.sub}>{t.chooseLanguageSub}</Text>
         </View>
 
         <View style={styles.optionsRow}>
@@ -89,18 +88,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
-  heading: {
-    fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
-    textAlign: 'center',
+  appName: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: Colors.orange,
+    letterSpacing: -1,
   },
-  sub: {
-    fontSize: FontSize.md,
+  heading: {
+    fontSize: FontSize.lg,
+    fontWeight: '600',
     color: Colors.textLight,
     textAlign: 'center',
-    lineHeight: 22,
   },
   optionsRow: {
     flexDirection: 'row',

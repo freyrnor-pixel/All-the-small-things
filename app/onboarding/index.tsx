@@ -53,9 +53,7 @@ export default function OnboardingWelcome() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.top}>
-            <Text style={styles.emoji}>🌿</Text>
             <Text style={styles.heading}>{t.welcomeHeading}</Text>
-            <Text style={styles.sub}>{t.welcomeSub}</Text>
           </View>
 
           <View style={styles.featureList}>
