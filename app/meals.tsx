@@ -19,7 +19,6 @@ import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,12 +32,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import ExpandableCard from '@/components/ExpandableCard';
-import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
-import PressableScale from '@/components/PressableScale';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
 // Prep-complexity proxy from ingredient count (no DB column). Returns 1–3 dots.
@@ -54,7 +51,10 @@ const MEAL_TYPES: { value: MealType; icon: string; color: string }[] = [
   { value: 'lunch', icon: '🥙', color: '#6BAA75' },
   { value: 'dinner', icon: '🍽', color: '#F4A261' },
   { value: 'snack', icon: '🍎', color: '#7BC8A4' },
+  { value: 'kveldsmat', icon: '🌙', color: '#9B8EC4' },
 ];
+
+const UNIT_OPTIONS = ['kg', 'g', 'dl', 'l', 'stk'];
 
 export default function MealsScreen() {
   const router = useRouter();
@@ -63,7 +63,6 @@ export default function MealsScreen() {
   const removeDish = useMealStore((s) => s.removeDish);
   const addIngredient = useMealStore((s) => s.addIngredient);
   const removeIngredient = useMealStore((s) => s.removeIngredient);
-  const randomDish = useMealStore((s) => s.randomDish);
   const t = useT();
   const theme = useAppTheme();
   const addToShopping = useShoppingStore((s) => s.add);
@@ -78,6 +77,7 @@ export default function MealsScreen() {
   const [ingName, setIngName] = useState('');
   const [ingAmount, setIngAmount] = useState('1');
   const [ingUnit, setIngUnit] = useState('');
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
 
   const prepLabels: Record<1 | 2 | 3, string> = {
@@ -121,32 +121,11 @@ export default function MealsScreen() {
     setConfirm(t.addedToShoppingConfirm);
   }
 
-  function pickRandom(mealType?: MealType) {
-    const dish = randomDish(mealType);
-    if (!dish) {
-      Alert.alert(
-        t.noDishesTitle,
-        mealType ? t.noDishesBody(mealLabel(mealType).toLowerCase()) : t.noDishesBodyGeneric
-      );
-      return;
-    }
-    Alert.alert(
-      dish.name,
-      dish.ingredients.length > 0
-        ? t.randomIngredientsLabel(dish.ingredients.map((i) => `${i.amount} ${i.unit} ${i.name}`).join(', '))
-        : t.randomNoIngredients,
-      [
-        { text: t.addToShoppingList, onPress: () => pushDishToShopping(dish) },
-        { text: t.ok },
-      ]
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={{ flex: 1 }}
       >
       <View style={styles.header}>
@@ -154,9 +133,7 @@ export default function MealsScreen() {
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
         <Text style={[styles.title, { color: theme.text }]}>{t.mealsTitle}</Text>
-        <Pressable style={[styles.randomBtn, { backgroundColor: theme.white }]} onPress={() => pickRandom()}>
-          <Text style={styles.randomBtnText}>🎲</Text>
-        </Pressable>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Filter chips */}
@@ -189,19 +166,6 @@ export default function MealsScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
-
-        {/* Prominent random picker — the headline interaction */}
-        <PressableScale
-          style={[styles.surpriseBtn, { backgroundColor: theme.green }]}
-          onPress={() => pickRandom(filterType === 'all' ? undefined : filterType)}
-          scaleTo={0.96}
-        >
-          <Text style={styles.surpriseIcon}>🎲</Text>
-          <Text style={styles.surpriseTitle}>{t.surpriseMe}</Text>
-          <Text style={styles.surpriseSub}>{t.pickRandomDishSub}</Text>
-        </PressableScale>
-
         {/* Add dish */}
         {addingDish ? (
           <View style={[styles.addCard, { backgroundColor: theme.white }]}>
@@ -250,7 +214,7 @@ export default function MealsScreen() {
         )}
 
         {/* Empty state */}
-        {filtered.length === 0 && !addingDish && (
+        {filtered.length === 0 && !addingDish && !addingIngredient && (
           <View style={[styles.emptyState, { backgroundColor: theme.white }]}>
             <Text style={styles.emptyEmoji}>
               {filterType === 'all' ? '🍽' : MEAL_TYPES.find((m) => m.value === filterType)?.icon}
@@ -264,8 +228,8 @@ export default function MealsScreen() {
           </View>
         )}
 
-        {/* Dishes */}
-        {filtered.map((dish) => {
+        {/* Dishes — hidden while adding a new dish to keep the form focused */}
+        {!addingDish && filtered.map((dish) => {
           const level = prepLevel(dish.ingredients.length);
           return (
           <ExpandableCard
@@ -327,13 +291,16 @@ export default function MealsScreen() {
                     placeholder={t.shoppingAmountPlaceholder}
                     placeholderTextColor={theme.gray}
                   />
-                  <TextInput
-                    style={[styles.ingInput, { width: 60, backgroundColor: theme.offWhite, color: theme.text }]}
-                    value={ingUnit}
-                    onChangeText={setIngUnit}
-                    placeholder={t.shoppingUnitPlaceholder}
-                    placeholderTextColor={theme.gray}
-                  />
+                  {/* Unit picker — tap to show options instead of free-text */}
+                  <Pressable
+                    style={[styles.ingInput, styles.unitPickerBtn, { backgroundColor: theme.offWhite }]}
+                    onPress={() => setShowUnitPicker((v) => !v)}
+                  >
+                    <Text style={[{ color: ingUnit ? theme.text : theme.gray }, { fontSize: FontSize.sm }]}>
+                      {ingUnit || t.shoppingUnitPlaceholder}
+                    </Text>
+                    <Text style={{ color: theme.gray, fontSize: 10 }}>▼</Text>
+                  </Pressable>
                   <TextInput
                     style={[styles.ingInput, { flex: 1, backgroundColor: theme.offWhite, color: theme.text }]}
                     value={ingName}
@@ -341,6 +308,8 @@ export default function MealsScreen() {
                     placeholder={t.ingredientPlaceholder}
                     placeholderTextColor={theme.gray}
                     autoFocus
+                    autoCorrect={false}
+                    autoCapitalize="none"
                     returnKeyType="done"
                     onSubmitEditing={() => saveIngredient(dish.id)}
                   />
@@ -348,6 +317,25 @@ export default function MealsScreen() {
                     <Text style={styles.confirmBtnText}>+</Text>
                   </Pressable>
                 </View>
+                {showUnitPicker && (
+                  <View style={[styles.unitDropdown, { backgroundColor: theme.white }]}>
+                    {UNIT_OPTIONS.map((u) => (
+                      <Pressable
+                        key={u}
+                        style={[styles.unitOption, { borderBottomColor: theme.grayLight }]}
+                        onPress={() => { setIngUnit(u); setShowUnitPicker(false); }}
+                      >
+                        <Text style={[styles.unitOptionText, { color: theme.text }, ingUnit === u && { color: theme.orange, fontWeight: '700' }]}>{u}</Text>
+                      </Pressable>
+                    ))}
+                    <Pressable
+                      style={styles.unitOption}
+                      onPress={() => { setIngUnit(''); setShowUnitPicker(false); }}
+                    >
+                      <Text style={[styles.unitOptionText, { color: theme.textLight }]}>—</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
             ) : (
               <View style={styles.ingFooter}>
@@ -384,16 +372,6 @@ const styles = StyleSheet.create({
   },
   back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
   title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
-  randomBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadow.card,
-  },
-  randomBtnText: { fontSize: 20 },
   filterRow: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.sm },
   chip: {
     paddingHorizontal: Spacing.md,
@@ -406,18 +384,6 @@ const styles = StyleSheet.create({
   chipActiveText: { color: Colors.white },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.sm },
-  surpriseBtn: {
-    borderRadius: Radius.lg,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-    alignItems: 'center',
-    gap: 2,
-    marginBottom: Spacing.sm,
-    ...Shadow.card,
-  },
-  surpriseIcon: { fontSize: 40 },
-  surpriseTitle: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.xl, marginTop: 4 },
-  surpriseSub: { color: 'rgba(255,255,255,0.9)', fontSize: FontSize.sm },
   rightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   prepDots: { flexDirection: 'row', gap: 3, alignItems: 'center' },
   prepDot: { width: 7, height: 7, borderRadius: Radius.full },
@@ -492,6 +458,25 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.text,
   },
+  unitPickerBtn: {
+    width: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 2,
+  },
+  unitDropdown: {
+    marginTop: 4,
+    borderRadius: Radius.sm,
+    ...Shadow.card,
+    overflow: 'hidden',
+  },
+  unitOption: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  unitOptionText: { fontSize: FontSize.sm, fontWeight: '500' },
   ingAmountRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   ingFooter: {
     flexDirection: 'row',

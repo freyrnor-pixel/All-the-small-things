@@ -369,7 +369,7 @@ const en = {
   // Meals screen
   mealsTitle: 'Dishes',
   mealAll: 'All',
-  mealTypes: { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks' },
+  mealTypes: { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks', kveldsmat: 'Evening meal' },
   newDishTrigger: '+ New dish',
   dishNamePlaceholder: 'Dish name',
   ingredientsCount: (n: number) => n === 1 ? '1 item' : `${n} items`,
@@ -979,7 +979,7 @@ const no: typeof en = {
   lastPaid: (price: string) => `betalte sist ${price}`,
   mealsTitle: 'Matretter',
   mealAll: 'Alle',
-  mealTypes: { breakfast: 'Frokost', lunch: 'Lunsj', dinner: 'Middag', snack: 'Snacks' },
+  mealTypes: { breakfast: 'Frokost', lunch: 'Lunsj', dinner: 'Middag', snack: 'Snacks', kveldsmat: 'Kveldsmat' },
   newDishTrigger: '+ Ny rett',
   dishNamePlaceholder: 'Navn på rett',
   ingredientsCount: (n: number) => `${n} stk`,
