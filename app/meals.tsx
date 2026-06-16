@@ -112,6 +112,8 @@ export default function MealsScreen() {
       addIngredient({ dishId: dish.id, name: ing.name, amount: ing.amount, unit: ing.unit });
     });
     setModalVisible(false);
+    // Confirm even when the filter chip hides the new dish (e.g. added as 'dinner' while filtered to 'lunch').
+    setConfirm(t.taskSavedSimple);
   }
 
   function onIngNameChange(text: string) {

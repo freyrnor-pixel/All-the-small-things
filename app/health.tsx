@@ -6,13 +6,14 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/HintCard, components/PressableScale, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/PressableScale, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table)
  *
  * Edit notes:
  *   - All visible strings go through useT(); dates are YYYY-MM-DD via todayStr()/dateStr().
  *   - The date field is a free-text TextInput (no picker) — it trusts the YYYY-MM-DD string entered.
+ *   - save() shows a ConfirmationBanner so there's always positive proof the entry was logged.
  *   - W-D: this is an emotional screen — uses useSoftTheme() for a gentler palette and
  *     PressableScale severity targets. SEVERITY_COLORS is a soft purple→blue family
  *     (NOT red/green — avoids alarm connotations); labels come from t.severityLabels.
@@ -33,6 +34,7 @@ import { useRouter } from 'expo-router';
 import { useHealthStore } from '@/store/useHealthStore';
 import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
+import ConfirmationBanner from '@/components/ConfirmationBanner';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
@@ -69,6 +71,7 @@ export default function HealthScreen() {
   const [notes, setNotes] = useState('');
   const [severity, setSeverity] = useState(2);
   const [date, setDate] = useState(todayStr());
+  const [confirm, setConfirm] = useState<string | null>(null);
   const t = useT();
   const theme = useSoftTheme();
   const SEVERITIES = severities();
@@ -85,6 +88,7 @@ export default function HealthScreen() {
     setSeverity(2);
     setDate(todayStr());
     setAdding(false);
+    setConfirm(t.taskSavedSimple);
   }
 
   // Count occurrences of ailments in last 30 days
@@ -101,6 +105,7 @@ export default function HealthScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+      <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
