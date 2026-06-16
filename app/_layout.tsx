@@ -175,6 +175,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="shopping" />
+        <Stack.Screen name="plans" />
         <Stack.Screen name="meals" />
         <Stack.Screen name="health" />
         <Stack.Screen name="scan" />

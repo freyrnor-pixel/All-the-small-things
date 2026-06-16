@@ -1,20 +1,21 @@
 /**
- * DayTimeline.tsx — vertical "today at a glance" agenda strip
+ * DayTimeline.tsx — "Plans" agenda strip (merged daily timeline + task list)
  *
- * Renders today's time-anchored tasks (those with a `time` set) in chronological
- * order along a vertical line, with a live "now" marker inserted at its correct
- * position so the user can see what's happening now and what's coming up next
- * at a glance. Time-box tasks show their start–end span; start-at tasks show a
- * single time. Essential tasks get a small star indicator — regular tasks get none.
+ * Renders today's tasks as a single vertical agenda: untimed ("anytime") tasks
+ * first, then time-anchored tasks in chronological order, with a live "now"
+ * marker inserted at its correct position among the timed ones. Time-box tasks
+ * show their start–end span; start-at tasks show a single time; untimed tasks
+ * show no time column. Essential tasks get a small star indicator — regular
+ * tasks get none.
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme, lib/i18n, store/useTaskStore (Task type only)
- *   Used by → app/index.tsx
- *   Data    → pure presentational component; reads no stores directly, takes today's tasks as a prop
+ *   Used by → app/index.tsx (as the "Plans" preview/expanded widget), app/plans.tsx (full list)
+ *   Data    → pure presentational component; reads no stores directly, takes a task list as a prop
  *
  * Edit notes:
- *   - Only tasks with a `time` are shown here — untimed tasks stay in the regular
- *     today's-tasks list below; this is an at-a-glance agenda, not the full list.
+ *   - The caller decides which tasks to pass in (e.g. a 3-item preview slice vs.
+ *     the full day) — this component just renders whatever list it's given.
  *   - The "now" marker re-renders on a 60s interval (see useNowMinutes) — cheap
  *     enough for a home-screen-resident component, no need to debounce further.
  *   - Done tasks are muted (not hidden) so the day's shape stays visible.
@@ -31,6 +32,8 @@ type Props = {
   tasks: Task[];
   onPress: (task: Task) => void;
 };
+
+type Entry = { task: Task; start: number | null; end: number | null };
 
 function toMinutes(time: string): number | null {
   const [h, m] = time.split(':').map((n) => parseInt(n, 10));
@@ -65,16 +68,25 @@ export default function DayTimeline({ tasks, onPress }: Props) {
   const t = useT();
   const nowMinutes = useNowMinutes();
 
-  const entries = useMemo(() => {
-    return tasks
-      .filter((task) => !!task.time)
-      .map((task) => {
-        const start = toMinutes(task.time!) ?? 0;
-        const end = task.taskType === 'time-box' ? start + (task.durationMinutes ?? 30) : start;
-        return { task, start, end };
-      })
-      .sort((a, b) => a.start - b.start);
+  // Untimed ("anytime") tasks keep the caller's order and lead the list;
+  // timed tasks follow in chronological order.
+  const { untimed, timed } = useMemo(() => {
+    const untimedEntries: Entry[] = [];
+    const timedEntries: Entry[] = [];
+    for (const task of tasks) {
+      if (!task.time) {
+        untimedEntries.push({ task, start: null, end: null });
+        continue;
+      }
+      const start = toMinutes(task.time) ?? 0;
+      const end = task.taskType === 'time-box' ? start + (task.durationMinutes ?? 30) : start;
+      timedEntries.push({ task, start, end });
+    }
+    timedEntries.sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+    return { untimed: untimedEntries, timed: timedEntries };
   }, [tasks]);
+
+  const entries = useMemo(() => [...untimed, ...timed], [untimed, timed]);
 
   if (entries.length === 0) {
     return (
@@ -84,18 +96,21 @@ export default function DayTimeline({ tasks, onPress }: Props) {
     );
   }
 
-  // Index of the first entry that hasn't started yet — the "now" marker is
-  // inserted right before it (or at the end if the whole day has started).
-  const nowInsertIndex = entries.findIndex((e) => e.start > nowMinutes);
-  const insertAt = nowInsertIndex === -1 ? entries.length : nowInsertIndex;
+  // Index (within the full entries array) of the first timed entry that
+  // hasn't started yet — the "now" marker is inserted right before it.
+  const nowInsertIndexInTimed = timed.findIndex((e) => (e.start ?? 0) > nowMinutes);
+  const insertAt = timed.length === 0
+    ? -1 // no timed entries at all — no "now" marker to show
+    : untimed.length + (nowInsertIndexInTimed === -1 ? timed.length : nowInsertIndexInTimed);
 
   return (
     <View style={styles.wrap}>
       {entries.map((entry, idx) => {
         const { task, start, end } = entry;
-        const effectiveEnd = task.taskType === 'time-box' ? end : start + 30;
-        const isHappeningNow = !task.done && nowMinutes >= start && nowMinutes < effectiveEnd;
-        const isPast = !isHappeningNow && nowMinutes >= effectiveEnd;
+        const isTimed = start !== null && end !== null;
+        const effectiveEnd = isTimed ? (task.taskType === 'time-box' ? end! : start! + 30) : null;
+        const isHappeningNow = isTimed && !task.done && nowMinutes >= start! && nowMinutes < effectiveEnd!;
+        const isPast = isTimed && !isHappeningNow && nowMinutes >= effectiveEnd!;
         const isEssential = task.importance === 'essential';
         const dimmed = task.done || isPast;
 
@@ -112,13 +127,17 @@ export default function DayTimeline({ tasks, onPress }: Props) {
             )}
             <Pressable style={styles.row} onPress={() => onPress(task)}>
               <View style={styles.timeCol}>
-                <Text style={[styles.timeText, { color: dimmed ? theme.textLight : theme.text }]}>
-                  {task.time}
-                </Text>
-                {task.taskType === 'time-box' && (
-                  <Text style={[styles.timeEndText, { color: theme.textLight }]}>
-                    {minutesToLabel(end)}
-                  </Text>
+                {isTimed && (
+                  <>
+                    <Text style={[styles.timeText, { color: dimmed ? theme.textLight : theme.text }]}>
+                      {task.time}
+                    </Text>
+                    {task.taskType === 'time-box' && (
+                      <Text style={[styles.timeEndText, { color: theme.textLight }]}>
+                        {minutesToLabel(end!)}
+                      </Text>
+                    )}
+                  </>
                 )}
               </View>
               <View style={styles.lineCol}>

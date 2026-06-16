@@ -47,9 +47,17 @@ const en = {
   backlogHint: 'Every small step counts — just take one at a time.',
   // Daily timeline (Proposal — home overhaul)
   dailyTimeline: 'Today at a glance',
-  timelineEmpty: 'No timed plans today',
+  timelineEmpty: 'No plans today',
   timelineNow: 'Now',
   priceTotalLabel: 'Total',
+  // Plans (merged "your day" + "today's tasks" widget)
+  plansTitle: 'Plans',
+  essentialPlansTitle: '⭐ Essential plans',
+  noPlansToday: 'No plans today — enjoy your day 🌿',
+  noEssentialPlansToday: 'No essential plans today — great!',
+  expandPlans: 'Show all plans for today',
+  collapsePlans: 'Show fewer plans',
+  plansEssentialsHidden: (n: number) => `+ ${n} regular plan${n !== 1 ? 's' : ''} hidden →`,
   // Focus view (Proposal 1)
   focusView: {
     currentTask: 'Up next',
@@ -583,9 +591,16 @@ const no: typeof en = {
   backlog: 'Venter på deg',
   backlogHint: 'Hvert lite steg teller — bare ta ett om gangen.',
   dailyTimeline: 'Dagen din',
-  timelineEmpty: 'Ingen tidsavtaler i dag',
+  timelineEmpty: 'Ingen planer i dag',
   timelineNow: 'Nå',
   priceTotalLabel: 'Totalt',
+  plansTitle: 'Planer',
+  essentialPlansTitle: '⭐ Viktige planer',
+  noPlansToday: 'Ingen planer i dag! Nyt dagen 🌿',
+  noEssentialPlansToday: 'Ingen viktige planer i dag — bra!',
+  expandPlans: 'Vis alle planer for i dag',
+  collapsePlans: 'Vis færre planer',
+  plansEssentialsHidden: (n: number) => `+ ${n} vanlige planer skjult →`,
   focusView: {
     currentTask: 'Neste',
     done: 'Ferdig ✓',
