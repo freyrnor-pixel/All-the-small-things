@@ -95,6 +95,8 @@ export default function MealsScreen() {
     addDish({ name: newDishName.trim(), mealType: newDishType });
     setNewDishName('');
     setAddingDish(false);
+    // Confirm even when the filter chip hides the new dish (e.g. added as 'dinner' while filtered to 'lunch').
+    setConfirm(t.taskSavedSimple);
   }
 
   function saveIngredient(dishId: string) {
@@ -104,6 +106,7 @@ export default function MealsScreen() {
     setIngAmount('1');
     setIngUnit('');
     setAddingIngredient(null);
+    setConfirm(t.taskSavedSimple);
   }
 
   function pushDishToShopping(dish: Dish) {
