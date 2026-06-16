@@ -3,11 +3,7 @@ name: OTA Update
 on:
   push:
     branches:
-      - claude/adhd-task-life-app-TOdFj
-      - claude/merge-outstanding-changes-yqj56d
-      - claude/push-changes-ota-m5mjqf
-      - claude/github-actions-job-failure-4ssqat
-      - claude/epic-cray-4vabkb
+      - 'claude/**'
   workflow_dispatch:
 
 jobs:

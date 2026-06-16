@@ -180,6 +180,8 @@ export default function TaskFormScreen() {
               theme={theme}
               dayLabels={dayLabels}
               monthLabels={months}
+              expandLabel={t.showFullMonth}
+              collapseLabel={t.showWeekOnly}
             />
           </View>
 

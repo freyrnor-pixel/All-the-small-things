@@ -1,9 +1,10 @@
 /**
- * DatePickerCalendar.tsx — month-grid calendar for picking a YYYY-MM-DD date.
+ * DatePickerCalendar.tsx — collapsible week-strip / month-grid calendar for picking a YYYY-MM-DD date.
  *
- * Self-contained month calendar with prev/next navigation that highlights the
- * selected day and today. Day/month names and theme colors are injected via
- * props so the parent owns localization and theming.
+ * Defaults to a single-row week strip (Mon–Sun) centered on the selected date, with
+ * prev/next week navigation. A chevron toggle expands it into the full month grid
+ * (and back), so the common case (one tap, nearby day) stays compact while the full
+ * month is still reachable.
  *
  * Connections:
  *   Imports → constants/theme
@@ -11,11 +12,13 @@
  *   Data    → none (presentational); value/onChange/theme/labels all come from props
  *
  * Edit notes:
- *   - dayLabels must be Mon–Sun ordered (7 entries); the grid offsets weeks so Monday is column 0.
+ *   - dayLabels must be Mon–Sun ordered (7 entries); the grid/strip offsets weeks so Monday is column 0.
  *   - Dates are handled as YYYY-MM-DD strings via toDateStr/parseDateParts — avoid raw Date math to dodge timezone shifts.
+ *   - expandLabel/collapseLabel are plain strings (not from useT directly) so this stays presentational; pass t.showFullMonth / t.showWeekOnly.
  */
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 
 interface Props {
@@ -24,6 +27,8 @@ interface Props {
   theme: AppColors;
   dayLabels: string[]; // Mon–Sun (7 entries)
   monthLabels: string[]; // 12 month names
+  expandLabel: string;
+  collapseLabel: string;
 }
 
 function parseDateParts(s: string): [number, number, number] {
@@ -40,10 +45,29 @@ function todayStr(): string {
   return toDateStr(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-export default function DatePickerCalendar({ value, onChange, theme, dayLabels, monthLabels }: Props) {
+/** Monday (Mon=0 offset) of the week containing the given YYYY-MM-DD string. */
+function weekStart(s: string): Date {
+  const [y, m, d] = parseDateParts(s);
+  const dt = new Date(y, m, d);
+  const mon0 = (dt.getDay() + 6) % 7;
+  dt.setDate(dt.getDate() - mon0);
+  return dt;
+}
+
+export default function DatePickerCalendar({
+  value,
+  onChange,
+  theme,
+  dayLabels,
+  monthLabels,
+  expandLabel,
+  collapseLabel,
+}: Props) {
   const [selY, selM, selD] = parseDateParts(value);
+  const [expanded, setExpanded] = useState(false);
   const [viewYear, setViewYear] = useState(selY);
   const [viewMonth, setViewMonth] = useState(selM);
+  const [weekAnchor, setWeekAnchor] = useState<Date>(() => weekStart(value));
 
   const today = todayStr();
 
@@ -55,6 +79,64 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
   function nextMonth() {
     if (viewMonth === 11) { setViewYear((y) => y + 1); setViewMonth(0); }
     else setViewMonth((m) => m + 1);
+  }
+
+  function prevWeek() {
+    setWeekAnchor((d) => {
+      const nd = new Date(d);
+      nd.setDate(nd.getDate() - 7);
+      return nd;
+    });
+  }
+
+  function nextWeek() {
+    setWeekAnchor((d) => {
+      const nd = new Date(d);
+      nd.setDate(nd.getDate() + 7);
+      return nd;
+    });
+  }
+
+  function toggleExpanded() {
+    if (!expanded) {
+      // Jump the month grid to whichever month the week view is currently showing.
+      setViewYear(weekAnchor.getFullYear());
+      setViewMonth(weekAnchor.getMonth());
+    } else {
+      // Collapse back to the week containing the selected date.
+      setWeekAnchor(weekStart(value));
+    }
+    setExpanded((e) => !e);
+  }
+
+  function renderDay(ds: string, dayNum: number, key: React.Key) {
+    const isSelected = ds === value;
+    const isToday = ds === today;
+    return (
+      <Pressable key={key} style={styles.cell} onPress={() => onChange(ds)} hitSlop={2}>
+        <View style={[
+          styles.dayCircle,
+          isSelected && { backgroundColor: theme.orange },
+          !isSelected && isToday && { borderWidth: 1.5, borderColor: theme.orange },
+        ]}>
+          <Text style={[
+            styles.dayText,
+            { color: theme.text },
+            isSelected && { color: '#FFFFFF', fontWeight: '700' },
+            !isSelected && isToday && { color: theme.orange, fontWeight: '600' },
+          ]}>
+            {dayNum}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  }
+
+  const weekDays: { ds: string; day: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekAnchor);
+    d.setDate(d.getDate() + i);
+    weekDays.push({ ds: toDateStr(d.getFullYear(), d.getMonth(), d.getDate()), day: d.getDate() });
   }
 
   const firstDow = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
@@ -72,13 +154,13 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
   return (
     <View style={[styles.container, { backgroundColor: theme.white }]}>
       <View style={styles.header}>
-        <Pressable onPress={prevMonth} hitSlop={12} style={styles.navBtn}>
+        <Pressable onPress={expanded ? prevMonth : prevWeek} hitSlop={12} style={styles.navBtn}>
           <Text style={[styles.navArrow, { color: theme.orange }]}>‹</Text>
         </Pressable>
         <Text style={[styles.monthYear, { color: theme.text }]}>
-          {monthLabels[viewMonth]} {viewYear}
+          {expanded ? `${monthLabels[viewMonth]} ${viewYear}` : `${monthLabels[weekAnchor.getMonth()]} ${weekAnchor.getFullYear()}`}
         </Text>
-        <Pressable onPress={nextMonth} hitSlop={12} style={styles.navBtn}>
+        <Pressable onPress={expanded ? nextMonth : nextWeek} hitSlop={12} style={styles.navBtn}>
           <Text style={[styles.navArrow, { color: theme.orange }]}>›</Text>
         </Pressable>
       </View>
@@ -91,34 +173,28 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
         ))}
       </View>
 
-      {weeks.map((week, wi) => (
+      {!expanded && (
+        <View style={styles.weekRow}>
+          {weekDays.map(({ ds, day }) => renderDay(ds, day, ds))}
+        </View>
+      )}
+
+      {expanded && weeks.map((week, wi) => (
         <View key={wi} style={styles.weekRow}>
           {week.map((day, di) => {
             if (!day) return <View key={di} style={styles.cell} />;
             const ds = toDateStr(viewYear, viewMonth, day);
-            const isSelected = ds === value;
-            const isToday = ds === today;
-            return (
-              <Pressable key={di} style={styles.cell} onPress={() => onChange(ds)} hitSlop={2}>
-                <View style={[
-                  styles.dayCircle,
-                  isSelected && { backgroundColor: theme.orange },
-                  !isSelected && isToday && { borderWidth: 1.5, borderColor: theme.orange },
-                ]}>
-                  <Text style={[
-                    styles.dayText,
-                    { color: theme.text },
-                    isSelected && { color: '#FFFFFF', fontWeight: '700' },
-                    !isSelected && isToday && { color: theme.orange, fontWeight: '600' },
-                  ]}>
-                    {day}
-                  </Text>
-                </View>
-              </Pressable>
-            );
+            return renderDay(ds, day, di);
           })}
         </View>
       ))}
+
+      <Pressable onPress={toggleExpanded} style={styles.toggleRow} hitSlop={8}>
+        <Text style={[styles.toggleText, { color: theme.orange }]}>
+          {expanded ? collapseLabel : expandLabel}
+        </Text>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={theme.orange} />
+      </Pressable>
     </View>
   );
 }
@@ -152,4 +228,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: { fontSize: FontSize.sm },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: Spacing.sm,
+  },
+  toggleText: { fontSize: FontSize.sm, fontWeight: '600' },
 });
