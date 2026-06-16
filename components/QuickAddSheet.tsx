@@ -6,7 +6,7 @@
  * task store. State resets each time the sheet becomes visible.
  *
  * Connections:
- *   Imports → constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore
+ *   Imports → components/ConfirmationBanner, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore
  *   Used by → app/index.tsx
  *   Data    → calls useTaskStore.add() to insert a task; reads colorTheme from useSettingsStore
  *
@@ -14,6 +14,8 @@
  *   - dayOptions is memoized on t.today/t.tomorrow; a language change remounts the sheet so dayShort stays in sync.
  *   - save() builds a task with fixed defaults (taskType 'start-at', recurring 'none', importance 'regular') — extend here for richer quick-add.
  *   - All visible strings via useT(); placeholders like "HH:MM" are format hints, not user copy.
+ *   - save() shows a ConfirmationBanner and delays onClose() by 300ms (mirrors task-form.tsx) so there's
+ *     always positive proof the task was saved, even if it sorts past the home screen's visible cap.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -32,6 +34,7 @@ import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
+import ConfirmationBanner from '@/components/ConfirmationBanner';
 
 type DayOption = { label: string; date: string };
 
@@ -49,6 +52,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [showTime, setShowTime] = useState(false);
   const [time, setTime] = useState('');
+  const [confirm, setConfirm] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   const dayOptions = useMemo((): DayOption[] => {
@@ -73,6 +77,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
       setSelectedDate(todayStr());
       setShowTime(false);
       setTime('');
+      setConfirm(null);
       setTimeout(() => inputRef.current?.focus(), 80);
     }
   }, [visible]);
@@ -91,7 +96,9 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
       recurringDays: [],
       importance: 'regular',
     });
-    onClose();
+    setConfirm(t.taskSavedSimple);
+    // Let the confirmation land before the sheet closes — mirrors task-form.tsx.
+    setTimeout(onClose, 300);
   }
 
   return (
@@ -161,15 +168,17 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
             style={[
               styles.saveBtn,
               { backgroundColor: theme.orange },
-              !title.trim() && styles.saveBtnDisabled,
+              (!title.trim() || !!confirm) && styles.saveBtnDisabled,
             ]}
             onPress={save}
-            disabled={!title.trim()}
+            disabled={!title.trim() || !!confirm}
           >
             <Text style={styles.saveBtnText}>{t.save}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
     </Modal>
   );
 }
