@@ -25,6 +25,9 @@
  *     "3 full + 2 half-cut" window effect regardless of how many bubbles exist.
  *   - wheelAngle initializes to windowCenter so item 0 starts at the window centre (NW of the
  *     FAB when right-handed); re-synced on handedness change.
+ *   - The wheel doesn't loop: minAngle/maxAngle "block" it at the first/last item. Dragging past
+ *     either end rubber-bands, then tugs back into place on release (bouncier spring) — purely
+ *     visual, no haptic.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
  *   - tap() haptic fires on the FAB toggle and on every bubble press.
@@ -209,6 +212,12 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const windowEnd   = leftHanded ? 0             : -Math.PI / 2;
   const windowCenter = (windowStart + windowEnd) / 2;
 
+  // The wheel doesn't loop — item 0 and the last item are hard ends ("blocks").
+  // maxAngle centres item 0, minAngle centres the last item; dragging past either
+  // rubber-bands (see spinGesture) instead of revealing nothing.
+  const maxAngle = windowCenter;
+  const minAngle = windowCenter - (BASE_ITEMS.length - 1) * STEP_ANGLE;
+
   const wheelAngle   = useSharedValue(windowCenter);
   const openProgress = useSharedValue(0);
   const startAngle   = useSharedValue(0);
@@ -252,17 +261,31 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   // Spin gesture: dragging up rotates the wheel counterclockwise, revealing items
   // further along the circle. Releases snap to the nearest item slot in ~175ms.
+  // Dragging past either end "block" rubber-bands (resisted drag) and then tugs
+  // back into place on release with a bouncier spring — a visual-only cue that
+  // you've hit the end of the list.
   const spinGesture = Gesture.Pan()
     .onStart(() => {
       startAngle.value = wheelAngle.value;
     })
     .onUpdate((e) => {
-      wheelAngle.value = startAngle.value - e.translationY / DRAG_SENSITIVITY;
+      const raw = startAngle.value - e.translationY / DRAG_SENSITIVITY;
+      if (raw > maxAngle) {
+        wheelAngle.value = maxAngle + (raw - maxAngle) * 0.25;
+      } else if (raw < minAngle) {
+        wheelAngle.value = minAngle + (raw - minAngle) * 0.25;
+      } else {
+        wheelAngle.value = raw;
+      }
     })
     .onEnd((e) => {
       const projected = wheelAngle.value - (e.velocityY / DRAG_SENSITIVITY) * 0.12;
-      const snapped = Math.round(projected / STEP_ANGLE) * STEP_ANGLE;
-      wheelAngle.value = withSpring(snapped, { damping: 35, stiffness: 500 });
+      const snapped = Math.min(maxAngle, Math.max(minAngle, Math.round(projected / STEP_ANGLE) * STEP_ANGLE));
+      const hitBlock = snapped === maxAngle || snapped === minAngle;
+      wheelAngle.value = withSpring(
+        snapped,
+        hitBlock ? { damping: 14, stiffness: 380 } : { damping: 35, stiffness: 500 }
+      );
     });
 
   const fabStyle = useAnimatedStyle(() => ({
