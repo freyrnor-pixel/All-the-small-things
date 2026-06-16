@@ -19,6 +19,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
@@ -30,17 +31,17 @@ export default function PrivacyScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.icon}>🔒</Text>
+          <Ionicons name="lock-closed-outline" size={56} color={Colors.orange} />
           <Text style={styles.headline}>{t.onboarding.privacy.headline}</Text>
         </View>
 
         <View style={styles.bulletCard}>
           <View style={styles.bulletRow}>
-            <Text style={styles.bullet}>📱</Text>
+            <Ionicons name="phone-portrait-outline" size={22} color={Colors.orange} />
             <Text style={styles.bulletText}>{t.onboarding.privacy.local}</Text>
           </View>
           <View style={styles.bulletRow}>
-            <Text style={styles.bullet}>💚</Text>
+            <Ionicons name="gift-outline" size={22} color={Colors.orange} />
             <Text style={styles.bulletText}>{t.onboarding.privacy.free}</Text>
           </View>
         </View>
@@ -69,7 +70,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   top: { alignItems: 'center', gap: Spacing.md },
-  icon: { fontSize: 72 },
   headline: {
     fontSize: FontSize.xxl,
     fontWeight: '700',
@@ -86,10 +86,9 @@ const styles = StyleSheet.create({
   },
   bulletRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.md,
   },
-  bullet: { fontSize: 22, lineHeight: 26 },
   bulletText: {
     flex: 1,
     fontSize: FontSize.md,

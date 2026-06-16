@@ -26,6 +26,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
@@ -56,7 +57,7 @@ export default function OnboardingStep5() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🎨</Text>
+          <Ionicons name="color-palette-outline" size={56} color={Colors.orange} />
           <Text style={styles.heading}>{t.themeOnboarding}</Text>
           <Text style={styles.sub}>{t.themeSub}</Text>
         </View>
@@ -85,7 +86,7 @@ export default function OnboardingStep5() {
                 <Text style={[styles.themeLabel, { color: th.text }]}>{t.themeNames[key]}</Text>
                 {isActive && (
                   <View style={[styles.checkmark, { backgroundColor: th.orange }]}>
-                    <Text style={styles.checkmarkText}>✓</Text>
+                    <Ionicons name="checkmark" size={14} color={Colors.white} />
                   </View>
                 )}
               </Pressable>
@@ -134,7 +135,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: { flex: 1, padding: Spacing.xl, gap: Spacing.xl, justifyContent: 'center' },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
@@ -161,7 +161,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkmarkText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
   handednessCard: {
     backgroundColor: Colors.white,
     borderRadius: Radius.md,

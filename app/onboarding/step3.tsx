@@ -19,6 +19,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -40,7 +41,7 @@ export default function OnboardingStep3() {
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🛒</Text>
+          <Ionicons name="cart-outline" size={56} color={Colors.orange} />
           <Text style={styles.heading}>{t.shoppingOnboarding}</Text>
           <Text style={styles.sub}>{t.shoppingOnboardingSub}</Text>
         </View>
@@ -71,6 +72,7 @@ export default function OnboardingStep3() {
           />
           <Text style={styles.hint}>{t.monthlyDateInputHint}</Text>
           <View style={styles.tipBox}>
+            <Ionicons name="bulb-outline" size={18} color={Colors.text} />
             <Text style={styles.tipText}>{t.monthlyPaydayHint}</Text>
           </View>
         </View>
@@ -106,7 +108,6 @@ const styles = StyleSheet.create({
   skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   card: {
@@ -144,8 +145,8 @@ const styles = StyleSheet.create({
   dateChipActive: { backgroundColor: Colors.orange },
   dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
   dateTextActive: { color: Colors.white },
-  tipBox: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.sm },
-  tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
+  tipBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.sm },
+  tipText: { flex: 1, fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },

@@ -1,16 +1,17 @@
 /**
- * language.tsx — Language picker (first onboarding screen)
+ * language.tsx — App intro + language picker (first onboarding screen)
  *
- * Entry point of the onboarding flow. Lets the user pick English or Norwegian,
- * persisting the choice so all subsequent strings render in that language.
+ * Entry point of the onboarding flow. The very first thing a new user sees:
+ * the app name and a choice of English or Norwegian — no explanatory copy.
+ * Persists the choice so all subsequent strings render in that language.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @/components/AppLogo, @/store/useSettingsStore, @/lib/i18n, @/constants/theme
  *   Used by → Expo Router route "/onboarding/language"
  *   Data    → useSettingsStore (writes `language`)
  *
  * Edit notes:
- *   - All user-facing strings go through useT() — no hardcoded text.
+ *   - Intentionally has no heading/subtext beyond the app name — keep it that way.
  *   - choose() writes `language` to settings, then router.push to "/onboarding/privacy" (inserts privacy trust screen before guided).
  *   - OPTIONS labels are intentionally literal language names (not translated).
  */
@@ -18,9 +19,11 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import AppLogo from '@/components/AppLogo';
 import type { Language } from '@/store/useSettingsStore';
 
 type LangOption = {
@@ -49,9 +52,8 @@ export default function LanguageScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🌐</Text>
-          <Text style={styles.heading}>{t.chooseLanguage}</Text>
-          <Text style={styles.sub}>{t.chooseLanguageSub}</Text>
+          <AppLogo size={72} />
+          <Text style={styles.heading}>{t.welcomeHeading}</Text>
         </View>
 
         <View style={styles.optionsRow}>
@@ -69,7 +71,7 @@ export default function LanguageScreen() {
               <Text style={styles.optionSub}>{opt.sublabel}</Text>
               {settings.language === opt.code && (
                 <View style={styles.checkmark}>
-                  <Text style={styles.checkmarkText}>✓</Text>
+                  <Ionicons name="checkmark" size={14} color={Colors.white} />
                 </View>
               )}
             </Pressable>
@@ -89,18 +91,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: {
     fontSize: FontSize.xxl,
     fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
-  },
-  sub: {
-    fontSize: FontSize.md,
-    color: Colors.textLight,
-    textAlign: 'center',
-    lineHeight: 22,
   },
   optionsRow: {
     flexDirection: 'row',
@@ -141,10 +136,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkmarkText: {
-    color: Colors.white,
-    fontSize: FontSize.sm,
-    fontWeight: '700',
   },
 });

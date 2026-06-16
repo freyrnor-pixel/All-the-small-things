@@ -19,6 +19,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -43,14 +44,14 @@ export default function GuidedScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🗺️</Text>
+          <Ionicons name="compass-outline" size={56} color={Colors.orange} />
           <Text style={styles.heading}>{t.guidedTitle}</Text>
           <Text style={styles.sub}>{t.guidedSub}</Text>
         </View>
 
         <View style={styles.options}>
           <Pressable style={[styles.option, styles.optionPrimary]} onPress={goGuided}>
-            <Text style={styles.optionIcon}>📋</Text>
+            <Ionicons name="list-outline" size={28} color={Colors.white} />
             <View style={styles.optionText}>
               <Text style={styles.optionLabel}>{t.guidedBtn}</Text>
               <Text style={styles.optionDesc}>{t.guidedDesc}</Text>
@@ -86,7 +87,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: {
     fontSize: FontSize.xxl,
     fontWeight: '700',
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.grayLight,
   },
-  optionIcon: { fontSize: 28 },
   optionText: { flex: 1, gap: 2 },
   optionLabel: {
     fontSize: FontSize.lg,

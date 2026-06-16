@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -50,7 +51,7 @@ export default function OnboardingStep2() {
           showsVerticalScrollIndicator={false}
         >
         <View style={styles.top}>
-          <Text style={styles.emoji}>💼</Text>
+          <Ionicons name="briefcase-outline" size={56} color={Colors.orange} />
           <Text style={styles.heading}>{t.workModeOnboarding}</Text>
           <Text style={styles.sub}>{t.workModeOnboardingSub}</Text>
         </View>
@@ -111,6 +112,7 @@ export default function OnboardingStep2() {
         </View>
 
         <View style={styles.tipBox}>
+          <Ionicons name="bulb-outline" size={18} color={Colors.text} />
           <Text style={styles.tipText}>{t.tipWorkMode}</Text>
         </View>
 
@@ -144,7 +146,6 @@ const styles = StyleSheet.create({
   skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
@@ -157,8 +158,8 @@ const styles = StyleSheet.create({
   hoursRow: { flexDirection: 'row', gap: Spacing.md },
   hourField: { flex: 1, gap: 4 },
   hourLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600', textAlign: 'center' },
-  tipBox: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.md },
-  tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
+  tipBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.md },
+  tipText: { flex: 1, fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
   dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
   dotActive: { backgroundColor: Colors.orange, width: 20 },

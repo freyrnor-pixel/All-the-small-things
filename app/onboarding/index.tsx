@@ -5,7 +5,7 @@
  * and a text field for the user's name, then advances into the setup wizard.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @/components/AppLogo, @/store/useSettingsStore, @/lib/i18n, @/constants/theme
  *   Used by → Expo Router route "/onboarding"
  *   Data    → useSettingsStore (writes `userName`)
  *
@@ -26,9 +26,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import AppLogo from '@/components/AppLogo';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function OnboardingWelcome() {
   const router = useRouter();
@@ -73,7 +77,7 @@ export default function OnboardingWelcome() {
           </View>
 
           <View style={styles.top}>
-            <Text style={styles.emoji}>🌿</Text>
+            <AppLogo size={56} />
             <Text style={styles.heading}>{t.welcomeHeading}</Text>
             <Text style={styles.sub}>{t.welcomeSub}</Text>
           </View>
@@ -81,7 +85,7 @@ export default function OnboardingWelcome() {
           <View style={styles.featureList}>
             {t.features.map((f, i) => (
               <View key={i} style={styles.featureRow}>
-                <Text style={styles.featureIcon}>{f.icon}</Text>
+                <Ionicons name={f.icon as IoniconsName} size={20} color={Colors.orange} />
                 <Text style={styles.featureText}>{f.text}</Text>
               </View>
             ))}
@@ -113,7 +117,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: {
     fontSize: FontSize.xxl,
     fontWeight: '700',
@@ -133,8 +136,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.card,
   },
-  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
-  featureIcon: { fontSize: 20, lineHeight: 26 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   featureText: { flex: 1, fontSize: FontSize.md, color: Colors.text, lineHeight: 22 },
   card: {
     backgroundColor: Colors.white,

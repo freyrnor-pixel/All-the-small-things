@@ -19,6 +19,7 @@ import React, { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -42,19 +43,19 @@ export default function OnboardingStep4() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🔔</Text>
+          <Ionicons name="notifications-outline" size={56} color={Colors.orange} />
           <Text style={styles.heading}>{t.notificationsOnboarding}</Text>
           <Text style={styles.sub}>{t.notificationsSub}</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>✅</Text>
+            <Ionicons name="checkmark-circle-outline" size={20} color={Colors.orange} />
             <Text style={styles.infoText}>{t.taskNotifications} — {t.taskNotificationsHintOnboarding}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🛒</Text>
+            <Ionicons name="cart-outline" size={20} color={Colors.orange} />
             <Text style={styles.infoText}>{t.weeklyRemindersOnboarding} — {t.weeklyRemindersHint}</Text>
           </View>
         </View>
@@ -86,12 +87,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  infoIcon: { fontSize: 20 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   infoText: { flex: 1, fontSize: FontSize.md, color: Colors.text, lineHeight: 22 },
   divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.xs },
   noteBox: { borderRadius: Radius.md, padding: Spacing.md },
