@@ -204,6 +204,9 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN pet_color TEXT DEFAULT '#A78BFA'",
     // Left-handed mode
     "ALTER TABLE settings ADD COLUMN left_handed INTEGER DEFAULT 0",
+    // Shopping items grouped by dish (home screen / shopping list redesign)
+    "ALTER TABLE shopping_items ADD COLUMN dish_id TEXT DEFAULT NULL",
+    "ALTER TABLE shopping_items ADD COLUMN dish_name TEXT DEFAULT ''",
   ];
   for (const sql of migrations) {
     try { db.execSync(sql); } catch { /* column already exists */ }

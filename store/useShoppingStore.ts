@@ -31,10 +31,14 @@ export type ShoppingItem = {
   category: string;
   monthlyAllocated: number;
   monthlySourceId?: string;
+  dishId?: string;
+  dishName: string;
 };
 
-type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId'> & {
+type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId' | 'dishId' | 'dishName'> & {
   category?: string;
+  dishId?: string;
+  dishName?: string;
 };
 
 type ShoppingStore = {
@@ -64,6 +68,8 @@ function rowToItem(row: Record<string, unknown>): ShoppingItem {
     category: (row.category as string) || 'other',
     monthlyAllocated: (row.monthly_allocated as number) || 0,
     monthlySourceId: (row.monthly_source_id as string) || undefined,
+    dishId: (row.dish_id as string) || undefined,
+    dishName: (row.dish_name as string) || '',
   };
 }
 
@@ -84,14 +90,16 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   add(item) {
     const id = generateId();
     const category = item.category ?? 'other';
+    const dishId = item.dishId ?? null;
+    const dishName = item.dishName ?? '';
     db.runSync(
       `INSERT INTO shopping_items
-         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL)`,
-      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category]
+         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id, dish_id, dish_name)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL, ?, ?)`,
+      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category, dishId, dishName]
     );
     set((s) => ({
-      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined }],
+      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined, dishId: item.dishId, dishName }],
     }));
   },
 
@@ -102,12 +110,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     db.runSync(
       `UPDATE shopping_items
          SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=?, category=?,
-             monthly_allocated=?, monthly_source_id=?
+             monthly_allocated=?, monthly_source_id=?, dish_id=?, dish_name=?
        WHERE id=?`,
       [
         next.name, next.amount, next.unit, next.listType,
         next.checked ? 1 : 0, next.store, next.price, next.category,
-        next.monthlyAllocated, next.monthlySourceId ?? null, id,
+        next.monthlyAllocated, next.monthlySourceId ?? null, next.dishId ?? null, next.dishName, id,
       ]
     );
     set((s) => ({ items: s.items.map((i) => (i.id === id ? next : i)) }));
@@ -170,9 +178,9 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     try {
       db.runSync(
         `INSERT INTO shopping_items
-           (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id)
-         VALUES (?, ?, ?, ?, 'weekly', 0, ?, ?, ?, 0, ?)`,
-        [weeklyId, monthly.name, String(qty), monthly.unit, monthly.store, monthly.price, monthly.category, monthlyId]
+           (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id, dish_id, dish_name)
+         VALUES (?, ?, ?, ?, 'weekly', 0, ?, ?, ?, 0, ?, ?, ?)`,
+        [weeklyId, monthly.name, String(qty), monthly.unit, monthly.store, monthly.price, monthly.category, monthlyId, monthly.dishId ?? null, monthly.dishName]
       );
       db.runSync(
         'UPDATE shopping_items SET monthly_allocated = monthly_allocated + ? WHERE id = ?',
@@ -197,6 +205,8 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
           category: monthly.category,
           monthlyAllocated: 0,
           monthlySourceId: monthlyId,
+          dishId: monthly.dishId,
+          dishName: monthly.dishName,
         },
       ],
     }));

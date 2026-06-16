@@ -115,6 +115,8 @@ export default function MealsScreen() {
         listType: 'weekly',
         store: '',
         price: 0,
+        dishId: dish.id,
+        dishName: dish.name,
       });
     });
     success();

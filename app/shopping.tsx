@@ -1,10 +1,11 @@
 /**
  * shopping.tsx — weekly & monthly shopping lists
  *
- * Tabbed shopping screen (weekly / monthly) with per-category grouping,
- * check-off, quantity adjust, and add via the catalog-backed autocomplete
- * (useCatalogStore.suggest). Monthly items can be allocated into the weekly
- * list through the MonthlyPickerSheet.
+ * Tabbed shopping screen (weekly / monthly) with unchecked items grouped by
+ * dish (items pushed from a meals.tsx dish share its dishName; undished items
+ * fall into a shared "Other" bucket), check-off, quantity adjust, and add via
+ * the catalog-backed autocomplete (useCatalogStore.suggest). Monthly items can
+ * be allocated into the weekly list through the MonthlyPickerSheet.
  *
  * Connections:
  *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useCatalogStore, store/useSettingsStore, store/useShoppingStore
@@ -115,6 +116,30 @@ export default function ShoppingScreen() {
     () => [...unchecked].sort((a, b) => a.name.localeCompare(b.name)),
     [unchecked]
   );
+
+  // Group unchecked items by dish (ingredients pushed from meals.tsx carry a
+  // dishName); items without a dish fall into the shared "Other" bucket, which
+  // always sorts last.
+  const dishGroups = useMemo(() => {
+    const groups = new Map<string, typeof sortedUnchecked>();
+    for (const item of sortedUnchecked) {
+      const key = item.dishName || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+    return [...groups.entries()]
+      .sort(([a], [b]) => {
+        if (a === '' && b === '') return 0;
+        if (a === '') return 1;
+        if (b === '') return -1;
+        return a.localeCompare(b);
+      })
+      .map(([dishName, dishItems]) => ({
+        dishName,
+        items: dishItems,
+        total: dishItems.reduce((sum, i) => sum + i.price * (parseInt(i.amount, 10) || 1), 0),
+      }));
+  }, [sortedUnchecked]);
 
   // Monthly items that still have remaining quantity (available to add to weekly)
   const monthlyAvailable = useMemo(
@@ -376,7 +401,7 @@ export default function ShoppingScreen() {
             </View>
           )}
 
-          {/* Alphabetical unchecked items — header coloured per list (green weekly / orange monthly) */}
+          {/* Unchecked items grouped by dish — header coloured per list (green weekly / orange monthly) */}
           {sortedUnchecked.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
@@ -385,22 +410,36 @@ export default function ShoppingScreen() {
                 </Text>
                 <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
               </View>
-              <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
-                {sortedUnchecked.map((item, idx) => (
-                  <View key={item.id}>
-                    <ShoppingRow
-                      item={item}
-                      theme={theme}
-                      onToggle={() => toggle(item.id)}
-                      onRemove={() => removeWithSource(item.id)}
-                      onAdjust={(d) => adjustAmount(item.id, d)}
-                    />
-                    {idx < sortedUnchecked.length - 1 && (
-                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+              {dishGroups.map((group) => (
+                <View key={group.dishName || '__other__'} style={styles.dishGroup}>
+                  <View style={styles.dishGroupHeader}>
+                    <Text style={[styles.dishGroupName, { color: theme.text }]}>
+                      {group.dishName || t.shoppingCategories.other}
+                    </Text>
+                    {group.total > 0 && (
+                      <Text style={[styles.dishGroupTotal, { color: theme.textLight }]}>
+                        {group.total.toFixed(2)} kr
+                      </Text>
                     )}
                   </View>
-                ))}
-              </View>
+                  <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
+                    {group.items.map((item, idx) => (
+                      <View key={item.id}>
+                        <ShoppingRow
+                          item={item}
+                          theme={theme}
+                          onToggle={() => toggle(item.id)}
+                          onRemove={() => removeWithSource(item.id)}
+                          onAdjust={(d) => adjustAmount(item.id, d)}
+                        />
+                        {idx < group.items.length - 1 && (
+                          <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
             </View>
           )}
 
@@ -602,6 +641,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   addAllBtn: { fontSize: FontSize.xs, fontWeight: '700' },
+  dishGroup: { gap: Spacing.xs },
+  dishGroupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  dishGroupName: { fontSize: FontSize.sm, fontWeight: '700' },
+  dishGroupTotal: { fontSize: FontSize.xs },
   monthlySourceRow: {
     flexDirection: 'row',
     alignItems: 'center',

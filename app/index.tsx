@@ -2,9 +2,9 @@
  * index.tsx — Home screen
  *
  * The app's daily landing screen: greeting, today's tasks + backlog, a weekly
- * shopping preview (tickable inline), gentle completed-count points, and the
- * BubbleMenu / QuickAddSheet entry points. Honours work mode and essentials
- * (focus) mode, both driven by settings.
+ * shopping preview (grouped by dish, tickable + quantity-adjustable inline),
+ * gentle completed-count points, and the BubbleMenu / QuickAddSheet entry
+ * points. Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
  *   Imports → components/BubbleMenu, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
@@ -78,6 +78,7 @@ export default function HomeScreen() {
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
+  const adjustShoppingAmount = useShoppingStore((s) => s.adjustAmount);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
@@ -144,6 +145,29 @@ export default function HomeScreen() {
     [shoppingItems]
   );
   const pendingShopping = weeklyPending.slice(0, 5);
+
+  // Group the home-screen preview by dish (mirrors app/shopping.tsx); items
+  // without a dishName fall into the shared "Other" bucket, sorted last.
+  const pendingDishGroups = useMemo(() => {
+    const groups = new Map<string, typeof pendingShopping>();
+    for (const item of pendingShopping) {
+      const key = item.dishName || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+    return [...groups.entries()]
+      .sort(([a], [b]) => {
+        if (a === '' && b === '') return 0;
+        if (a === '') return 1;
+        if (b === '') return -1;
+        return a.localeCompare(b);
+      })
+      .map(([dishName, dishItems]) => ({
+        dishName,
+        items: dishItems,
+        total: dishItems.reduce((sum, i) => sum + i.price * (parseInt(i.amount, 10) || 1), 0),
+      }));
+  }, [pendingShopping]);
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: Colors.cream }]} />;
@@ -334,28 +358,59 @@ export default function HomeScreen() {
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
             </View>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
-              {pendingShopping.map((item) => (
-                // OLD: <View key={item.id} style={styles.shoppingPreviewRow}>
-                //        <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
-                //        <Text ...>{item.amount} {item.unit} {item.name}</Text>
-                //      </View>
-                //      Items were read-only; tapping anywhere navigated to /shopping instead
-                //      of acting on the individual item. Changed to a per-item checkbox so
-                //      users can tick things off from the home screen while shopping.
-                <Pressable key={item.id} style={styles.shoppingPreviewRow} onPress={() => toggleShoppingItem(item.id)}>
-                  <View style={[styles.shoppingCheck, { borderColor: theme.green }]} />
-                  <Text style={[styles.shoppingPreviewName, { color: theme.text }]}>
-                    {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
-                  </Text>
-                </Pressable>
+            <>
+              {pendingDishGroups.map((group) => (
+                <View key={group.dishName || '__other__'} style={styles.dishGroup}>
+                  <View style={styles.dishGroupHeader}>
+                    <Text style={[styles.dishGroupName, { color: theme.text }]}>
+                      {group.dishName || t.shoppingCategories.other}
+                    </Text>
+                    {group.total > 0 && (
+                      <Text style={[styles.dishGroupTotal, { color: theme.textLight }]}>
+                        {group.total.toFixed(2)} kr
+                      </Text>
+                    )}
+                  </View>
+                  <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
+                    {group.items.map((item) => (
+                      <View key={item.id} style={styles.shoppingPreviewRow}>
+                        <Pressable
+                          style={[styles.shoppingCheck, { borderColor: theme.green }]}
+                          onPress={() => toggleShoppingItem(item.id)}
+                        />
+                        <Text style={[styles.shoppingPreviewName, { color: theme.text }]}>
+                          {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
+                        </Text>
+                        {item.price > 0 && (
+                          <Text style={[styles.shoppingPreviewPrice, { color: theme.textLight }]}>
+                            {(item.price * (parseInt(item.amount, 10) || 1)).toFixed(2)} kr
+                          </Text>
+                        )}
+                        <View style={styles.stepperInline}>
+                          <Pressable
+                            style={[styles.inlineStepBtn, { backgroundColor: theme.grayLight }]}
+                            onPress={() => adjustShoppingAmount(item.id, -1)}
+                          >
+                            <Text style={[styles.inlineStepText, { color: theme.text }]}>−</Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.inlineStepBtn, { backgroundColor: theme.orange }]}
+                            onPress={() => adjustShoppingAmount(item.id, 1)}
+                          >
+                            <Text style={[styles.inlineStepText, { color: Colors.white }]}>+</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
               ))}
               {weeklyPending.length > 5 && (
                 <Text style={[styles.moreText, { color: theme.textLight }]}>
                   {t.moreItems(weeklyPending.length - 5)}
                 </Text>
               )}
-            </View>
+            </>
           )}
         </View>
 
@@ -446,6 +501,20 @@ const styles = StyleSheet.create({
   shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2 },
   // OLD: shoppingPreviewName: { fontSize: FontSize.md }  — added flex:1 so long names don't overflow
   shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
+  shoppingPreviewPrice: { fontSize: FontSize.xs, marginRight: Spacing.xs },
+  dishGroup: { marginBottom: Spacing.sm },
+  dishGroupHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  dishGroupName: { fontSize: FontSize.sm, fontWeight: '700' },
+  dishGroupTotal: { fontSize: FontSize.xs },
+  stepperInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  inlineStepBtn: {
+    width: 24, height: 24, borderRadius: Radius.full,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  inlineStepText: { fontSize: FontSize.md, fontWeight: '700', lineHeight: 18 },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
   backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
