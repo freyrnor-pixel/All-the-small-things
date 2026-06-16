@@ -431,6 +431,7 @@ export default function ShoppingScreen() {
                           onToggle={() => toggle(item.id)}
                           onRemove={() => removeWithSource(item.id)}
                           onAdjust={(d) => adjustAmount(item.id, d)}
+                          totalLabel={t.priceTotalLabel}
                         />
                         {idx < group.items.length - 1 && (
                           <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
@@ -455,6 +456,7 @@ export default function ShoppingScreen() {
                       theme={theme}
                       onToggle={() => toggle(item.id)}
                       onRemove={() => removeWithSource(item.id)}
+                      totalLabel={t.priceTotalLabel}
                     />
                     {idx < checked.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />

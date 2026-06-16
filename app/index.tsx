@@ -43,6 +43,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
+import DayTimeline from '@/components/DayTimeline';
 import BubbleMenu from '@/components/BubbleMenu';
 import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
@@ -260,6 +261,18 @@ export default function HomeScreen() {
               </Pressable>
             </View>
           </View>
+        </View>
+
+        {/* Daily timeline — at-a-glance agenda of today's timed tasks, with a
+            live "now" marker and a small star on essential tasks only. */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.dailyTimeline}</Text>
+          </View>
+          <DayTimeline
+            tasks={visibleTodayTasks}
+            onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
+          />
         </View>
 
         {/* Today's tasks */}

@@ -45,6 +45,11 @@ const en = {
   essentialsHidden: (n: number) => `+ ${n} regular task${n !== 1 ? 's' : ''} hidden →`,
   backlog: 'Waiting for you',
   backlogHint: 'Every small step counts — just take one at a time.',
+  // Daily timeline (Proposal — home overhaul)
+  dailyTimeline: 'Today at a glance',
+  timelineEmpty: 'No timed plans today',
+  timelineNow: 'Now',
+  priceTotalLabel: 'Total',
   // Focus view (Proposal 1)
   focusView: {
     currentTask: 'Up next',
@@ -577,6 +582,10 @@ const no: typeof en = {
   essentialsHidden: (n: number) => `+ ${n} vanlige oppgaver skjult →`,
   backlog: 'Venter på deg',
   backlogHint: 'Hvert lite steg teller — bare ta ett om gangen.',
+  dailyTimeline: 'Dagen din',
+  timelineEmpty: 'Ingen tidsavtaler i dag',
+  timelineNow: 'Nå',
+  priceTotalLabel: 'Totalt',
   focusView: {
     currentTask: 'Neste',
     done: 'Ferdig ✓',

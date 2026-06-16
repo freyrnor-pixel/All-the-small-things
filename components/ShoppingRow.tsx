@@ -3,7 +3,8 @@
  *
  * Presentational row for a ShoppingItem: a check toggle, name + meta (unit /
  * store / monthly-source tag), an inline qty stepper for numeric amounts, an
- * optional price, and a remove button. All actions are bubbled up via callbacks.
+ * optional unit price (+ a "Total" line when quantity > 1), and a remove
+ * button. All actions are bubbled up via callbacks.
  *
  * Connections:
  *   Imports → constants/theme, store/useShoppingStore
@@ -28,14 +29,15 @@ type Props = {
   onRemove: () => void;
   onAdjust?: (delta: number) => void;
   fromMonthlyLabel?: string;
+  totalLabel?: string;
 };
 
-export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel }: Props) {
+export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel, totalLabel }: Props) {
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
   const showStepper = isNumeric && !!onAdjust && !item.checked;
 
-  // Build meta parts: qty+unit (when no stepper), unit (when stepper active), store, tag, price
+  // Build meta parts: qty+unit (when no stepper), unit (when stepper active), store, tag, price (+ total when qty > 1)
   const metaParts: string[] = [];
   if (!showStepper) {
     metaParts.push(`${item.amount}${item.unit ? ' ' + item.unit : ''}`);
@@ -43,7 +45,13 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
     metaParts.push(item.unit);
   }
   if (item.store) metaParts.push(item.store);
-  if (item.price > 0) metaParts.push(`${item.price.toFixed(0)} kr`);
+  if (item.price > 0) {
+    metaParts.push(`${item.price.toFixed(0)} kr`);
+    const effectiveQty = isNumeric ? qty : 1;
+    if (effectiveQty > 1) {
+      metaParts.push(`${totalLabel ?? 'Total'} ${(item.price * effectiveQty).toFixed(0)} kr`);
+    }
+  }
 
   return (
     <View style={[styles.row, item.checked && styles.rowChecked]}>
