@@ -2,23 +2,29 @@
  * BubbleMenu.tsx — spinning-wheel radial FAB for navigation.
  *
  * Floating action button on the home screen that opens into a spinnable ring of
- * bubbles. Only 3 bubbles are visible in the 90° viewing window at any time;
- * dragging the wheel spins it to reveal the rest. BASE_ITEMS is ordered
- * "primary + more": the everyday actions (Tasks · Shopping · Habits · Focus) sit
- * first in the window, while Health/Meals/Scan/Shared are demoted to the end and
- * reached by spinning. Labels resolve through `t.nav` so the menu follows the
- * user's language. Bubble colors follow the FeatureColors warm-to-cool gradient.
+ * bubbles. The 90°-wide viewing window shows 3 full bubbles (the window centre
+ * plus one on each side) and 2 half-cut bubbles right at its edges — a visual cue
+ * that more exist; dragging the wheel spins it to reveal them. BASE_ITEMS is
+ * ordered "primary + more": the everyday actions (Tasks · Shopping · Habits ·
+ * Focus) sit first in the window, while Health/Meals/Scan/Shared are demoted to
+ * the end and reached by spinning. Item 0 ("New task") is the main/focused bubble:
+ * it always sits at the window centre — straight north-west of the FAB in the
+ * right-handed layout — and shows the app logo instead of an Ionicons glyph.
+ * Labels resolve through `t.nav` so the menu follows the user's language. Bubble
+ * colors follow the FeatureColors warm-to-cool gradient.
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/haptics, store/useSettingsStore
+ *   Imports → constants/theme, lib/i18n, lib/haptics, store/useSettingsStore, assets/icon.png
  *   Used by → app/index.tsx
  *   Data    → none (presentational); reads colorTheme + leftHanded from useSettingsStore
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
  *     Keep the everyday actions first in the array so they land in the viewing window.
- *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE
- *     updates automatically from BASE_ITEMS.length.
+ *   - STEP_ANGLE/WINDOW_FADE are fixed at 22.5° (not derived from BASE_ITEMS.length) to keep the
+ *     "3 full + 2 half-cut" window effect regardless of how many bubbles exist.
+ *   - wheelAngle initializes to windowCenter so item 0 starts at the window centre (NW of the
+ *     FAB when right-handed); re-synced on handedness change.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
  *   - tap() haptic fires on the FAB toggle and on every bubble press.
@@ -27,6 +33,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -58,6 +65,7 @@ type BubbleEntry = {
   label: string;
   route: string;
   color: string;
+  isLogo?: boolean;
   onPress?: () => void;
 };
 
@@ -70,9 +78,11 @@ type Props = {
 // Scan / Health / Meals / Shared are intentionally demoted to the END so they read
 // as secondary "reach by spinning" items. (Settings is not in the wheel — it lives
 // as a persistent corner button in app/index.tsx.)
-const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
-  // Primary — everyday actions, shown first in the window
-  { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
+const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string; isLogo?: boolean }[] = [
+  // Primary — everyday actions, shown first in the window. Item 0 is the
+  // "main" bubble: it sits at the window centre (NW of the FAB) and shows
+  // the app logo instead of an Ionicons glyph.
+  { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task, isLogo: true },
   { icon: 'cart-outline',       labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
   { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
   { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: '#E8934A' },
@@ -86,7 +96,10 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 const RADIUS = 130;
 const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
-const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length;  // 45° for 8 items
+// Fixed (not derived from BASE_ITEMS.length) so the 90°-wide window always shows
+// 3 full bubbles (centre ± one step) plus 2 half-cut bubbles right at its edges,
+// with the rest reachable by spinning.
+const STEP_ANGLE = Math.PI / 8; // 22.5°
 
 // Wheel canvas: large enough to contain the full arc in all directions.
 // The FAB sits at the CENTRE of this canvas, so all translations radiate
@@ -95,7 +108,9 @@ const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE; // diameter + one bubble
 
 const DRAG_SENSITIVITY = 120;      // px of drag per radian — lower = more responsive
 
-const WINDOW_FADE = Math.PI / 4; // 45° — edge bubbles at 50% opacity, signal "drag for more"
+// Matches STEP_ANGLE so the bubble one step past the window boundary lands at
+// exactly 50% opacity ("half-cut") and the one after that is fully hidden.
+const WINDOW_FADE = STEP_ANGLE; // 22.5°
 
 // Returns 0–1 opacity based on signed angular distance from each window boundary.
 // Works correctly for both right-handed [−π, −π/2] and left-handed [−π/2, 0] windows
@@ -103,7 +118,7 @@ const WINDOW_FADE = Math.PI / 4; // 45° — edge bubbles at 50% opacity, signal
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
   const twoPi = 2 * Math.PI;
-  const wF = Math.PI / 4;
+  const wF = WINDOW_FADE;
   // Signed angular distance from each boundary: positive = past it, negative = before it.
   const dS = ((angle - winStart + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
   const dE = ((angle - winEnd   + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
@@ -169,7 +184,11 @@ function BubbleItemView({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        <Ionicons name={item.icon} size={22} color="#fff" />
+        {item.isLogo ? (
+          <Image source={require('@/assets/icon.png')} style={styles.bubbleLogo} />
+        ) : (
+          <Ionicons name={item.icon} size={22} color="#fff" />
+        )}
         <Text style={styles.bubbleLabel}>{item.label}</Text>
       </Pressable>
     </Animated.View>
@@ -182,18 +201,21 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const { leftHanded } = useSettingsStore();
 
-  // Right-handed: window from left (−π) to up (−π/2); item 0 starts at left edge.
-  // Left-handed:  window from up (−π/2) to right (0);  item 0 starts at center (−π/4).
+  // Right-handed: window from left (−π) to up (−π/2), centred at −3π/4 (NW).
+  // Left-handed:  window from up (−π/2) to right (0),  centred at −π/4 (NE).
+  // Item 0 (the "main" bubble) always starts at the window centre, which is
+  // straight north-west of the FAB in the right-handed layout.
   const windowStart = leftHanded ? -Math.PI / 2 : -Math.PI;
   const windowEnd   = leftHanded ? 0             : -Math.PI / 2;
+  const windowCenter = (windowStart + windowEnd) / 2;
 
-  const wheelAngle   = useSharedValue(-Math.PI);
+  const wheelAngle   = useSharedValue(windowCenter);
   const openProgress = useSharedValue(0);
   const startAngle   = useSharedValue(0);
 
   // Reset wheel position to match the new window when handedness changes.
   useEffect(() => {
-    wheelAngle.value = leftHanded ? -Math.PI / 4 : -Math.PI;
+    wheelAngle.value = windowCenter;
   }, [leftHanded]);
 
   const router = useRouter();
@@ -206,6 +228,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
       label: t.nav[item.labelKey],
       route: item.route,
       color: item.color,
+      isLogo: item.isLogo,
       onPress: item.route === '/task-form' && onNewTask ? onNewTask : undefined,
     })),
     [onNewTask, t]
@@ -339,5 +362,10 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  bubbleLogo: {
+    width: 22,
+    height: 22,
+    borderRadius: Radius.full,
   },
 });
