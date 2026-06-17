@@ -28,6 +28,10 @@
  *   - The wheel doesn't loop: minAngle/maxAngle "block" it at the first/last item. Dragging past
  *     either end rubber-bands, then tugs back into place on release (bouncier spring) — purely
  *     visual, no haptic.
+ *   - RADIUS (170) must keep arc spacing (RADIUS × STEP_ANGLE) a few px above BUBBLE_SIZE so
+ *     adjacent bubbles don't visually overlap at this tighter step — re-check if either changes.
+ *   - openProgress's open/close spring is tuned snappy (high damping/stiffness) — it shouldn't
+ *     visibly overshoot/bounce when tapping the FAB.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
  *   - tap() haptic fires on the FAB toggle and on every bubble press.
@@ -96,7 +100,10 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const RADIUS = 130;
+// RADIUS must be large enough that adjacent bubbles (spaced STEP_ANGLE apart on
+// the arc) don't overlap: arc spacing = RADIUS * STEP_ANGLE must exceed
+// BUBBLE_SIZE with a small gap, even at this tighter 22.5° step.
+const RADIUS = 170;
 const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
 // Fixed (not derived from BASE_ITEMS.length) so the 90°-wide window always shows
@@ -246,14 +253,14 @@ export default function BubbleMenu({ onNewTask }: Props) {
   function toggle() {
     tap();
     const toValue = open ? 0 : 1;
-    openProgress.value = withSpring(toValue, { damping: 25, stiffness: 320 });
+    openProgress.value = withSpring(toValue, { damping: 32, stiffness: 550 });
     setOpen((v) => !v);
   }
 
   function navigate(item: BubbleEntry) {
     tap();
     // Mirror toggle()'s close animation without re-firing the FAB haptic.
-    openProgress.value = withSpring(0, { damping: 25, stiffness: 320 });
+    openProgress.value = withSpring(0, { damping: 32, stiffness: 550 });
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
     setTimeout(action, 150);
