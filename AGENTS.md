@@ -104,7 +104,7 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 ## Builds and updates
 
 ### OTA updates (normal flow)
-- Workflow: `.github/workflows/update.yml` — triggers on every push to `claude/adhd-task-life-app-TOdFj`
+- Workflow: `.github/workflows/update.yml` — triggers on every push to any `claude/**` branch
 - Runs `eas update --auto --channel preview` — pushes the JS bundle silently to all installed apps
 - Apps pick it up automatically on next launch — no download needed
 - Takes ~1–2 min on CI
