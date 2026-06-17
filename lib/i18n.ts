@@ -359,10 +359,6 @@ const en = {
   // home overhaul: low-weight nudge when today's task list is capped at maxVisible
   andMoreTasks: (n: number) => `and ${n} more…`,
   errorTitle: 'Something went wrong',
-  updateAvailableTitle: 'Update available',
-  updateAvailableBody: 'A new version has been downloaded. Restart now to apply it.',
-  updateRestart: 'Restart now',
-  updateLater: 'Later',
   themeNames: { default: 'Default', tech: 'Tech', gothic: 'Gothic', nature: 'Nature', custom: 'Custom' },
   customThemePrimary: 'Primary color',
   customThemeSecondary: 'Secondary color',
@@ -988,10 +984,6 @@ const no: typeof en = {
   // home overhaul: low-weight nudge when today's task list is capped at maxVisible
   andMoreTasks: (n: number) => `og ${n} til…`,
   errorTitle: 'Noe gikk galt',
-  updateAvailableTitle: 'Oppdatering tilgjengelig',
-  updateAvailableBody: 'En ny versjon er lastet ned. Start på nytt for å bruke den.',
-  updateRestart: 'Start på nytt',
-  updateLater: 'Senere',
   themeNames: { default: 'Standard', tech: 'Tech', gothic: 'Gotisk', nature: 'Natur', custom: 'Egendefinert' },
   customThemePrimary: 'Primærfarge',
   customThemeSecondary: 'Sekundærfarge',
