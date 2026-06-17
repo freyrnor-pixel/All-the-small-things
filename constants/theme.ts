@@ -78,6 +78,13 @@ function darken(hex: string, amount: number): string {
   return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
 }
 
+/** Relative-luminance check: returns a readable foreground color for any background hex. */
+export function contrastOn(hexBg: string): string {
+  const [r, g, b] = hexToRgb(hexBg);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#1E293B' : '#FFFFFF';
+}
+
 function buildCustomTheme(primary: string, secondary: string, isDark: boolean): AppColors {
   if (isDark) {
     return {
@@ -126,26 +133,26 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
 // ─── Light themes ────────────────────────────────────────────────────────────
 
 export const THEMES: Record<ThemeName, AppColors> = {
-  // Blue seams with white — clean, focused, calm.
+  // Watercolor tree logo blue, soft glow whites — clean, focused, calm.
   default: {
-    cream: '#F5F8FF',
-    orange: '#3B82F6',
+    cream: '#F2F8FE',
+    orange: '#2563EB',
     orangeLight: '#BFDBFE',
     green: '#10B981',
     greenLight: '#A7F3D0',
-    brown: '#1E40AF',
-    brownLight: '#93C5FD',
+    brown: '#1E3A8A',
+    brownLight: '#60A5FA',
     white: '#FFFFFF',
-    offWhite: '#EEF2FF',
+    offWhite: '#E8F2FE',
     gray: '#94A3B8',
-    grayLight: '#E8EEFB',
-    text: '#1E293B',
-    textLight: '#64748B',
+    grayLight: '#DCEEFC',
+    text: '#142545',
+    textLight: '#5C7299',
     danger: '#EF4444',
     dangerLight: '#FEE2E2',
     shadow: 'rgba(30,41,59,0.12)',
-    border: '#DBEAFE',
-    neutral: '#A8B8D8',
+    border: '#CDE6FA',
+    neutral: '#A3C2E4',
   },
   // Sky blue with blue-tinted white and grey details — modern, airy.
   tech: {
@@ -245,24 +252,24 @@ export const THEME_META: Record<ThemeName, { label: string; emoji: string }> = {
 
 export const DARK_THEMES: Record<ThemeName, AppColors> = {
   default: {
-    cream: '#0A0F1C',
-    orange: '#60A5FA',
-    orangeLight: '#1E3A60',
+    cream: '#070B16',
+    orange: '#4EA8FC',
+    orangeLight: '#1C3A66',
     green: '#34D399',
     greenLight: '#0D2A1A',
-    brown: '#93C5FD',
-    brownLight: '#1A3060',
+    brown: '#8FC7FF',
+    brownLight: '#16335E',
     white: '#121928',
-    offWhite: '#0E1524',
+    offWhite: '#0C1220',
     gray: '#6A8AA0',
-    grayLight: '#1A2540',
-    text: '#E8F0FC',
-    textLight: '#93BCDC',
+    grayLight: '#18233C',
+    text: '#E6F1FE',
+    textLight: '#8FB8DE',
     danger: '#FC8181',
     dangerLight: '#2A0A0A',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#1E3A60',
-    neutral: '#5A7898',
+    border: '#1A3460',
+    neutral: '#52708C',
   },
   tech: {
     cream: '#080E16',

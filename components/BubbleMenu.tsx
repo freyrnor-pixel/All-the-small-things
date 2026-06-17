@@ -17,9 +17,16 @@
  *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE updates from BASE_ITEMS.length.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
+ *   - Closed-state FAB shows the tree logo (assets/android-icon-monochrome.png), tinted via
+ *     contrastOn(theme.orange) so it stays readable against any theme's accent color, including
+ *     arbitrary custom-theme colors — don't replace this with a hardcoded white/dark tint.
+ *   - Open-state FAB renders Ionicons "close" (an already-correct ×) with no rotation transform —
+ *     a prior version rotated it 45° (a leftover trick for morphing a "+" glyph into an "×"), which
+ *     instead turns this × back into a "+". Don't reintroduce that rotation.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -31,15 +38,13 @@ import Animated, {
   withSpring,
   withTiming,
   withSequence,
-  interpolate,
-  Extrapolation,
   Easing,
   SharedValue,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Radius, Shadow, FeatureColors } from '@/constants/theme';
+import { Colors, Radius, Shadow, FeatureColors, contrastOn } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -219,13 +224,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
       );
     });
 
-  const fabStyle = useAnimatedStyle(() => ({
-    transform: [{
-      rotate: `${interpolate(openProgress.value, [0, 1], [0, 45], Extrapolation.CLAMP)}deg`,
-    }],
-  }));
-
   const sideStyle = leftHanded ? { left: 24 } : { right: 24 };
+  const fabIconColor = contrastOn(theme.orange);
 
   return (
     <View style={[styles.container, sideStyle]} pointerEvents="box-none">
@@ -256,9 +256,15 @@ export default function BubbleMenu({ onNewTask }: Props) {
         accessibilityLabel={open ? t.close : t.nav.newTask}
         accessibilityState={{ expanded: open }}
       >
-        <Animated.View style={fabStyle}>
-          <Ionicons name={open ? 'close' : 'add'} size={28} color="#fff" />
-        </Animated.View>
+        {open ? (
+          <Ionicons name="close" size={28} color={fabIconColor} />
+        ) : (
+          <Image
+            source={require('@/assets/android-icon-monochrome.png')}
+            style={[styles.fabLogo, { tintColor: fabIconColor }]}
+            resizeMode="contain"
+          />
+        )}
       </Pressable>
     </View>
   );
@@ -285,6 +291,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.fab,
+  },
+  fabLogo: {
+    width: 30,
+    height: 30,
   },
   bubble: {
     position: 'absolute',

@@ -16,6 +16,7 @@
  */
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -73,7 +74,9 @@ export default function OnboardingWelcome() {
           </View>
 
           <View style={styles.top}>
-            <Text style={styles.emoji}>🌿</Text>
+            <View style={styles.logoShadow}>
+              <Image source={require('@/assets/icon.png')} style={styles.logo} resizeMode="contain" />
+            </View>
             <Text style={styles.heading}>{t.welcomeHeading}</Text>
             <Text style={styles.sub}>{t.welcomeSub}</Text>
           </View>
@@ -113,7 +116,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
+  logoShadow: { borderRadius: Radius.lg, ...Shadow.card },
+  logo: { width: 110, height: 110, borderRadius: Radius.lg, overflow: 'hidden' },
   heading: {
     fontSize: FontSize.xxl,
     fontWeight: '700',
