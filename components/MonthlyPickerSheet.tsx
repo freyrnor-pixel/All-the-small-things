@@ -24,6 +24,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
@@ -50,6 +51,7 @@ interface Props {
 }
 
 export default function MonthlyPickerSheet({ visible, monthlyItems, categoryLabels, onConfirm, onClose, theme, t }: Props) {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const [qtys, setQtys] = useState<{ [id: string]: number }>({});
 
   function adjust(id: string, delta: number, max: number) {
@@ -86,7 +88,7 @@ export default function MonthlyPickerSheet({ visible, monthlyItems, categoryLabe
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <Pressable style={styles.backdrop} onPress={handleClose} />
-      <View style={[styles.sheet, { backgroundColor: theme.cream }]}>
+      <View style={[styles.sheet, { backgroundColor: theme.cream, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
         {/* Handle */}
         <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
 

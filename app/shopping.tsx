@@ -30,7 +30,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
@@ -56,6 +56,7 @@ type Tab = 'weekly' | 'monthly';
 export default function ShoppingScreen() {
   const router = useRouter();
   const theme = useAppTheme();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('weekly');
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [addSheetTab, setAddSheetTab] = useState<'freely' | 'monthly'>('freely');
@@ -382,7 +383,7 @@ export default function ShoppingScreen() {
       <Modal visible={showAddSheet} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowAddSheet(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowAddSheet(false)} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
-          <View style={[styles.addSheet, { backgroundColor: theme.white }]}>
+          <View style={[styles.addSheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
             <View style={styles.sheetHandle} />
             <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.addSheetTitle}</Text>
 

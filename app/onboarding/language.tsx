@@ -5,7 +5,7 @@
  * persisting the choice so all subsequent strings render in that language.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @expo/vector-icons, @/store/useSettingsStore, @/lib/i18n, @/constants/theme
  *   Used by → Expo Router route "/onboarding/language"
  *   Data    → useSettingsStore (writes `language`)
  *
@@ -18,6 +18,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -69,7 +70,7 @@ export default function LanguageScreen() {
               <Text style={styles.optionSub}>{opt.sublabel}</Text>
               {settings.language === opt.code && (
                 <View style={styles.checkmark}>
-                  <Text style={styles.checkmarkText}>✓</Text>
+                  <Ionicons name="checkmark" size={14} color={Colors.white} />
                 </View>
               )}
             </Pressable>
@@ -141,10 +142,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkmarkText: {
-    color: Colors.white,
-    fontSize: FontSize.sm,
-    fontWeight: '700',
   },
 });

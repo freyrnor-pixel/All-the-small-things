@@ -101,6 +101,7 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - **Notifications**: `lib/notifications.ts` only takes already-localised content. Per-task reminders live in `useTaskStore` and cover both kinds — one-off tasks fire once (skipped if done/past), weekly-recurring tasks fire on every selected weekday (via `scheduleWeeklyTaskNotifications`); time-box tasks also get an "end" reminder. Habit daily reminders in `useHabitStore`; weekly/monthly reminders in `lib/reminders.ts` (`syncReminders`). `settings.tsx` re-syncs on relevant changes; `_layout.tsx` and onboarding step 5 sync on startup/finish.
 - **Retention**: `pruneOldData()` in `lib/db.ts` trims dated history to the last `RETENTION_DAYS` (365) on startup; config tables are left untouched.
 - **`BubbleMenu.tsx` merge risk**: this file has been independently rewritten by parallel `claude/*` branches more than once (see commits `96891b4`, `9b02162`). Always hand-diff this file against the target branch on merge — do not auto-resolve conflicts here.
+- **Materials**: `bubbleMaterial` (settings) + `getMaterialStyle()` in `constants/theme.ts` give the FAB/bubbles a surface finish (glass/metal/rock/paper) independent of colour theme — a bubble's hue and its finish vary separately. Rendered via a two-layer view (outer = border + shadow, inner `overflow:'hidden'` mask = fill + sheen) so shadows aren't clipped.
 
 ## Builds and updates
 
