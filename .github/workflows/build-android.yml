@@ -14,6 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate app.json (runtimeVersion / slug guardrail)
+        run: node .github/scripts/check-app-config.js
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

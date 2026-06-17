@@ -100,11 +100,12 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - `backlogTasks(today)` only returns non-recurring tasks; recurring tasks reappear by date schedule
 - **Notifications**: `lib/notifications.ts` only takes already-localised content. Per-task reminders live in `useTaskStore` and cover both kinds — one-off tasks fire once (skipped if done/past), weekly-recurring tasks fire on every selected weekday (via `scheduleWeeklyTaskNotifications`); time-box tasks also get an "end" reminder. Habit daily reminders in `useHabitStore`; weekly/monthly reminders in `lib/reminders.ts` (`syncReminders`). `settings.tsx` re-syncs on relevant changes; `_layout.tsx` and onboarding step 5 sync on startup/finish.
 - **Retention**: `pruneOldData()` in `lib/db.ts` trims dated history to the last `RETENTION_DAYS` (365) on startup; config tables are left untouched.
+- **`BubbleMenu.tsx` merge risk**: this file has been independently rewritten by parallel `claude/*` branches more than once (see commits `96891b4`, `9b02162`). Always hand-diff this file against the target branch on merge — do not auto-resolve conflicts here.
 
 ## Builds and updates
 
 ### OTA updates (normal flow)
-- Workflow: `.github/workflows/update.yml` — triggers on every push to `main` or any `claude/**` branch
+- Workflow: `.github/workflows/update.yml` — triggers on every push to `main` only (deliberately NOT on `claude/**` branches — parallel session branches all publishing to the one shared `preview` channel caused a real incident where a later, older-tree push silently clobbered a newer one; see git history around June 2026). Push your branch and merge into `main` to publish.
 - Runs `eas update --branch preview --message "..."` — always publishes to EAS branch `preview`
 - Runtime version is read from `runtimeVersion` in `app.json` (currently hardcoded `"1.0.0"` to target build 148977ec)
 - Apps pick it up automatically on next launch — no download needed

@@ -23,6 +23,13 @@
  *   - Open-state FAB renders Ionicons "close" (an already-correct ×) with no rotation transform —
  *     a prior version rotated it 45° (a leftover trick for morphing a "+" glyph into an "×"), which
  *     instead turns this × back into a "+". Don't reintroduce that rotation.
+ *   - HIGH MERGE-CONFLICT RISK: this file has a documented history of parallel claude/* branches
+ *     independently rewriting it (two competing redesigns were merged via 96891b4 and 9b02162,
+ *     and a careless merge would have let the older variant silently win). When merging or
+ *     rebasing branches that touch this file, diff the FULL file against the target branch by
+ *     hand — do not trust automatic conflict resolution or accept "ours"/"theirs" wholesale.
+ *     Confirm the resulting BASE_ITEMS, wheel geometry, and rendering logic actually match the
+ *     most recently intended design before pushing.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
