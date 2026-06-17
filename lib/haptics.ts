@@ -54,4 +54,13 @@ export function warning(): void {
   }
 }
 
-export default { tap, success, selection, warning };
+/** Tug — wheel reached its end boundary. */
+export function tug(): void {
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  } catch {
+    // no-op
+  }
+}
+
+export default { tap, success, selection, warning, tug };

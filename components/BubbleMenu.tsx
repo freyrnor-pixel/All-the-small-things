@@ -47,6 +47,7 @@ import Animated, {
   withSequence,
   Easing,
   SharedValue,
+  runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,7 +56,7 @@ import { Colors, Radius, Shadow, FeatureColors, contrastOn } from '@/constants/t
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { tap } from '@/lib/haptics';
+import { tap, tug } from '@/lib/haptics';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 type NavKey = keyof Translations['nav'];
@@ -221,13 +222,34 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   const minWheel = leftHanded ? MIN_WHEEL_LH : MIN_WHEEL_RH;
   const maxWheel = leftHanded ? MAX_WHEEL_LH : MAX_WHEEL_RH;
+  const atBoundary = useSharedValue(false);
 
   // Lottery-wheel feel: coast to a projected position, then spring-snap.
+  // Rubber-bands 20% past the clamp boundary instead of hard-stopping, with a single
+  // haptic tug on first contact with each end (atBoundary guards against repeat fires).
   const spinGesture = Gesture.Pan()
-    .onStart(() => { startAngle.value = wheelAngle.value; })
+    .onStart(() => {
+      startAngle.value = wheelAngle.value;
+      atBoundary.value = false;
+    })
     .onUpdate((e) => {
       const raw = startAngle.value - e.translationY / DRAG_SENSITIVITY;
-      wheelAngle.value = Math.max(minWheel, Math.min(maxWheel, raw));
+      if (raw < minWheel) {
+        wheelAngle.value = minWheel + (raw - minWheel) * 0.2;
+        if (!atBoundary.value) {
+          atBoundary.value = true;
+          runOnJS(tug)();
+        }
+      } else if (raw > maxWheel) {
+        wheelAngle.value = maxWheel + (raw - maxWheel) * 0.2;
+        if (!atBoundary.value) {
+          atBoundary.value = true;
+          runOnJS(tug)();
+        }
+      } else {
+        atBoundary.value = false;
+        wheelAngle.value = raw;
+      }
     })
     .onEnd((e) => {
       const velocity = leftHanded ? e.velocityY : -e.velocityY;
