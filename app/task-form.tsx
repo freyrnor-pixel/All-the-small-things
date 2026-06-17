@@ -17,8 +17,11 @@
  *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Repeat → Importance).
  *   - On save a ConfirmationBanner is shown, then navigation is briefly delayed (~900ms) so it's visible.
  *     start-at vs time-box is colour/icon-coded via FeatureColors (consistent with TaskItem).
+ *   - Date field is a Mon–Sun chip row (current calendar week) for one-tap picking; the full
+ *     DatePickerCalendar is collapsed behind a toggle for dates outside the current week.
+ *     Picking a chip sets the date and collapses the calendar if it was open.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -82,8 +85,20 @@ export default function TaskFormScreen() {
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [calExpanded, setCalExpanded] = useState(false);
 
   const { dayLabels, months } = t;
+
+  // Mon–Sun of the current calendar week, for one-tap date selection.
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    const mon0 = (today.getDay() + 6) % 7; // days since Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - mon0 + i);
+      return { value: dateStr(d), dayIdx: i, dayNum: d.getDate() };
+    });
+  }, []);
 
   function toggleDay(d: number) {
     setRecurringDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
@@ -173,16 +188,59 @@ export default function TaskFormScreen() {
             />
           </View>
 
-          {/* Date — calendar */}
+          {/* Date — Mon–Sun chip row, with the full calendar collapsed behind a toggle */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.dateLabel}</Text>
-            <DatePickerCalendar
-              value={date}
-              onChange={setDate}
-              theme={theme}
-              dayLabels={dayLabels}
-              monthLabels={months}
-            />
+            <View style={styles.weekRow}>
+              {weekDays.map((wd) => {
+                const active = date === wd.value;
+                return (
+                  <Pressable
+                    key={wd.value}
+                    style={[
+                      styles.weekChip,
+                      { backgroundColor: theme.grayLight },
+                      active && { backgroundColor: theme.orange },
+                    ]}
+                    onPress={() => {
+                      tap();
+                      setDate(wd.value);
+                      setCalExpanded(false);
+                    }}
+                  >
+                    <Text style={[styles.weekChipDay, { color: theme.textLight }, active && { color: Colors.white }]}>
+                      {dayLabels[wd.dayIdx].slice(0, 2)}
+                    </Text>
+                    <Text style={[styles.weekChipNum, { color: theme.text }, active && { color: Colors.white, fontWeight: '700' }]}>
+                      {wd.dayNum}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              style={styles.calToggleBtn}
+              onPress={() => {
+                tap();
+                setCalExpanded((v) => !v);
+              }}
+            >
+              <Text style={[styles.calToggleText, { color: theme.orange }]}>
+                {calExpanded ? t.hideCalendar : t.pickOtherDate(date)}
+              </Text>
+            </Pressable>
+            {calExpanded && (
+              <DatePickerCalendar
+                value={date}
+                onChange={(d) => {
+                  setDate(d);
+                  setCalExpanded(false);
+                }}
+                theme={theme}
+                dayLabels={dayLabels}
+                monthLabels={months}
+              />
+            )}
           </View>
 
           {/* Time — scroll wheel */}
@@ -391,6 +449,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     ...Shadow.card,
   },
+  weekRow: { flexDirection: 'row', gap: Spacing.xs, justifyContent: 'space-between' },
+  weekChip: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    gap: 2,
+  },
+  weekChipDay: { fontSize: FontSize.xs, fontWeight: '600' },
+  weekChipNum: { fontSize: FontSize.sm },
+  calToggleBtn: { alignSelf: 'flex-start', paddingVertical: Spacing.xs },
+  calToggleText: { fontSize: FontSize.sm, fontWeight: '600' },
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
   dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
