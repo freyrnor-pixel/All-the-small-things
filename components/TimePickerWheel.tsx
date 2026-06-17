@@ -7,12 +7,13 @@
  *
  * Connections:
  *   Imports → constants/theme
- *   Used by → app/settings.tsx, app/task-form.tsx
+ *   Used by → app/settings.tsx, app/task-form.tsx, app/habit-form.tsx, app/onboarding/step2.tsx
  *   Data    → none (presentational); value in / onChange out
  *
  * Edit notes:
  *   - Selected values are tracked in refs (curHour/curMin) to avoid closure staleness inside scroll handlers; keep state + refs in sync if changing.
  *   - Geometry depends on ITEM_H and VISIBLE (must stay odd); initial scroll-to-offset runs on an 80ms timeout after mount.
+ *   - Every caller nests this inside a vertical ScrollView, so the wheels' FlatLists need nestedScrollEnabled — without it, Android lets the outer ScrollView win the gesture and the wheel won't scroll at all.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -25,8 +26,8 @@ import {
 } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 
-const ITEM_H = 50;
-const VISIBLE = 5; // must be odd
+const ITEM_H = 44;
+const VISIBLE = 3; // must be odd
 
 interface Props {
   value: string; // HH:MM
@@ -99,6 +100,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
           keyExtractor={(n) => `h${n}`}
           style={styles.wheel}
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
           snapToInterval={ITEM_H}
           decelerationRate="fast"
           getItemLayout={(_, i) => ({ length: ITEM_H, offset: ITEM_H * i, index: i })}
@@ -131,6 +133,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
           keyExtractor={(n) => `m${n}`}
           style={styles.wheel}
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
           snapToInterval={ITEM_H}
           decelerationRate="fast"
           getItemLayout={(_, i) => ({ length: ITEM_H, offset: ITEM_H * i, index: i })}
