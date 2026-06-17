@@ -13,6 +13,9 @@
  * Edit notes:
  *   - Selected values are tracked in refs (curHour/curMin) to avoid closure staleness inside scroll handlers; keep state + refs in sync if changing.
  *   - Geometry depends on ITEM_H and VISIBLE (must stay odd); initial scroll-to-offset runs on an 80ms timeout after mount.
+ *   - Both FlatLists need nestedScrollEnabled — this component is nested inside a parent ScrollView
+ *     (task-form, settings), and without it Android intercepts the touch for the outer scroller instead
+ *     of letting the wheel scroll independently.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -105,6 +108,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
           contentContainerStyle={styles.listPad}
           onMomentumScrollEnd={onHourEnd}
           onScrollEndDrag={onHourEnd}
+          nestedScrollEnabled
           renderItem={({ item }) => {
             const active = item === displayHour;
             return (
@@ -137,6 +141,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
           contentContainerStyle={styles.listPad}
           onMomentumScrollEnd={onMinEnd}
           onScrollEndDrag={onMinEnd}
+          nestedScrollEnabled
           renderItem={({ item }) => {
             const active = item === displayMin;
             return (

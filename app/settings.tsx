@@ -108,7 +108,7 @@ export default function SettingsScreen() {
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
         <HintCard text={t.hints.settings.text} example={t.hints.settings.example} />
 
         {/* Privacy trust card — mirrors onboarding/privacy for returning users */}

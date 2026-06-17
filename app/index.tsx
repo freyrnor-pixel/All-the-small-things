@@ -25,6 +25,10 @@
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
  *   - Pet renders as a screen-level overlay (bottom-left) when petEnabled; passes completedCount so it triggers excited animation on task completion.
+ *   - `tasks` is selected directly from useTaskStore (not just the tasksForDate/backlogTasks/completedCount
+ *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
+ *     re-render this screen at all, since none of the other selected slices change. Keep it even though
+ *     it looks unused; it's a re-render trigger + a useMemo dep.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -73,6 +77,7 @@ export default function HomeScreen() {
   const { isCoverScreen } = useCoverScreen();
   const isDark = useIsDark();
 
+  const tasks = useTaskStore((s) => s.tasks);
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
   const completedCountFn = useTaskStore((s) => s.completedCount);
@@ -126,7 +131,7 @@ export default function HomeScreen() {
       if (b.time) return 1;
       return 0;
     });
-  }, [tasksForDate, today]);
+  }, [tasks, tasksForDate, today]);
 
   const visibleTodayTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((task) => task.importance === 'essential')

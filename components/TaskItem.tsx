@@ -82,7 +82,7 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   return (
     <View style={styles.wrap}>
       <CompletionGlow trigger={task.done} color={theme.green} radius={Radius.md} />
-      <Pressable style={styles.row} onPress={onPress}>
+      <View style={styles.row}>
       <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
       <Animated.View style={{ transform: [{ scale: checkScale }] }}>
@@ -95,12 +95,13 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
             task.done && { backgroundColor: theme.orange, borderColor: theme.orange },
           ]}
           onPress={onToggle}
+          hitSlop={8}
         >
           {task.done && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
         </Pressable>
       </Animated.View>
 
-      <View style={styles.content}>
+      <Pressable style={styles.content} onPress={onPress}>
         <View style={styles.titleRow}>
           <Text
             // OLD: style={[styles.title, muted && styles.titleMuted, task.done && styles.done]}
@@ -157,8 +158,8 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
             </View>
           )}
         </View>
-      </View>
       </Pressable>
+      </View>
     </View>
   );
 }
