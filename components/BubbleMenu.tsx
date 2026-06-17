@@ -83,18 +83,25 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const RADIUS = 130;
+const RADIUS = 130;        // vertical arc radius (tall spread above FAB)
+const FAB_MARGIN_SIDE = 24; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
 const BUBBLE_SIZE = 56;
+// Horizontal arc radius = FAB center's distance from the screen edge. At angle 0 (RH) /
+// π (LH) this lands the edge item's center exactly on the screen boundary, so the OS
+// compositor clips it to a clean static half-circle instead of letting it hang fully
+// past the edge — which previously caused spring-oscillation flicker there.
+const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 54
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
 
 const DRAG_SENSITIVITY = 140; // px per radian — slightly higher for the clamped range
 
-// Window shows 3 full + 2 half-visible bubbles = 3π/4 (135°) wide.
-// Right-handed: from −π (left) sweeping up to −π/4 (upper-right).
-// The WINDOW_FADE zone = half a step on each edge → items at the boundary are 50% visible.
+// Window is π (180°) wide — 4 steps — so items exactly at winStart/winEnd land on the
+// WINDOW_FADE boundary and render at 50% opacity (half-visible "peek" bubbles), while the
+// 2 steps between them stay fully opaque: 3 full + 2 half-visible bubbles, as intended.
+// Right-handed: from −π (left) sweeping up to 0 (right).
 const WINDOW_FADE = STEP_ANGLE / 2; // ~22.5°
 
 // Clamped rotation: 4 × STEP_ANGLE = π (180°) total travel, enough to reach all 8 items.
@@ -106,13 +113,18 @@ const MAX_WHEEL_LH = Math.PI;
 
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
+  // Single center-relative reference point — using winStart/winEnd as two independent
+  // wraparound references breaks at exactly winEnd when the window is a full π wide:
+  // that point is antipodal to winStart, so the dS-based early-exit fires before the
+  // dE-based 50%-opacity branch is reached.
   const twoPi = 2 * Math.PI;
   const wF = WINDOW_FADE;
-  const dS = ((angle - winStart + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
-  const dE = ((angle - winEnd   + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
-  if (dS < -wF || dE > wF) return 0;
-  if (dS <  wF) return (dS + wF) / (2 * wF);
-  if (dE > -wF) return (wF - dE) / (2 * wF);
+  const halfWidth = (winEnd - winStart) / 2;
+  const center = winStart + halfWidth;
+  const rel = ((angle - center + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
+  if (rel < -(halfWidth + wF) || rel > halfWidth + wF) return 0;
+  if (rel < -(halfWidth - wF)) return (rel + halfWidth + wF) / (2 * wF);
+  if (rel > halfWidth - wF) return (halfWidth + wF - rel) / (2 * wF);
   return 1;
 }
 
@@ -137,7 +149,7 @@ function BubbleItemView({
   const animStyle = useAnimatedStyle(() => {
     const currentAngle = baseAngle + wheelAngle.value;
     const op = openProgress.value;
-    const x = Math.cos(currentAngle) * RADIUS * op;
+    const x = Math.cos(currentAngle) * RADIUS_X * op;
     const y = Math.sin(currentAngle) * RADIUS * op;
     const scale = (0.3 + 0.7 * op) * pressAnim.value;
     const opacity = windowOpacity(currentAngle, windowStart, windowEnd) * op;
@@ -163,17 +175,17 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const { leftHanded } = useSettingsStore();
 
-  // Right-handed: window from −π (left) to −π/4 (upper-right), 3π/4 wide.
-  // Left-handed:  window from π/4 (upper-left) to π (right), mirrored.
-  const windowStart = leftHanded ? Math.PI / 4 : -Math.PI;
-  const windowEnd   = leftHanded ? Math.PI      : -Math.PI / 4;
+  // Right-handed: window from −π (left) to 0 (right), π wide.
+  // Left-handed:  window from 0 (right) to π (left), mirrored.
+  const windowStart = leftHanded ? 0 : -Math.PI;
+  const windowEnd   = leftHanded ? Math.PI : 0;
 
-  const wheelAngle   = useSharedValue(leftHanded ? Math.PI / 4 : -Math.PI);
+  const wheelAngle   = useSharedValue(leftHanded ? 0 : -Math.PI);
   const openProgress = useSharedValue(0);
   const startAngle   = useSharedValue(0);
 
   useEffect(() => {
-    wheelAngle.value = leftHanded ? Math.PI / 4 : -Math.PI;
+    wheelAngle.value = leftHanded ? 0 : -Math.PI;
   }, [leftHanded]);
 
   const router = useRouter();
