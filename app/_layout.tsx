@@ -18,13 +18,15 @@
  *   - task-form, habit-form and share-modal are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
  *   - segments are read inside the onboarding-guard effect but intentionally kept out of its deps — do not add them.
+ *   - OTA updates auto-apply: a fetched update calls Updates.reloadAsync() immediately, no
+ *     confirmation dialog — a missed/dismissed tap was leaving the app stuck on stale JS.
  */
 import { useEffect, Component } from 'react';
 import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Updates from 'expo-updates';
 import {
   useFonts,
@@ -139,11 +141,10 @@ export default function RootLayout() {
         const check = await Updates.checkForUpdateAsync();
         if (!check.isAvailable) return;
         await Updates.fetchUpdateAsync();
-        const t = getTranslations();
-        Alert.alert(t.updateAvailableTitle, t.updateAvailableBody, [
-          { text: t.updateLater, style: 'cancel' },
-          { text: t.updateRestart, onPress: () => Updates.reloadAsync() },
-        ]);
+        // Auto-apply: no confirmation dialog. A missed/dismissed tap was leaving
+        // the app stuck on stale JS indefinitely, so the fetched update now
+        // activates immediately rather than waiting for the next cold start.
+        await Updates.reloadAsync();
       } catch {
         /* silently ignore — update check must never crash the app */
       }
