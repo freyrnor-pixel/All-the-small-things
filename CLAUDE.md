@@ -7,3 +7,7 @@
 - Before starting new work, check for stale or unmerged branches and flag them.
 - Always end the session by opening a pull request with a clear description of what changed and why.
 - After every new update, double-check that everything works as intended: quick-check for bugs, and see if anything old can/should be deleted.
+
+## Current deployment state
+
+- App version used at this time is Runtime 1.0.0, In Preview.
