@@ -291,7 +291,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
       const hitBlock = snapped === maxAngle || snapped === minAngle;
       wheelAngle.value = withSpring(
         snapped,
-        hitBlock ? { damping: 14, stiffness: 380 } : { damping: 35, stiffness: 500 }
+        hitBlock ? { damping: 26, stiffness: 420 } : { damping: 35, stiffness: 500 }
       );
     });
 
