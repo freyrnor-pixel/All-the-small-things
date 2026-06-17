@@ -12,6 +12,7 @@
  *
  * Edit notes:
  *   - seedCatalog() runs on every load() and uses stable name-derived IDs ('cat_<name>') with INSERT OR IGNORE — safe to re-run, but renaming seed items orphans old rows.
+ *   - price_source ('seed' | 'purchase') tracks where a row's price came from: seedCatalog() keeps 'seed' rows in sync with lib/catalogSeed.ts on every load, but never overwrites a price once a real purchase sets it to 'purchase'.
  *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/price/category.
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  */
@@ -64,9 +65,10 @@ function seedCatalog(): void {
          VALUES (?, ?, ?, '', ?, ?)`,
         [stableId, s.name, s.category, s.price, now]
       );
-      // Backfill price for rows that were seeded before prices were added.
+      // Keep seed-sourced prices in sync with lib/catalogSeed.ts on every load.
+      // Stops touching the row once a real purchase marks it price_source = 'purchase'.
       db.runSync(
-        `UPDATE store_items SET price = ? WHERE id = ? AND price = 0`,
+        `UPDATE store_items SET price = ? WHERE id = ? AND price_source = 'seed'`,
         [s.price, stableId]
       );
     } catch { /* ignore */ }
@@ -133,8 +135,10 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
         next[idx] = merged;
         try {
           db.runSync(
-            'UPDATE store_items SET store = ?, price = ?, category = ?, last_updated = ? WHERE id = ?',
-            [merged.store, merged.price, merged.category, now, merged.id]
+            `UPDATE store_items SET store = ?, price = ?, category = ?, last_updated = ?,
+              price_source = CASE WHEN ? > 0 THEN 'purchase' ELSE price_source END
+             WHERE id = ?`,
+            [merged.store, merged.price, merged.category, now, p.price, merged.id]
           );
         } catch { /* ignore */ }
       } else {
@@ -143,7 +147,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
         next.push(item);
         try {
           db.runSync(
-            `INSERT INTO store_items (id, name, category, store, price, last_updated) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO store_items (id, name, category, store, price, last_updated, price_source) VALUES (?, ?, ?, ?, ?, ?, 'purchase')`,
             [id, item.name, item.category, item.store, item.price, now]
           );
         } catch { /* ignore */ }

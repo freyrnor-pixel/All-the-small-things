@@ -209,9 +209,20 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN custom_secondary_color TEXT DEFAULT '#10B981'",
     // 1.1.0 — inventory tracking for shopping items
     "ALTER TABLE shopping_items ADD COLUMN inventory_qty REAL DEFAULT 0",
+    // Track whether a catalog item's price came from the seed list or a real purchase
+    "ALTER TABLE store_items ADD COLUMN price_source TEXT DEFAULT 'seed'",
   ];
   for (const sql of migrations) {
-    try { db.execSync(sql); } catch { /* column already exists */ }
+    try {
+      db.execSync(sql);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Expected on every launch once a column exists — anything else means a
+      // migration silently failed and new columns/features may be missing.
+      if (!msg.includes('duplicate column')) {
+        console.error(`Migration failed: ${sql}`, e);
+      }
+    }
   }
 }
 
