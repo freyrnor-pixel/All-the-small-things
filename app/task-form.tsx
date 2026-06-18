@@ -239,6 +239,7 @@ export default function TaskFormScreen() {
                 theme={theme}
                 dayLabels={dayLabels}
                 monthLabels={months}
+                calendarLabels={t.calendar}
               />
             )}
           </View>

@@ -6,17 +6,32 @@
  * props so the parent owns localization and theming.
  *
  * Connections:
- *   Imports → constants/theme
+ *   Imports → constants/theme, lib/date
  *   Used by → app/task-form.tsx
  *   Data    → none (presentational); value/onChange/theme/labels all come from props
  *
  * Edit notes:
  *   - dayLabels must be Mon–Sun ordered (7 entries); the grid offsets weeks so Monday is column 0.
  *   - Dates are handled as YYYY-MM-DD strings via toDateStr/parseDateParts — avoid raw Date math to dodge timezone shifts.
+ *   - "today" comes from lib/date.ts's todayStr() (shared local-time helper) — don't reintroduce a local copy.
+ *   - calendarLabels is optional so existing callers keep compiling without changes; pass it for
+ *     screen-reader support and the "jump to today" button (see app/task-form.tsx for usage).
+ *   - "jump to today" only re-centers the visible month; it never calls onChange itself, so it
+ *     can't silently overwrite a date the user already picked while browsing other months.
  */
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { todayStr } from '@/lib/date';
+
+interface CalendarLabels {
+  prevMonth: string;
+  nextMonth: string;
+  jumpToToday: string;
+  jumpToTodayHint: string;
+  selectedSuffix: string;
+  todaySuffix: string;
+}
 
 interface Props {
   value: string; // YYYY-MM-DD
@@ -24,6 +39,7 @@ interface Props {
   theme: AppColors;
   dayLabels: string[]; // Mon–Sun (7 entries)
   monthLabels: string[]; // 12 month names
+  calendarLabels?: CalendarLabels; // a11y strings + "jump to today" button copy
 }
 
 function parseDateParts(s: string): [number, number, number] {
@@ -35,12 +51,7 @@ function toDateStr(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-function todayStr(): string {
-  const n = new Date();
-  return toDateStr(n.getFullYear(), n.getMonth(), n.getDate());
-}
-
-export default function DatePickerCalendar({ value, onChange, theme, dayLabels, monthLabels }: Props) {
+export default function DatePickerCalendar({ value, onChange, theme, dayLabels, monthLabels, calendarLabels }: Props) {
   const [selY, selM, selD] = parseDateParts(value);
   const [viewYear, setViewYear] = useState(selY);
   const [viewMonth, setViewMonth] = useState(selM);
@@ -57,6 +68,19 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
     else setViewMonth((m) => m + 1);
   }
 
+  // Navigates the visible month back to today WITHOUT changing the selected date — tapping a day
+  // cell is still the only way to select a date, so browsing here never silently discards a pick.
+  function jumpToToday() {
+    const [ty, tm] = parseDateParts(today);
+    setViewYear(ty);
+    setViewMonth(tm);
+  }
+
+  const isViewingCurrentMonth = (() => {
+    const [ty, tm] = parseDateParts(today);
+    return viewYear === ty && viewMonth === tm;
+  })();
+
   const firstDow = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
   const offset = (firstDow + 6) % 7; // shift so Mon=0
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -72,16 +96,49 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
   return (
     <View style={[styles.container, { backgroundColor: theme.white }]}>
       <View style={styles.header}>
-        <Pressable onPress={prevMonth} hitSlop={12} style={styles.navBtn}>
+        <Pressable
+          onPress={prevMonth}
+          hitSlop={12}
+          style={styles.navBtn}
+          accessibilityRole="button"
+          accessibilityLabel={calendarLabels?.prevMonth}
+        >
           <Text style={[styles.navArrow, { color: theme.orange }]}>‹</Text>
         </Pressable>
         <Text style={[styles.monthYear, { color: theme.text }]}>
           {monthLabels[viewMonth]} {viewYear}
         </Text>
-        <Pressable onPress={nextMonth} hitSlop={12} style={styles.navBtn}>
+        <Pressable
+          onPress={nextMonth}
+          hitSlop={12}
+          style={styles.navBtn}
+          accessibilityRole="button"
+          accessibilityLabel={calendarLabels?.nextMonth}
+        >
           <Text style={[styles.navArrow, { color: theme.orange }]}>›</Text>
         </Pressable>
       </View>
+
+      {calendarLabels && (
+        <Pressable
+          onPress={jumpToToday}
+          disabled={isViewingCurrentMonth}
+          hitSlop={6}
+          style={styles.todayBtn}
+          accessibilityRole="button"
+          accessibilityLabel={calendarLabels.jumpToTodayHint}
+        >
+          <Text
+            style={[
+              styles.todayBtnText,
+              { color: theme.orange },
+              isViewingCurrentMonth && { color: theme.textLight },
+            ]}
+          >
+            {calendarLabels.jumpToToday}
+          </Text>
+        </Pressable>
+      )}
 
       <View style={styles.weekRow}>
         {dayLabels.map((label, i) => (
@@ -98,8 +155,22 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
             const ds = toDateStr(viewYear, viewMonth, day);
             const isSelected = ds === value;
             const isToday = ds === today;
+            const fullLabel = `${day} ${monthLabels[viewMonth]} ${viewYear}`;
+            const suffix = isSelected
+              ? calendarLabels?.selectedSuffix
+              : isToday
+              ? calendarLabels?.todaySuffix
+              : undefined;
             return (
-              <Pressable key={di} style={styles.cell} onPress={() => onChange(ds)} hitSlop={2}>
+              <Pressable
+                key={di}
+                style={styles.cell}
+                onPress={() => onChange(ds)}
+                hitSlop={2}
+                accessibilityRole="button"
+                accessibilityLabel={suffix ? `${fullLabel}, ${suffix}` : fullLabel}
+                accessibilityState={{ selected: isSelected }}
+              >
                 <View style={[
                   styles.dayCircle,
                   isSelected && { backgroundColor: theme.orange },
@@ -141,6 +212,8 @@ const styles = StyleSheet.create({
   navBtn: { padding: Spacing.sm },
   navArrow: { fontSize: 26, lineHeight: 30, fontWeight: '300' },
   monthYear: { fontSize: FontSize.md, fontWeight: '700' },
+  todayBtn: { alignSelf: 'center', paddingVertical: 2, paddingHorizontal: Spacing.sm, marginBottom: Spacing.xs },
+  todayBtnText: { fontSize: FontSize.xs, fontWeight: '600' },
   weekRow: { flexDirection: 'row', justifyContent: 'space-around' },
   cell: { width: CELL, height: CELL, alignItems: 'center', justifyContent: 'center' },
   weekLabel: { fontSize: FontSize.xs, fontWeight: '600' },
