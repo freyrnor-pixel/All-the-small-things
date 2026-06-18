@@ -459,6 +459,28 @@ const en = {
     fewerOptions: 'Fewer options',
     // --- end W-D additions ---
   },
+  // IFTTT-style automations
+  automations: {
+    title: 'Automations',
+    navLabel: 'Automations',
+    navHint: 'Simple if-this-then-that rules',
+    emptyState: 'No automations yet — tap + to create one.',
+    addNew: '+ New automation',
+    whenLabel: 'When…',
+    thenLabel: 'Then…',
+    triggerTaskCompleted: 'A task is completed',
+    triggerShoppingOpened: 'Shopping list is opened',
+    actionShowMessage: 'Show a message',
+    actionAddShoppingItem: 'Add a shopping item',
+    messagePlaceholder: 'Message to show…',
+    itemNamePlaceholder: 'Item name…',
+    alertTitle: 'Automation',
+    saveBtn: 'Save automation',
+    deleteTitle: 'Delete this automation?',
+    deleteBody: 'This cannot be undone.',
+    deleteBtn: 'Delete',
+    ruleSummary: (when: string, then: string) => `${when} → ${then}`,
+  },
   // Onboarding privacy screen (Proposal 3)
   onboarding: {
     privacy: {
@@ -601,6 +623,10 @@ const en = {
     plans: {
       text: "Today's full agenda — anytime plans first, then timed ones in order, with a live marker for now.",
       example: 'Example: tap a plan to edit it, or use Share to send your plans to someone else.',
+    },
+    automations: {
+      text: 'Set up simple rules: when something happens in the app, do something automatically.',
+      example: 'Example: when a task is completed → show a cheerful message.',
     },
   },
 };
@@ -860,6 +886,27 @@ const no: typeof en = {
     moreOptions: 'Flere valg',
     fewerOptions: 'Færre valg',
     // --- end W-D additions ---
+  },
+  automations: {
+    title: 'Automatiseringer',
+    navLabel: 'Automatiseringer',
+    navHint: 'Enkle hvis-dette-så-det-regler',
+    emptyState: 'Ingen automatiseringer ennå — trykk + for å opprette.',
+    addNew: '+ Ny automatisering',
+    whenLabel: 'Når…',
+    thenLabel: 'Så…',
+    triggerTaskCompleted: 'En oppgave fullføres',
+    triggerShoppingOpened: 'Handlelisten åpnes',
+    actionShowMessage: 'Vis en melding',
+    actionAddShoppingItem: 'Legg til en handlevare',
+    messagePlaceholder: 'Melding som skal vises…',
+    itemNamePlaceholder: 'Navn på vare…',
+    alertTitle: 'Automatisering',
+    saveBtn: 'Lagre automatisering',
+    deleteTitle: 'Slette denne automatiseringen?',
+    deleteBody: 'Dette kan ikke angres.',
+    deleteBtn: 'Slett',
+    ruleSummary: (when: string, then: string) => `${when} → ${then}`,
   },
   onboarding: {
     privacy: {
@@ -1160,6 +1207,10 @@ const no: typeof en = {
     plans: {
       text: 'Dagens fulle agenda — planer uten tidspunkt først, så tidsstyrte planer i rekkefølge, med en levende markør for nå.',
       example: 'Eksempel: trykk på en plan for å redigere den, eller bruk Del for å sende planene dine til noen andre.',
+    },
+    automations: {
+      text: 'Sett opp enkle regler: når noe skjer i appen, gjør noe automatisk.',
+      example: 'Eksempel: når en oppgave fullføres → vis en oppmuntrende melding.',
     },
   },
 };

@@ -19,6 +19,7 @@
  *   - Section structure is the four config.sections.* groups; sub-cards live inside them. Keep the Essentials toggle first and the Data section last.
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet sub-card visible only when petEnabled; colour swatches pull from active theme palette.
+ *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
  */
 import React, { useState } from 'react';
 import {
@@ -659,6 +660,18 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Automations */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.automations.navLabel}</Text>
+          <Pressable
+            style={[styles.card, styles.navRow, { backgroundColor: theme.white }]}
+            onPress={() => router.push('/automations')}
+          >
+            <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.automations.navHint}</Text>
+            <Text style={[styles.navRowArrow, { color: theme.orange }]}>›</Text>
+          </Pressable>
+        </View>
+
         {/* ===== WORK MODE ===== */}
         <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.workMode}</Text>
 
@@ -801,6 +814,8 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontSize: FontSize.md, fontWeight: '500' },
   switchHint: { fontSize: FontSize.xs, marginTop: 2 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  navRowArrow: { fontSize: FontSize.xl, fontWeight: '700' },
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },

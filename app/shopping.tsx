@@ -7,9 +7,9 @@
  * list through the MonthlyPickerSheet.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup)
+ *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
@@ -19,6 +19,7 @@
  *   - weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed, so the label is t.days[(weeklyResetDay + 1) % 7].
  *   - Unchecked items with a dishName (pushed from app/meals.tsx) render grouped under that dish in their own cards, above the plain alphabetical list; ungroupedUnchecked feeds the latter so items aren't duplicated.
  *   - Add sheet supports swipe-down-to-close via a Gesture.Pan on the handle/title row only (not the whole sheet, so inner ScrollView/TextInput touches aren't hijacked); past 100px or a fast flick closes it, otherwise it springs back.
+ *   - The 'shopping_opened' trigger fires once per mount ([] deps) — not on every re-render as items change.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -40,6 +41,7 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
+import { useAutomationStore } from '@/store/useAutomationStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import MonthlyPickerSheet from '@/components/MonthlyPickerSheet';
 import HintCard from '@/components/HintCard';
@@ -91,6 +93,11 @@ export default function ShoppingScreen() {
 
   // weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed (0=Sun).
   const resetDayLabel = t.days[(weeklyResetDay + 1) % 7];
+
+  // Fire the 'shopping_opened' automation trigger once per screen visit.
+  useEffect(() => {
+    useAutomationStore.getState().fireTrigger('shopping_opened');
+  }, []);
 
   const suggestions = useMemo(() => {
     const exact = newName.trim().toLowerCase();

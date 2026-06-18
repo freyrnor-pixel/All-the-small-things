@@ -4,14 +4,14 @@
  * Mounts on launch: loads the rounded Nunito font (gating render until ready and
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
- * habits, catalog). After requesting notification permission it re-syncs all
- * reminders/notifications to the loaded data and language, and keeps the persistent
+ * habits, catalog, automations). After requesting notification permission it re-syncs
+ * all reminders/notifications to the loaded data and language, and keeps the persistent
  * "today's overview" notification (if enabled) refreshed as tasks/shopping change.
  * Defines the expo-router Stack and per-screen options, redirects to onboarding
  * until setup is complete, and wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useAutomationStore, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
  *
@@ -53,6 +53,7 @@ import { useHealthStore } from '@/store/useHealthStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import { Colors, Fonts } from '@/constants/theme';
 
@@ -118,6 +119,7 @@ export default function RootLayout() {
   const loadShared = useSharedStore((s) => s.load);
   const loadHabits = useHabitStore((s) => s.load);
   const loadCatalog = useCatalogStore((s) => s.load);
+  const loadAutomations = useAutomationStore((s) => s.load);
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
   const language = useSettingsStore((s) => s.language);
   const tasks = useTaskStore((s) => s.tasks);
@@ -134,6 +136,7 @@ export default function RootLayout() {
     loadShared();
     loadHabits();
     loadCatalog();
+    loadAutomations();
 
     // Notifications: ask once, then bring all scheduled reminders in line with
     // the loaded settings, tasks and habits (and the user's chosen language).
@@ -214,6 +217,7 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="shared" />
         <Stack.Screen name="habits" />
+        <Stack.Screen name="automations" />
         <Stack.Screen
           name="habit-form"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
