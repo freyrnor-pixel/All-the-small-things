@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useSettingsStore
- *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step5.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx
+ *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx
  *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications
  *
  * Edit notes:

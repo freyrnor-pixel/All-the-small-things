@@ -175,6 +175,7 @@ export default function RootLayout() {
       <StatusBar style="dark" backgroundColor={Colors.cream} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="plans" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="meals" />
         <Stack.Screen name="health" />

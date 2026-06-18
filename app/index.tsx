@@ -1,26 +1,28 @@
 /**
  * index.tsx — Home screen
  *
- * The app's daily landing screen: greeting, today's tasks + backlog, a weekly
- * shopping preview (tickable inline), gentle completed-count points, and the
- * BubbleMenu / QuickAddSheet entry points. Honours work mode and essentials
+ * The app's daily landing screen: greeting, a unified Plans widget + backlog, a
+ * weekly shopping preview (tickable inline), gentle completed-count points, and
+ * the BubbleMenu / QuickAddSheet entry points. Honours work mode and essentials
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
  *
  * Edit notes:
- *   - Today's tasks are ranked "what do I need right now?": undone first, then
- *     time-anchored (time-box/time) earliest, then essentials. Rendered list is
- *     capped at Layout.maxVisible; the overflow shows a low-weight t.andMoreTasks
- *     nudge (informational — home is the full list, so it doesn't navigate).
+ *   - Plans are ranked "what do I need right now?": undone first, then
+ *     time-anchored (time-box/time) earliest, then essentials. The Plans widget
+ *     shows a 3-item preview (planPreviewCount) via DayTimeline; tapping the
+ *     "•••" strip toggles plansExpanded to show the full day in place. Tapping
+ *     the section title navigates to the full /plans screen (same ranking logic
+ *     duplicated there by design — see app/plans.tsx).
  *   - Greeting is intentionally low-weight (Fonts.semibold, FontSize.xl); cards use
  *     Layout.cardPadding for a consistent calm rhythm.
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
- *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; task rows push /task-form (also a modal).
+ *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; DayTimeline rows push /task-form (also a modal).
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
@@ -47,6 +49,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
+import DayTimeline from '@/components/DayTimeline';
 import BubbleMenu from '@/components/BubbleMenu';
 import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
@@ -137,10 +140,11 @@ export default function HomeScreen() {
     ? allTodayTasks.filter((task) => task.importance === 'essential')
     : allTodayTasks;
 
-  // Keep the home calm: render at most Layout.maxVisible rows, then a low-weight
-  // "and X more…" nudge instead of an overwhelming wall of tasks.
-  const todayTasks = visibleTodayTasks.slice(0, Layout.maxVisible);
-  const hiddenTodayCount = visibleTodayTasks.length - todayTasks.length;
+  // Plans widget: a short 3-item preview by default, expandable in place to the
+  // full day via the "•••" strip — no separate cap/overflow-nudge mechanism.
+  const planPreviewCount = 3;
+  const [plansExpanded, setPlansExpanded] = useState(false);
+  const plansTasks = plansExpanded ? visibleTodayTasks : visibleTodayTasks.slice(0, planPreviewCount);
 
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
@@ -269,12 +273,14 @@ export default function HomeScreen() {
 
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
 
-        {/* Today's tasks */}
+        {/* Plans — unified preview of today's agenda; tap the title for the full /plans screen */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {settings.essentialsModeEnabled ? t.essentialTasksToday : t.dailyOverview}
-            </Text>
+            <Pressable style={{ flex: 1 }} onPress={() => router.push('/plans')}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {settings.essentialsModeEnabled ? t.essentialPlansTitle : t.plansTitle}
+              </Text>
+            </Pressable>
             <View style={styles.sectionActions}>
               <Pressable
                 style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
@@ -291,36 +297,33 @@ export default function HomeScreen() {
               </Pressable>
             </View>
           </View>
-          {todayTasks.length === 0 ? (
+          {plansTasks.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>
-                {settings.essentialsModeEnabled ? t.noEssentialTasks : t.noTasks}
+                {settings.essentialsModeEnabled ? t.noEssentialPlansToday : t.noPlansToday}
               </Text>
             </View>
           ) : (
             <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
-              {todayTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggle={() => handleToggleTask(task.id)}
-                  onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
-                />
-              ))}
+              <DayTimeline
+                tasks={plansTasks}
+                onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
+              />
             </View>
           )}
-          {/* Low-weight "and X more…" nudge — the list is intentionally capped at
-              Layout.maxVisible to keep the home calm. Purely informational: there's
-              no separate all-tasks screen (home is the list), so it doesn't navigate. */}
-          {hiddenTodayCount > 0 && (
-            <Text style={[styles.andMore, { color: theme.textLight }]}>
-              {t.andMoreTasks(hiddenTodayCount)}
-            </Text>
+          {/* Expand/collapse strip — only shown when there's more than the 3-item
+              preview to reveal; toggles plansExpanded in place (no navigation). */}
+          {visibleTodayTasks.length > planPreviewCount && (
+            <Pressable onPress={() => setPlansExpanded((v) => !v)} style={styles.expandStrip}>
+              <Text style={[styles.expandStripText, { color: theme.textLight }]}>
+                {plansExpanded ? t.plansCollapse : '•••'}
+              </Text>
+            </Pressable>
           )}
-          {settings.essentialsModeEnabled && allTodayTasks.length > todayTasks.length && (
+          {settings.essentialsModeEnabled && allTodayTasks.length > visibleTodayTasks.length && (
             <Pressable onPress={() => settings.update({ essentialsModeEnabled: false })}>
               <Text style={[styles.seeAll, { color: theme.orange }]}>
-                {t.essentialsHidden(allTodayTasks.length - todayTasks.length)}
+                {t.plansEssentialsHidden(allTodayTasks.length - visibleTodayTasks.length)}
               </Text>
             </Pressable>
           )}
@@ -475,9 +478,10 @@ const styles = StyleSheet.create({
   // Empty/ahead state: generous padding so a gentle prompt never reads as cramped.
   emptyCard: { borderRadius: Radius.md, padding: Layout.cardPadding, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, fontFamily: Fonts.regular, textAlign: 'center' },
-  // Low-weight nudge — regular face, muted colour, small, right-aligned so it
-  // recedes beneath the capped task list rather than competing with it.
-  andMore: { fontSize: FontSize.sm, fontFamily: Fonts.regular, marginTop: Spacing.xs, textAlign: 'right' },
+  // "•••" expand/collapse strip beneath the Plans preview — low-weight, centred,
+  // toggles plansExpanded in place rather than navigating anywhere.
+  expandStrip: { paddingVertical: Spacing.xs, alignItems: 'center' },
+  expandStripText: { fontSize: FontSize.md, fontWeight: '600', letterSpacing: 2 },
   // OLD: shoppingPreviewRow: { ..., paddingVertical: 4 }  — increased to 6 for easier tap target
   shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: Spacing.sm },
   // OLD: shoppingDot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: theme.green }
