@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   emptyBody: { fontSize: FontSize.sm, textAlign: 'center' },
 
   // Modal / sheet
-  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrapper: { justifyContent: 'flex-end' },
   sheet: {
     borderTopLeftRadius: Radius.lg,

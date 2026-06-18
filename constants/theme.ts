@@ -8,6 +8,8 @@
  * `getSoftTheme(colors)` returns a gentler, lower-contrast variant for emotional/health screens.
  * `Fonts` holds the rounded Nunito family tokens, `Layout` the shared card padding/rhythm.
  * `getFontSize(base, scale)` applies the user's fontSize preference to a base pt.
+ * `getMaterialStyle(base, material)` computes bubble/FAB surface-finish tokens
+ * (glass/metal/rock/paper) from a single base colour — see "Materials" section below.
  *
  * Connections:
  *   Imports → —
@@ -21,6 +23,9 @@
  *     which is always the light default palette.
  *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
  *   - The 'custom' theme is computed from user's primary/secondary colors via buildCustomTheme().
+ *   - Materials are a separate axis from colour themes (a bubble's hue + its finish are
+ *     independent settings) — getMaterialStyle() only ever computes border/shadow/sheen
+ *     tokens, never a hue, so it composes with any theme or FeatureColors value.
  */
 export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
@@ -382,14 +387,29 @@ export function getSoftTheme(c: AppColors): AppColors {
 
 export const Colors = THEMES.default;
 
+/**
+ * Bubble/FAB accent colors for BubbleMenu + the task-type accents in task-form/TaskItem.
+ * Designed as one coordinated set rather than independent picks: hues are spread
+ * ~16-41° apart around the wheel (no two adjacent, so every bubble is unambiguous at a
+ * glance — the old set had habits/health as near-identical greens and meals/shop as
+ * near-identical cyans), saturation held in a 56-85% band, and lightness tuned per-hue
+ * so every value's luminance lands in a tight ~0.42-0.55 range. That luminance cap is
+ * deliberate: BubbleMenu renders a hardcoded white icon + white label on top of these
+ * (no contrastOn() there), so every entry must stay dark/saturated enough for white to
+ * read clearly — the old `scan`/`meals` picks were close to failing this.
+ * Hue stays anchored to the feature's natural semantic family (task=blue/trust,
+ * health=red/heart, habits=green/growth, shared=violet/connection, focus=red-orange/
+ * energy) so the mapping still feels intuitive, not just decorative.
+ */
 export const FeatureColors = {
-  task:    '#3B82F6',
-  scan:    '#F59E0B',
-  habits:  '#10B981',
-  health:  '#22C55E',
-  meals:   '#06B6D4',
-  shop:    '#0EA5E9',
-  shared:  '#6366F1',
+  task:    '#3A78E4', // blue          — trust / primary action
+  scan:    '#D97512', // burnt amber   — camera / attention
+  habits:  '#27915F', // forest green  — growth (was too close to health's old green)
+  health:  '#DC3853', // rose-red      — heart / vitality
+  meals:   '#AF8D1D', // ochre/mustard — food / warmth (was cyan, didn't read as "food")
+  shop:    '#2096B6', // teal-cyan     — list / fresh (distinct from task's blue)
+  shared:  '#8260D2', // violet        — connection
+  focus:   '#E83A17', // red-orange    — energy / urgency (was a stray inline hex in BubbleMenu)
 } as const;
 
 export const Spacing = {
@@ -481,3 +501,105 @@ export const CUSTOM_COLOR_PRESETS = [
   '#6366F1', '#8B5CF6', '#A855F7', '#EC4899', '#F43F5E',
   '#78716C', '#6B7280', '#374151', '#1E293B', '#000000',
 ];
+
+// ─── Materials: bubble/FAB surface finish ───────────────────────────────────
+// A finish is a set of pure style tokens (no native gradient/blur deps, so it
+// stays OTA-safe) derived from a single base colour. Independent from colour
+// themes — any bubble's hue and finish can vary separately.
+
+export type MaterialName = 'glass' | 'metal' | 'rock' | 'paper';
+
+export const MATERIAL_META: Record<MaterialName, { label: string; emoji: string }> = {
+  glass: { label: 'Glass', emoji: '🧊' },
+  metal: { label: 'Metal', emoji: '⚙️' },
+  rock: { label: 'Rock', emoji: '🪨' },
+  paper: { label: 'Paper', emoji: '📄' },
+};
+
+export type MaterialStyle = {
+  backgroundColor: string;
+  borderWidth: number;
+  borderColor: string;
+  borderTopColor: string;
+  borderBottomColor: string;
+  shadowOpacity: number;
+  shadowRadius: number;
+  /**
+   * Android shadow depth. RN ignores shadowOpacity/shadowRadius on Android —
+   * elevation is the only thing that actually draws a shadow there, so each
+   * finish needs its own value or every material looks identical on Android.
+   */
+  elevation: number;
+  /** Faint highlight overlay for the top portion of the surface. */
+  sheenColor: string;
+};
+
+/** lighten() for amount >= 0, darken() for amount < 0 — one knob, either direction. */
+function shade(hex: string, amount: number): string {
+  return amount >= 0 ? lighten(hex, amount) : darken(hex, -amount);
+}
+
+function rgba(hex: string, alpha: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
+ * Per-finish surface tokens for bubble/FAB rendering, computed from a single
+ * base colour. Spread the border/shadow keys onto the outer (shadow-casting)
+ * view and `backgroundColor` + `sheenColor` onto an inner overflow:hidden mask
+ * — see components/BubbleMenu.tsx for the two-layer render pattern.
+ */
+export function getMaterialStyle(base: string, material: MaterialName): MaterialStyle {
+  switch (material) {
+    case 'metal':
+      return {
+        backgroundColor: shade(base, -0.08),
+        borderWidth: 1.5,
+        borderColor: shade(base, -0.3),
+        borderTopColor: shade(base, 0.4),
+        borderBottomColor: shade(base, -0.5),
+        shadowOpacity: 0.32,
+        shadowRadius: 8,
+        elevation: 9,
+        sheenColor: rgba('#FFFFFF', 0.3),
+      };
+    case 'rock':
+      return {
+        backgroundColor: shade(base, -0.18),
+        borderWidth: 2,
+        borderColor: shade(base, -0.4),
+        borderTopColor: shade(base, -0.05),
+        borderBottomColor: shade(base, -0.55),
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 12,
+        sheenColor: rgba('#FFFFFF', 0.06),
+      };
+    case 'paper':
+      return {
+        backgroundColor: shade(base, 0.1),
+        borderWidth: 1,
+        borderColor: shade(base, -0.08),
+        borderTopColor: shade(base, 0.18),
+        borderBottomColor: shade(base, -0.12),
+        shadowOpacity: 0.09,
+        shadowRadius: 4,
+        elevation: 2,
+        sheenColor: rgba('#FFFFFF', 0.18),
+      };
+    case 'glass':
+    default:
+      return {
+        backgroundColor: rgba(base, 0.72),
+        borderWidth: 1,
+        borderColor: rgba('#FFFFFF', 0.5),
+        borderTopColor: rgba('#FFFFFF', 0.75),
+        borderBottomColor: rgba('#000000', 0.15),
+        shadowOpacity: 0.16,
+        shadowRadius: 16,
+        elevation: 6,
+        sheenColor: rgba('#FFFFFF', 0.5),
+      };
+  }
+}

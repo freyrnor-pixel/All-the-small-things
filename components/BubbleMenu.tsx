@@ -52,7 +52,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Radius, Shadow, FeatureColors, contrastOn } from '@/constants/theme';
+import { Colors, Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, MaterialStyle } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -77,7 +77,7 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
   { icon: 'cart-outline',       labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
   { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
-  { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: '#E8934A' },
+  { icon: 'flash-outline',      labelKey: 'focus',   route: '/focus',     color: FeatureColors.focus },
   { icon: 'heart-outline',      labelKey: 'health',  route: '/health',    color: FeatureColors.health },
   { icon: 'restaurant-outline', labelKey: 'meals',   route: '/meals',     color: FeatureColors.meals },
   { icon: 'camera-outline',     labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
@@ -87,12 +87,20 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 const RADIUS = 130;        // vertical arc radius (tall spread above FAB)
 const FAB_MARGIN_SIDE = 24; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
-const BUBBLE_SIZE = 56;
 // Horizontal arc radius = FAB center's distance from the screen edge. At angle 0 (RH) /
 // π (LH) this lands the edge item's center exactly on the screen boundary, so the OS
 // compositor clips it to a clean static half-circle instead of letting it hang fully
-// past the edge — which previously caused spring-oscillation flicker there.
+// past the edge — which previously caused spring-oscillation flicker there. This value
+// is load-bearing for that fix — do not raise it without re-deriving the edge math.
 const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 54
+// Adjacent bubbles sit STEP_ANGLE (45°) apart on an ellipse, so their on-screen spacing
+// isn't uniform: it's widest near angle 0/π (governed by RADIUS) and narrowest near ±90°
+// (governed by RADIUS_X, which is pinned above). The tightest gap on the whole ellipse is
+// 2·RADIUS_X·sin(STEP_ANGLE/2) ≈ 41px — and every reachable rest position has some adjacent
+// pair landing at ±90°/±45°/±135°, ~54px apart. BUBBLE_SIZE must stay under that or those
+// two bubbles visibly overlap every time the menu is open, not just mid-drag. 52 clears the
+// at-rest case with a small gap; don't raise this back toward 56 without re-checking the math.
+const BUBBLE_SIZE = 52;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
@@ -133,6 +141,7 @@ function windowOpacity(angle: number, winStart: number, winEnd: number): number 
 
 type BubbleItemViewProps = {
   item: BubbleEntry;
+  material: MaterialStyle;
   baseAngle: number;
   wheelAngle: SharedValue<number>;
   openProgress: SharedValue<number>;
@@ -143,7 +152,7 @@ type BubbleItemViewProps = {
 };
 
 function BubbleItemView({
-  item, baseAngle, wheelAngle, openProgress, windowStart, windowEnd, onPress, pointerEvents,
+  item, material, baseAngle, wheelAngle, openProgress, windowStart, windowEnd, onPress, pointerEvents,
 }: BubbleItemViewProps) {
   const pressAnim = useSharedValue(1);
 
@@ -161,11 +170,29 @@ function BubbleItemView({
   function handlePressOut() { pressAnim.value = withSpring(1, { damping: 40, stiffness: 700 }); }
 
   return (
-    <Animated.View style={[styles.bubble, { backgroundColor: item.color }, animStyle]} pointerEvents={pointerEvents}>
-      <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-        <Ionicons name={item.icon} size={22} color="#fff" />
-        <Text style={styles.bubbleLabel}>{item.label}</Text>
-      </Pressable>
+    <Animated.View
+      style={[
+        styles.bubble,
+        {
+          borderWidth: material.borderWidth,
+          borderColor: material.borderColor,
+          borderTopColor: material.borderTopColor,
+          borderBottomColor: material.borderBottomColor,
+          shadowOpacity: material.shadowOpacity,
+          shadowRadius: material.shadowRadius,
+          elevation: material.elevation,
+        },
+        animStyle,
+      ]}
+      pointerEvents={pointerEvents}
+    >
+      <View style={[styles.bubbleMask, { backgroundColor: material.backgroundColor }]}>
+        <View pointerEvents="none" style={[styles.bubbleSheen, { backgroundColor: material.sheenColor }]} />
+        <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+          <Ionicons name={item.icon} size={22} color="#fff" />
+          <Text style={styles.bubbleLabel}>{item.label}</Text>
+        </Pressable>
+      </View>
     </Animated.View>
   );
 }
@@ -174,7 +201,7 @@ function BubbleItemView({
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
-  const { leftHanded } = useSettingsStore();
+  const { leftHanded, bubbleMaterial } = useSettingsStore();
 
   // Right-handed: window from −π (left) to 0 (right), π wide.
   // Left-handed:  window from 0 (right) to π (left), mirrored.
@@ -267,6 +294,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
 
   const sideStyle = leftHanded ? { left: 24 } : { right: 24 };
   const fabIconColor = contrastOn(theme.orange);
+  // fabIconColor is deliberately derived from theme.orange (the semantic accent), not
+  // fabMaterial.backgroundColor — materials only shade/tint that accent, never invert it,
+  // so the contrast decision stays valid across every finish.
+  const fabMaterial = useMemo(() => getMaterialStyle(theme.orange, bubbleMaterial), [theme.orange, bubbleMaterial]);
 
   return (
     <View style={[styles.container, sideStyle]} pointerEvents="box-none">
@@ -278,6 +309,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
             <BubbleItemView
               key={item.route}
               item={item}
+              material={getMaterialStyle(item.color, bubbleMaterial)}
               baseAngle={i * STEP_ANGLE}
               wheelAngle={wheelAngle}
               openProgress={openProgress}
@@ -291,21 +323,35 @@ export default function BubbleMenu({ onNewTask }: Props) {
       </GestureDetector>
 
       <Pressable
-        style={[styles.fab, { backgroundColor: theme.orange }]}
+        style={[
+          styles.fab,
+          {
+            borderWidth: fabMaterial.borderWidth,
+            borderColor: fabMaterial.borderColor,
+            borderTopColor: fabMaterial.borderTopColor,
+            borderBottomColor: fabMaterial.borderBottomColor,
+            shadowOpacity: fabMaterial.shadowOpacity,
+            shadowRadius: fabMaterial.shadowRadius,
+            elevation: fabMaterial.elevation,
+          },
+        ]}
         onPress={toggle}
         accessibilityRole="button"
         accessibilityLabel={open ? t.close : t.nav.newTask}
         accessibilityState={{ expanded: open }}
       >
-        {open ? (
-          <Ionicons name="close" size={28} color={fabIconColor} />
-        ) : (
-          <Image
-            source={require('@/assets/android-icon-monochrome.png')}
-            style={[styles.fabLogo, { tintColor: fabIconColor }]}
-            resizeMode="contain"
-          />
-        )}
+        <View style={[styles.fabMask, { backgroundColor: fabMaterial.backgroundColor }]}>
+          <View pointerEvents="none" style={[styles.fabSheen, { backgroundColor: fabMaterial.sheenColor }]} />
+          {open ? (
+            <Ionicons name="close" size={28} color={fabIconColor} />
+          ) : (
+            <Image
+              source={require('@/assets/android-icon-monochrome.png')}
+              style={[styles.fabLogo, { tintColor: fabIconColor }]}
+              resizeMode="contain"
+            />
+          )}
+        </View>
       </Pressable>
     </View>
   );
@@ -333,6 +379,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.fab,
   },
+  // Inner overflow:hidden layer carries the material's fill + sheen, kept separate from
+  // `fab` so its border/shadow (drawn on the outer Pressable) are never clipped.
+  fabMask: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: FAB_SIZE * 0.45,
+    borderTopLeftRadius: FAB_SIZE / 2,
+    borderTopRightRadius: FAB_SIZE / 2,
+  },
   fabLogo: {
     width: 30,
     height: 30,
@@ -347,6 +415,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.cardHeavy,
+  },
+  // Same mask/sheen split as the FAB — see fabMask comment.
+  bubbleMask: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubbleSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: BUBBLE_SIZE * 0.45,
+    borderTopLeftRadius: BUBBLE_SIZE / 2,
+    borderTopRightRadius: BUBBLE_SIZE / 2,
   },
   bubbleInner: {
     alignItems: 'center',

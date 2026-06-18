@@ -24,6 +24,8 @@ export type Language = 'en' | 'no';
 export type DarkMode = 'system' | 'on' | 'off';
 export type FontSizePref = 'small' | 'default' | 'large';
 export type PetType = 'cat' | 'dog' | 'bird' | 'fox' | 'bunny';
+/** Bubble/FAB surface finish — see getMaterialStyle() in constants/theme.ts. */
+export type BubbleMaterial = 'glass' | 'metal' | 'rock' | 'paper';
 
 export type Settings = {
   userName: string;
@@ -60,6 +62,8 @@ export type Settings = {
   // Custom theme colors
   customPrimaryColor: string;
   customSecondaryColor: string;
+  // Bubble menu surface finish
+  bubbleMaterial: BubbleMaterial;
 };
 
 type SettingsStore = Settings & {
@@ -113,6 +117,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   leftHanded: false,
   customPrimaryColor: '#3B82F6',
   customSecondaryColor: '#10B981',
+  bubbleMaterial: 'glass' as BubbleMaterial,
   loaded: false,
   workModeSessionOverride: false,
 
@@ -149,6 +154,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         left_handed: number | null;
         custom_primary_color: string | null;
         custom_secondary_color: string | null;
+        bubble_material: string | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -182,6 +188,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         leftHanded: row.left_handed === 1,
         customPrimaryColor: row.custom_primary_color ?? '#3B82F6',
         customSecondaryColor: row.custom_secondary_color ?? '#10B981',
+        bubbleMaterial: (row.bubble_material as BubbleMaterial) ?? 'glass',
         loaded: true,
       });
     } catch {
@@ -204,7 +211,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             holidays_enabled = ?, dark_mode = ?, child_profiles = ?,
             reduced_motion = ?, font_size = ?,
             pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?,
-            left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?
+            left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?,
+            bubble_material = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -237,6 +245,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.leftHanded ? 1 : 0,
             next.customPrimaryColor,
             next.customSecondaryColor,
+            next.bubbleMaterial,
           ]
         );
       } catch {
