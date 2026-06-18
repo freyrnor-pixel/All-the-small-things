@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → lib/db, lib/id
- *   Used by → app/_layout.tsx, app/meals.tsx
+ *   Used by → app/_layout.tsx, app/meals.tsx, app/shopping.tsx (read-only, for per-dish price lookup)
  *   Data    → defines a Zustand store; owns SQLite tables dishes and ingredients (1-to-many)
  *
  * Edit notes:
