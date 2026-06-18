@@ -7,11 +7,14 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
+ *   - The update-ready banner mirrors the work-mode banner's look (theme.green
+ *     pill) and calls Updates.reloadAsync() directly on tap — app/_layout.tsx
+ *     only sets the updateReady flag, never auto-reloads or pops an Alert.
  *   - Plans are ranked "what do I need right now?": undone first, then
  *     time-anchored (time-box/time) earliest, then essentials. The Plans widget
  *     shows a 3-item preview (planPreviewCount) via DayTimeline; tapping the
@@ -47,6 +50,8 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useUpdateStore } from '@/store/useUpdateStore';
+import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
@@ -89,6 +94,7 @@ export default function HomeScreen() {
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
+  const updateReady = useUpdateStore((s) => s.updateReady);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   const isWorkModeActive = useMemo(() => {
@@ -201,6 +207,14 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
+      {updateReady && (
+        <View style={[styles.workBanner, { backgroundColor: theme.green }]}>
+          <Text style={styles.workBannerText}>{t.updateReadyBanner}</Text>
+          <Pressable style={styles.overrideBtn} onPress={() => Updates.reloadAsync()}>
+            <Text style={styles.overrideBtnText}>{t.updateRestartBtn}</Text>
+          </Pressable>
+        </View>
+      )}
       {isWorkModeActive && (
         <View style={[styles.workBanner, { backgroundColor: theme.orange }]}>
           <Text style={styles.workBannerText}>{t.workBanner}</Text>
