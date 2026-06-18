@@ -13,6 +13,7 @@
  * Edit notes:
  *   - Selected values are tracked in refs (curHour/curMin) to avoid closure staleness inside scroll handlers; keep state + refs in sync if changing.
  *   - Geometry depends on ITEM_H and VISIBLE (must stay odd); initial scroll-to-offset runs on an 80ms timeout after mount.
+ *     Slimmed from 50px/5 rows (250px tall) to 44px/3 rows (132px tall) to take up less space in scrolling forms.
  *   - Both FlatLists need nestedScrollEnabled — this component is nested inside a parent ScrollView
  *     (task-form, settings), and without it Android intercepts the touch for the outer scroller instead
  *     of letting the wheel scroll independently.
@@ -28,8 +29,8 @@ import {
 } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 
-const ITEM_H = 50;
-const VISIBLE = 5; // must be odd
+const ITEM_H = 44;
+const VISIBLE = 3; // must be odd
 
 interface Props {
   value: string; // HH:MM
