@@ -7,9 +7,9 @@
  * list through the MonthlyPickerSheet.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useCatalogStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only)
+ *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
@@ -17,8 +17,11 @@
  *   - Weekly vs monthly are visually distinguished by the per-tab accent (green vs orange) applied to section headers + a thick accent rule.
  *   - Autocomplete suggestions render as large PressableScale chips; "clear checked" lives at the BOTTOM and reuses removeWithSource per checked item (no dedicated store action).
  *   - weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed, so the label is t.days[(weeklyResetDay + 1) % 7].
+ *   - Unchecked items with a dishName (pushed from app/meals.tsx) render grouped under that dish in their own cards, above the plain alphabetical list; ungroupedUnchecked feeds the latter so items aren't duplicated.
+ *   - Add sheet supports swipe-down-to-close via a Gesture.Pan on the handle/title row only (not the whole sheet, so inner ScrollView/TextInput touches aren't hijacked); past 100px or a fast flick closes it, otherwise it springs back.
+ *   - The 'shopping_opened' trigger fires once per mount ([] deps) — not on every re-render as items change.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -31,10 +34,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useMealStore } from '@/store/useMealStore';
+import { useAutomationStore } from '@/store/useAutomationStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import MonthlyPickerSheet from '@/components/MonthlyPickerSheet';
 import HintCard from '@/components/HintCard';
@@ -42,7 +49,7 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 const CATEGORY_ORDER = [
@@ -80,10 +87,17 @@ export default function ShoppingScreen() {
   const suggest = useCatalogStore((s) => s.suggest);
   const catalog = useCatalogStore((s) => s.items);
   const weeklyResetDay = useSettingsStore((s) => s.weeklyResetDay);
+  const dishes = useMealStore((s) => s.dishes);
+  const { reducedMotion } = useAccessibility();
   const t = useT();
 
   // weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed (0=Sun).
   const resetDayLabel = t.days[(weeklyResetDay + 1) % 7];
+
+  // Fire the 'shopping_opened' automation trigger once per screen visit.
+  useEffect(() => {
+    useAutomationStore.getState().fireTrigger('shopping_opened');
+  }, []);
 
   const suggestions = useMemo(() => {
     const exact = newName.trim().toLowerCase();
@@ -116,6 +130,24 @@ export default function ShoppingScreen() {
     [unchecked]
   );
 
+  // Items pushed from a dish (app/meals.tsx) are grouped under that dish's name;
+  // everything else stays in the plain alphabetical list below.
+  const dishGroups = useMemo(() => {
+    const map = new Map<string, typeof sortedUnchecked>();
+    for (const item of sortedUnchecked) {
+      if (!item.dishName) continue;
+      const group = map.get(item.dishName);
+      if (group) group.push(item);
+      else map.set(item.dishName, [item]);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [sortedUnchecked]);
+
+  const ungroupedUnchecked = useMemo(
+    () => sortedUnchecked.filter((i) => !i.dishName),
+    [sortedUnchecked]
+  );
+
   // Monthly items that still have remaining quantity (available to add to weekly)
   const monthlyAvailable = useMemo(
     () => monthlyItems
@@ -123,6 +155,33 @@ export default function ShoppingScreen() {
       .sort((a, b) => a.name.localeCompare(b.name)),
     [monthlyItems]
   );
+
+  // Swipe-down-to-close on the add sheet's drag handle
+  const sheetTranslateY = useSharedValue(0);
+  useEffect(() => {
+    if (showAddSheet) sheetTranslateY.value = 0;
+  }, [showAddSheet, sheetTranslateY]);
+
+  function closeAddSheet() {
+    setShowAddSheet(false);
+  }
+
+  const sheetPanGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      if (e.translationY > 0) sheetTranslateY.value = e.translationY;
+    })
+    .onEnd((e) => {
+      if (e.translationY > 100 || e.velocityY > 800) {
+        sheetTranslateY.value = reducedMotion ? 600 : withTiming(600, { duration: 180 });
+        runOnJS(closeAddSheet)();
+      } else {
+        sheetTranslateY.value = reducedMotion ? 0 : withSpring(0, { damping: 16, stiffness: 180 });
+      }
+    });
+
+  const sheetAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: sheetTranslateY.value }],
+  }));
 
   function addItem() {
     if (!newName.trim()) return;
@@ -134,6 +193,7 @@ export default function ShoppingScreen() {
       store: '',
       price: newPrice,
       category: newCategory,
+      inventoryQty: 0,
     });
     setNewName('');
     setNewAmount('1');
@@ -284,8 +344,47 @@ export default function ShoppingScreen() {
             </View>
           )}
 
+          {/* Items pushed from a dish (app/meals.tsx), grouped under that dish's name */}
+          {dishGroups.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.fromMealsSection}</Text>
+                <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
+              </View>
+              {dishGroups.map(([dishName, groupItems]) => {
+                const dish = dishes.find((d) => d.name === dishName);
+                return (
+                  <View key={dishName} style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
+                    <View style={styles.dishGroupHeader}>
+                      <Text style={[styles.dishGroupName, { color: theme.text }]} numberOfLines={1}>{dishName}</Text>
+                      <Text style={[styles.dishGroupMeta, { color: theme.textLight }]}>
+                        {t.ingredientsCount(groupItems.length)}
+                        {dish && dish.estimatedPriceNok > 0 ? ` · ${t.dishPriceLabel(String(dish.estimatedPriceNok))}` : ''}
+                      </Text>
+                    </View>
+                    {groupItems.map((item, idx) => (
+                      <View key={item.id}>
+                        <ShoppingRow
+                          item={item}
+                          theme={theme}
+                          onToggle={() => toggle(item.id)}
+                          onRemove={() => removeWithSource(item.id)}
+                          onAdjust={(d) => adjustAmount(item.id, d)}
+                          inStockLabel={t.inStockLabel}
+                        />
+                        {idx < groupItems.length - 1 && (
+                          <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {/* Alphabetical unchecked items — header coloured per list (green weekly / orange monthly) */}
-          {sortedUnchecked.length > 0 && (
+          {ungroupedUnchecked.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={[styles.sectionLabel, { color: tabAccent }]}>
@@ -294,7 +393,7 @@ export default function ShoppingScreen() {
                 <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
               </View>
               <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
-                {sortedUnchecked.map((item, idx) => (
+                {ungroupedUnchecked.map((item, idx) => (
                   <View key={item.id}>
                     <ShoppingRow
                       item={item}
@@ -306,7 +405,7 @@ export default function ShoppingScreen() {
                       inStockLabel={t.inStockLabel}
                       monthlyLeftLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
                     />
-                    {idx < sortedUnchecked.length - 1 && (
+                    {idx < ungroupedUnchecked.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                     )}
                   </View>
@@ -383,9 +482,13 @@ export default function ShoppingScreen() {
       <Modal visible={showAddSheet} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowAddSheet(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowAddSheet(false)} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
-          <View style={[styles.addSheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
-            <View style={styles.sheetHandle} />
-            <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.addSheetTitle}</Text>
+          <Reanimated.View style={[styles.addSheet, sheetAnimStyle, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
+            <GestureDetector gesture={sheetPanGesture}>
+              <View style={styles.sheetDragArea}>
+                <View style={styles.sheetHandle} />
+                <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.addSheetTitle}</Text>
+              </View>
+            </GestureDetector>
 
             {/* Sheet tabs */}
             <View style={[styles.sheetTabRow, { backgroundColor: theme.grayLight }]}>
@@ -544,7 +647,7 @@ export default function ShoppingScreen() {
                 )}
               </ScrollView>
             )}
-          </View>
+          </Reanimated.View>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -701,6 +804,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   addAllBtn: { fontSize: FontSize.xs, fontWeight: '700' },
+  dishGroupHeader: { paddingTop: Spacing.sm, paddingBottom: 2 },
+  dishGroupName: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
+  dishGroupMeta: { fontSize: FontSize.xs, marginTop: 1 },
   monthlySourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -738,7 +844,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
-  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrapper: { justifyContent: 'flex-end' },
   addSheet: {
     borderTopLeftRadius: 24,
@@ -748,6 +854,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
     maxHeight: '85%',
   },
+  sheetDragArea: { paddingBottom: Spacing.xs },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc', alignSelf: 'center', marginBottom: 4 },
   sheetTitle: { fontSize: FontSize.lg, fontWeight: '700' },
   sheetTabRow: { flexDirection: 'row', borderRadius: Radius.sm, padding: 3 },

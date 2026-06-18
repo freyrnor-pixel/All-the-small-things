@@ -6,9 +6,9 @@
  * scheduling (start, and end reminders for time-box tasks).
  *
  * Connections:
- *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useSettingsStore
+ *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useAutomationStore, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx
- *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications
+ *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications; fires the 'task_completed' automation trigger
  *
  * Edit notes:
  *   - Per-task notification scheduling lives here (syncTaskNotification); add/update auto-reschedule. Call syncAllTaskNotifications() after a settings/language change since notification copy is baked in at schedule time.
@@ -16,12 +16,14 @@
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
  *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
  *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
+ *   - toggle() fires the 'task_completed' automation trigger only on the rising edge (not-done → done), not on uncheck.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAutomationStore } from '@/store/useAutomationStore';
 import {
   scheduleTaskNotification,
   scheduleWeeklyTaskNotifications,
@@ -244,7 +246,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   toggle(id) {
     const task = get().tasks.find((t) => t.id === id);
     if (!task) return;
+    const wasDone = task.done;
     get().update(id, { done: !task.done });
+    if (!wasDone) useAutomationStore.getState().fireTrigger('task_completed');
   },
 
   remove(id) {

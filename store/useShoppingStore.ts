@@ -7,13 +7,14 @@
  *
  * Connections:
  *   Imports → lib/db, lib/id
- *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/MonthlyPickerSheet.tsx, components/ShoppingRow.tsx
+ *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/MonthlyPickerSheet.tsx, components/ShoppingRow.tsx, store/useAutomationStore.ts (read-only, for the add_shopping_item action)
  *   Data    → defines a Zustand store; owns SQLite table shopping_items (both weekly and monthly rows, distinguished by list_type)
  *
  * Edit notes:
  *   - monthly_source_id links a weekly item back to its monthly staple; removeWithSource()/adjustAmount()/resetWeekly() must release the parent's monthly_allocated — use these, not the bare remove().
  *   - resetWeekly() deletes all weekly rows (releasing allocations first); resetMonthly() only unchecks + zeroes monthly_allocated, it does not delete.
  *   - New columns (e.g. monthly_allocated, monthly_source_id) go through the migrations array in lib/db.ts; never recreate tables.
+ *   - dishName (dish_name column) is set when an item was pushed from a meal dish (app/meals.tsx); used to group shopping items by dish in app/shopping.tsx.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -32,6 +33,7 @@ export type ShoppingItem = {
   monthlyAllocated: number;
   monthlySourceId?: string;
   inventoryQty: number;
+  dishName?: string;
 };
 
 type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId'> & {
@@ -66,6 +68,7 @@ function rowToItem(row: Record<string, unknown>): ShoppingItem {
     monthlyAllocated: (row.monthly_allocated as number) || 0,
     monthlySourceId: (row.monthly_source_id as string) || undefined,
     inventoryQty: (row.inventory_qty as number) || 0,
+    dishName: (row.dish_name as string) || undefined,
   };
 }
 
@@ -88,12 +91,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     const category = item.category ?? 'other';
     db.runSync(
       `INSERT INTO shopping_items
-         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL)`,
-      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category]
+         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id, inventory_qty, dish_name)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL, ?, ?)`,
+      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category, item.inventoryQty ?? 0, item.dishName ?? null]
     );
     set((s) => ({
-      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined, inventoryQty: 0 }],
+      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined, inventoryQty: item.inventoryQty ?? 0 }],
     }));
   },
 
@@ -104,12 +107,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     db.runSync(
       `UPDATE shopping_items
          SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=?, category=?,
-             monthly_allocated=?, monthly_source_id=?, inventory_qty=?
+             monthly_allocated=?, monthly_source_id=?, inventory_qty=?, dish_name=?
        WHERE id=?`,
       [
         next.name, next.amount, next.unit, next.listType,
         next.checked ? 1 : 0, next.store, next.price, next.category,
-        next.monthlyAllocated, next.monthlySourceId ?? null, next.inventoryQty ?? 0, id,
+        next.monthlyAllocated, next.monthlySourceId ?? null, next.inventoryQty ?? 0, next.dishName ?? null, id,
       ]
     );
     set((s) => ({ items: s.items.map((i) => (i.id === id ? next : i)) }));
@@ -199,6 +202,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
           category: monthly.category,
           monthlyAllocated: 0,
           monthlySourceId: monthlyId,
+          inventoryQty: 0,
         },
       ],
     }));

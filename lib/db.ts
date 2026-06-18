@@ -8,8 +8,8 @@
  *
  * Connections:
  *   Imports → lib/date
- *   Used by → app/_layout.tsx, store/useCatalogStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs
+ *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
@@ -163,6 +163,16 @@ export function initDb() {
       FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS ifttt_rules (
+      id TEXT PRIMARY KEY,
+      trigger_type TEXT NOT NULL,
+      trigger_params TEXT DEFAULT '{}',
+      action_type TEXT NOT NULL,
+      action_params TEXT DEFAULT '{}',
+      active INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT 0
+    );
+
     -- Indexes for the columns we filter / sort / join on most often.
     CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(task_date);
     CREATE INDEX IF NOT EXISTS idx_shopping_list ON shopping_items(list_type);
@@ -213,6 +223,12 @@ export function initDb() {
     "ALTER TABLE store_items ADD COLUMN price_source TEXT DEFAULT 'seed'",
     // Bubble menu surface finish
     "ALTER TABLE settings ADD COLUMN bubble_material TEXT DEFAULT 'glass'",
+    // Estimated cost per dish, shown in the meals library
+    "ALTER TABLE dishes ADD COLUMN estimated_price_nok REAL DEFAULT 0",
+    // Groups shopping items pushed from a dish under that dish's name
+    "ALTER TABLE shopping_items ADD COLUMN dish_name TEXT DEFAULT NULL",
+    // Persistent "today's overview" notification toggle
+    "ALTER TABLE settings ADD COLUMN persistent_notif_enabled INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try {

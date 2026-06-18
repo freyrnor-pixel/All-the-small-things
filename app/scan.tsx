@@ -171,7 +171,7 @@ export default function ScanScreen() {
   function addManualItem() {
     const trimmed = manualName.trim();
     if (!trimmed) return;
-    addShopping({ name: trimmed, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: 0 });
+    addShopping({ name: trimmed, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: 0, inventoryQty: 0 });
     setManualName('');
     setManualVisible(false);
     Alert.alert(t.addedTitle, t.addedBody(1), [{ text: t.ok }]);
@@ -181,7 +181,7 @@ export default function ScanScreen() {
     const selected = parsedItems.filter((i) => i.selected);
     const existingNames = new Set(shoppingItems.map((i) => i.name.toLowerCase()));
     selected.forEach((item) => {
-      addShopping({ name: item.name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: item.price });
+      addShopping({ name: item.name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: item.price, inventoryQty: 0 });
     });
     // Log the receipt as purchases and keep the catalog's prices current.
     recordPurchases(
