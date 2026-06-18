@@ -6,7 +6,7 @@
  * task store. State resets each time the sheet becomes visible.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore
+ *   Imports → components/ConfirmationBanner, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore, react-native-safe-area-context
  *   Used by → app/index.tsx
  *   Data    → calls useTaskStore.add() to insert a task; reads colorTheme from useSettingsStore
  *
@@ -29,6 +29,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -46,6 +47,7 @@ type Props = {
 export default function QuickAddSheet({ visible, onClose }: Props) {
   const addTask = useTaskStore((s) => s.add);
   const theme = useAppTheme();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const t = useT();
 
   const [title, setTitle] = useState('');
@@ -108,7 +110,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.kvWrapper}
       >
-        <View style={[styles.sheet, { backgroundColor: theme.white }]}>
+        <View style={[styles.sheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
           <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
 
           <TextInput
