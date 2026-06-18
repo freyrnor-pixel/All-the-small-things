@@ -87,12 +87,20 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 const RADIUS = 130;        // vertical arc radius (tall spread above FAB)
 const FAB_MARGIN_SIDE = 24; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
-const BUBBLE_SIZE = 56;
 // Horizontal arc radius = FAB center's distance from the screen edge. At angle 0 (RH) /
 // π (LH) this lands the edge item's center exactly on the screen boundary, so the OS
 // compositor clips it to a clean static half-circle instead of letting it hang fully
-// past the edge — which previously caused spring-oscillation flicker there.
+// past the edge — which previously caused spring-oscillation flicker there. This value
+// is load-bearing for that fix — do not raise it without re-deriving the edge math.
 const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 54
+// Adjacent bubbles sit STEP_ANGLE (45°) apart on an ellipse, so their on-screen spacing
+// isn't uniform: it's widest near angle 0/π (governed by RADIUS) and narrowest near ±90°
+// (governed by RADIUS_X, which is pinned above). The tightest gap on the whole ellipse is
+// 2·RADIUS_X·sin(STEP_ANGLE/2) ≈ 41px — and every reachable rest position has some adjacent
+// pair landing at ±90°/±45°/±135°, ~54px apart. BUBBLE_SIZE must stay under that or those
+// two bubbles visibly overlap every time the menu is open, not just mid-drag. 52 clears the
+// at-rest case with a small gap; don't raise this back toward 56 without re-checking the math.
+const BUBBLE_SIZE = 52;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
