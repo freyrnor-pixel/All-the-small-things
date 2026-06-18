@@ -9,7 +9,7 @@
  * the scheduled reminders.
  *
  * Connections:
- *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
  *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders
  *
@@ -40,6 +40,7 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { syncReminders } from '@/lib/reminders';
+import { seedTestData } from '@/lib/seedTestData';
 import { useT } from '@/lib/i18n';
 import { useAppTheme } from '@/lib/useAppTheme';
 import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
@@ -693,6 +694,22 @@ export default function SettingsScreen() {
                 />
               </>
             )}
+          </View>
+        </View>
+
+        {/* ===== TEST DATA ===== */}
+        <View style={styles.section}>
+          <View style={[styles.card, { backgroundColor: theme.white, borderWidth: 1, borderColor: theme.green }]}>
+            <Text style={[styles.descText, { color: theme.textLight, marginBottom: Spacing.sm, marginTop: 0 }]}>{t.loadTestDataDesc}</Text>
+            <Pressable
+              style={styles.dangerBtn}
+              onPress={() => {
+                seedTestData();
+                Alert.alert('', t.loadTestDataDone);
+              }}
+            >
+              <Text style={[styles.dangerBtnText, { color: theme.green }]}>{t.loadTestData}</Text>
+            </Pressable>
           </View>
         </View>
 

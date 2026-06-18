@@ -199,6 +199,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
           category: monthly.category,
           monthlyAllocated: 0,
           monthlySourceId: monthlyId,
+          inventoryQty: 0,
         },
       ],
     }));

@@ -134,6 +134,7 @@ export default function ShoppingScreen() {
       store: '',
       price: newPrice,
       category: newCategory,
+      inventoryQty: 0,
     });
     setNewName('');
     setNewAmount('1');
@@ -738,7 +739,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
-  modalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrapper: { justifyContent: 'flex-end' },
   addSheet: {
     borderTopLeftRadius: 24,

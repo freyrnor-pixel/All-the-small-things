@@ -206,7 +206,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {updateReady && (
         <View style={[styles.workBanner, { backgroundColor: theme.green }]}>
           <Text style={styles.workBannerText}>{t.updateReadyBanner}</Text>

@@ -358,7 +358,6 @@ export default function MealsScreen() {
                     style={[styles.suggestRow, { borderBottomColor: theme.grayLight }]}
                     onPress={() => {
                       setIngName(item.name);
-                      setIngUnit(item.unit ?? '');
                       setSuggestions([]);
                     }}
                   >
