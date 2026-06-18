@@ -33,14 +33,15 @@ export type Dish = {
   id: string;
   name: string;
   mealType: MealType;
+  estimatedPriceNok: number;
   ingredients: Ingredient[];
 };
 
 type MealStore = {
   dishes: Dish[];
   load: () => void;
-  addDish: (d: { name: string; mealType: MealType }) => Dish;
-  updateDish: (id: string, patch: { name?: string; mealType?: MealType }) => void;
+  addDish: (d: { name: string; mealType: MealType; estimatedPriceNok?: number }) => Dish;
+  updateDish: (id: string, patch: { name?: string; mealType?: MealType; estimatedPriceNok?: number }) => void;
   removeDish: (id: string) => void;
   addIngredient: (i: Omit<Ingredient, 'id'>) => void;
   removeIngredient: (id: string) => void;
@@ -52,6 +53,7 @@ function loadDishes(): Dish[] {
     id: string;
     name: string;
     meal_type: string;
+    estimated_price_nok: number | null;
   }>('SELECT * FROM dishes ORDER BY name');
 
   const ingredientRows = db.getAllSync<{
@@ -66,6 +68,7 @@ function loadDishes(): Dish[] {
     id: d.id,
     name: d.name,
     mealType: d.meal_type as MealType,
+    estimatedPriceNok: d.estimated_price_nok ?? 0,
     ingredients: ingredientRows
       .filter((i) => i.dish_id === d.id)
       .map((i) => ({
@@ -89,14 +92,15 @@ export const useMealStore = create<MealStore>((set, get) => ({
     }
   },
 
-  addDish({ name, mealType }) {
+  addDish({ name, mealType, estimatedPriceNok = 0 }) {
     const id = generateId();
-    db.runSync('INSERT INTO dishes (id, name, meal_type) VALUES (?, ?, ?)', [
+    db.runSync('INSERT INTO dishes (id, name, meal_type, estimated_price_nok) VALUES (?, ?, ?, ?)', [
       id,
       name,
       mealType,
+      estimatedPriceNok,
     ]);
-    const dish: Dish = { id, name, mealType, ingredients: [] };
+    const dish: Dish = { id, name, mealType, estimatedPriceNok, ingredients: [] };
     set((s) => ({ dishes: [...s.dishes, dish] }));
     return dish;
   },
@@ -105,9 +109,10 @@ export const useMealStore = create<MealStore>((set, get) => ({
     const dish = get().dishes.find((d) => d.id === id);
     if (!dish) return;
     const next = { ...dish, ...patch };
-    db.runSync('UPDATE dishes SET name=?, meal_type=? WHERE id=?', [
+    db.runSync('UPDATE dishes SET name=?, meal_type=?, estimated_price_nok=? WHERE id=?', [
       next.name,
       next.mealType,
+      next.estimatedPriceNok,
       id,
     ]);
     set((s) => ({

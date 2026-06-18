@@ -14,7 +14,8 @@
  *   - All visible strings go through useT(); MEAL_TYPES holds only icon/colour metadata.
  *   - Category tiles show dish count per type; tapping drills into category view.
  *   - New dish modal collects name + ingredients with catalog autocomplete via suggest().
- *   - pushDishToShopping always adds ingredients as listType 'weekly' and surfaces a ConfirmationBanner.
+ *   - pushDishToShopping always adds ingredients as listType 'weekly', tags them with dishName so app/shopping.tsx can group by dish, and surfaces a ConfirmationBanner.
+ *   - estimatedPriceNok on a dish is optional (defaults to 0, hidden from the subtitle when 0).
  */
 import React, { useState } from 'react';
 import {
@@ -81,6 +82,7 @@ export default function MealsScreen() {
   const [ingAmount, setIngAmount] = useState('1');
   const [ingUnit, setIngUnit] = useState('');
   const [suggestions, setSuggestions] = useState<StoreItem[]>([]);
+  const [dishPrice, setDishPrice] = useState('');
 
   function openModal(type: MealType) {
     setDishType(type);
@@ -90,6 +92,7 @@ export default function MealsScreen() {
     setIngAmount('1');
     setIngUnit('');
     setSuggestions([]);
+    setDishPrice('');
     setModalVisible(true);
   }
 
@@ -108,7 +111,7 @@ export default function MealsScreen() {
 
   function saveDish() {
     if (!dishName.trim()) return;
-    const dish = addDish({ name: dishName.trim(), mealType: dishType });
+    const dish = addDish({ name: dishName.trim(), mealType: dishType, estimatedPriceNok: parseFloat(dishPrice.replace(',', '.')) || 0 });
     draftIngredients.forEach((ing) => {
       addIngredient({ dishId: dish.id, name: ing.name, amount: ing.amount, unit: ing.unit });
     });
@@ -124,7 +127,16 @@ export default function MealsScreen() {
 
   function pushDishToShopping(dish: Dish) {
     dish.ingredients.forEach((ing) => {
-      addToShopping({ name: ing.name, amount: ing.amount, unit: ing.unit, listType: 'weekly', store: '', price: 0 });
+      addToShopping({
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        listType: 'weekly',
+        store: '',
+        price: 0,
+        inventoryQty: 0,
+        dishName: dish.name,
+      });
     });
     success();
     setConfirm(t.addedToShoppingConfirm);
@@ -222,7 +234,11 @@ export default function MealsScreen() {
               <ExpandableCard
                 key={dish.id}
                 title={dish.name}
-                subtitle={mealLabel(dish.mealType)}
+                subtitle={
+                  dish.estimatedPriceNok > 0
+                    ? `${mealLabel(dish.mealType)} · ${t.dishPriceLabel(String(dish.estimatedPriceNok))}`
+                    : mealLabel(dish.mealType)
+                }
                 badge={t.ingredientsCount(dish.ingredients.length)}
                 accentColor={activeMeta?.color}
                 rightAction={
@@ -303,6 +319,16 @@ export default function MealsScreen() {
               placeholderTextColor={theme.gray}
               autoFocus
               returnKeyType="next"
+            />
+
+            {/* Estimated price */}
+            <TextInput
+              style={[styles.nameInput, { backgroundColor: theme.offWhite, color: theme.text, borderColor: theme.orange }]}
+              value={dishPrice}
+              onChangeText={setDishPrice}
+              placeholder={t.dishPricePlaceholder}
+              placeholderTextColor={theme.gray}
+              keyboardType="decimal-pad"
             />
 
             {/* Draft ingredients */}
