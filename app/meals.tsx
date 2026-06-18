@@ -50,6 +50,7 @@ const MEAL_TYPES: { value: MealType; icon: string; color: string }[] = [
   { value: 'lunch', icon: '🥙', color: '#6BAA75' },
   { value: 'dinner', icon: '🍽', color: '#F4A261' },
   { value: 'snack', icon: '🍎', color: '#7BC8A4' },
+  { value: 'kveldsmat', icon: '🌙', color: '#9B8EC4' },
 ];
 
 type DraftIngredient = { name: string; amount: string; unit: string };

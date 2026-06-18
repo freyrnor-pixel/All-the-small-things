@@ -19,7 +19,7 @@ import { create } from 'zustand';
 import db from '@/lib/db';
 import { generateId } from '@/lib/id';
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'kveldsmat';
 
 export type Ingredient = {
   id: string;
