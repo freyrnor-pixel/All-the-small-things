@@ -172,6 +172,7 @@ function BubbleItemView({
           borderBottomColor: material.borderBottomColor,
           shadowOpacity: material.shadowOpacity,
           shadowRadius: material.shadowRadius,
+          elevation: material.elevation,
         },
         animStyle,
       ]}
@@ -323,6 +324,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
             borderBottomColor: fabMaterial.borderBottomColor,
             shadowOpacity: fabMaterial.shadowOpacity,
             shadowRadius: fabMaterial.shadowRadius,
+            elevation: fabMaterial.elevation,
           },
         ]}
         onPress={toggle}

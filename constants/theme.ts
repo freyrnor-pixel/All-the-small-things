@@ -509,6 +509,12 @@ export type MaterialStyle = {
   borderBottomColor: string;
   shadowOpacity: number;
   shadowRadius: number;
+  /**
+   * Android shadow depth. RN ignores shadowOpacity/shadowRadius on Android —
+   * elevation is the only thing that actually draws a shadow there, so each
+   * finish needs its own value or every material looks identical on Android.
+   */
+  elevation: number;
   /** Faint highlight overlay for the top portion of the surface. */
   sheenColor: string;
 };
@@ -540,6 +546,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         borderBottomColor: shade(base, -0.5),
         shadowOpacity: 0.32,
         shadowRadius: 8,
+        elevation: 9,
         sheenColor: rgba('#FFFFFF', 0.3),
       };
     case 'rock':
@@ -551,6 +558,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         borderBottomColor: shade(base, -0.55),
         shadowOpacity: 0.3,
         shadowRadius: 12,
+        elevation: 12,
         sheenColor: rgba('#FFFFFF', 0.06),
       };
     case 'paper':
@@ -562,6 +570,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         borderBottomColor: shade(base, -0.12),
         shadowOpacity: 0.09,
         shadowRadius: 4,
+        elevation: 2,
         sheenColor: rgba('#FFFFFF', 0.18),
       };
     case 'glass':
@@ -574,6 +583,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         borderBottomColor: rgba('#000000', 0.15),
         shadowOpacity: 0.16,
         shadowRadius: 16,
+        elevation: 6,
         sheenColor: rgba('#FFFFFF', 0.5),
       };
   }
