@@ -4,6 +4,8 @@
  * Zustand store mirroring the one settings row: user name, language, theme,
  * dark mode, reminder/notification toggles, reset cadence, work/essentials modes,
  * onboarding state, accessibility flags, and companion pet settings.
+ * persistentNotifEnabled toggles the always-current "today's overview" notification
+ * (refreshed by app/_layout.tsx, see lib/notifications.ts's refreshPersistentNotification).
  *
  * Connections:
  *   Imports → lib/db
@@ -64,6 +66,8 @@ export type Settings = {
   customSecondaryColor: string;
   // Bubble menu surface finish
   bubbleMaterial: BubbleMaterial;
+  // Persistent "today's overview" notification
+  persistentNotifEnabled: boolean;
 };
 
 type SettingsStore = Settings & {
@@ -118,6 +122,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   customPrimaryColor: '#3B82F6',
   customSecondaryColor: '#10B981',
   bubbleMaterial: 'glass' as BubbleMaterial,
+  persistentNotifEnabled: false,
   loaded: false,
   workModeSessionOverride: false,
 
@@ -155,6 +160,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         custom_primary_color: string | null;
         custom_secondary_color: string | null;
         bubble_material: string | null;
+        persistent_notif_enabled: number | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -189,6 +195,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         customPrimaryColor: row.custom_primary_color ?? '#3B82F6',
         customSecondaryColor: row.custom_secondary_color ?? '#10B981',
         bubbleMaterial: (row.bubble_material as BubbleMaterial) ?? 'glass',
+        persistentNotifEnabled: row.persistent_notif_enabled === 1,
         loaded: true,
       });
     } catch {
@@ -212,7 +219,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             reduced_motion = ?, font_size = ?,
             pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?,
             left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?,
-            bubble_material = ?
+            bubble_material = ?, persistent_notif_enabled = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -246,6 +253,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.customPrimaryColor,
             next.customSecondaryColor,
             next.bubbleMaterial,
+            next.persistentNotifEnabled ? 1 : 0,
           ]
         );
       } catch {

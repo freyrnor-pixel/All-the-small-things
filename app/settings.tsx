@@ -624,6 +624,19 @@ export default function SettingsScreen() {
                 thumbColor={settings.taskNotificationsEnabled ? theme.orange : theme.gray}
               />
             </View>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.persistentNotifLabel}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.persistentNotifHint}</Text>
+              </View>
+              <Switch
+                value={settings.persistentNotifEnabled}
+                onValueChange={(v) => settings.update({ persistentNotifEnabled: v })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.persistentNotifEnabled ? theme.orange : theme.gray}
+              />
+            </View>
           </View>
         </View>
 

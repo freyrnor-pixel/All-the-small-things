@@ -5,14 +5,15 @@
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
  * habits, catalog). After requesting notification permission it re-syncs all
- * reminders/notifications to the loaded data and language. Defines the expo-router
- * Stack and per-screen options, redirects to onboarding until setup is complete,
- * and wraps the tree in an ErrorBoundary.
+ * reminders/notifications to the loaded data and language, and keeps the persistent
+ * "today's overview" notification (if enabled) refreshed as tasks/shopping change.
+ * Defines the expo-router Stack and per-screen options, redirects to onboarding
+ * until setup is complete, and wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → constants/theme, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
- *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders
+ *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
  *
  * Edit notes:
  *   - task-form, habit-form and share-modal are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
@@ -21,6 +22,8 @@
  *   - OTA updates do not auto-apply or pop up a dismissible Alert: a fetched update sets
  *     useUpdateStore's updateReady flag, and app/index.tsx shows a persistent "Restart"
  *     banner (no auto-reload, no missable tap) until the user taps it.
+ *   - The persistent-overview effect re-reads tasksForDate(todayStr()) fresh on every run rather
+ *     than trusting a stale closure, since it depends on the `tasks` array reference, not on the date.
  */
 import { useEffect, Component } from 'react';
 import React from 'react';
@@ -38,9 +41,10 @@ import {
   Nunito_800ExtraBold,
 } from '@expo-google-fonts/nunito';
 import { initDb, pruneOldData } from '@/lib/db';
-import { requestPermissions } from '@/lib/notifications';
+import { requestPermissions, refreshPersistentNotification, cancelPersistentNotification } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
 import { getTranslations } from '@/lib/i18n';
+import { todayStr } from '@/lib/date';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -114,6 +118,10 @@ export default function RootLayout() {
   const loadShared = useSharedStore((s) => s.load);
   const loadHabits = useHabitStore((s) => s.load);
   const loadCatalog = useCatalogStore((s) => s.load);
+  const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
+  const language = useSettingsStore((s) => s.language);
+  const tasks = useTaskStore((s) => s.tasks);
+  const shoppingItems = useShoppingStore((s) => s.items);
 
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
@@ -135,6 +143,27 @@ export default function RootLayout() {
       useHabitStore.getState().syncAllHabitReminders();
     });
   }, []);
+
+  // Keep the persistent "today's overview" notification in sync with today's
+  // pending tasks and the unchecked weekly shopping count, refreshing it in
+  // place (same identifier) on every relevant data change.
+  useEffect(() => {
+    if (!loaded) return;
+    if (!persistentNotifEnabled) {
+      void cancelPersistentNotification();
+      return;
+    }
+    const t = getTranslations(language);
+    const pending = useTaskStore.getState().tasksForDate(todayStr()).filter((task) => !task.done).length;
+    const shoppingPending = shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).length;
+    void refreshPersistentNotification({
+      title: t.notif.overviewTitle,
+      body: [
+        pending > 0 ? t.notif.overviewBodyTasks(pending) : t.notif.overviewBodyNoTasks,
+        shoppingPending > 0 ? t.notif.overviewBodyShopping(shoppingPending) : null,
+      ].filter((part): part is string => !!part).join(' · '),
+    });
+  }, [loaded, persistentNotifEnabled, language, tasks, shoppingItems]);
 
   useEffect(() => {
     if (!Updates.isEnabled) return;

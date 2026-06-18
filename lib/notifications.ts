@@ -3,8 +3,8 @@
  *
  * Configures the foreground notification handler and exposes language-agnostic
  * schedule/cancel helpers (weekly, monthly, per-task one-off, recurring weekly
- * task, daily/habit). Callers pass already-localised Content; this module never
- * builds strings itself. Uses stable identifiers so re-scheduling replaces.
+ * task, daily/habit, persistent overview). Callers pass already-localised Content;
+ * this module never builds strings itself. Uses stable identifiers so re-scheduling replaces.
  *
  * Connections:
  *   Imports → —
@@ -16,6 +16,10 @@
  *     (e.g. `task-${id}`, `daily-${key}`) or cancellation silently misses.
  *   - Scheduling failures are swallowed via `ignore` — intentional, never crash the UI.
  *   - Content must already be localised by the caller; do not import i18n here.
+ *   - refreshPersistentNotification uses trigger: null (fires immediately) so callers can
+ *     re-invoke it on every relevant data change to keep one notification up to date;
+ *     `sticky`/sound-free presentation is JS-only (no native channel changes), so it's OTA-safe
+ *     but isn't a true non-dismissible Android "ongoing" notification — that needs a new build.
  */
 import * as Notifications from 'expo-notifications';
 
@@ -180,4 +184,20 @@ export async function scheduleDailyReminder(
 
 export async function cancelDailyReminder(key: string) {
   await Notifications.cancelScheduledNotificationAsync(`daily-${key}`).catch(ignore);
+}
+
+// ── Persistent "today's overview" notification ──────────────────────────────
+// Fires immediately (trigger: null) under a stable identifier, so each call
+// replaces the previous one in place rather than stacking new notifications.
+export async function refreshPersistentNotification(content: Content) {
+  await Notifications.scheduleNotificationAsync({
+    identifier: 'persistent-overview',
+    content: { ...content, sticky: true, autoDismiss: false },
+    trigger: null,
+  }).catch(ignore);
+}
+
+export async function cancelPersistentNotification() {
+  await Notifications.dismissNotificationAsync('persistent-overview').catch(ignore);
+  await Notifications.cancelScheduledNotificationAsync('persistent-overview').catch(ignore);
 }
