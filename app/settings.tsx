@@ -45,7 +45,7 @@ import { useAppTheme } from '@/lib/useAppTheme';
 import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
 import TimePickerWheel from '@/components/TimePickerWheel';
-import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName, CUSTOM_COLOR_PRESETS } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
@@ -268,6 +268,53 @@ export default function SettingsScreen() {
             )}
 
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.theme}</Text>
+          </View>
+        </View>
+
+        {/* Bubble finish (Appearance) — menu bubble/FAB surface material, independent of colour theme */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionBubbleMaterial}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={styles.themeGrid}>
+              {(Object.keys(MATERIAL_META) as MaterialName[]).map((key) => {
+                const meta = MATERIAL_META[key];
+                const isActive = settings.bubbleMaterial === key;
+                const preview = getMaterialStyle(theme.orange, key);
+                return (
+                  <Pressable
+                    key={key}
+                    style={[
+                      styles.themeOption,
+                      { borderColor: isActive ? theme.orange : theme.grayLight },
+                      isActive && { borderWidth: 2.5 },
+                    ]}
+                    onPress={() => settings.update({ bubbleMaterial: key })}
+                  >
+                    <View
+                      style={[
+                        styles.materialSwatch,
+                        {
+                          backgroundColor: preview.backgroundColor,
+                          borderWidth: preview.borderWidth,
+                          borderColor: preview.borderColor,
+                          borderTopColor: preview.borderTopColor,
+                          borderBottomColor: preview.borderBottomColor,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.themeEmoji}>{meta.emoji}</Text>
+                    <Text style={[
+                      styles.themeLabel,
+                      { color: theme.textLight },
+                      isActive && { color: theme.orange, fontWeight: '700' },
+                    ]}>
+                      {t.materialNames[key]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.material}</Text>
           </View>
         </View>
 
@@ -732,6 +779,7 @@ const styles = StyleSheet.create({
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
   themeEmoji: { fontSize: 20 },
   themeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  materialSwatch: { width: 36, height: 36, borderRadius: Radius.full, marginBottom: 2 },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
   colorSwatch: { width: 32, height: 32, borderRadius: Radius.sm, borderWidth: 2, borderColor: 'transparent' },
   colorSwatchActive: { borderColor: '#333', borderWidth: 3 },

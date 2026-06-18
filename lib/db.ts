@@ -211,6 +211,8 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN inventory_qty REAL DEFAULT 0",
     // Track whether a catalog item's price came from the seed list or a real purchase
     "ALTER TABLE store_items ADD COLUMN price_source TEXT DEFAULT 'seed'",
+    // Bubble menu surface finish
+    "ALTER TABLE settings ADD COLUMN bubble_material TEXT DEFAULT 'glass'",
   ];
   for (const sql of migrations) {
     try {
