@@ -382,14 +382,29 @@ export function getSoftTheme(c: AppColors): AppColors {
 
 export const Colors = THEMES.default;
 
+/**
+ * Bubble/FAB accent colors for BubbleMenu + the task-type accents in task-form/TaskItem.
+ * Designed as one coordinated set rather than independent picks: hues are spread
+ * ~16-41° apart around the wheel (no two adjacent, so every bubble is unambiguous at a
+ * glance — the old set had habits/health as near-identical greens and meals/shop as
+ * near-identical cyans), saturation held in a 56-85% band, and lightness tuned per-hue
+ * so every value's luminance lands in a tight ~0.42-0.55 range. That luminance cap is
+ * deliberate: BubbleMenu renders a hardcoded white icon + white label on top of these
+ * (no contrastOn() there), so every entry must stay dark/saturated enough for white to
+ * read clearly — the old `scan`/`meals` picks were close to failing this.
+ * Hue stays anchored to the feature's natural semantic family (task=blue/trust,
+ * health=red/heart, habits=green/growth, shared=violet/connection, focus=red-orange/
+ * energy) so the mapping still feels intuitive, not just decorative.
+ */
 export const FeatureColors = {
-  task:    '#3B82F6',
-  scan:    '#F59E0B',
-  habits:  '#10B981',
-  health:  '#22C55E',
-  meals:   '#06B6D4',
-  shop:    '#0EA5E9',
-  shared:  '#6366F1',
+  task:    '#3A78E4', // blue          — trust / primary action
+  scan:    '#D97512', // burnt amber   — camera / attention
+  habits:  '#27915F', // forest green  — growth (was too close to health's old green)
+  health:  '#DC3853', // rose-red      — heart / vitality
+  meals:   '#AF8D1D', // ochre/mustard — food / warmth (was cyan, didn't read as "food")
+  shop:    '#2096B6', // teal-cyan     — list / fresh (distinct from task's blue)
+  shared:  '#8260D2', // violet        — connection
+  focus:   '#E83A17', // red-orange    — energy / urgency (was a stray inline hex in BubbleMenu)
 } as const;
 
 export const Spacing = {
