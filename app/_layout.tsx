@@ -10,7 +10,7 @@
  * and wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → constants/theme, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → constants/theme, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders
  *
@@ -18,8 +18,9 @@
  *   - task-form, habit-form and share-modal are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
  *   - segments are read inside the onboarding-guard effect but intentionally kept out of its deps — do not add them.
- *   - OTA updates auto-apply: a fetched update calls Updates.reloadAsync() immediately, no
- *     confirmation dialog — a missed/dismissed tap was leaving the app stuck on stale JS.
+ *   - OTA updates do not auto-apply or pop up a dismissible Alert: a fetched update sets
+ *     useUpdateStore's updateReady flag, and app/index.tsx shows a persistent "Restart"
+ *     banner (no auto-reload, no missable tap) until the user taps it.
  */
 import { useEffect, Component } from 'react';
 import React from 'react';
@@ -48,6 +49,7 @@ import { useHealthStore } from '@/store/useHealthStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import { useUpdateStore } from '@/store/useUpdateStore';
 import { Colors, Fonts } from '@/constants/theme';
 
 /**
@@ -141,10 +143,9 @@ export default function RootLayout() {
         const check = await Updates.checkForUpdateAsync();
         if (!check.isAvailable) return;
         await Updates.fetchUpdateAsync();
-        // Auto-apply: no confirmation dialog. A missed/dismissed tap was leaving
-        // the app stuck on stale JS indefinitely, so the fetched update now
-        // activates immediately rather than waiting for the next cold start.
-        await Updates.reloadAsync();
+        // Flag it instead of auto-reloading or popping an Alert — the home
+        // screen shows a persistent "Restart" banner until the user taps it.
+        useUpdateStore.getState().setUpdateReady(true);
       } catch {
         /* silently ignore — update check must never crash the app */
       }

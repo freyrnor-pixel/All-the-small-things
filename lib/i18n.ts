@@ -70,6 +70,8 @@ const en = {
   switchModeTitle: 'Switch to personal mode?',
   switchModeBody: "Remember to focus on what's in front of you! Work mode will be disabled until you reopen the app.",
   switchModeConfirm: 'Switch anyway',
+  updateReadyBanner: '⬇️ Update ready',
+  updateRestartBtn: 'Restart',
   // Task form
   newTask: 'New plan',
   editTask: 'Edit',
@@ -635,6 +637,8 @@ const no: typeof en = {
   switchModeTitle: 'Bytt til personlig modus?',
   switchModeBody: 'Husk å fokusere på det som er foran deg! Jobb-modus vil deaktiveres frem til du åpner appen på nytt.',
   switchModeConfirm: 'Bytt likevel',
+  updateReadyBanner: '⬇️ Oppdatering klar',
+  updateRestartBtn: 'Start på nytt',
   newTask: 'Ny plan',
   editTask: 'Rediger',
   taskTitleLabel: 'Plan',
