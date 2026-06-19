@@ -6,7 +6,7 @@
  * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
+ *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
@@ -41,6 +41,8 @@ import ExpandableCard from '@/components/ExpandableCard';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -168,7 +170,8 @@ export default function MealsScreen() {
   const activeMeta = MEAL_TYPES.find((m) => m.value === activeCategory);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
 
       <View style={styles.header}>
@@ -222,7 +225,7 @@ export default function MealsScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {categoryDishes.length === 0 && (
-              <View style={[styles.emptyState, { backgroundColor: theme.white }]}>
+              <Surface style={styles.emptyState}>
                 {activeMeta && (
                   <Ionicons name={activeMeta.icon} size={40} color={activeMeta.color} style={styles.emptyEmoji} />
                 )}
@@ -230,7 +233,7 @@ export default function MealsScreen() {
                 <Text style={[styles.emptyBody, { color: theme.textLight }]}>
                   {t.noDishesBody(mealLabel(activeCategory).toLowerCase())}
                 </Text>
-              </View>
+              </Surface>
             )}
 
             {categoryDishes.map((dish) => (

@@ -7,7 +7,7 @@
  * list through the MonthlyPickerSheet.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ScreenBackground, components/ShoppingRow, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -47,6 +47,8 @@ import MonthlyPickerSheet from '@/components/MonthlyPickerSheet';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
@@ -227,7 +229,8 @@ export default function ShoppingScreen() {
   const tabAccentLight = tab === 'weekly' ? theme.greenLight : theme.orangeLight;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
@@ -314,7 +317,7 @@ export default function ShoppingScreen() {
                   <Text style={[styles.addAllBtn, { color: theme.orange }]}>{t.addFromMonthly}</Text>
                 </Pressable>
               </View>
-              <View style={[styles.card, { backgroundColor: theme.white }]}>
+              <Surface style={styles.card}>
                 {monthlyAvailable.map((item, idx) => {
                   const remaining = (parseInt(item.amount, 10) || 1) - item.monthlyAllocated;
                   return (
@@ -341,7 +344,7 @@ export default function ShoppingScreen() {
                     </View>
                   );
                 })}
-              </View>
+              </Surface>
             </View>
           )}
 
@@ -419,7 +422,7 @@ export default function ShoppingScreen() {
           {checked.length > 0 && (
             <View style={styles.section}>
               <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.inCart}</Text>
-              <View style={[styles.card, { backgroundColor: theme.white }]}>
+              <Surface style={styles.card}>
                 {checked.map((item, idx) => (
                   <View key={item.id}>
                     <ShoppingRow
@@ -433,7 +436,7 @@ export default function ShoppingScreen() {
                     )}
                   </View>
                 ))}
-              </View>
+              </Surface>
             </View>
           )}
 

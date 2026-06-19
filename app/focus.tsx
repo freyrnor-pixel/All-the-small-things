@@ -8,7 +8,7 @@
  * false all tasks show in time/id order.
  *
  * Connections:
- *   Imports → components/HintCard, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore, lib/useAppTheme
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore, lib/useAppTheme
  *   Used by → Expo Router route "/focus", BubbleMenu (nav.focus bubble)
  *   Data    → useTaskStore (tasksForDate, toggle); useSettingsStore (workModeEnabled, workModeSessionOverride)
  *
@@ -33,6 +33,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HintCard from '@/components/HintCard';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { todayStr } from '@/lib/date';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
@@ -84,7 +86,8 @@ export default function FocusScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -100,7 +103,7 @@ export default function FocusScreen() {
 
         {task ? (
           <View style={styles.taskContainer}>
-            <View style={[styles.taskCard, { backgroundColor: theme.white, borderColor: theme.border }]}>
+            <Surface style={styles.taskCard}>
               {task.time ? (
                 <Text style={[styles.taskTime, { color: theme.orange }]}>{task.time}</Text>
               ) : null}
@@ -110,7 +113,7 @@ export default function FocusScreen() {
                   {task.durationMinutes} min
                 </Text>
               ) : null}
-            </View>
+            </Surface>
 
             <Pressable
               style={[styles.doneBtn, { backgroundColor: theme.green }]}

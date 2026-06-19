@@ -26,8 +26,8 @@ export type Language = 'en' | 'no';
 export type DarkMode = 'system' | 'on' | 'off';
 export type FontSizePref = 'small' | 'default' | 'large';
 export type PetType = 'cat' | 'dog' | 'bird' | 'fox' | 'bunny';
-/** Bubble/FAB surface finish — see getMaterialStyle() in constants/theme.ts. */
-export type BubbleMaterial = 'glass' | 'metal' | 'rock' | 'paper';
+/** Surface finish for bubbles/FAB and, via Surface/ScreenBackground, cards and screen backdrops app-wide — see getMaterialStyle() in constants/theme.ts. */
+export type BubbleMaterial = 'glass' | 'metal' | 'rock' | 'paper' | 'plain';
 
 export type Settings = {
   userName: string;

@@ -13,9 +13,10 @@
  * Edit notes:
  *   - LayoutAnimation is enabled on Android via UIManager at module load — keep that guard if refactoring imports.
  *   - Surface uses getMaterialStyle() (same finish system as BubbleMenu) so the card gets a
- *     beveled border + sheen + heavier shadow instead of a flat fill — pass `material` to
- *     override the default 'paper' finish. The outer view carries border/shadow, the inner
- *     overflow:hidden mask carries the fill + sheen (mirrors BubbleMenu's two-layer pattern).
+ *     beveled border + sheen + heavier shadow instead of a flat fill — `material` defaults to
+ *     the user's chosen bubbleMaterial setting (pass it explicitly to override). The outer view
+ *     carries border/shadow, the inner overflow:hidden mask carries the fill + sheen (mirrors
+ *     BubbleMenu's two-layer pattern).
  */
 import React, { useRef, useState } from 'react';
 import {
@@ -31,6 +32,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Radius, Spacing, FontSize, getMaterialStyle, MaterialName } from '@/constants/theme';
 import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -55,14 +57,16 @@ export default function ExpandableCard({
   rightAction,
   defaultOpen = false,
   accentColor,
-  material = 'paper',
+  material,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const rotate = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
   const theme = useAppTheme();
+  const settingsMaterial = useSettingsStore((s) => s.bubbleMaterial);
+  const finish = material ?? settingsMaterial;
   const { reducedMotion } = useAccessibility();
   const styles = useScaledStyles(baseStyles);
-  const mat = getMaterialStyle(accentColor ?? theme.orange, material);
+  const mat = getMaterialStyle(accentColor ?? theme.orange, finish);
 
   function toggle() {
     if (reducedMotion) {
@@ -92,6 +96,7 @@ export default function ExpandableCard({
           borderColor: mat.borderColor,
           borderTopColor: mat.borderTopColor,
           borderBottomColor: mat.borderBottomColor,
+          shadowColor: theme.shadow,
           shadowOpacity: mat.shadowOpacity,
           shadowRadius: mat.shadowRadius,
           elevation: mat.elevation,
@@ -130,7 +135,6 @@ const baseStyles = StyleSheet.create({
   card: {
     borderRadius: Radius.md,
     marginBottom: Spacing.sm,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
   },
   // Inner overflow:hidden layer carries fill + sheen, kept separate from `card` so its

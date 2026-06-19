@@ -7,7 +7,7 @@
  * Share button that opens /share-modal for the day's plans.
  *
  * Connections:
- *   Imports → components/DayTimeline, components/HintCard, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/DayTimeline, components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/plans" (plain push from app/index.tsx's Plans widget title)
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *
@@ -29,6 +29,8 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import DayTimeline from '@/components/DayTimeline';
 import HintCard from '@/components/HintCard';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -50,7 +52,8 @@ export default function PlansScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -77,16 +80,16 @@ export default function PlansScreen() {
         <HintCard text={t.hints.plans.text} example={t.hints.plans.example} />
 
         {todayTasks.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+          <Surface tint={theme.offWhite} style={styles.emptyCard}>
             <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noPlansToday}</Text>
-          </View>
+          </Surface>
         ) : (
-          <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
+          <Surface style={styles.card}>
             <DayTimeline
               tasks={todayTasks}
               onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
             />
-          </View>
+          </Surface>
         )}
       </View>
     </SafeAreaView>

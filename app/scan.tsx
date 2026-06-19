@@ -7,7 +7,7 @@
  * shared shopping/task payloads into the shared store.
  *
  * Connections:
- *   Imports → components/HintCard, components/PressableScale, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to THREE stores: useShoppingStore (shopping_items) + useCatalogStore.recordPurchases (purchase_log + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -44,6 +44,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { decodeSharePayload } from '@/lib/share';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -248,7 +250,8 @@ export default function ScanScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -342,13 +345,13 @@ export default function ScanScreen() {
         )}
 
         {loading && (
-          <View style={[styles.loadingCard, { backgroundColor: theme.offWhite }]}>
+          <Surface tint={theme.offWhite} style={styles.loadingCard}>
             <Text style={[styles.loadingText, { color: theme.textLight }]}>{t.analysingReceipt}</Text>
-          </View>
+          </Surface>
         )}
 
         {ocrEmpty && !loading && (
-          <View style={[styles.emptyOcr, { backgroundColor: theme.offWhite }]}>
+          <Surface tint={theme.offWhite} style={styles.emptyOcr}>
             <Text style={[styles.emptyOcrText, { color: theme.textLight }]}>{t.ocrNoItemsFriendly}</Text>
             <PressableScale
               style={[styles.emptyManualBtn, { backgroundColor: theme.orange }]}
@@ -356,7 +359,7 @@ export default function ScanScreen() {
             >
               <Text style={styles.emptyManualText}>{t.typeItInInstead}</Text>
             </PressableScale>
-          </View>
+          </Surface>
         )}
 
         {/* Parsed items */}

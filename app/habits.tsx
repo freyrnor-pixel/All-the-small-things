@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/HintCard, components/CompletionGlow, components/HabitIcon, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -41,6 +41,7 @@ import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
+import ScreenBackground from '@/components/ScreenBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { success } from '@/lib/haptics';
 import { todayStr, dateStr } from '@/lib/date';
@@ -554,7 +555,8 @@ export default function HabitsScreen() {
   const showProfiles = childProfiles.length > 0 || addingChild;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>

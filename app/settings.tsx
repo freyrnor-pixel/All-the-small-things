@@ -13,7 +13,7 @@
  * settings re-syncs the scheduled reminders.
  *
  * Connections:
- *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
  *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders; scaled fontSize via useScaledStyles()
  *
@@ -51,6 +51,8 @@ import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
@@ -118,7 +120,8 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -162,7 +165,7 @@ export default function SettingsScreen() {
         {/* Profile */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionProfile}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.yourName}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
@@ -174,13 +177,13 @@ export default function SettingsScreen() {
               returnKeyType="done"
             />
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.name}</Text>
-          </View>
+          </Surface>
         </View>
 
         {/* Language */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionLanguage}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.langRow}>
               {(['no', 'en'] as const).map((lang) => (
                 <Pressable
@@ -204,7 +207,7 @@ export default function SettingsScreen() {
               ))}
             </View>
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.language}</Text>
-          </View>
+          </Surface>
         </View>
 
         {/* ===== APPEARANCE ===== */}
@@ -213,7 +216,7 @@ export default function SettingsScreen() {
         {/* Color theme (Appearance) — 2-column grid, custom theme color pickers */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionColorTheme}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.themeGrid}>
               {(Object.keys(THEMES) as ThemeName[]).map((key) => {
                 const th = THEMES[key];
@@ -287,13 +290,13 @@ export default function SettingsScreen() {
             )}
 
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.theme}</Text>
-          </View>
+          </Surface>
         </View>
 
         {/* Bubble finish (Appearance) — menu bubble/FAB surface material, independent of colour theme */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionBubbleMaterial}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.themeGrid}>
               {(Object.keys(MATERIAL_META) as MaterialName[]).map((key) => {
                 const isActive = settings.bubbleMaterial === key;
@@ -345,13 +348,13 @@ export default function SettingsScreen() {
               })}
             </View>
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.material}</Text>
-          </View>
+          </Surface>
         </View>
 
         {/* Dark mode (Appearance) — three options: Light, Dark, Follow System */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionAppearance}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
             <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
               {(['off', 'system', 'on'] as DarkMode[]).map((mode) => (
@@ -371,13 +374,13 @@ export default function SettingsScreen() {
               ))}
             </View>
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.darkMode}</Text>
-          </View>
+          </Surface>
         </View>
 
         {/* Accessibility (Proposal 4) — Appearance group */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.accessibility.title}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
                 <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.accessibility.reducedMotion}</Text>
@@ -426,13 +429,13 @@ export default function SettingsScreen() {
                 thumbColor={settings.leftHanded ? theme.orange : theme.gray}
               />
             </View>
-          </View>
+          </Surface>
         </View>
 
         {/* Motivation (Appearance group — home-screen embellishments) */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionMotivation}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
                 <Text style={[styles.switchLabel, { color: theme.text }]}>{t.showPointsLabel}</Text>
@@ -458,7 +461,7 @@ export default function SettingsScreen() {
                 thumbColor={settings.showHints ? theme.orange : theme.gray}
               />
             </View>
-          </View>
+          </Surface>
         </View>
 
         {/* Companion pet (Proposal 6) — DISABLED FOR NOW */}
@@ -542,7 +545,7 @@ export default function SettingsScreen() {
         {/* Shopping list — its own settings, not a notification */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionShopping}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.defaultListType}</Text>
             <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
               {(['weekly', 'monthly'] as const).map((mode) => (
@@ -614,7 +617,7 @@ export default function SettingsScreen() {
               maxLength={2}
             />
             <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.monthlyDateInputHint}</Text>
-          </View>
+          </Surface>
         </View>
 
         {/* ===== NOTIFICATIONS ===== */}
@@ -623,7 +626,7 @@ export default function SettingsScreen() {
         {/* Reminders */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionNotifications}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
                 <Text style={[styles.switchLabel, { color: theme.text }]}>{t.weeklyReminders}</Text>
@@ -673,13 +676,13 @@ export default function SettingsScreen() {
                 thumbColor={settings.persistentNotifEnabled ? theme.orange : theme.gray}
               />
             </View>
-          </View>
+          </Surface>
         </View>
 
         {/* Holidays */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionHolidays}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
                 <Text style={[styles.switchLabel, { color: theme.text }]}>{t.holidaysEnabledLabel}</Text>
@@ -692,7 +695,7 @@ export default function SettingsScreen() {
                 thumbColor={settings.holidaysEnabled ? theme.orange : theme.gray}
               />
             </View>
-          </View>
+          </Surface>
         </View>
 
         {/* Automations */}
@@ -713,7 +716,7 @@ export default function SettingsScreen() {
         {/* Work mode */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionWorkMode}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workModeDesc}</Text>
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
             <View style={styles.switchRow}>
@@ -755,7 +758,7 @@ export default function SettingsScreen() {
                 />
               </>
             )}
-          </View>
+          </Surface>
         </View>
 
         {/* ===== DATA (destructive resets — separated, danger-tinted) ===== */}

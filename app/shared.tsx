@@ -6,7 +6,7 @@
  * linked source task/shopping item when one exists (sourceTaskId / sourceItemId).
  *
  * Connections:
- *   Imports → components/HintCard, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/shared"
  *   Data    → useSharedStore (shared_tasks + shared_shopping_items tables); mirrors actions to useTaskStore (tasks) / useShoppingStore (shopping_items) via the source ids; scaled fontSize via useScaledStyles()
  *
@@ -30,6 +30,8 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -83,7 +85,8 @@ export default function SharedScreen() {
   const doneShopping = sharedShopping.filter((i) => i.done);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -112,14 +115,14 @@ export default function SharedScreen() {
         {tab === 'shopping' ? (
           <>
             {sharedShopping.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+              <Surface tint={theme.offWhite} style={styles.emptyCard}>
                 <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noSharedItems}</Text>
-              </View>
+              </Surface>
             ) : (
               <>
                 {activeShopping.length > 0 && (
                   <View style={styles.section}>
-                    <View style={[styles.card, { backgroundColor: theme.white }]}>
+                    <Surface style={styles.card}>
                       {activeShopping.map((item) => (
                         <SharedShoppingRow
                           key={item.id}
@@ -130,13 +133,13 @@ export default function SharedScreen() {
                           t={t}
                         />
                       ))}
-                    </View>
+                    </Surface>
                   </View>
                 )}
                 {doneShopping.length > 0 && (
                   <View style={styles.section}>
                     <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.sharedDone}</Text>
-                    <View style={[styles.card, { backgroundColor: theme.offWhite }]}>
+                    <Surface tint={theme.offWhite} style={styles.card}>
                       {doneShopping.map((item) => (
                         <SharedShoppingRow
                           key={item.id}
@@ -147,7 +150,7 @@ export default function SharedScreen() {
                           t={t}
                         />
                       ))}
-                    </View>
+                    </Surface>
                   </View>
                 )}
               </>
@@ -156,14 +159,14 @@ export default function SharedScreen() {
         ) : (
           <>
             {sharedTasks.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+              <Surface tint={theme.offWhite} style={styles.emptyCard}>
                 <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noSharedItems}</Text>
-              </View>
+              </Surface>
             ) : (
               <>
                 {activeTasks.length > 0 && (
                   <View style={styles.section}>
-                    <View style={[styles.card, { backgroundColor: theme.white }]}>
+                    <Surface style={styles.card}>
                       {activeTasks.map((item) => (
                         <SharedTaskRow
                           key={item.id}
@@ -174,13 +177,13 @@ export default function SharedScreen() {
                           t={t}
                         />
                       ))}
-                    </View>
+                    </Surface>
                   </View>
                 )}
                 {doneTasks.length > 0 && (
                   <View style={styles.section}>
                     <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.sharedDone}</Text>
-                    <View style={[styles.card, { backgroundColor: theme.offWhite }]}>
+                    <Surface tint={theme.offWhite} style={styles.card}>
                       {doneTasks.map((item) => (
                         <SharedTaskRow
                           key={item.id}
@@ -191,7 +194,7 @@ export default function SharedScreen() {
                           t={t}
                         />
                       ))}
-                    </View>
+                    </Surface>
                   </View>
                 )}
               </>

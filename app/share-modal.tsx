@@ -6,7 +6,7 @@
  * user to scan. Also records the selection as outbound shared items locally.
  *
  * Connections:
- *   Imports → components/QRCodeDisplay, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/QRCodeDisplay, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/share-modal" (presented as a modal — see app/_layout.tsx)
  *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -31,6 +31,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { encodeSharePayload } from '@/lib/share';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -134,7 +136,8 @@ export default function ShareModal() {
   const title = kind === 's' ? t.sharedShopping : t.sharedTasks;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
@@ -146,7 +149,7 @@ export default function ShareModal() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {!shared ? (
           <>
-            <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Surface style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={[styles.cardTitle, { color: theme.text }]}>{title}</Text>
                 <Pressable onPress={toggleAll}>
@@ -178,7 +181,7 @@ export default function ShareModal() {
                   </Pressable>
                 ))
               )}
-            </View>
+            </Surface>
 
             {selected.size > 0 && qrPayload && (
               <Pressable
@@ -193,13 +196,13 @@ export default function ShareModal() {
           </>
         ) : (
           <>
-            <View style={[styles.qrCard, { backgroundColor: theme.white }]}>
+            <Surface style={styles.qrCard}>
               <Text style={[styles.qrTitle, { color: theme.text }]}>{t.shareTitle}</Text>
               <Text style={[styles.qrInstructions, { color: theme.textLight }]}>{t.shareInstructions}</Text>
               <View style={styles.qrWrap}>
                 <QRCodeDisplay data={qrPayload} size={260} />
               </View>
-            </View>
+            </Surface>
 
             <Pressable
               style={[styles.doneBtn, { backgroundColor: theme.greenLight }]}

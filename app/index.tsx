@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/HintCard, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -60,6 +60,8 @@ import BubbleMenu from '@/components/BubbleMenu';
 // import Pet from '@/components/Pet'; // Disabled for now
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import CoverScreen from '@/components/cover/CoverScreen';
 import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr } from '@/lib/date';
@@ -154,7 +156,7 @@ export default function HomeScreen() {
   const pendingShopping = weeklyPending.slice(0, 5);
 
   if (!settings.loaded || !settings.setupComplete) {
-    return <SafeAreaView style={[styles.safe, { backgroundColor: Colors.cream }]} />;
+    return <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]} />;
   }
 
   if (isCoverScreen) {
@@ -192,7 +194,8 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {updateReady && (
         <View style={[styles.workBanner, { backgroundColor: theme.green }]}>
@@ -299,18 +302,18 @@ export default function HomeScreen() {
             </View>
           </View>
           {plansTasks.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+            <Surface tint={theme.offWhite} style={styles.emptyCard}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>
                 {settings.essentialsModeEnabled ? t.noEssentialPlansToday : t.noPlansToday}
               </Text>
-            </View>
+            </Surface>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
+            <Surface style={styles.card}>
               <DayTimeline
                 tasks={plansTasks}
                 onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
               />
-            </View>
+            </Surface>
           )}
           {/* Expand/collapse strip — only shown when there's more than the 3-item
               preview to reveal; toggles plansExpanded in place (no navigation). */}
@@ -341,7 +344,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
-            <View style={[styles.card, { backgroundColor: theme.offWhite, borderColor: theme.border }]}>
+            <Surface tint={theme.offWhite} style={styles.card}>
               {backlog.map((task) => (
                 <TaskItem
                   key={task.id}
@@ -351,7 +354,7 @@ export default function HomeScreen() {
                   muted
                 />
               ))}
-            </View>
+            </Surface>
             <Text style={[styles.backlogHint, { color: theme.textLight }]}>{t.backlogHint}</Text>
           </View>
         )}
@@ -365,11 +368,11 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           {pendingShopping.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+            <Surface tint={theme.offWhite} style={styles.emptyCard}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
-            </View>
+            </Surface>
           ) : (
-            <View style={[styles.card, { backgroundColor: theme.white, borderColor: theme.border }]}>
+            <Surface style={styles.card}>
               {pendingShopping.map((item) => (
                 // OLD: <View key={item.id} style={styles.shoppingPreviewRow}>
                 //        <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
@@ -390,17 +393,17 @@ export default function HomeScreen() {
                   {t.moreItems(weeklyPending.length - 5)}
                 </Text>
               )}
-            </View>
+            </Surface>
           )}
         </View>
 
         {/* Gentle points */}
         {settings.showPoints && completedCount > 0 && (
-          <View style={[styles.pointsCard, { backgroundColor: theme.offWhite }]}>
+          <Surface tint={theme.offWhite} style={styles.pointsCard}>
             <Text style={[styles.pointsText, { color: theme.textLight }]}>
               {t.smallThingsCount(completedCount)}
             </Text>
-          </View>
+          </Surface>
         )}
 
         <View style={{ height: 120 }} />

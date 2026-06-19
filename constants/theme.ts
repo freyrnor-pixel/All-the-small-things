@@ -128,7 +128,7 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
     greenLight: lighten(secondary, 0.7),
     brown: darken(primary, 0.3),
     brownLight: lighten(primary, 0.4),
-    white: '#FFFFFF',
+    white: lighten(primary, 0.985),
     offWhite: lighten(primary, 0.85),
     gray: '#8A8A9A',
     grayLight: lighten(primary, 0.88),
@@ -157,7 +157,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#A7F3D0',
     brown: '#1E3A8A',
     brownLight: '#60A5FA',
-    white: '#FFFFFF',
+    white: lighten('#2563EB', 0.985),
     offWhite: '#E8F2FE',
     gray: '#94A3B8',
     grayLight: '#DCEEFC',
@@ -181,7 +181,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#CFFAFE',
     brown: '#0369A1',
     brownLight: '#7DD3FC',
-    white: '#FFFFFF',
+    white: lighten('#0EA5E9', 0.985),
     offWhite: '#E8F1FB',
     gray: '#6B8090',
     grayLight: '#D8E8F5',
@@ -205,7 +205,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#F5F3FF',
     brown: '#5B21B6',
     brownLight: '#C4B5FD',
-    white: '#FFFFFF',
+    white: lighten('#7C3AED', 0.985),
     offWhite: '#F0EAFF',
     gray: '#7C6A9E',
     grayLight: '#EAE5F8',
@@ -229,7 +229,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#DCFCE7',
     brown: '#EA580C',
     brownLight: '#FED7AA',
-    white: '#FFFFFF',
+    white: lighten('#16A34A', 0.985),
     offWhite: '#E8F5EC',
     gray: '#7A9E84',
     grayLight: '#D8EEE0',
@@ -547,13 +547,14 @@ export const CUSTOM_COLOR_PRESETS = [
 // stays OTA-safe) derived from a single base colour. Independent from colour
 // themes — any bubble's hue and finish can vary separately.
 
-export type MaterialName = 'glass' | 'metal' | 'rock' | 'paper';
+export type MaterialName = 'glass' | 'metal' | 'rock' | 'paper' | 'plain';
 
 export const MATERIAL_META: Record<MaterialName, { label: string }> = {
   glass: { label: 'Glass' },
   metal: { label: 'Metal' },
   rock: { label: 'Rock' },
   paper: { label: 'Paper' },
+  plain: { label: 'Plain' },
 };
 
 export type MaterialStyle = {
@@ -629,7 +630,6 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         sheenColor: rgba('#FFFFFF', 0.18),
       };
     case 'glass':
-    default:
       return {
         backgroundColor: rgba(base, 0.72),
         borderWidth: 1,
@@ -640,6 +640,22 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 16,
         elevation: 6,
         sheenColor: rgba('#FFFFFF', 0.5),
+      };
+    // No-finish baseline: a flat, even fill with a hairline border and no
+    // bevel/sheen — for anyone who wants surfaces to just sit there quietly
+    // rather than read as glass/metal/rock/paper.
+    case 'plain':
+    default:
+      return {
+        backgroundColor: base,
+        borderWidth: 1,
+        borderColor: shade(base, -0.06),
+        borderTopColor: shade(base, -0.06),
+        borderBottomColor: shade(base, -0.06),
+        shadowOpacity: 0.1,
+        shadowRadius: 7,
+        elevation: 3,
+        sheenColor: rgba('#FFFFFF', 0),
       };
   }
 }
