@@ -20,7 +20,7 @@
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
  *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
- *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, holidays, automations link) → Work Mode group → Data group (test data, then destructive resets last).
+ *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, holidays, automations link) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet section is currently disabled (code intact, ready to re-enable when feature launches).
  *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
@@ -760,6 +760,24 @@ export default function SettingsScreen() {
 
         {/* ===== DATA (destructive resets — separated, danger-tinted) ===== */}
         <Text style={[styles.groupHeader, { color: theme.danger }]}>{t.config.sections.data}</Text>
+
+        {/* Debug mode — feedback pins + bubble-wheel tuning overlay (components/DebugOverlay.tsx) */}
+        <View style={styles.section}>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.debug.toggleLabel}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.debug.toggleHint}</Text>
+              </View>
+              <Switch
+                value={settings.debugModeEnabled}
+                onValueChange={(v) => { selection(); settings.update({ debugModeEnabled: v }); }}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.debugModeEnabled ? theme.orange : theme.gray}
+              />
+            </View>
+          </View>
+        </View>
 
         {/* Test data */}
         <View style={styles.section}>

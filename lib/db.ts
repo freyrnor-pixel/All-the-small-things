@@ -8,8 +8,8 @@
  *
  * Connections:
  *   Imports → lib/date
- *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules
+ *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
@@ -173,6 +173,15 @@ export function initDb() {
       created_at INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS feedback_notes (
+      id TEXT PRIMARY KEY,
+      screen TEXT NOT NULL,
+      x REAL NOT NULL,
+      y REAL NOT NULL,
+      note TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Indexes for the columns we filter / sort / join on most often.
     CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(task_date);
     CREATE INDEX IF NOT EXISTS idx_shopping_list ON shopping_items(list_type);
@@ -181,6 +190,7 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_habit_logs ON habit_logs(habit_id, log_date);
     CREATE INDEX IF NOT EXISTS idx_store_items_name ON store_items(name);
     CREATE INDEX IF NOT EXISTS idx_purchase_log_date ON purchase_log(purchased_at);
+    CREATE INDEX IF NOT EXISTS idx_feedback_notes_screen ON feedback_notes(screen);
   `);
 
   // Schema migrations — safe to run repeatedly (errors = column already exists)
@@ -229,6 +239,12 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN dish_name TEXT DEFAULT NULL",
     // Persistent "today's overview" notification toggle
     "ALTER TABLE settings ADD COLUMN persistent_notif_enabled INTEGER DEFAULT 0",
+    // Debug mode — feedback pins + bubble-wheel tuning overlay
+    "ALTER TABLE settings ADD COLUMN debug_mode_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN bubble_size REAL DEFAULT 50",
+    "ALTER TABLE settings ADD COLUMN bubble_spacing REAL DEFAULT 78",
+    "ALTER TABLE settings ADD COLUMN bubble_spring_intensity REAL DEFAULT 50",
+    "ALTER TABLE settings ADD COLUMN bubble_anim_speed REAL DEFAULT 50",
   ];
   for (const sql of migrations) {
     try {

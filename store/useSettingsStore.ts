@@ -3,13 +3,14 @@
  *
  * Zustand store mirroring the one settings row: user name, language, theme,
  * dark mode, reminder/notification toggles, reset cadence, work/essentials modes,
- * onboarding state, accessibility flags, and companion pet settings.
+ * onboarding state, accessibility flags, companion pet settings, and the debug
+ * overlay's enable flag + bubble-wheel tuning values.
  * persistentNotifEnabled toggles the always-current "today's overview" notification
  * (refreshed by app/_layout.tsx, see lib/notifications.ts's refreshPersistentNotification).
  *
  * Connections:
  *   Imports → lib/db
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/DebugOverlay.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns the single-row SQLite table settings (id = 1)
  *
  * Edit notes:
@@ -68,6 +69,12 @@ export type Settings = {
   bubbleMaterial: BubbleMaterial;
   // Persistent "today's overview" notification
   persistentNotifEnabled: boolean;
+  // Debug mode — feedback pins + bubble-wheel tuning overlay
+  debugModeEnabled: boolean;
+  bubbleSize: number;
+  bubbleSpacing: number;
+  bubbleSpringIntensity: number;
+  bubbleAnimSpeed: number;
 };
 
 type SettingsStore = Settings & {
@@ -123,6 +130,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   customSecondaryColor: '#10B981',
   bubbleMaterial: 'glass' as BubbleMaterial,
   persistentNotifEnabled: false,
+  debugModeEnabled: false,
+  bubbleSize: 50,
+  bubbleSpacing: 78,
+  bubbleSpringIntensity: 50,
+  bubbleAnimSpeed: 50,
   loaded: false,
   workModeSessionOverride: false,
 
@@ -161,6 +173,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         custom_secondary_color: string | null;
         bubble_material: string | null;
         persistent_notif_enabled: number | null;
+        debug_mode_enabled: number | null;
+        bubble_size: number | null;
+        bubble_spacing: number | null;
+        bubble_spring_intensity: number | null;
+        bubble_anim_speed: number | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -196,6 +213,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         customSecondaryColor: row.custom_secondary_color ?? '#10B981',
         bubbleMaterial: (row.bubble_material as BubbleMaterial) ?? 'glass',
         persistentNotifEnabled: row.persistent_notif_enabled === 1,
+        debugModeEnabled: row.debug_mode_enabled === 1,
+        bubbleSize: row.bubble_size ?? 50,
+        bubbleSpacing: row.bubble_spacing ?? 78,
+        bubbleSpringIntensity: row.bubble_spring_intensity ?? 50,
+        bubbleAnimSpeed: row.bubble_anim_speed ?? 50,
         loaded: true,
       });
     } catch {
@@ -219,7 +241,9 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             reduced_motion = ?, font_size = ?,
             pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?,
             left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?,
-            bubble_material = ?, persistent_notif_enabled = ?
+            bubble_material = ?, persistent_notif_enabled = ?,
+            debug_mode_enabled = ?, bubble_size = ?, bubble_spacing = ?,
+            bubble_spring_intensity = ?, bubble_anim_speed = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -254,6 +278,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.customSecondaryColor,
             next.bubbleMaterial,
             next.persistentNotifEnabled ? 1 : 0,
+            next.debugModeEnabled ? 1 : 0,
+            next.bubbleSize,
+            next.bubbleSpacing,
+            next.bubbleSpringIntensity,
+            next.bubbleAnimSpeed,
           ]
         );
       } catch {
