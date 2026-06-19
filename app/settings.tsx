@@ -1,12 +1,16 @@
 /**
  * settings.tsx — app settings
  *
- * Central settings screen, grouped under four primary headers — Appearance,
- * Notifications, Work Mode, Data — with an Essentials Mode toggle pinned at the
- * very top. Each control carries a one-sentence description. Destructive reset
- * actions live in the danger-tinted Data section at the bottom (each confirms via
- * Alert). Changing reminder-, notification- or language-related settings re-syncs
- * the scheduled reminders.
+ * Central settings screen, with an Essentials Mode toggle pinned at the very
+ * top, followed by Profile/Language, then four primary group headers —
+ * Appearance, Notifications, Work Mode, Data. Cards that don't fit a group
+ * header (Accessibility, Motivation, Companion Pet, Shopping List) sit
+ * ungrouped between Appearance and Notifications, each carrying its own
+ * section title for separation. Each control carries a one-sentence
+ * description. Destructive reset actions live in the danger-tinted Data
+ * section at the bottom (each confirms via Alert), preceded there by the
+ * Test data card. Changing reminder-, notification- or language-related
+ * settings re-syncs the scheduled reminders.
  *
  * Connections:
  *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
@@ -16,7 +20,7 @@
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
  *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
- *   - Section structure is the four config.sections.* groups; sub-cards live inside them. Keep the Essentials toggle first and the Data section last.
+ *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, holidays, automations link) → Work Mode group → Data group (test data, then destructive resets last).
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet sub-card visible only when petEnabled; colour swatches pull from active theme palette.
  *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
@@ -141,9 +145,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ===== APPEARANCE ===== */}
-        <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.appearance}</Text>
-
         {/* Profile */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionProfile}</Text>
@@ -191,6 +192,9 @@ export default function SettingsScreen() {
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.language}</Text>
           </View>
         </View>
+
+        {/* ===== APPEARANCE ===== */}
+        <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.appearance}</Text>
 
         {/* Color theme (Appearance) — 2-column grid, custom theme color pickers */}
         <View style={styles.section}>
@@ -504,10 +508,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ===== NOTIFICATIONS ===== */}
-        <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.notifications}</Text>
-
-        {/* Shopping list (drives the weekly reminder cadence) */}
+        {/* Shopping list — its own settings, not a notification */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionShopping}</Text>
           <View style={[styles.card, { backgroundColor: theme.white }]}>
@@ -584,6 +585,9 @@ export default function SettingsScreen() {
             <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.monthlyDateInputHint}</Text>
           </View>
         </View>
+
+        {/* ===== NOTIFICATIONS ===== */}
+        <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.notifications}</Text>
 
         {/* Reminders */}
         <View style={styles.section}>
@@ -723,8 +727,12 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ===== TEST DATA ===== */}
+        {/* ===== DATA (destructive resets — separated, danger-tinted) ===== */}
+        <Text style={[styles.groupHeader, { color: theme.danger }]}>{t.config.sections.data}</Text>
+
+        {/* Test data */}
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionTestData}</Text>
           <View style={[styles.card, { backgroundColor: theme.white, borderWidth: 1, borderColor: theme.green }]}>
             <Text style={[styles.descText, { color: theme.textLight, marginBottom: Spacing.sm, marginTop: 0 }]}>{t.loadTestDataDesc}</Text>
             <Pressable
@@ -738,9 +746,6 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
         </View>
-
-        {/* ===== DATA (destructive resets — separated, danger-tinted) ===== */}
-        <Text style={[styles.groupHeader, { color: theme.danger }]}>{t.config.sections.data}</Text>
 
         {/* Reset data */}
         <View style={styles.section}>
