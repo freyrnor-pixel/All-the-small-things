@@ -16,10 +16,15 @@
  *     (e.g. `task-${id}`, `daily-${key}`) or cancellation silently misses.
  *   - Scheduling failures are swallowed via `ignore` — intentional, never crash the UI.
  *   - Content must already be localised by the caller; do not import i18n here.
- *   - refreshPersistentNotification uses trigger: null (fires immediately) so callers can
- *     re-invoke it on every relevant data change to keep one notification up to date;
- *     `sticky`/sound-free presentation is JS-only (no native channel changes), so it's OTA-safe
- *     but isn't a true non-dismissible Android "ongoing" notification — that needs a new build.
+ *   - refreshPersistentNotification only calls scheduleNotificationAsync when the
+ *     content actually changed since the last call (module-level cache) — Android
+ *     bumps a notification's position/recency on every notify(), so re-posting
+ *     identical content on every app open made it look like a fresh alert.
+ *   - The persistent notification lives on its own Android channel
+ *     (PERSISTENT_CHANNEL_ID) with showBadge: false and LOW importance, so it
+ *     never contributes an app-icon badge count or a heads-up popup.
+ *   - Content.color (optional) tints the small notification icon on Android —
+ *     used by the persistent overview to mirror a task's in-app accent color.
  */
 import * as Notifications from 'expo-notifications';
 
@@ -38,7 +43,7 @@ Notifications.setNotificationHandler({
  * `lib/reminders.ts` and the task/habit stores), so the user's chosen language
  * is the single source of truth.
  */
-export type Content = { title: string; body: string };
+export type Content = { title: string; body: string; color?: string };
 
 export async function requestPermissions(): Promise<boolean> {
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -187,17 +192,41 @@ export async function cancelDailyReminder(key: string) {
 }
 
 // ── Persistent "today's overview" notification ──────────────────────────────
-// Fires immediately (trigger: null) under a stable identifier, so each call
-// replaces the previous one in place rather than stacking new notifications.
+const PERSISTENT_CHANNEL_ID = 'persistent-overview';
+
+let persistentChannelReady = false;
+async function ensurePersistentChannel() {
+  if (persistentChannelReady) return;
+  persistentChannelReady = true;
+  await Notifications.setNotificationChannelAsync(PERSISTENT_CHANNEL_ID, {
+    name: 'Daily overview',
+    importance: Notifications.AndroidImportance.LOW,
+    showBadge: false,
+    sound: null,
+    enableVibrate: false,
+    vibrationPattern: [],
+  }).catch(ignore);
+}
+
+// Fires immediately under a stable identifier, so each call replaces the
+// previous one in place rather than stacking new notifications. Skips the
+// native call entirely when the content hasn't changed since the last call,
+// so opening the app doesn't re-surface/reorder it when nothing is new.
+let lastPersistentContentKey: string | null = null;
 export async function refreshPersistentNotification(content: Content) {
+  const key = `${content.title} ${content.body} ${content.color ?? ''}`;
+  if (key === lastPersistentContentKey) return;
+  lastPersistentContentKey = key;
+  await ensurePersistentChannel();
   await Notifications.scheduleNotificationAsync({
     identifier: 'persistent-overview',
-    content: { ...content, sticky: true, autoDismiss: false },
-    trigger: null,
+    content: { ...content, sticky: true, autoDismiss: false, sound: false, vibrate: [] },
+    trigger: { channelId: PERSISTENT_CHANNEL_ID },
   }).catch(ignore);
 }
 
 export async function cancelPersistentNotification() {
+  lastPersistentContentKey = null;
   await Notifications.dismissNotificationAsync('persistent-overview').catch(ignore);
   await Notifications.cancelScheduledNotificationAsync('persistent-overview').catch(ignore);
 }

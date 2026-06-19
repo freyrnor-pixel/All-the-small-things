@@ -11,7 +11,7 @@
  * until setup is complete, and wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, store/useAutomationStore, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
  *
@@ -27,6 +27,9 @@
  *     It shows only today's next pending task (title) plus the 2 after it (body, revealed on
  *     expand) — ordered via lib/taskOrder.ts and styled via lib/taskVisual.ts so it always
  *     matches the home screen's look and order. No longer includes the shopping list.
+ *   - Also passes taskAccentColor(next, theme) as the notification's `color`, so Android
+ *     tints the small notification icon to match the task's in-app accent (essential/
+ *     time-box/start-at) — the one real non-text visual cue OTA-only JS can produce.
  */
 import { useEffect, Component } from 'react';
 import React from 'react';
@@ -49,7 +52,8 @@ import { syncReminders } from '@/lib/reminders';
 import { getTranslations } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
-import { describeTask } from '@/lib/taskVisual';
+import { describeTask, taskAccentColor } from '@/lib/taskVisual';
+import { useAppTheme } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -128,6 +132,7 @@ export default function RootLayout() {
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
   const language = useSettingsStore((s) => s.language);
   const tasks = useTaskStore((s) => s.tasks);
+  const theme = useAppTheme();
 
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
@@ -177,8 +182,9 @@ export default function RootLayout() {
     void refreshPersistentNotification({
       title: describeTask(next, t),
       body: upcoming.slice(0, 2).map((task) => describeTask(task, t)).join('\n') || t.notif.overviewNothingElse,
+      color: taskAccentColor(next, theme),
     });
-  }, [loaded, persistentNotifEnabled, language, tasks]);
+  }, [loaded, persistentNotifEnabled, language, tasks, theme]);
 
   useEffect(() => {
     if (!Updates.isEnabled) return;
