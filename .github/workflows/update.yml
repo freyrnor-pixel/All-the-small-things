@@ -38,4 +38,5 @@ jobs:
       - name: Push update
         run: |
           MSG=$(git log -1 --format=%s)
-          eas update --branch preview --platform ios,android --message "$MSG"
+          eas update --branch preview --platform android --message "$MSG"
+          eas update --branch preview --platform ios --message "$MSG"
