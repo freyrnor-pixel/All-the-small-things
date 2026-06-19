@@ -20,14 +20,12 @@
  *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE updates from BASE_ITEMS.length.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
- *   - Closed-state FAB shows the tree logo (assets/android-icon-monochrome.png), tinted via
+ *   - FAB always shows the tree logo (assets/android-icon-monochrome.png), open or closed — no
+ *     "×" close glyph; tapping the same tree icon toggles the wheel either way. Tinted via
  *     contrastOn(theme.orange) so it stays readable against any theme's accent color, including
  *     arbitrary custom-theme colors — don't replace this with a hardcoded white/dark tint. On
  *     press, the tint flashes to the opposite contrastOn() output (fabWaveColor) and eases back —
  *     this needs Animated.Image (not a plain Image) since tintColor is driven by an animated style.
- *   - Open-state FAB renders Ionicons "close" (an already-correct ×) with no rotation transform —
- *     a prior version rotated it 45° (a leftover trick for morphing a "+" glyph into an "×"), which
- *     instead turns this × back into a "+". Don't reintroduce that rotation.
  *   - HIGH MERGE-CONFLICT RISK: this file has a documented history of parallel claude/* branches
  *     independently rewriting it (two competing redesigns were merged via 96891b4 and 9b02162,
  *     and a careless merge would have let the older variant silently win). When merging or
@@ -350,9 +348,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
     opacity: openProgress.value * 0.35,
   }));
 
-  // Press feedback for the closed-state tree logo: a quick tint flash to the opposite
-  // contrastOn() output (always readable, no new color constants needed) that eases back
-  // to fabIconColor. Only applies to the tree logo, not the open-state "close" Ionicon.
+  // Press feedback for the tree logo: a quick tint flash to the opposite contrastOn()
+  // output (always readable, no new color constants needed) that eases back to fabIconColor.
   const pressWave = useSharedValue(0);
   const fabWaveColor = fabIconColor === '#FFFFFF' ? '#1E293B' : '#FFFFFF';
   const fabIconAnimStyle = useAnimatedStyle(() => ({
@@ -414,15 +411,11 @@ export default function BubbleMenu({ onNewTask }: Props) {
           <View pointerEvents="none" style={[styles.fabSheenOuter, { backgroundColor: fabMaterial.sheenColor, opacity: 0.35 }]} />
           <View pointerEvents="none" style={[styles.fabSheenMid, { backgroundColor: fabMaterial.sheenColor, opacity: 0.55 }]} />
           <View pointerEvents="none" style={[styles.fabSheenInner, { backgroundColor: fabMaterial.sheenColor, opacity: 1 }]} />
-          {open ? (
-            <Ionicons name="close" size={28} color={fabIconColor} />
-          ) : (
-            <Animated.Image
-              source={require('@/assets/android-icon-monochrome.png')}
-              style={[styles.fabLogo, fabIconAnimStyle]}
-              resizeMode="contain"
-            />
-          )}
+          <Animated.Image
+            source={require('@/assets/android-icon-monochrome.png')}
+            style={[styles.fabLogo, fabIconAnimStyle]}
+            resizeMode="contain"
+          />
         </View>
       </Pressable>
       </View>
@@ -497,8 +490,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: FAB_SIZE / 2,
   },
   fabLogo: {
-    width: 36,
-    height: 36,
+    width: 46,
+    height: 46,
   },
   bubble: {
     position: 'absolute',
