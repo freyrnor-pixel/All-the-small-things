@@ -22,7 +22,9 @@
  *   - All labels go through useT() — no hardcoded text.
  *   - Closed-state FAB shows the tree logo (assets/android-icon-monochrome.png), tinted via
  *     contrastOn(theme.orange) so it stays readable against any theme's accent color, including
- *     arbitrary custom-theme colors — don't replace this with a hardcoded white/dark tint.
+ *     arbitrary custom-theme colors — don't replace this with a hardcoded white/dark tint. On
+ *     press, the tint flashes to the opposite contrastOn() output (fabWaveColor) and eases back —
+ *     this needs Animated.Image (not a plain Image) since tintColor is driven by an animated style.
  *   - Open-state FAB renders Ionicons "close" (an already-correct ×) with no rotation transform —
  *     a prior version rotated it 45° (a leftover trick for morphing a "+" glyph into an "×"), which
  *     instead turns this × back into a "+". Don't reintroduce that rotation.
@@ -36,7 +38,6 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -48,6 +49,7 @@ import Animated, {
   withSpring,
   withTiming,
   withSequence,
+  interpolateColor,
   Easing,
   SharedValue,
   runOnJS,
@@ -334,6 +336,18 @@ export default function BubbleMenu({ onNewTask }: Props) {
   // so the contrast decision stays valid across every finish.
   const fabMaterial = useMemo(() => getMaterialStyle(theme.orange, bubbleMaterial), [theme.orange, bubbleMaterial]);
 
+  // Press feedback for the closed-state tree logo: a quick tint flash to the opposite
+  // contrastOn() output (always readable, no new color constants needed) that eases back
+  // to fabIconColor. Only applies to the tree logo, not the open-state "close" Ionicon.
+  const pressWave = useSharedValue(0);
+  const fabWaveColor = fabIconColor === '#FFFFFF' ? '#1E293B' : '#FFFFFF';
+  const fabIconAnimStyle = useAnimatedStyle(() => ({
+    tintColor: interpolateColor(pressWave.value, [0, 1], [fabIconColor, fabWaveColor]),
+  }));
+  function handleFabPressIn() {
+    pressWave.value = withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 280 }));
+  }
+
   return (
     <View style={[styles.container, sideStyle]} pointerEvents="box-none">
       {open && <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />}
@@ -371,6 +385,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
           },
         ]}
         onPress={toggle}
+        onPressIn={handleFabPressIn}
         accessibilityRole="button"
         accessibilityLabel={open ? t.close : t.nav.newTask}
         accessibilityState={{ expanded: open }}
@@ -380,9 +395,9 @@ export default function BubbleMenu({ onNewTask }: Props) {
           {open ? (
             <Ionicons name="close" size={28} color={fabIconColor} />
           ) : (
-            <Image
+            <Animated.Image
               source={require('@/assets/android-icon-monochrome.png')}
-              style={[styles.fabLogo, { tintColor: fabIconColor }]}
+              style={[styles.fabLogo, fabIconAnimStyle]}
               resizeMode="contain"
             />
           )}
@@ -437,8 +452,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: FAB_SIZE / 2,
   },
   fabLogo: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
   },
   bubble: {
     position: 'absolute',
