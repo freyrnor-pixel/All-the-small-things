@@ -50,6 +50,10 @@ export interface AppColors {
   border: string;
   /** Muted neutral tone — used for shame-free empty circles / backlog badges. */
   neutral: string;
+  /** Hint/explanation box surface — derived from `orange` (primary), not `green`, so it always harmonizes with the theme's own accent rather than an unrelated secondary hue. */
+  hintBg: string;
+  hintBorder: string;
+  hintAccent: string;
 }
 
 const fontScaleMap: Record<FontSizeScale, number> = { small: 0.875, default: 1, large: 1.2 };
@@ -111,6 +115,9 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
       shadow: 'rgba(0,0,0,0.6)',
       border: darken(primary, 0.4),
       neutral: '#505068',
+      hintBg: darken(primary, 0.75),
+      hintBorder: darken(primary, 0.5),
+      hintAccent: lighten(primary, 0.2),
     };
   }
   return {
@@ -132,6 +139,9 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
     shadow: `rgba(0,0,0,0.12)`,
     border: lighten(primary, 0.6),
     neutral: lighten(primary, 0.5),
+    hintBg: lighten(primary, 0.9),
+    hintBorder: lighten(primary, 0.65),
+    hintAccent: primary,
   };
 }
 
@@ -158,6 +168,9 @@ export const THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(30,41,59,0.12)',
     border: '#CDE6FA',
     neutral: '#A3C2E4',
+    hintBg: lighten('#2563EB', 0.9),
+    hintBorder: lighten('#2563EB', 0.65),
+    hintAccent: '#2563EB',
   },
   // Sky blue with blue-tinted white and grey details — modern, airy.
   tech: {
@@ -179,6 +192,9 @@ export const THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(12,26,40,0.12)',
     border: '#C0D8F0',
     neutral: '#8AAAC0',
+    hintBg: lighten('#0EA5E9', 0.9),
+    hintBorder: lighten('#0EA5E9', 0.65),
+    hintAccent: '#0EA5E9',
   },
   // Soft purple tones in light mode; dark mode is the true gothic look.
   gothic: {
@@ -200,6 +216,9 @@ export const THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(32,14,64,0.12)',
     border: '#DDD6FE',
     neutral: '#A890C8',
+    hintBg: lighten('#7C3AED', 0.9),
+    hintBorder: lighten('#7C3AED', 0.65),
+    hintAccent: '#7C3AED',
   },
   // Green seams with white, orange details — earthy, grounded.
   nature: {
@@ -221,6 +240,9 @@ export const THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(13,48,24,0.12)',
     border: '#C0E8CC',
     neutral: '#8CB89A',
+    hintBg: lighten('#16A34A', 0.9),
+    hintBorder: lighten('#16A34A', 0.65),
+    hintAccent: '#16A34A',
   },
   // Placeholder — replaced at runtime by buildCustomTheme() using user's chosen colors.
   custom: {
@@ -242,6 +264,9 @@ export const THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(0,0,0,0.12)',
     border: '#D0D0E0',
     neutral: '#9090A8',
+    hintBg: lighten('#6B6B8A', 0.9),
+    hintBorder: lighten('#6B6B8A', 0.65),
+    hintAccent: '#6B6B8A',
   },
 };
 
@@ -275,6 +300,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(0,0,0,0.6)',
     border: '#1A3460',
     neutral: '#52708C',
+    hintBg: darken('#4EA8FC', 0.75),
+    hintBorder: darken('#4EA8FC', 0.5),
+    hintAccent: lighten('#4EA8FC', 0.15),
   },
   tech: {
     cream: '#080E16',
@@ -295,6 +323,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(0,0,0,0.6)',
     border: '#142030',
     neutral: '#3A5870',
+    hintBg: darken('#38BDF8', 0.75),
+    hintBorder: darken('#38BDF8', 0.5),
+    hintAccent: lighten('#38BDF8', 0.15),
   },
   // Full dark gothic — the primary intended look for this theme.
   gothic: {
@@ -316,6 +347,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(0,0,0,0.7)',
     border: '#3A1860',
     neutral: '#6840A0',
+    hintBg: darken('#A855F7', 0.75),
+    hintBorder: darken('#A855F7', 0.5),
+    hintAccent: lighten('#A855F7', 0.15),
   },
   nature: {
     cream: '#08140A',
@@ -336,6 +370,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(0,0,0,0.6)',
     border: '#142818',
     neutral: '#387048',
+    hintBg: darken('#22C55E', 0.75),
+    hintBorder: darken('#22C55E', 0.5),
+    hintAccent: lighten('#22C55E', 0.15),
   },
   // Placeholder — replaced at runtime by buildCustomTheme().
   custom: {
@@ -357,6 +394,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     shadow: 'rgba(0,0,0,0.6)',
     border: '#252540',
     neutral: '#505068',
+    hintBg: darken('#8888AA', 0.75),
+    hintBorder: darken('#8888AA', 0.5),
+    hintAccent: lighten('#8888AA', 0.15),
   },
 };
 

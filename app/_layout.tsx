@@ -11,7 +11,7 @@
  * until setup is complete, and wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, store/useAutomationStore, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, store/useAutomationStore, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
  *
@@ -24,6 +24,9 @@
  *     banner (no auto-reload, no missable tap) until the user taps it.
  *   - The persistent-overview effect re-reads tasksForDate(todayStr()) fresh on every run rather
  *     than trusting a stale closure, since it depends on the `tasks` array reference, not on the date.
+ *     It shows only today's next pending task (title) plus the 2 after it (body, revealed on
+ *     expand) — ordered via lib/taskOrder.ts and styled via lib/taskVisual.ts so it always
+ *     matches the home screen's look and order. No longer includes the shopping list.
  */
 import { useEffect, Component } from 'react';
 import React from 'react';
@@ -45,6 +48,8 @@ import { requestPermissions, refreshPersistentNotification, cancelPersistentNoti
 import { syncReminders } from '@/lib/reminders';
 import { getTranslations } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
+import { rankTodayTasks } from '@/lib/taskOrder';
+import { describeTask } from '@/lib/taskVisual';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -123,7 +128,6 @@ export default function RootLayout() {
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
   const language = useSettingsStore((s) => s.language);
   const tasks = useTaskStore((s) => s.tasks);
-  const shoppingItems = useShoppingStore((s) => s.items);
 
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
@@ -148,8 +152,10 @@ export default function RootLayout() {
   }, []);
 
   // Keep the persistent "today's overview" notification in sync with today's
-  // pending tasks and the unchecked weekly shopping count, refreshing it in
-  // place (same identifier) on every relevant data change.
+  // pending tasks, refreshing it in place (same identifier) on every relevant
+  // data change. Shows the next task (collapsed) with the look mirrored from
+  // TaskItem.tsx via lib/taskVisual.ts, and the 2 after it on expand (body text),
+  // both ordered the same way as the home screen via lib/taskOrder.ts.
   useEffect(() => {
     if (!loaded) return;
     if (!persistentNotifEnabled) {
@@ -157,16 +163,22 @@ export default function RootLayout() {
       return;
     }
     const t = getTranslations(language);
-    const pending = useTaskStore.getState().tasksForDate(todayStr()).filter((task) => !task.done).length;
-    const shoppingPending = shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked).length;
+    const pending = rankTodayTasks(useTaskStore.getState().tasksForDate(todayStr())).filter(
+      (task) => !task.done
+    );
+    const [next, ...upcoming] = pending;
+    if (!next) {
+      void refreshPersistentNotification({
+        title: t.notif.overviewTitle,
+        body: t.notif.overviewBodyNoTasks,
+      });
+      return;
+    }
     void refreshPersistentNotification({
-      title: t.notif.overviewTitle,
-      body: [
-        pending > 0 ? t.notif.overviewBodyTasks(pending) : t.notif.overviewBodyNoTasks,
-        shoppingPending > 0 ? t.notif.overviewBodyShopping(shoppingPending) : null,
-      ].filter((part): part is string => !!part).join(' · '),
+      title: describeTask(next, t),
+      body: upcoming.slice(0, 2).map((task) => describeTask(task, t)).join('\n') || t.notif.overviewNothingElse,
     });
-  }, [loaded, persistentNotifEnabled, language, tasks, shoppingItems]);
+  }, [loaded, persistentNotifEnabled, language, tasks]);
 
   useEffect(() => {
     if (!Updates.isEnabled) return;

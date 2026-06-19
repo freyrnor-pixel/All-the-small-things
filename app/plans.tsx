@@ -12,9 +12,9 @@
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *
  * Edit notes:
- *   - Ranking logic (undone first, then time-anchored, then essential) is
- *     intentionally duplicated from app/index.tsx rather than shared — see the
- *     edit note there for the same rationale (small, self-contained, screen-local).
+ *   - Ranking logic (undone first, then time-anchored, then essential) comes
+ *     from lib/taskOrder.ts (rankTodayTasks) — shared with app/index.tsx and the
+ *     persistent notification in app/_layout.tsx so all three stay in sync.
  *   - Registered as a plain Stack.Screen in app/_layout.tsx (not a modal) — this
  *     is a full screen you navigate to, not a transient sheet.
  *   - Essentials-mode filtering is intentionally NOT applied here — this is the
@@ -30,6 +30,7 @@ import { useT } from '@/lib/i18n';
 import DayTimeline from '@/components/DayTimeline';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
+import { rankTodayTasks } from '@/lib/taskOrder';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -43,25 +44,10 @@ export default function PlansScreen() {
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const tasks = useTaskStore((s) => s.tasks); // re-render trigger, see app/index.tsx edit notes
 
-  const todayTasks = useMemo(() => {
-    const list = tasksForDate(today);
-    const rank = (task: typeof list[number]) => {
-      let r = 0;
-      if (task.done) r += 1000;
-      if (task.taskType === 'time-box' || task.time) r -= 100;
-      if (task.importance === 'essential') r -= 10;
-      return r;
-    };
-    return [...list].sort((a, b) => {
-      const dr = rank(a) - rank(b);
-      if (dr !== 0) return dr;
-      if (a.time && b.time) return a.time.localeCompare(b.time);
-      if (a.time) return -1;
-      if (b.time) return 1;
-      return 0;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, tasksForDate, today]);
+  const todayTasks = useMemo(
+    () => rankTodayTasks(tasksForDate(today)),
+    [tasks, tasksForDate, today]
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
