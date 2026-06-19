@@ -13,11 +13,16 @@
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/haptics, lib/useAppTheme, store/useSettingsStore
  *   Used by → app/index.tsx
- *   Data    → none (presentational); reads colorTheme + leftHanded from useSettingsStore, reducedMotion via useAccessibility()
+ *   Data    → none (presentational); reads colorTheme + leftHanded + bubbleSize/bubbleSpacing/
+ *             bubbleSpringIntensity/bubbleAnimSpeed (debug overlay tuning) from useSettingsStore,
+ *             reducedMotion via useAccessibility()
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - Wheel geometry (RADIUS / DRAG_SENSITIVITY) is tuned for 8 bubbles. STEP_ANGLE updates from BASE_ITEMS.length.
+ *   - Wheel geometry (radius/bubbleSize) is derived per-render from settings (default 78/50,
+ *     clamped — see clamp() calls in BubbleMenu) instead of fixed module consts, so the debug
+ *     overlay's "Bubble Wheel" tab can tune it live. DRAG_SENSITIVITY stays a fixed module
+ *     const. STEP_ANGLE updates from BASE_ITEMS.length.
  *   - Left-handed mode flips the FAB to bottom-left and shows bubbles in the upper-right arc.
  *   - All labels go through useT() — no hardcoded text.
  *   - FAB always shows the tree logo (assets/android-icon-monochrome.png), open or closed — no
@@ -89,26 +94,24 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
 
 const FAB_MARGIN_SIDE = 48; // must match sideStyle left/right value below — kept equal to styles.container's bottom (48) so the FAB sits the same distance from the bottom edge as the side edge
 const FAB_SIZE = 60;
-// Orbit radius = FAB center's distance from the screen edge. At angle 0 (RH) / π (LH)
-// this used to land the edge item's center exactly on the screen boundary for a clean
-// compositor clip. That slot is now outside the visible window (focus moved to NW/NE,
-// see windowStart/windowEnd below), so the edge-clip behavior no longer applies there —
-// this formula is kept anyway since it still gives a sensible, edge-anchored orbit size.
-const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 78
-// RADIUS == RADIUS_X: the orbit is a true circle, not an ellipse, so bubble spacing is
-// uniform all the way around (a mismatched RADIUS previously made this a tall, pointy
-// ellipse instead of a round cluster).
-const RADIUS = RADIUS_X; // = 78
+// Default orbit radius/bubble size — match the debug overlay's "Bubble Wheel" defaults
+// (bubbleSpacing=78, bubbleSize=50) so a fresh install with no settings row looks identical
+// to before these became tunable. The orbit is always a true circle (one radius, not an
+// ellipse) so bubble spacing is uniform all the way around the wheel.
+const DEFAULT_RADIUS = 78;
+const DEFAULT_BUBBLE_SIZE = 50;
 // Adjacent bubbles sit STEP_ANGLE (45°) apart on the circle, so every pair is the same
-// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 59.7px. BUBBLE_SIZE must stay under that or
-// adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 50
-// clears it with ~9.7px to spare.
-const BUBBLE_SIZE = 50;
+// distance apart: 2·radius·sin(STEP_ANGLE/2). bubbleSize must stay under that or adjacent
+// bubbles visibly overlap every time the menu is open, not just mid-drag — clamped to
+// 30–70 (size) / 60–110 (spacing) in BubbleMenu below so this invariant always holds
+// (worst case 30 size vs 60 spacing: 2·60·sin(22.5°) ≈ 45.9px > 30px).
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
-const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
-
 const DRAG_SENSITIVITY = 100; // px per radian — lower = lighter drag feel; final rest position is always snapped to the nearest step regardless, so this only affects feel, not precision
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 // Window is π (180°) wide — 4 steps. Opacity grades down with distance from the centered
 // focus item: 1.0 at center, OPACITY_NEAR for the immediate neighbor on each side,
@@ -170,10 +173,14 @@ type BubbleItemViewProps = {
   windowEnd: number;
   onPress: () => void;
   pointerEvents: 'auto' | 'none';
+  radius: number;
+  bubbleSize: number;
+  pressDuration: number;
 };
 
 function BubbleItemView({
   item, material, baseAngle, wheelAngle, openProgress, windowStart, windowEnd, onPress, pointerEvents,
+  radius, bubbleSize, pressDuration,
 }: BubbleItemViewProps) {
   const pressAnim = useSharedValue(1);
   const { reducedMotion } = useAccessibility();
@@ -181,20 +188,21 @@ function BubbleItemView({
   const animStyle = useAnimatedStyle(() => {
     const currentAngle = baseAngle + wheelAngle.value;
     const op = openProgress.value;
-    const x = Math.cos(currentAngle) * RADIUS_X * op;
-    const y = Math.sin(currentAngle) * RADIUS * op;
+    const x = Math.cos(currentAngle) * radius * op;
+    const y = Math.sin(currentAngle) * radius * op;
     const scale = (0.3 + 0.7 * op) * pressAnim.value;
     const opacity = windowOpacity(currentAngle, windowStart, windowEnd) * op;
     return { transform: [{ translateX: x }, { translateY: y }, { scale }], opacity };
   });
 
-  function handlePressIn() { if (!reducedMotion) pressAnim.value = withTiming(0.94, { duration: 60 }); }
+  function handlePressIn() { if (!reducedMotion) pressAnim.value = withTiming(0.94, { duration: pressDuration }); }
   function handlePressOut() { if (!reducedMotion) pressAnim.value = withSpring(1, { damping: 40, stiffness: 700 }); }
 
   return (
     <Animated.View
       style={[
         styles.bubble,
+        { left: radius, top: radius, width: bubbleSize, height: bubbleSize },
         {
           borderWidth: material.borderWidth,
           borderColor: material.borderColor,
@@ -211,9 +219,9 @@ function BubbleItemView({
       <View style={[styles.bubbleMask, { backgroundColor: material.backgroundColor }]}>
         {/* Stacked, decreasing-opacity layers fake a smooth highlight falloff instead of one
             flat-edged sheen rectangle — stays OTA-safe (no native gradient module). */}
-        <View pointerEvents="none" style={[styles.bubbleSheenOuter, { backgroundColor: material.sheenColor, opacity: 0.35 }]} />
-        <View pointerEvents="none" style={[styles.bubbleSheenMid, { backgroundColor: material.sheenColor, opacity: 0.55 }]} />
-        <View pointerEvents="none" style={[styles.bubbleSheenInner, { backgroundColor: material.sheenColor, opacity: 1 }]} />
+        <View pointerEvents="none" style={[styles.bubbleSheenOuter, { height: bubbleSize * 0.55, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 0.35 }]} />
+        <View pointerEvents="none" style={[styles.bubbleSheenMid, { height: bubbleSize * 0.38, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 0.55 }]} />
+        <View pointerEvents="none" style={[styles.bubbleSheenInner, { height: bubbleSize * 0.2, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 1 }]} />
         <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
           <Ionicons name={item.icon} size={22} color="#fff" />
           <Text style={styles.bubbleLabel}>{item.label}</Text>
@@ -227,7 +235,28 @@ function BubbleItemView({
 
 export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
-  const { leftHanded, bubbleMaterial } = useSettingsStore();
+  const {
+    leftHanded, bubbleMaterial,
+    bubbleSize, bubbleSpacing, bubbleSpringIntensity, bubbleAnimSpeed,
+  } = useSettingsStore();
+
+  // Debug-overlay-tunable wheel geometry, clamped so adjacent bubbles can never overlap
+  // (see the STEP_ANGLE comment above) even if a stored value is out of the UI's own range.
+  const radius = clamp(bubbleSpacing ?? DEFAULT_RADIUS, 60, 110);
+  const bSize = clamp(bubbleSize ?? DEFAULT_BUBBLE_SIZE, 30, 70);
+  const wheelSize = radius * 2 + bSize;
+
+  // springScale/animScale: 50 is the neutral midpoint reproducing today's exact feel
+  // (springScale=1, animScale=1). Clamped well past the UI's own range as a defensive floor/
+  // ceiling so durations can never collapse to 0ms or balloon into a multi-second stall.
+  const springScale = clamp((bubbleSpringIntensity ?? 50) / 50, 0.25, 4);
+  const animScale = clamp((bubbleAnimSpeed ?? 50) / 50, 0.3, 3);
+  const pressDuration = clamp(60 / animScale, 30, 600);
+  const coastDuration = clamp(180 / animScale, 30, 600);
+  const waveInDuration = clamp(90 / animScale, 30, 600);
+  const waveOutDuration = clamp(280 / animScale, 30, 600);
+  const navigateDelay = clamp(130 / animScale, 30, 600);
+  const snapStiffness = clamp(600 * springScale, 150, 2400);
 
   // Right-handed: window from −5π/4 to −π/4, centered at −3π/4 (NW), π wide.
   // Left-handed:  window from −3π/4 to π/4, centered at −π/4 (NE) — the left-right mirror
@@ -259,9 +288,11 @@ export default function BubbleMenu({ onNewTask }: Props) {
     [onNewTask, t]
   );
 
-  // ζ≈0.71 — quicker pop-out with a touch of bounce, between the old too-springy
-  // { damping: 20, stiffness: 400 } (ζ≈0.5) and the too-stiff overshoot-clamped version.
-  const OPEN_SPRING = { damping: 20, stiffness: 200 };
+  // ζ≈0.71 at the default springScale=1 — quicker pop-out with a touch of bounce, between
+  // the old too-springy { damping: 20, stiffness: 400 } (ζ≈0.5) and the too-stiff
+  // overshoot-clamped version. stiffness scales with the debug overlay's spring-intensity
+  // setting; damping stays fixed.
+  const OPEN_SPRING = { damping: 20, stiffness: clamp(200 * springScale, 50, 800) };
 
   function toggle() {
     tap();
@@ -275,7 +306,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
     openProgress.value = reducedMotion ? 0 : withSpring(0, OPEN_SPRING);
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
-    setTimeout(action, reducedMotion ? 0 : 130);
+    setTimeout(action, reducedMotion ? 0 : navigateDelay);
   }
 
   const minWheel = leftHanded ? MIN_WHEEL_LH : MIN_WHEEL_RH;
@@ -320,10 +351,11 @@ export default function BubbleMenu({ onNewTask }: Props) {
         wheelAngle.value = snapped;
         return;
       }
-      // Coast briefly (lottery spin inertia), then spring to nearest slot.
+      // Coast briefly (lottery spin inertia), then spring to nearest slot. Duration/stiffness
+      // scale with the debug overlay's animation-speed/spring-intensity settings.
       wheelAngle.value = withSequence(
-        withTiming(clamped, { duration: 180, easing: Easing.out(Easing.cubic) }),
-        withSpring(snapped, { damping: 28, stiffness: 600 })
+        withTiming(clamped, { duration: coastDuration, easing: Easing.out(Easing.cubic) }),
+        withSpring(snapped, { damping: 28, stiffness: snapStiffness })
       );
     });
 
@@ -356,7 +388,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
     tintColor: interpolateColor(pressWave.value, [0, 1], [fabIconColor, fabWaveColor]),
   }));
   function handleFabPressIn() {
-    pressWave.value = withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 280 }));
+    pressWave.value = withSequence(withTiming(1, { duration: waveInDuration }), withTiming(0, { duration: waveOutDuration }));
   }
 
   return (
@@ -370,7 +402,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
       {open && <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />}
 
       <GestureDetector gesture={wheelGesture}>
-        <View style={styles.wheelArea} pointerEvents={open ? 'auto' : 'none'}>
+        <View
+          style={[styles.wheelArea, { width: wheelSize, height: wheelSize, left: FAB_SIZE / 2 - wheelSize / 2, top: FAB_SIZE / 2 - wheelSize / 2 }]}
+          pointerEvents={open ? 'auto' : 'none'}
+        >
           {items.map((item, i) => (
             <BubbleItemView
               key={item.route}
@@ -383,6 +418,9 @@ export default function BubbleMenu({ onNewTask }: Props) {
               windowEnd={windowEnd}
               onPress={() => navigate(item)}
               pointerEvents={open ? 'auto' : 'none'}
+              radius={radius}
+              bubbleSize={bSize}
+              pressDuration={pressDuration}
             />
           ))}
         </View>
@@ -435,11 +473,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wheelArea: {
+    // width/height/left/top are set inline per-render (depend on the tunable wheel
+    // radius/bubbleSize — see BubbleMenu's `wheelSize`).
     position: 'absolute',
-    width: WHEEL_SIZE,
-    height: WHEEL_SIZE,
-    left: FAB_SIZE / 2 - WHEEL_SIZE / 2,
-    top: FAB_SIZE / 2 - WHEEL_SIZE / 2,
   },
   fab: {
     width: 60,
@@ -494,11 +530,9 @@ const styles = StyleSheet.create({
     height: 46,
   },
   bubble: {
+    // left/top/width/height are set inline per-render (depend on the tunable wheel
+    // radius/bubbleSize — see BubbleItemView's `radius`/`bubbleSize` props).
     position: 'absolute',
-    left: RADIUS,
-    top: RADIUS,
-    width: BUBBLE_SIZE,
-    height: BUBBLE_SIZE,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -516,32 +550,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // height/borderTopLeftRadius/borderTopRightRadius for all 3 sheen layers are set inline
+  // per-render (depend on the tunable bubbleSize — see BubbleItemView's JSX).
   bubbleSheenOuter: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: BUBBLE_SIZE * 0.55,
-    borderTopLeftRadius: BUBBLE_SIZE / 2,
-    borderTopRightRadius: BUBBLE_SIZE / 2,
   },
   bubbleSheenMid: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: BUBBLE_SIZE * 0.38,
-    borderTopLeftRadius: BUBBLE_SIZE / 2,
-    borderTopRightRadius: BUBBLE_SIZE / 2,
   },
   bubbleSheenInner: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: BUBBLE_SIZE * 0.2,
-    borderTopLeftRadius: BUBBLE_SIZE / 2,
-    borderTopRightRadius: BUBBLE_SIZE / 2,
   },
   bubbleInner: {
     alignItems: 'center',

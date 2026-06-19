@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -632,6 +632,30 @@ const en = {
       example: '',
     },
   },
+  // Debug mode — feedback pins + bubble-wheel tuning overlay
+  debug: {
+    toggleLabel: 'Debug mode',
+    toggleHint: 'Adds a floating button for leaving feedback pins on screen and tuning the bubble menu.',
+    panelTitle: 'Debug overlay',
+    tabComments: 'Comments',
+    tabBubbleWheel: 'Bubble Wheel',
+    annotateMode: 'Annotate mode',
+    annotateModeHint: 'Tap anywhere on screen to drop a numbered pin and leave a note.',
+    noNotesOnScreen: 'No notes on this screen yet.',
+    composerTitle: 'Comment',
+    composerPlaceholder: "What's on your mind?",
+    composerDelete: 'Delete',
+    exportAll: 'Export all',
+    exportEmpty: 'No feedback notes to export yet.',
+    exportHeading: (date: string) => `UnFocus UI feedback — ${date}`,
+    exportBubbleLine: (size: number, spacing: number, spring: number, speed: number) =>
+      `Bubble wheel: size=${size} spacing=${spacing} springIntensity=${spring} animSpeed=${speed}`,
+    bubbleSize: 'Bubble size',
+    bubbleSpacing: 'Spacing',
+    bubbleSpringIntensity: 'Spring intensity',
+    bubbleAnimSpeed: 'Animation speed',
+    resetDefaults: 'Reset to defaults',
+  },
 };
 
 const no: typeof en = {
@@ -1218,6 +1242,29 @@ const no: typeof en = {
       text: 'Enkle regler: når X skjer, gjør Y automatisk.',
       example: '',
     },
+  },
+  debug: {
+    toggleLabel: 'Feilsøkingsmodus',
+    toggleHint: 'Legger til en flytende knapp for tilbakemeldinger på skjermen og justering av boblemenyen.',
+    panelTitle: 'Feilsøkingsoverlegg',
+    tabComments: 'Kommentarer',
+    tabBubbleWheel: 'Boblehjul',
+    annotateMode: 'Kommentarmodus',
+    annotateModeHint: 'Trykk hvor som helst på skjermen for å legge igjen en nummerert nål og en kommentar.',
+    noNotesOnScreen: 'Ingen kommentarer på denne skjermen ennå.',
+    composerTitle: 'Kommentar',
+    composerPlaceholder: 'Hva tenker du på?',
+    composerDelete: 'Slett',
+    exportAll: 'Eksporter alt',
+    exportEmpty: 'Ingen tilbakemeldinger å eksportere ennå.',
+    exportHeading: (date: string) => `UnFocus tilbakemelding — ${date}`,
+    exportBubbleLine: (size: number, spacing: number, spring: number, speed: number) =>
+      `Boblehjul: størrelse=${size} avstand=${spacing} fjærkraft=${spring} fart=${speed}`,
+    bubbleSize: 'Boblestørrelse',
+    bubbleSpacing: 'Avstand',
+    bubbleSpringIntensity: 'Fjærkraft',
+    bubbleAnimSpeed: 'Animasjonsfart',
+    resetDefaults: 'Tilbakestill til standard',
   },
 };
 

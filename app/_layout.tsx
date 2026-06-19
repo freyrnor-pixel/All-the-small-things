@@ -4,20 +4,22 @@
  * Mounts on launch: loads the rounded Nunito font (gating render until ready and
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
- * habits, catalog, automations). After requesting notification permission it re-syncs
- * all reminders/notifications to the loaded data and language, and keeps the persistent
- * "today's overview" notification (if enabled) refreshed as tasks/shopping change.
+ * habits, catalog, automations, feedback). After requesting notification permission it
+ * re-syncs all reminders/notifications to the loaded data and language, and keeps the
+ * persistent "today's overview" notification (if enabled) refreshed as tasks/shopping change.
  * Defines the expo-router Stack and per-screen options, redirects to onboarding
- * until setup is complete, and wraps the tree in an ErrorBoundary.
+ * until setup is complete, mounts the global DebugOverlay when debug mode is on, and
+ * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
  *
  * Edit notes:
  *   - task-form, habit-form and share-modal are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
+ *   - DebugOverlay is gated on `loaded && debugModeEnabled` so it never flashes before settings load and is fully absent for users who haven't enabled it in Settings.
  *   - segments are read inside the onboarding-guard effect but intentionally kept out of its deps — do not add them.
  *   - OTA updates do not auto-apply or pop up a dismissible Alert: a fetched update sets
  *     useUpdateStore's updateReady flag, and app/index.tsx shows a persistent "Restart"
@@ -64,7 +66,9 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
+import { useFeedbackStore } from '@/store/useFeedbackStore';
 import { Colors, Fonts } from '@/constants/theme';
+import DebugOverlay from '@/components/DebugOverlay';
 
 /**
  * Apply the rounded Nunito family as the app-wide default for <Text>/<TextInput>
@@ -129,7 +133,9 @@ export default function RootLayout() {
   const loadHabits = useHabitStore((s) => s.load);
   const loadCatalog = useCatalogStore((s) => s.load);
   const loadAutomations = useAutomationStore((s) => s.load);
+  const loadFeedback = useFeedbackStore((s) => s.load);
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
+  const debugModeEnabled = useSettingsStore((s) => s.debugModeEnabled);
   const language = useSettingsStore((s) => s.language);
   const tasks = useTaskStore((s) => s.tasks);
   const theme = useAppTheme();
@@ -146,6 +152,7 @@ export default function RootLayout() {
     loadHabits();
     loadCatalog();
     loadAutomations();
+    loadFeedback();
 
     // Notifications: ask once, then bring all scheduled reminders in line with
     // the loaded settings, tasks and habits (and the user's chosen language).
@@ -249,6 +256,7 @@ export default function RootLayout() {
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
       </Stack>
+      {loaded && debugModeEnabled && <DebugOverlay />}
     </GestureHandlerRootView>
     </ErrorBoundary>
   );
