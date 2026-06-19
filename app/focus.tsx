@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
@@ -133,7 +134,7 @@ export default function FocusScreen() {
           </View>
         ) : (
           <View style={[styles.allDoneCard, { backgroundColor: theme.greenLight }]}>
-            <Text style={styles.allDoneEmoji}>🌿</Text>
+            <Ionicons name="checkmark-circle-outline" size={56} color={theme.green} />
             <Text style={[styles.allDoneTitle, { color: theme.text }]}>
               {t.focusView.allDone}
             </Text>
@@ -219,9 +220,6 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  allDoneEmoji: {
-    fontSize: 64,
   },
   allDoneTitle: {
     fontSize: FontSize.xxl,

@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -50,7 +51,9 @@ export default function OnboardingStep2() {
           showsVerticalScrollIndicator={false}
         >
         <View style={styles.top}>
-          <Text style={styles.emoji}>💼</Text>
+          <View style={[styles.iconBadge, { backgroundColor: theme.orangeLight }]}>
+            <Ionicons name="briefcase-outline" size={36} color={theme.orange} />
+          </View>
           <Text style={styles.heading}>{t.workModeOnboarding}</Text>
           <Text style={styles.sub}>{t.workModeOnboardingSub}</Text>
         </View>
@@ -144,7 +147,7 @@ const styles = StyleSheet.create({
   skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
+  iconBadge: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },

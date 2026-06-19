@@ -51,7 +51,7 @@ import { useAppTheme } from '@/lib/useAppTheme';
 import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
 import TimePickerWheel from '@/components/TimePickerWheel';
-import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
@@ -202,7 +202,6 @@ export default function SettingsScreen() {
           <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.themeGrid}>
               {(Object.keys(THEMES) as ThemeName[]).map((key) => {
-                const meta = THEME_META[key];
                 const th = THEMES[key];
                 const isActive = settings.colorTheme === key;
                 const primaryColor = key === 'custom' ? settings.customPrimaryColor : th.orange;
@@ -225,7 +224,6 @@ export default function SettingsScreen() {
                       <View style={[styles.swatch, { backgroundColor: primaryColor }]} />
                       <View style={[styles.swatch, { backgroundColor: secondaryColor }]} />
                     </View>
-                    <Text style={styles.themeEmoji}>{meta.emoji}</Text>
                     <Text style={[
                       styles.themeLabel,
                       { color: theme.textLight },
@@ -283,7 +281,6 @@ export default function SettingsScreen() {
           <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.themeGrid}>
               {(Object.keys(MATERIAL_META) as MaterialName[]).map((key) => {
-                const meta = MATERIAL_META[key];
                 const isActive = settings.bubbleMaterial === key;
                 const preview = getMaterialStyle(theme.orange, key);
                 return (
@@ -308,7 +305,6 @@ export default function SettingsScreen() {
                         },
                       ]}
                     />
-                    <Text style={styles.themeEmoji}>{meta.emoji}</Text>
                     <Text style={[
                       styles.themeLabel,
                       { color: theme.textLight },
@@ -827,7 +823,6 @@ const styles = StyleSheet.create({
   themeOption: { width: '30%', flexGrow: 1, borderRadius: Radius.md, borderWidth: 2, padding: Spacing.sm, alignItems: 'center', gap: 4 },
   themeSwatches: { flexDirection: 'row', gap: 3 },
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
-  themeEmoji: { fontSize: 20 },
   themeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
   materialSwatch: { width: 36, height: 36, borderRadius: Radius.full, marginBottom: 2 },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },

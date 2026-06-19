@@ -50,7 +50,9 @@ export default function LanguageScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🌐</Text>
+          <View style={styles.iconBadge}>
+            <Ionicons name="globe-outline" size={36} color={Colors.orange} />
+          </View>
           <Text style={styles.heading}>{t.chooseLanguage}</Text>
           <Text style={styles.sub}>{t.chooseLanguageSub}</Text>
         </View>
@@ -90,7 +92,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
+  iconBadge: {
+    width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.offWhite,
+  },
   heading: {
     fontSize: FontSize.xxl,
     fontWeight: '700',

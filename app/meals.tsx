@@ -46,12 +46,12 @@ import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 
-const MEAL_TYPES: { value: MealType; icon: string; color: string }[] = [
-  { value: 'breakfast', icon: '🌅', color: '#F6C344' },
-  { value: 'lunch', icon: '🥙', color: '#6BAA75' },
-  { value: 'dinner', icon: '🍽', color: '#F4A261' },
-  { value: 'snack', icon: '🍎', color: '#7BC8A4' },
-  { value: 'kveldsmat', icon: '🌙', color: '#9B8EC4' },
+const MEAL_TYPES: { value: MealType; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { value: 'breakfast', icon: 'sunny-outline', color: '#F6C344' },
+  { value: 'lunch', icon: 'fast-food-outline', color: '#6BAA75' },
+  { value: 'dinner', icon: 'restaurant-outline', color: '#F4A261' },
+  { value: 'snack', icon: 'nutrition-outline', color: '#7BC8A4' },
+  { value: 'kveldsmat', icon: 'moon-outline', color: '#9B8EC4' },
 ];
 
 type DraftIngredient = { name: string; amount: string; unit: string };
@@ -178,7 +178,7 @@ export default function MealsScreen() {
           {activeCategory ? mealLabel(activeCategory) : t.mealsTitle}
         </Text>
         <Pressable style={[styles.randomBtn, { backgroundColor: theme.white, ...Shadow.card }]} onPress={() => pickRandom(activeCategory ?? undefined)}>
-          <Text style={styles.randomBtnText}>🎲</Text>
+          <Ionicons name="shuffle" size={18} color={theme.orange} />
         </Pressable>
       </View>
 
@@ -192,7 +192,7 @@ export default function MealsScreen() {
             onPress={() => pickRandom()}
             scaleTo={0.96}
           >
-            <Text style={styles.surpriseIcon}>🎲</Text>
+            <Ionicons name="shuffle" size={26} color="#FFFFFF" style={styles.surpriseIconView} />
             <Text style={styles.surpriseTitle}>{t.surpriseMe}</Text>
             <Text style={styles.surpriseSub}>{t.pickRandomDishSub}</Text>
           </PressableScale>
@@ -206,7 +206,7 @@ export default function MealsScreen() {
                   style={[styles.tile, { backgroundColor: mt.color }]}
                   onPress={() => setActiveCategory(mt.value)}
                 >
-                  <Text style={styles.tileIcon}>{mt.icon}</Text>
+                  <Ionicons name={mt.icon} size={28} color="#FFFFFF" style={styles.tileIconView} />
                   <Text style={styles.tileLabel}>{mealLabel(mt.value)}</Text>
                   <Text style={styles.tileCount}>{count} {t.ingredientsCount(count).replace(/\d+\s*/, '')}</Text>
                 </Pressable>
@@ -222,7 +222,9 @@ export default function MealsScreen() {
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {categoryDishes.length === 0 && (
               <View style={[styles.emptyState, { backgroundColor: theme.white }]}>
-                <Text style={styles.emptyEmoji}>{activeMeta?.icon}</Text>
+                {activeMeta && (
+                  <Ionicons name={activeMeta.icon} size={40} color={activeMeta.color} style={styles.emptyEmoji} />
+                )}
                 <Text style={[styles.emptyTitle, { color: theme.text }]}>{t.noDishesTitle}</Text>
                 <Text style={[styles.emptyBody, { color: theme.textLight }]}>
                   {t.noDishesBody(mealLabel(activeCategory).toLowerCase())}
@@ -247,7 +249,7 @@ export default function MealsScreen() {
                     style={[styles.shoppingBtn, { backgroundColor: theme.grayLight }]}
                     hitSlop={8}
                   >
-                    <Text style={styles.shoppingBtnText}>🛒</Text>
+                    <Ionicons name="cart-outline" size={16} color={theme.text} />
                   </Pressable>
                 }
               >
@@ -302,7 +304,12 @@ export default function MealsScreen() {
                   style={[styles.typePill, { backgroundColor: dishType === mt.value ? mt.color : theme.grayLight }]}
                   onPress={() => setDishType(mt.value)}
                 >
-                  <Text style={styles.typePillIcon}>{mt.icon}</Text>
+                  <Ionicons
+                    name={mt.icon}
+                    size={16}
+                    color={dishType === mt.value ? '#fff' : theme.text}
+                    style={styles.typePillIconView}
+                  />
                   <Text style={[styles.typePillLabel, { color: dishType === mt.value ? '#fff' : theme.text }]}>
                     {mealLabel(mt.value)}
                   </Text>
@@ -426,7 +433,6 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  randomBtnText: { fontSize: 20 },
   tileGrid: { padding: Spacing.md, gap: Spacing.md },
   tilesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   tile: {
@@ -437,7 +443,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     ...Shadow.card,
   },
-  tileIcon: { fontSize: 40 },
+  tileIconView: { marginBottom: 2 },
   tileLabel: { fontSize: FontSize.md, fontWeight: '700', color: '#fff' },
   tileCount: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.85)' },
   surpriseBtn: {
@@ -448,12 +454,11 @@ const styles = StyleSheet.create({
     gap: 2,
     ...Shadow.card,
   },
-  surpriseIcon: { fontSize: 40 },
+  surpriseIconView: { marginBottom: 2 },
   surpriseTitle: { color: '#fff', fontWeight: '700', fontSize: FontSize.xl, marginTop: 4 },
   surpriseSub: { color: 'rgba(255,255,255,0.9)', fontSize: FontSize.sm },
   content: { padding: Spacing.md, gap: Spacing.sm },
   shoppingBtn: { width: 28, height: 28, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
-  shoppingBtnText: { fontSize: 16 },
   ingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.xs },
   ingText: { fontSize: FontSize.sm, fontWeight: '500' },
   removeText: { fontSize: 18 },
@@ -469,7 +474,7 @@ const styles = StyleSheet.create({
   },
   addTriggerText: { fontSize: FontSize.md, fontWeight: '600' },
   emptyState: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm, ...Shadow.card },
-  emptyEmoji: { fontSize: 36 },
+  emptyEmoji: { marginBottom: 2 },
   emptyTitle: { fontSize: FontSize.md, fontWeight: '600' },
   emptyBody: { fontSize: FontSize.sm, textAlign: 'center' },
 
@@ -489,7 +494,7 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: FontSize.lg, fontWeight: '700' },
   typeRow: { flexDirection: 'row', gap: Spacing.xs },
   typePill: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center', gap: 2 },
-  typePillIcon: { fontSize: 16 },
+  typePillIconView: {},
   typePillLabel: { fontSize: FontSize.xs, fontWeight: '500' },
   nameInput: {
     borderWidth: 2, borderRadius: Radius.sm,

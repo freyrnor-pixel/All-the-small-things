@@ -301,7 +301,7 @@ export default function HomeScreen() {
                 onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
                 accessibilityLabel={t.shareBtnLabel}
               >
-                <Text style={styles.shareBtnIcon}>⤴</Text>
+                <Ionicons name="share-outline" size={14} color={theme.green} />
               </Pressable>
               <Pressable
                 style={[styles.addBtn, { backgroundColor: theme.orange }]}
@@ -484,7 +484,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   shareBtn: { borderRadius: Radius.full, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  shareBtnIcon: { fontSize: 14 },
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
