@@ -87,22 +87,22 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const FAB_MARGIN_SIDE = 44; // must match sideStyle left/right value below
+const FAB_MARGIN_SIDE = 54; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
 // Orbit radius = FAB center's distance from the screen edge. At angle 0 (RH) / π (LH)
 // this lands the edge item's center exactly on the screen boundary, so the OS compositor
 // clips it to a clean static half-circle instead of letting it hang fully past the edge —
 // which previously caused spring-oscillation flicker there. This value is load-bearing for
 // that fix — do not change it without re-deriving the edge math below.
-const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 74
+const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 84
 // RADIUS == RADIUS_X: the orbit is a true circle, not an ellipse, so bubble spacing is
 // uniform all the way around (a mismatched RADIUS previously made this a tall, pointy
 // ellipse instead of a round cluster).
-const RADIUS = RADIUS_X; // = 74
+const RADIUS = RADIUS_X; // = 84
 // Adjacent bubbles sit STEP_ANGLE (45°) apart on the circle, so every pair is the same
-// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 57px. BUBBLE_SIZE must stay under that or
+// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 64px. BUBBLE_SIZE must stay under that or
 // adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 44
-// (the platform touch-target minimum) clears it with ~13px to spare.
+// (the platform touch-target minimum) clears it with ~20px to spare.
 const BUBBLE_SIZE = 44;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
@@ -110,11 +110,14 @@ const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
 
 const DRAG_SENSITIVITY = 140; // px per radian — slightly higher for the clamped range
 
-// Window is π (180°) wide — 4 steps — so items exactly at winStart/winEnd land on the
-// WINDOW_FADE boundary and render at 50% opacity (half-visible "peek" bubbles), while the
-// 2 steps between them stay fully opaque: 3 full + 2 half-visible bubbles, as intended.
-// Right-handed: from −π (left) sweeping up to 0 (right).
+// Window is π (180°) wide — 4 steps. Opacity grades down with distance from the centered
+// focus item: 1.0 at center, OPACITY_NEAR for the immediate neighbor on each side,
+// OPACITY_FAR for the item at winStart/winEnd (the half-visible "peek" bubbles), then fades
+// to 0 over the WINDOW_FADE margin beyond that. Right-handed: from −π (left) sweeping up to
+// 0 (right).
 const WINDOW_FADE = STEP_ANGLE / 2; // ~22.5°
+const OPACITY_NEAR = 0.72;
+const OPACITY_FAR = 0.4;
 
 // Clamped rotation: stops one item short of each end (item 1 / item 6 reach the focus
 // slot, not item 0 / item 7) rather than the true edges. Centering a true edge item
@@ -127,6 +130,13 @@ const MAX_WHEEL_RH = -3 * Math.PI / 4;   // item 1 centered
 const MIN_WHEEL_LH = -Math.PI;           // item 6 centered
 const MAX_WHEEL_LH = Math.PI / 4;        // item 1 centered
 
+// Default rest pose, shifted one step off the symmetric center so the default focus item
+// sits at NW rather than dead-center N. Same raw delta for both handedness (not mirrored
+// in sign) — each window's own absolute angle range determines its own give before the
+// clamp, not the sign of the default value.
+const DEFAULT_WHEEL_RH = -Math.PI - STEP_ANGLE;
+const DEFAULT_WHEEL_LH = -STEP_ANGLE;
+
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
   // Single center-relative reference point — using winStart/winEnd as two independent
@@ -135,13 +145,16 @@ function windowOpacity(angle: number, winStart: number, winEnd: number): number 
   // dE-based 50%-opacity branch is reached.
   const twoPi = 2 * Math.PI;
   const wF = WINDOW_FADE;
+  const step = STEP_ANGLE;
   const halfWidth = (winEnd - winStart) / 2;
   const center = winStart + halfWidth;
   const rel = ((angle - center + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
-  if (rel < -(halfWidth + wF) || rel > halfWidth + wF) return 0;
-  if (rel < -(halfWidth - wF)) return (rel + halfWidth + wF) / (2 * wF);
-  if (rel > halfWidth - wF) return (halfWidth + wF - rel) / (2 * wF);
-  return 1;
+  const d = Math.abs(rel);
+  const outerEdge = halfWidth + wF;
+  if (d >= outerEdge) return 0;
+  if (d <= step) return 1 - (1 - OPACITY_NEAR) * (d / step);
+  if (d <= halfWidth) return OPACITY_NEAR - (OPACITY_NEAR - OPACITY_FAR) * ((d - step) / (halfWidth - step));
+  return OPACITY_FAR * (1 - (d - halfWidth) / wF);
 }
 
 // ─── Per-bubble sub-component ────────────────────────────────────────────────
@@ -215,12 +228,12 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const windowStart = leftHanded ? 0 : -Math.PI;
   const windowEnd   = leftHanded ? Math.PI : 0;
 
-  const wheelAngle   = useSharedValue(leftHanded ? 0 : -Math.PI);
+  const wheelAngle   = useSharedValue(leftHanded ? DEFAULT_WHEEL_LH : DEFAULT_WHEEL_RH);
   const openProgress = useSharedValue(0);
   const startAngle   = useSharedValue(0);
 
   useEffect(() => {
-    wheelAngle.value = leftHanded ? 0 : -Math.PI;
+    wheelAngle.value = leftHanded ? DEFAULT_WHEEL_LH : DEFAULT_WHEEL_RH;
   }, [leftHanded]);
 
   const router = useRouter();
@@ -238,11 +251,9 @@ export default function BubbleMenu({ onNewTask }: Props) {
     [onNewTask, t]
   );
 
-  // Near-critically-damped (ζ≈0.93) and slower than the old { damping: 20, stiffness: 400 }
-  // (ζ≈0.5, fast + bouncy). overshootClamping prevents mashing the FAB from stacking up
-  // extra bounce — it hard-disallows ever passing toValue, even if a retrigger inherits
-  // velocity from a still-settling prior spring.
-  const OPEN_SPRING = { damping: 22, stiffness: 140, overshootClamping: true };
+  // ζ≈0.71 — quicker pop-out with a touch of bounce, between the old too-springy
+  // { damping: 20, stiffness: 400 } (ζ≈0.5) and the too-stiff overshoot-clamped version.
+  const OPEN_SPRING = { damping: 20, stiffness: 200 };
 
   function toggle() {
     tap();
