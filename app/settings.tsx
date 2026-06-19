@@ -105,6 +105,17 @@ export default function SettingsScreen() {
     );
   }
 
+  function clearTestData() {
+    const taskStore = useTaskStore.getState();
+    const shoppingStore = useShoppingStore.getState();
+    const habitStore = useHabitStore.getState();
+
+    taskStore.clearAll();
+    shoppingStore.resetWeekly();
+    shoppingStore.resetMonthly();
+    habitStore.habits.forEach((h) => habitStore.remove(h.id));
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
@@ -213,18 +224,19 @@ export default function SettingsScreen() {
                     key={key}
                     style={[
                       styles.themeOption,
-                      { borderColor: isActive ? primaryColor : theme.grayLight },
-                      isActive && { borderWidth: 2.5 },
+                      { backgroundColor: theme.offWhite, borderColor: isActive ? primaryColor : theme.grayLight },
+                      isActive && { borderWidth: 3, ...Shadow.cardHeavy },
+                      !isActive && { borderWidth: 1 },
                     ]}
                     onPress={() => {
                       settings.update({ colorTheme: key });
                       if (key === 'gothic') settings.update({ darkMode: 'on' });
                     }}
                   >
-                    <View style={styles.themeSwatches}>
-                      <View style={[styles.swatch, { backgroundColor: th.cream }]} />
-                      <View style={[styles.swatch, { backgroundColor: primaryColor }]} />
-                      <View style={[styles.swatch, { backgroundColor: secondaryColor }]} />
+                    <View style={[styles.themeSwatches, { marginBottom: 8 }]}>
+                      <View style={[styles.swatch, styles.swatchLarge, { backgroundColor: th.cream }]} />
+                      <View style={[styles.swatch, styles.swatchLarge, { backgroundColor: primaryColor }]} />
+                      <View style={[styles.swatch, styles.swatchLarge, { backgroundColor: secondaryColor }]} />
                     </View>
                     <Text style={[
                       styles.themeLabel,
@@ -290,23 +302,36 @@ export default function SettingsScreen() {
                     key={key}
                     style={[
                       styles.themeOption,
-                      { borderColor: isActive ? theme.orange : theme.grayLight },
-                      isActive && { borderWidth: 2.5 },
+                      { backgroundColor: theme.offWhite, borderColor: isActive ? theme.orange : theme.grayLight },
+                      isActive && { borderWidth: 3, ...Shadow.cardHeavy },
+                      !isActive && { borderWidth: 1 },
                     ]}
                     onPress={() => settings.update({ bubbleMaterial: key })}
                   >
-                    <View
-                      style={[
-                        styles.materialSwatch,
-                        {
-                          backgroundColor: preview.backgroundColor,
-                          borderWidth: preview.borderWidth,
-                          borderColor: preview.borderColor,
-                          borderTopColor: preview.borderTopColor,
-                          borderBottomColor: preview.borderBottomColor,
-                        },
-                      ]}
-                    />
+                    <View style={styles.materialPreviewOuter}>
+                      <View
+                        style={[
+                          styles.materialSwatch,
+                          {
+                            backgroundColor: preview.backgroundColor,
+                            borderWidth: preview.borderWidth,
+                            borderColor: preview.borderColor,
+                            borderTopColor: preview.borderTopColor,
+                            borderBottomColor: preview.borderBottomColor,
+                            shadowOpacity: preview.shadowOpacity,
+                            shadowRadius: preview.shadowRadius,
+                            elevation: preview.elevation,
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.materialSheen,
+                            { backgroundColor: preview.sheenColor },
+                          ]}
+                        />
+                      </View>
+                    </View>
                     <Text style={[
                       styles.themeLabel,
                       { color: theme.textLight },
@@ -322,22 +347,29 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Dark mode (Appearance) — simple toggle: off=system, on=force dark */}
+        {/* Dark mode (Appearance) — three options: Light, Dark, Follow System */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionAppearance}</Text>
           <View style={[styles.card, { backgroundColor: theme.white }]}>
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1, marginRight: Spacing.md }}>
-                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.darkModeLabel}</Text>
-                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.config.desc.darkMode}</Text>
-              </View>
-              <Switch
-                value={settings.darkMode === 'on'}
-                onValueChange={(v) => settings.update({ darkMode: v ? 'on' : 'system' })}
-                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
-                thumbColor={settings.darkMode === 'on' ? theme.orange : theme.gray}
-              />
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+              {(['off', 'system', 'on'] as DarkMode[]).map((mode) => (
+                <Pressable
+                  key={mode}
+                  style={[styles.seg, settings.darkMode === mode && [styles.segActive, { backgroundColor: theme.white }]]}
+                  onPress={() => settings.update({ darkMode: mode })}
+                >
+                  <Text style={[
+                    styles.segText,
+                    { color: theme.textLight },
+                    settings.darkMode === mode && { color: theme.text, fontWeight: '600' },
+                  ]}>
+                    {mode === 'off' ? t.darkModeOff : mode === 'on' ? t.darkModeOn : t.darkModeSystem}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
+            <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.darkMode}</Text>
           </View>
         </View>
 
@@ -742,6 +774,17 @@ export default function SettingsScreen() {
             >
               <Text style={[styles.dangerBtnText, { color: theme.green }]}>{t.loadTestData}</Text>
             </Pressable>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <Text style={[styles.descText, { color: theme.textLight, marginBottom: Spacing.sm }]}>{t.removeTestDataDesc}</Text>
+            <Pressable
+              style={styles.dangerBtn}
+              onPress={() => confirmReset(t.removeTestData.toLowerCase(), () => {
+                clearTestData();
+                Alert.alert('', t.removeTestDataDone);
+              })}
+            >
+              <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.removeTestData}</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -822,11 +865,14 @@ const styles = StyleSheet.create({
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  themeOption: { width: '30%', flexGrow: 1, borderRadius: Radius.md, borderWidth: 2, padding: Spacing.sm, alignItems: 'center', gap: 4 },
-  themeSwatches: { flexDirection: 'row', gap: 3 },
+  themeOption: { width: '30%', flexGrow: 1, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', justifyContent: 'center' },
+  themeSwatches: { flexDirection: 'row', gap: 3, justifyContent: 'center' },
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
+  swatchLarge: { width: 18, height: 18 },
   themeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
-  materialSwatch: { width: 36, height: 36, borderRadius: Radius.full, marginBottom: 2 },
+  materialPreviewOuter: { alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
+  materialSwatch: { width: 48, height: 48, borderRadius: Radius.full, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 } },
+  materialSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderRadius: Radius.full },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
   colorSwatch: { width: 32, height: 32, borderRadius: Radius.sm, borderWidth: 2, borderColor: 'transparent' },
   colorSwatchActive: { borderColor: '#333', borderWidth: 3 },
