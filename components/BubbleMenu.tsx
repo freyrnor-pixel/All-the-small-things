@@ -1,11 +1,14 @@
 /**
  * BubbleMenu.tsx — spinning-wheel radial FAB for navigation.
  *
- * Floating action button that opens into a spinnable arc of bubbles. The arc
- * shows 3 full + 2 half-visible bubbles at any time (wider than the old 90°
- * window). Dragging the wheel rotates it through a clamped range (4 × 45° = π),
- * reaching all 8 items without a full 360° spin. Release snaps with a lottery-
- * wheel feel: a short ease-out coast before the spring settles.
+ * Floating action button that opens into a spinnable circle of bubbles. Shows
+ * 3 full + 2 half-visible bubbles at any time. Dragging the wheel rotates it
+ * through a clamped range (5 × 45° = 5π/4), stopping when the second-from-each-
+ * end item (index 1 or 6) reaches the centered "focus" slot — stopping at the
+ * true edge items (0/7) would leave a fully-empty bubble slot on their far
+ * side. Release snaps with a lottery-wheel feel: a short ease-out coast before
+ * the spring settles. Tapping anywhere outside the bubbles (including empty
+ * space inside the wheel's bounding square) closes the menu.
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/haptics, store/useSettingsStore
@@ -84,23 +87,23 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const RADIUS = 130;        // vertical arc radius (tall spread above FAB)
-const FAB_MARGIN_SIDE = 24; // must match sideStyle left/right value below
+const FAB_MARGIN_SIDE = 34; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
-// Horizontal arc radius = FAB center's distance from the screen edge. At angle 0 (RH) /
-// π (LH) this lands the edge item's center exactly on the screen boundary, so the OS
-// compositor clips it to a clean static half-circle instead of letting it hang fully
-// past the edge — which previously caused spring-oscillation flicker there. This value
-// is load-bearing for that fix — do not raise it without re-deriving the edge math.
-const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 54
-// Adjacent bubbles sit STEP_ANGLE (45°) apart on an ellipse, so their on-screen spacing
-// isn't uniform: it's widest near angle 0/π (governed by RADIUS) and narrowest near ±90°
-// (governed by RADIUS_X, which is pinned above). The tightest gap on the whole ellipse is
-// 2·RADIUS_X·sin(STEP_ANGLE/2) ≈ 41px — and every reachable rest position has some adjacent
-// pair landing at ±90°/±45°/±135°, ~54px apart. BUBBLE_SIZE must stay under that or those
-// two bubbles visibly overlap every time the menu is open, not just mid-drag. 52 clears the
-// at-rest case with a small gap; don't raise this back toward 56 without re-checking the math.
-const BUBBLE_SIZE = 52;
+// Orbit radius = FAB center's distance from the screen edge. At angle 0 (RH) / π (LH)
+// this lands the edge item's center exactly on the screen boundary, so the OS compositor
+// clips it to a clean static half-circle instead of letting it hang fully past the edge —
+// which previously caused spring-oscillation flicker there. This value is load-bearing for
+// that fix — do not change it without re-deriving the edge math below.
+const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 64
+// RADIUS == RADIUS_X: the orbit is a true circle, not an ellipse, so bubble spacing is
+// uniform all the way around (a mismatched RADIUS previously made this a tall, pointy
+// ellipse instead of a round cluster).
+const RADIUS = RADIUS_X; // = 64
+// Adjacent bubbles sit STEP_ANGLE (45°) apart on the circle, so every pair is the same
+// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 49px. BUBBLE_SIZE must stay under that or
+// adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 44
+// (the platform touch-target minimum) clears it with ~5px to spare.
+const BUBBLE_SIZE = 44;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
@@ -113,12 +116,16 @@ const DRAG_SENSITIVITY = 140; // px per radian — slightly higher for the clamp
 // Right-handed: from −π (left) sweeping up to 0 (right).
 const WINDOW_FADE = STEP_ANGLE / 2; // ~22.5°
 
-// Clamped rotation: 4 × STEP_ANGLE = π (180°) total travel, enough to reach all 8 items.
+// Clamped rotation: stops one item short of each end (item 1 / item 6 reach the focus
+// slot, not item 0 / item 7) rather than the true edges. Centering a true edge item
+// leaves a fully-empty adjacent slot on its far side (there's no item -1 or item 8) —
+// stopping one item short still leaves one empty half-visible peek slot at each extreme,
+// but not an empty full-opacity slot too. That's 5 × STEP_ANGLE = 5π/4 of total travel.
 // Right-handed clamps wheelAngle in [MIN_WHEEL, MAX_WHEEL].
-const MIN_WHEEL_RH = -2 * Math.PI;
-const MAX_WHEEL_RH = -Math.PI;
-const MIN_WHEEL_LH = 0;
-const MAX_WHEEL_LH = Math.PI;
+const MIN_WHEEL_RH = -2 * Math.PI;       // item 6 centered
+const MAX_WHEEL_RH = -3 * Math.PI / 4;   // item 1 centered
+const MIN_WHEEL_LH = -Math.PI;           // item 6 centered
+const MAX_WHEEL_LH = Math.PI / 4;        // item 1 centered
 
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
@@ -231,17 +238,22 @@ export default function BubbleMenu({ onNewTask }: Props) {
     [onNewTask, t]
   );
 
+  // Near-critically-damped (ζ≈0.93) and slower than the old { damping: 20, stiffness: 400 }
+  // (ζ≈0.5, fast + bouncy). overshootClamping prevents mashing the FAB from stacking up
+  // extra bounce — it hard-disallows ever passing toValue, even if a retrigger inherits
+  // velocity from a still-settling prior spring.
+  const OPEN_SPRING = { damping: 22, stiffness: 140, overshootClamping: true };
+
   function toggle() {
     tap();
     const toValue = open ? 0 : 1;
-    // Snappy open/close
-    openProgress.value = withSpring(toValue, { damping: 20, stiffness: 400 });
+    openProgress.value = withSpring(toValue, OPEN_SPRING);
     setOpen((v) => !v);
   }
 
   function navigate(item: BubbleEntry) {
     tap();
-    openProgress.value = withSpring(0, { damping: 20, stiffness: 400 });
+    openProgress.value = withSpring(0, OPEN_SPRING);
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
     setTimeout(action, 130);
@@ -292,7 +304,17 @@ export default function BubbleMenu({ onNewTask }: Props) {
       );
     });
 
-  const sideStyle = leftHanded ? { left: 24 } : { right: 24 };
+  // wheelArea spans the full orbit's bounding square — bigger than the visible bubbles —
+  // so a tap landing in the empty space between/around bubbles needs its own handler;
+  // it would otherwise be swallowed by this view instead of reaching the close Pressable
+  // behind it. Raced against spinGesture so a drag still spins instead of closing. Taps
+  // that land directly on a bubble are claimed by that bubble's own nested Pressable first.
+  const closeTapGesture = Gesture.Tap().onEnd(() => {
+    if (open) runOnJS(toggle)();
+  });
+  const wheelGesture = Gesture.Race(spinGesture, closeTapGesture);
+
+  const sideStyle = leftHanded ? { left: FAB_MARGIN_SIDE } : { right: FAB_MARGIN_SIDE };
   const fabIconColor = contrastOn(theme.orange);
   // fabIconColor is deliberately derived from theme.orange (the semantic accent), not
   // fabMaterial.backgroundColor — materials only shade/tint that accent, never invert it,
@@ -303,7 +325,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
     <View style={[styles.container, sideStyle]} pointerEvents="box-none">
       {open && <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />}
 
-      <GestureDetector gesture={spinGesture}>
+      <GestureDetector gesture={wheelGesture}>
         <View style={styles.wheelArea} pointerEvents={open ? 'auto' : 'none'}>
           {items.map((item, i) => (
             <BubbleItemView
