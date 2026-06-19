@@ -245,12 +245,12 @@ export const THEMES: Record<ThemeName, AppColors> = {
   },
 };
 
-export const THEME_META: Record<ThemeName, { label: string; emoji: string }> = {
-  default: { label: 'Default', emoji: '🔵' },
-  tech: { label: 'Tech', emoji: '💻' },
-  gothic: { label: 'Gothic', emoji: '🌑' },
-  nature: { label: 'Nature', emoji: '🌿' },
-  custom: { label: 'Custom', emoji: '🎨' },
+export const THEME_META: Record<ThemeName, { label: string }> = {
+  default: { label: 'Default' },
+  tech: { label: 'Tech' },
+  gothic: { label: 'Gothic' },
+  nature: { label: 'Nature' },
+  custom: { label: 'Custom' },
 };
 
 // ─── Dark themes ─────────────────────────────────────────────────────────────
@@ -509,11 +509,11 @@ export const CUSTOM_COLOR_PRESETS = [
 
 export type MaterialName = 'glass' | 'metal' | 'rock' | 'paper';
 
-export const MATERIAL_META: Record<MaterialName, { label: string; emoji: string }> = {
-  glass: { label: 'Glass', emoji: '🧊' },
-  metal: { label: 'Metal', emoji: '⚙️' },
-  rock: { label: 'Rock', emoji: '🪨' },
-  paper: { label: 'Paper', emoji: '📄' },
+export const MATERIAL_META: Record<MaterialName, { label: string }> = {
+  glass: { label: 'Glass' },
+  metal: { label: 'Metal' },
+  rock: { label: 'Rock' },
+  paper: { label: 'Paper' },
 };
 
 export type MaterialStyle = {

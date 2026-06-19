@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/HintCard, components/CompletionGlow, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HintCard, components/CompletionGlow, components/HabitIcon, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -39,6 +39,8 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import CompletionGlow from '@/components/CompletionGlow';
+import HabitIcon from '@/components/HabitIcon';
+import { Ionicons } from '@expo/vector-icons';
 import { success } from '@/lib/haptics';
 import { todayStr, dateStr } from '@/lib/date';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
@@ -269,9 +271,11 @@ function HabitCard({
 
         {/* Header row */}
         <View style={styles.cardHeader}>
-          <Animated.Text style={[styles.habitIcon, { transform: [{ scale: pulseAnim }] }]}>
-            {isDone ? '✓' : habit.icon}
-          </Animated.Text>
+          <Animated.View style={[styles.habitIcon, { transform: [{ scale: pulseAnim }] }]}>
+            {isDone
+              ? <Ionicons name="checkmark" size={22} color={accent} />
+              : <HabitIcon icon={habit.icon} size={22} color={accent} />}
+          </Animated.View>
           <View style={styles.habitTitleWrap}>
             <Text style={[styles.habitTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
             {/* Streak stays prominent (the dopamine hook); when done, a "done today" pill joins it. */}
@@ -370,7 +374,8 @@ function WeekView({
       {habits.map((habit) => (
         <View key={habit.id} style={styles.weekGridRow}>
           <View style={styles.weekGridLabel}>
-            <Text style={styles.weekGridIcon}>{habit.icon}</Text>
+            <HabitIcon icon={habit.icon} size={16} color={theme.textLight} />
+
             <Text style={[styles.weekGridTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
           </View>
           {weekDates.map((date) => {
@@ -445,7 +450,8 @@ function MonthView({
       {habits.map((habit) => (
         <View key={habit.id} style={[styles.monthRow, { borderBottomColor: theme.grayLight }]}>
           <View style={styles.monthRowLabel}>
-            <Text style={styles.monthRowIcon}>{habit.icon}</Text>
+            <HabitIcon icon={habit.icon} size={14} color={theme.textLight} />
+
             <Text style={[styles.monthRowTitle, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -771,7 +777,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  habitIcon: { fontSize: 22, lineHeight: 26 },
+  habitIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
   habitTitleWrap: { flex: 1 },
   habitTitle: { fontSize: FontSize.md, fontWeight: '600' },
   doneLabel: { fontSize: FontSize.xs, fontWeight: '600', marginTop: 1 },
@@ -843,7 +849,6 @@ const styles = StyleSheet.create({
   weekGridLabel: {
     width: 110, flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: Spacing.xs,
   },
-  weekGridIcon: { fontSize: 16 },
   weekGridTitle: { flex: 1, fontSize: FontSize.xs, fontWeight: '500' },
   weekGridCell: { flex: 1, alignItems: 'center', gap: 2 },
   weekGridDayAbbr: { fontSize: 9 },
@@ -867,7 +872,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   monthRowLabel: { width: 90, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  monthRowIcon: { fontSize: 14 },
   monthRowTitle: { flex: 1, fontSize: FontSize.xs, fontWeight: '500' },
   monthDots: { flexDirection: 'row', gap: 3, paddingHorizontal: Spacing.xs },
   monthDotWrap: { alignItems: 'center', gap: 2 },

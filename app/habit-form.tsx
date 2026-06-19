@@ -7,7 +7,7 @@
  * delete); a `kind` param pre-seeds build vs. break for new habits.
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HabitIcon, constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder
  *
@@ -42,12 +42,9 @@ import { useT } from '@/lib/i18n';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
+import HabitIcon, { HABIT_ICON_NAMES } from '@/components/HabitIcon';
 
-const HABIT_ICONS = [
-  '💧','🏃','📚','🧘','🥗','💊','😴','🏋️','🧹','🌿',
-  '☕','📵','🚭','🍺','🎮','⭐','💪','🎯','🌅','🍎',
-  '🦷','✍️','🧠','🫁','🫀','🌊','🔥','🎵','🧩','💤',
-];
+const HABIT_ICONS = HABIT_ICON_NAMES;
 
 type FormState = {
   title: string;
@@ -83,7 +80,7 @@ export default function HabitForm() {
 
   const [form, setForm] = useState<FormState>({
     title: existing?.title ?? '',
-    icon: existing?.icon ?? '⭐',
+    icon: existing?.icon ?? 'star-outline',
     kind: existing?.kind ?? (params.kind === 'break' ? 'break' : 'build'),
     category: existing?.category ?? 'other',
     cue: existing?.cue ?? '',
@@ -297,7 +294,11 @@ export default function HabitForm() {
                         ]}
                         onPress={() => patch('icon', icon)}
                       >
-                        <Text style={styles.iconEmoji}>{icon}</Text>
+                        <HabitIcon
+                          icon={icon}
+                          size={22}
+                          color={form.icon === icon ? theme.white : theme.text}
+                        />
                       </Pressable>
                     ))}
                   </View>
@@ -412,7 +413,6 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center',
   },
-  iconEmoji: { fontSize: 20 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   chip: {
     paddingHorizontal: Spacing.sm, paddingVertical: 5, borderRadius: Radius.full,

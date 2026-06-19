@@ -26,12 +26,13 @@ import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_META, ThemeName } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, ThemeName } from '@/constants/theme';
 
 export default function OnboardingStep5() {
   const router = useRouter();
@@ -56,14 +57,15 @@ export default function OnboardingStep5() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🎨</Text>
+          <View style={styles.iconBadge}>
+            <Ionicons name="color-palette-outline" size={36} color={Colors.orange} />
+          </View>
           <Text style={styles.heading}>{t.themeOnboarding}</Text>
           <Text style={styles.sub}>{t.themeSub}</Text>
         </View>
 
         <View style={styles.themeGrid}>
           {(Object.keys(THEMES) as ThemeName[]).map((key) => {
-            const meta = THEME_META[key];
             const th = THEMES[key];
             const isActive = settings.colorTheme === key;
             return (
@@ -81,11 +83,10 @@ export default function OnboardingStep5() {
                   <View style={[styles.swatch, { backgroundColor: th.green }]} />
                   <View style={[styles.swatch, { backgroundColor: th.brown }]} />
                 </View>
-                <Text style={styles.themeEmoji}>{meta.emoji}</Text>
                 <Text style={[styles.themeLabel, { color: th.text }]}>{t.themeNames[key]}</Text>
                 {isActive && (
                   <View style={[styles.checkmark, { backgroundColor: th.orange }]}>
-                    <Text style={styles.checkmarkText}>✓</Text>
+                    <Ionicons name="checkmark" size={12} color={Colors.white} />
                   </View>
                 )}
               </Pressable>
@@ -134,7 +135,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: { flex: 1, padding: Spacing.xl, gap: Spacing.xl, justifyContent: 'center' },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
+  iconBadge: {
+    width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.offWhite,
+  },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
@@ -151,7 +155,6 @@ const styles = StyleSheet.create({
   themeCardActive: { borderWidth: 2 },
   swatchRow: { flexDirection: 'row', gap: Spacing.sm },
   swatch: { width: 20, height: 20, borderRadius: Radius.full },
-  themeEmoji: { fontSize: 28 },
   themeLabel: { fontSize: FontSize.md, fontWeight: '600' },
   checkmark: {
     position: 'absolute',
@@ -161,7 +164,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkmarkText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
   handednessCard: {
     backgroundColor: Colors.white,
     borderRadius: Radius.md,

@@ -19,6 +19,7 @@ import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAutomationStore, AutomationRule, TriggerType, ActionType } from '@/store/useAutomationStore';
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
@@ -72,7 +73,7 @@ function RuleCard({ rule, onToggle, onDelete }: {
         thumbColor={rule.active ? theme.orange : theme.gray}
       />
       <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
-        <Text style={[styles.deleteBtnText, { color: theme.textLight }]}>✕</Text>
+        <Ionicons name="close" size={18} color={theme.textLight} />
       </Pressable>
     </View>
   );
@@ -249,7 +250,6 @@ const styles = StyleSheet.create({
   ruleSummary: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   ruleDetail: { fontSize: FontSize.xs, marginTop: 2 },
   deleteBtn: { padding: Spacing.xs },
-  deleteBtnText: { fontSize: FontSize.md },
 
   formCard: {
     borderRadius: Radius.md,

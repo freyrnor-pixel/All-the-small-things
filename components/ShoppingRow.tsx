@@ -18,6 +18,7 @@
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 
@@ -57,7 +58,7 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
         onPress={onToggle}
         hitSlop={6}
       >
-        {item.checked && <Text style={styles.checkMark}>✓</Text>}
+        {item.checked && <Ionicons name="checkmark" size={14} color={theme.white} />}
       </Pressable>
 
       <View style={styles.content}>
@@ -126,7 +127,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkMark: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   content: { flex: 1, minWidth: 0 },
   name: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },

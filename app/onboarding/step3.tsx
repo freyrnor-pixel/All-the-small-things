@@ -19,9 +19,10 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 export default function OnboardingStep3() {
   const router = useRouter();
@@ -40,7 +41,9 @@ export default function OnboardingStep3() {
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
-          <Text style={styles.emoji}>🛒</Text>
+          <View style={styles.iconBadge}>
+            <Ionicons name="cart-outline" size={36} color={FeatureColors.shop} />
+          </View>
           <Text style={styles.heading}>{t.shoppingOnboarding}</Text>
           <Text style={styles.sub}>{t.shoppingOnboardingSub}</Text>
         </View>
@@ -106,7 +109,10 @@ const styles = StyleSheet.create({
   skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  emoji: { fontSize: 64 },
+  iconBadge: {
+    width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.offWhite,
+  },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
   card: {
