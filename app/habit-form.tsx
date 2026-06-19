@@ -7,7 +7,7 @@
  * delete); a `kind` param pre-seeds build vs. break for new habits.
  *
  * Connections:
- *   Imports → components/HabitIcon, constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HabitIcon, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder; scaled fontSize via useScaledStyles()
  *
@@ -43,6 +43,8 @@ import TimePickerWheel from '@/components/TimePickerWheel';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HabitIcon, { HABIT_ICON_NAMES } from '@/components/HabitIcon';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 
 const HABIT_ICONS = HABIT_ICON_NAMES;
 
@@ -143,7 +145,8 @@ export default function HabitForm() {
   const categoryKeys = ['physical', 'mental', 'health', 'nutrition', 'sleep', 'work', 'wellbeing', 'other'] as HabitCategory[];
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={[styles.header, { borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.cancel, { color: theme.orange }]}>{t.cancel}</Text>
@@ -250,7 +253,7 @@ export default function HabitForm() {
           )}
 
           {/* Notification */}
-          <View style={[styles.notifRow, { backgroundColor: theme.white }]}>
+          <Surface style={styles.notifRow}>
             <Text style={[styles.notifLabel, { color: theme.text }]}>{t.habitNotification}</Text>
             <Switch
               value={form.notificationEnabled}
@@ -258,7 +261,7 @@ export default function HabitForm() {
               trackColor={{ false: Colors.grayLight, true: Colors.orange }}
               thumbColor={Colors.white}
             />
-          </View>
+          </Surface>
           {form.notificationEnabled && (
             <TimePickerWheel
               value={form.notificationTime}

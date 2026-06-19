@@ -6,7 +6,7 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/HintCard, components/PressableScale, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table); scaled fontSize via useScaledStyles()
  *
@@ -35,6 +35,8 @@ import { useHealthStore } from '@/store/useHealthStore';
 import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
@@ -105,7 +107,8 @@ export default function HealthScreen() {
     .slice(0, 5);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
@@ -124,7 +127,7 @@ export default function HealthScreen() {
         <HintCard text={t.hints.health.text} example={t.hints.health.example} />
         {/* Overview */}
         {topAilments.length > 0 && (
-          <View style={[styles.overviewCard, { backgroundColor: theme.white }]}>
+          <Surface style={styles.overviewCard}>
             <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.last30Days}</Text>
             {topAilments.map(([name, count]) => {
               const weekSeverities = weekDates.map((d) => {
@@ -170,12 +173,12 @@ export default function HealthScreen() {
                 </View>
               );
             })}
-          </View>
+          </Surface>
         )}
 
         {/* Add form */}
         {adding ? (
-          <View style={[styles.addCard, { backgroundColor: theme.white }]}>
+          <Surface style={styles.addCard}>
             <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.dateLabel}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
@@ -234,7 +237,7 @@ export default function HealthScreen() {
                 <Text style={styles.saveBtnText}>{t.save}</Text>
               </Pressable>
             </View>
-          </View>
+          </Surface>
         ) : (
           <Pressable style={[styles.addTrigger, { borderColor: theme.green }]} onPress={() => setAdding(true)}>
             <Text style={[styles.addTriggerText, { color: theme.green }]}>{t.logSymptomTrigger}</Text>
@@ -247,9 +250,9 @@ export default function HealthScreen() {
         {/* Log list */}
         <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
         {logs.length === 0 && (
-          <View style={[styles.emptyCard, { backgroundColor: theme.offWhite }]}>
+          <Surface tint={theme.offWhite} style={styles.emptyCard}>
             <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noLogsGentle}</Text>
-          </View>
+          </Surface>
         )}
         {logs.map((log) => {
           const sev = SEVERITIES.find((s) => s.value === log.severity);

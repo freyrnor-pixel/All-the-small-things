@@ -7,7 +7,7 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/HintCard, constants/theme, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, lib/useAppTheme, store/useAutomationStore
  *   Used by → Expo Router route "/automations", reached via a nav row in app/settings.tsx
  *   Data    → useAutomationStore (ifttt_rules table)
  *
@@ -22,6 +22,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAutomationStore, AutomationRule, TriggerType, ActionType } from '@/store/useAutomationStore';
 import HintCard from '@/components/HintCard';
+import Surface from '@/components/Surface';
+import ScreenBackground from '@/components/ScreenBackground';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -98,7 +100,7 @@ function NewRuleForm({ onSave, onCancel }: { onSave: (triggerType: TriggerType, 
   }
 
   return (
-    <View style={[styles.formCard, { backgroundColor: theme.white, ...Shadow.card }]}>
+    <Surface style={styles.formCard}>
       <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.automations.whenLabel}</Text>
       <View style={styles.chipRow}>
         {(['task_completed', 'shopping_opened'] as TriggerType[]).map((type) => (
@@ -169,7 +171,7 @@ function NewRuleForm({ onSave, onCancel }: { onSave: (triggerType: TriggerType, 
           </Text>
         </Pressable>
       </View>
-    </View>
+    </Surface>
   );
 }
 
@@ -190,7 +192,8 @@ export default function AutomationsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]}>
+    <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
