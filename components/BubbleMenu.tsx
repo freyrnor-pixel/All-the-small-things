@@ -87,23 +87,23 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const FAB_MARGIN_SIDE = 64; // must match sideStyle left/right value below
+const FAB_MARGIN_SIDE = 48; // must match sideStyle left/right value below — kept equal to styles.container's bottom (48) so the FAB sits the same distance from the bottom edge as the side edge
 const FAB_SIZE = 60;
 // Orbit radius = FAB center's distance from the screen edge. At angle 0 (RH) / π (LH)
 // this used to land the edge item's center exactly on the screen boundary for a clean
 // compositor clip. That slot is now outside the visible window (focus moved to NW/NE,
 // see windowStart/windowEnd below), so the edge-clip behavior no longer applies there —
 // this formula is kept anyway since it still gives a sensible, edge-anchored orbit size.
-const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 94
+const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 78
 // RADIUS == RADIUS_X: the orbit is a true circle, not an ellipse, so bubble spacing is
 // uniform all the way around (a mismatched RADIUS previously made this a tall, pointy
 // ellipse instead of a round cluster).
-const RADIUS = RADIUS_X; // = 94
+const RADIUS = RADIUS_X; // = 78
 // Adjacent bubbles sit STEP_ANGLE (45°) apart on the circle, so every pair is the same
-// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 64px. BUBBLE_SIZE must stay under that or
-// adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 44
-// (the platform touch-target minimum) clears it with ~20px to spare.
-const BUBBLE_SIZE = 44;
+// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 59.7px. BUBBLE_SIZE must stay under that or
+// adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 50
+// clears it with ~9.7px to spare.
+const BUBBLE_SIZE = 50;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
@@ -139,17 +139,18 @@ const DEFAULT_WHEEL_LH = -3 * Math.PI / 4;
 
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
-  // Single center-relative reference point — using winStart/winEnd as two independent
-  // wraparound references breaks at exactly winEnd when the window is a full π wide:
-  // that point is antipodal to winStart, so the dS-based early-exit fires before the
-  // dE-based 50%-opacity branch is reached.
-  const twoPi = 2 * Math.PI;
+  // No modulo/wraparound here on purpose: wheelAngle is hard-clamped (MIN_WHEEL_*/MAX_WHEEL_*)
+  // so the wheel never spins freely past item 0/7 — it's a bounded arc, not a closed circle.
+  // baseAngle + wheelAngle is therefore already a well-defined, unwrapped real number, and a
+  // plain difference from the window center gives the true geometric distance. Wrapping it
+  // modulo 2π previously made item 0 and item 7 (opposite ends of the list) alias into each
+  // other's peek slot whenever item 1 or item 6 was centered, since -405° and -45° collapse
+  // to the same point mod 360° even though the wheel can never actually reach that state.
   const wF = WINDOW_FADE;
   const step = STEP_ANGLE;
   const halfWidth = (winEnd - winStart) / 2;
   const center = winStart + halfWidth;
-  const rel = ((angle - center + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
-  const d = Math.abs(rel);
+  const d = Math.abs(angle - center);
   const outerEdge = halfWidth + wF;
   if (d >= outerEdge) return 0;
   if (d <= step) return 1 - (1 - OPACITY_NEAR) * (d / step);
