@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -53,6 +53,7 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
+import { rankTodayTasks } from '@/lib/taskOrder';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
 import BubbleMenu from '@/components/BubbleMenu';
@@ -122,25 +123,10 @@ export default function HomeScreen() {
   // Single clear purpose on open — "what do I need right now?": surface today's
   // tasks in priority order (undone first, then timed/time-box items earliest,
   // then essentials), so the most actionable things sit at the top.
-  const allTodayTasks = useMemo(() => {
-    const list = tasksForDate(today);
-    const rank = (task: typeof list[number]) => {
-      let r = 0;
-      if (task.done) r += 1000;                              // done sinks to the bottom
-      if (task.taskType === 'time-box' || task.time) r -= 100; // time-anchored rises
-      if (task.importance === 'essential') r -= 10;          // essentials rise
-      return r;
-    };
-    return [...list].sort((a, b) => {
-      const dr = rank(a) - rank(b);
-      if (dr !== 0) return dr;
-      // Within the same rank, order by time when present (earliest first).
-      if (a.time && b.time) return a.time.localeCompare(b.time);
-      if (a.time) return -1;
-      if (b.time) return 1;
-      return 0;
-    });
-  }, [tasks, tasksForDate, today]);
+  const allTodayTasks = useMemo(
+    () => rankTodayTasks(tasksForDate(today)),
+    [tasks, tasksForDate, today]
+  );
 
   const visibleTodayTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((task) => task.importance === 'essential')
