@@ -65,7 +65,7 @@ import { todayStr } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
-import { useAppTheme, useIsDark } from '@/lib/useAppTheme';
+import { useAppTheme, useIsDark, useScaledStyles } from '@/lib/useAppTheme';
 import { StatusBar } from 'expo-status-bar';
 
 function isWithinWorkHours(start: string, end: string): boolean {
@@ -84,6 +84,7 @@ export default function HomeScreen() {
   const theme = useAppTheme();
   const { isCoverScreen } = useCoverScreen();
   const isDark = useIsDark();
+  const styles = useScaledStyles(baseStyles);
 
   const tasks = useTaskStore((s) => s.tasks);
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
@@ -427,7 +428,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   workBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

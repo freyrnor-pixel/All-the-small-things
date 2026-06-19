@@ -5,9 +5,9 @@
  * persisting the choice so all subsequent strings render in that language.
  *
  * Connections:
- *   Imports → @expo/vector-icons, @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @expo/vector-icons, @/store/useSettingsStore, @/lib/i18n, @/constants/theme, @/lib/useAppTheme
  *   Used by → Expo Router route "/onboarding/language"
- *   Data    → useSettingsStore (writes `language`)
+ *   Data    → useSettingsStore (writes `language`); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 import type { Language } from '@/store/useSettingsStore';
 
 type LangOption = {
@@ -40,6 +41,7 @@ export default function LanguageScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   function choose(lang: Language) {
     settings.update({ language: lang });
@@ -83,7 +85,7 @@ export default function LanguageScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: {
     flex: 1,

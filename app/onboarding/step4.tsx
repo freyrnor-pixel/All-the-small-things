@@ -23,11 +23,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 export default function OnboardingStep4() {
   const router = useRouter();
   const settings = useSettingsStore();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   // Notifications are ON by default; shopping reminder fires Saturday 14:00.
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function OnboardingStep4() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },

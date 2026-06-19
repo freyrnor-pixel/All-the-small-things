@@ -30,7 +30,7 @@ import Reanimated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import {
@@ -125,6 +125,7 @@ type Props = { completedToday: number };
 
 export default function Pet({ completedToday }: Props) {
   const theme    = useAppTheme();
+  const { reducedMotion } = useAccessibility();
   const petType  = useSettingsStore((s) => s.petType);
   const petColor = useSettingsStore((s) => s.petColor);
   const habitat  = PET_HABITATS[petType] ?? PET_HABITATS.cat;
@@ -164,6 +165,7 @@ export default function Pet({ completedToday }: Props) {
 
   // ── Idle bob (runs forever) ────────────────────────────────────────────────
   useEffect(() => {
+    if (reducedMotion) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(bobAnim, { toValue: -5, duration: 1400, useNativeDriver: true }),
@@ -172,7 +174,7 @@ export default function Pet({ completedToday }: Props) {
     );
     loop.start();
     return () => loop.stop();
-  }, [bobAnim]);
+  }, [bobAnim, reducedMotion]);
 
   // ── React to completed-task count ─────────────────────────────────────────
   useEffect(() => {
@@ -211,18 +213,20 @@ export default function Pet({ completedToday }: Props) {
   function triggerHappy() {
     clearState();
     setPetState('happy');
-    Animated.sequence([
-      Animated.spring(scaleAnim, { toValue: 1.5, useNativeDriver: true, tension: 280, friction: 4 }),
-      Animated.spring(scaleAnim, { toValue: 1,   useNativeDriver: true, tension: 80,  friction: 6 }),
-    ]).start();
-    heartOpacity.setValue(1);
-    heartY.setValue(0);
-    heartScale.setValue(0.6);
-    Animated.parallel([
-      Animated.timing(heartOpacity, { toValue: 0,   duration: 1300, useNativeDriver: true }),
-      Animated.spring(heartY,       { toValue: -54, useNativeDriver: true, tension: 50, friction: 8 }),
-      Animated.spring(heartScale,   { toValue: 1.6, useNativeDriver: true, tension: 80, friction: 6 }),
-    ]).start();
+    if (!reducedMotion) {
+      Animated.sequence([
+        Animated.spring(scaleAnim, { toValue: 1.5, useNativeDriver: true, tension: 280, friction: 4 }),
+        Animated.spring(scaleAnim, { toValue: 1,   useNativeDriver: true, tension: 80,  friction: 6 }),
+      ]).start();
+      heartOpacity.setValue(1);
+      heartY.setValue(0);
+      heartScale.setValue(0.6);
+      Animated.parallel([
+        Animated.timing(heartOpacity, { toValue: 0,   duration: 1300, useNativeDriver: true }),
+        Animated.spring(heartY,       { toValue: -54, useNativeDriver: true, tension: 50, friction: 8 }),
+        Animated.spring(heartScale,   { toValue: 1.6, useNativeDriver: true, tension: 80, friction: 6 }),
+      ]).start();
+    }
     showBubbleMsg(pick(HAPPY_MSGS));
     returnToIdle(2000);
   }
@@ -230,10 +234,12 @@ export default function Pet({ completedToday }: Props) {
   function triggerExcited() {
     clearState();
     setPetState('excited');
-    const steps = [8, -8, 6, -6, 4, -4, 0].map((v, i) =>
-      Animated.timing(rotateAnim, { toValue: v, duration: 70 + i * 5, useNativeDriver: true })
-    );
-    Animated.sequence(steps).start();
+    if (!reducedMotion) {
+      const steps = [8, -8, 6, -6, 4, -4, 0].map((v, i) =>
+        Animated.timing(rotateAnim, { toValue: v, duration: 70 + i * 5, useNativeDriver: true })
+      );
+      Animated.sequence(steps).start();
+    }
     showBubbleMsg(pick(EXCITED_MSGS));
     returnToIdle(2500);
   }
@@ -241,13 +247,15 @@ export default function Pet({ completedToday }: Props) {
   function triggerEating(category: string) {
     clearState();
     setPetState('eating');
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.82, duration: 80,  useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1.18, duration: 80,  useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 0.88, duration: 80,  useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1.12, duration: 80,  useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1,    duration: 120, useNativeDriver: true }),
-    ]).start();
+    if (!reducedMotion) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 0.82, duration: 80,  useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1.18, duration: 80,  useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 0.88, duration: 80,  useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1.12, duration: 80,  useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1,    duration: 120, useNativeDriver: true }),
+      ]).start();
+    }
     showBubbleMsg(reactionForCategory(category));
     returnToIdle(2000);
   }

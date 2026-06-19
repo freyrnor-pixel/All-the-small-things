@@ -6,9 +6,9 @@
  * labels, and optional right action are all passed in as children/props.
  *
  * Connections:
- *   Imports → constants/theme
+ *   Imports → constants/theme, lib/useAppTheme
  *   Used by → app/meals.tsx
- *   Data    → none (presentational); fully driven by props
+ *   Data    → driven by props; reads reducedMotion + scaled fontSize via useAccessibility()/useScaledStyles()
  *
  * Edit notes:
  *   - LayoutAnimation is enabled on Android via UIManager at module load — keep that guard if refactoring imports.
@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Radius, Shadow, Spacing, FontSize } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -55,14 +55,20 @@ export default function ExpandableCard({
   const [open, setOpen] = useState(defaultOpen);
   const rotate = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
   const theme = useAppTheme();
+  const { reducedMotion } = useAccessibility();
+  const styles = useScaledStyles(baseStyles);
 
   function toggle() {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    Animated.timing(rotate, {
-      toValue: open ? 0 : 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
+    if (reducedMotion) {
+      rotate.setValue(open ? 0 : 1);
+    } else {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      Animated.timing(rotate, {
+        toValue: open ? 0 : 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
     setOpen((v) => !v);
   }
 
@@ -98,7 +104,7 @@ export default function ExpandableCard({
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   card: {
     borderRadius: Radius.md,
     marginBottom: Spacing.sm,

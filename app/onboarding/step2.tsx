@@ -5,10 +5,10 @@
  * start/end work-hour strings used to switch the app's mode automatically.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme, @/lib/useAppTheme
  *   Used by → Expo Router route "/onboarding/step2"
  *   Data    → useSettingsStore (writes `workModeEnabled`, `enforceWorkHours`,
- *             `workHoursStart`, `workHoursEnd`)
+ *             `workHoursStart`, `workHoursEnd`); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
@@ -33,7 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import TimePickerWheel from '@/components/TimePickerWheel';
 
 export default function OnboardingStep2() {
@@ -41,6 +41,7 @@ export default function OnboardingStep2() {
   const settings = useSettingsStore();
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -141,7 +142,7 @@ export default function OnboardingStep2() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   skipLink: { alignItems: 'center', paddingBottom: Spacing.lg },
   skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },

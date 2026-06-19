@@ -24,7 +24,7 @@ import { useAutomationStore, AutomationRule, TriggerType, ActionType } from '@/s
 import HintCard from '@/components/HintCard';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 function triggerLabel(t: ReturnType<typeof useT>, type: TriggerType): string {
   return type === 'task_completed' ? t.automations.triggerTaskCompleted : t.automations.triggerShoppingOpened;
@@ -46,6 +46,7 @@ function RuleCard({ rule, onToggle, onDelete }: {
 }) {
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   function confirmDelete() {
     Alert.alert(t.automations.deleteTitle, t.automations.deleteBody, [
@@ -82,6 +83,7 @@ function RuleCard({ rule, onToggle, onDelete }: {
 function NewRuleForm({ onSave, onCancel }: { onSave: (triggerType: TriggerType, actionType: ActionType, params: Record<string, string>) => void; onCancel: () => void }) {
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const [triggerType, setTriggerType] = useState<TriggerType>('task_completed');
   const [actionType, setActionType] = useState<ActionType>('show_message');
   const [message, setMessage] = useState('');
@@ -175,6 +177,7 @@ export default function AutomationsScreen() {
   const router = useRouter();
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const rules = useAutomationStore((s) => s.rules);
   const addRule = useAutomationStore((s) => s.add);
   const toggleActive = useAutomationStore((s) => s.toggleActive);
@@ -220,7 +223,7 @@ export default function AutomationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

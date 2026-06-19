@@ -11,7 +11,7 @@
  *   Used by → Expo Router route "/onboarding/step5"
  *   Data    → useSettingsStore (writes `colorTheme`, `setupComplete`);
  *             schedules notifications via requestPermissions + syncReminders +
- *             useTaskStore.syncAllTaskNotifications
+ *             useTaskStore.syncAllTaskNotifications; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
@@ -33,11 +33,13 @@ import { syncReminders } from '@/lib/reminders';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, ThemeName } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 export default function OnboardingStep5() {
   const router = useRouter();
   const settings = useSettingsStore();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   function finish() {
     // W-E: new-user defaults — Essentials Mode ON + points visible by default, so new
@@ -131,7 +133,7 @@ export default function OnboardingStep5() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: { flex: 1, padding: Spacing.xl, gap: Spacing.xl, justifyContent: 'center' },
   top: { alignItems: 'center', gap: Spacing.md },

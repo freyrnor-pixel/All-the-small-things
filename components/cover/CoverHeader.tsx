@@ -8,12 +8,13 @@
  * Connections:
  *   Imports → react-native, constants/theme, lib/i18n
  *   Used by → components/cover/CoverScreen
- *   Data    → none (receives props)
+ *   Data    → none (receives props); scaled fontSize via useScaledStyles()
  */
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
   theme: AppColors;
@@ -23,6 +24,7 @@ type Props = {
 
 export default function CoverHeader({ theme, t, userName }: Props) {
   const [now, setNow] = useState(new Date());
+  const styles = useScaledStyles(baseStyles);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
@@ -45,7 +47,7 @@ export default function CoverHeader({ theme, t, userName }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: Spacing.sm,

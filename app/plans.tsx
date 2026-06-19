@@ -31,11 +31,12 @@ import DayTimeline from '@/components/DayTimeline';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 export default function PlansScreen() {
   const router = useRouter();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const t = useT();
   const today = todayStr();
 
@@ -106,7 +107,7 @@ export default function PlansScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

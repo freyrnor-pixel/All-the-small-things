@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/ConfirmationBanner, components/HintCard, components/PressableScale, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
  *   Used by → Expo Router route "/health"
- *   Data    → useHealthStore (health_logs table)
+ *   Data    → useHealthStore (health_logs table); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); dates are YYYY-MM-DD via todayStr()/dateStr().
@@ -38,7 +38,7 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
-import { useSoftTheme } from '@/lib/useAppTheme';
+import { useSoftTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 function getWeekDates(today: string): string[] {
   const d = new Date(today + 'T12:00:00');
@@ -74,6 +74,7 @@ export default function HealthScreen() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const t = useT();
   const theme = useSoftTheme();
+  const styles = useScaledStyles(baseStyles);
   const SEVERITIES = severities();
   const severityLabel = (value: number) => t.severityLabels[value - 1] ?? '';
 
@@ -280,7 +281,7 @@ export default function HealthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   header: {
     flexDirection: 'row',

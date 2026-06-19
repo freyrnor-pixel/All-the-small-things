@@ -8,12 +8,13 @@
  * Connections:
  *   Imports → react-native, constants/theme, lib/i18n, store/useHabitStore
  *   Used by → components/cover/CoverScreen
- *   Data    → receives habit summaries as props
+ *   Data    → receives habit summaries as props; scaled fontSize via useScaledStyles()
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 export type HabitSummary = {
   id: string;
@@ -28,6 +29,7 @@ type Props = {
 };
 
 export default function CoverHabitsSection({ habits, theme, t }: Props) {
+  const styles = useScaledStyles(baseStyles);
   if (habits.length === 0) return null;
 
   const visible = habits.slice(0, 4);
@@ -58,7 +60,7 @@ export default function CoverHabitsSection({ habits, theme, t }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
     borderWidth: 1,

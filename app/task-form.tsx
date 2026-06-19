@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/HintCard, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx)
- *   Data    → useTaskStore (tasks table) via add/update/remove
+ *   Data    → useTaskStore (tasks table) via add/update/remove; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); date defaults to todayStr() (YYYY-MM-DD).
@@ -37,7 +37,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTaskStore, TaskType, Importance } from '@/store/useTaskStore';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { tap } from '@/lib/haptics';
@@ -72,6 +72,7 @@ export default function TaskFormScreen() {
   const removeTask = useTaskStore((s) => s.remove);
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   const existing = id ? tasks.find((task) => task.id === id) : undefined;
 
@@ -396,7 +397,7 @@ export default function TaskFormScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   header: {

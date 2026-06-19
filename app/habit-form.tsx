@@ -9,7 +9,7 @@
  * Connections:
  *   Imports → components/HabitIcon, constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
- *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder
+ *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); colour theme comes from useSettingsStore.
@@ -41,7 +41,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HabitIcon, { HABIT_ICON_NAMES } from '@/components/HabitIcon';
 
 const HABIT_ICONS = HABIT_ICON_NAMES;
@@ -75,6 +75,7 @@ export default function HabitForm() {
 
   const theme = useAppTheme();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   const existing = isEdit ? habits.find((h) => h.id === params.id) : null;
 
@@ -385,7 +386,7 @@ export default function HabitForm() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

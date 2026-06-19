@@ -5,9 +5,9 @@
  * the shopping list's recurring resets.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme, @/lib/useAppTheme
  *   Used by → Expo Router route "/onboarding/step3"
- *   Data    → useSettingsStore (writes `weeklyResetDay`, `monthlyResetDate`)
+ *   Data    → useSettingsStore (writes `weeklyResetDay`, `monthlyResetDate`); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
@@ -23,11 +23,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 export default function OnboardingStep3() {
   const router = useRouter();
   const settings = useSettingsStore();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
   const [dateInput, setDateInput] = useState(String(settings.monthlyResetDate));
 
   // Weekly reset defaults to Monday (index 0) — no user choice needed in onboarding.
@@ -102,7 +104,7 @@ export default function OnboardingStep3() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   flex: { flex: 1 },
   skipLink: { alignItems: 'center', paddingBottom: Spacing.lg },

@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/ConfirmationBanner, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore, react-native-safe-area-context
  *   Used by → app/index.tsx
- *   Data    → calls useTaskStore.add() to insert a task; reads colorTheme from useSettingsStore
+ *   Data    → calls useTaskStore.add() to insert a task; reads colorTheme from useSettingsStore; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - dayOptions is memoized on t.today/t.tomorrow; a language change remounts the sheet so dayShort stays in sync.
@@ -34,7 +34,7 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 
 type DayOption = { label: string; date: string };
@@ -49,6 +49,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
   const theme = useAppTheme();
   const { bottom: bottomInset } = useSafeAreaInsets();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   const [title, setTitle] = useState('');
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -185,7 +186,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.35)',

@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/QRCodeDisplay, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/share-modal" (presented as a modal — see app/_layout.tsx)
- *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks)
+ *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); kind param ('t' = tasks, anything else = shopping) drives the whole sheet.
@@ -33,7 +33,7 @@ import { encodeSharePayload } from '@/lib/share';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 export default function ShareModal() {
   const router = useRouter();
@@ -43,6 +43,7 @@ export default function ShareModal() {
   const t = useT();
   const userName = useSettingsStore((s) => s.userName);
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   const shoppingItems = useShoppingStore((s) => s.items);
   const tasks = useTaskStore((s) => s.tasks);
@@ -215,7 +216,7 @@ export default function ShareModal() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

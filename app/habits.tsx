@@ -12,6 +12,7 @@
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
  * Edit notes:
+ *   - Several sub-components (ProgressDots, StreakBadge, WeekStrip, HabitCard, WeekView, MonthView, HabitsScreen) share one module-level baseStyles object — each calls useScaledStyles(baseStyles) itself for text-size scaling.
  *   - All visible strings go through useT(); per-day keys are YYYY-MM-DD via todayStr()/dateStr() (week starts Monday).
  *   - increment/decrement key off (habitId, today) into habit_logs; counts are clamped against dailyGoal for ratio/colour.
  *   - Edit navigates to the /habit-form modal; the empty-section CTAs pre-seed the `kind` param.
@@ -44,7 +45,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { success } from '@/lib/haptics';
 import { todayStr, dateStr } from '@/lib/date';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
-import { useSoftTheme } from '@/lib/useAppTheme';
+import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ const DAY_ABBR = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DAY_ABBR_NO = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
 
 function ProgressDots({ count, goal, kind, theme }: { count: number; goal: number; kind: HabitKind; theme: AppColors }) {
+  const styles = useScaledStyles(baseStyles);
   const dots = Math.min(goal, 8);
   const filled = Math.min(count, dots);
   return (
@@ -141,6 +143,7 @@ function ProgressDots({ count, goal, kind, theme }: { count: number; goal: numbe
 // streak day, capped) so the dopamine hook reads at a glance.
 function StreakBadge({ streak, color, theme }: { streak: number; color: string; theme: AppColors }) {
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
   const dots = Math.min(streak, 7);
   return (
     <View style={styles.streakWrap}>
@@ -167,6 +170,7 @@ function WeekStrip({
   const logs = useHabitStore((s) => s.logs);
   const weekDates = useMemo(() => getWeekDates(today), [today]);
   const abbr = lang === 'no' ? DAY_ABBR_NO : DAY_ABBR;
+  const styles = useScaledStyles(baseStyles);
 
   return (
     <View style={styles.weekStrip}>
@@ -206,6 +210,8 @@ function HabitCard({
   const increment = useHabitStore((s) => s.increment);
   const decrement = useHabitStore((s) => s.decrement);
   const t = useT();
+  const { reducedMotion } = useAccessibility();
+  const styles = useScaledStyles(baseStyles);
 
   const log = logs.find((l) => l.habitId === habit.id && l.logDate === today);
   const count = log?.count ?? 0;
@@ -234,7 +240,7 @@ function HabitCard({
   const pulseRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
-    if (isDone) {
+    if (isDone && !reducedMotion) {
       pulseRef.current = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1.2, duration: 650, useNativeDriver: true }),
@@ -247,7 +253,7 @@ function HabitCard({
       pulseAnim.setValue(1);
     }
     return () => { pulseRef.current?.stop(); };
-  }, [isDone]);
+  }, [isDone, reducedMotion]);
 
   const borderColor = progressColor(ratio, habit.kind, theme);
   const stepLabels = [t.habitCue, t.habitCraving, t.habitResponse, t.habitReward];
@@ -345,6 +351,7 @@ function WeekView({
   const weekDates = useMemo(() => getWeekDates(today), [today]);
   const abbr = lang === 'no' ? DAY_ABBR_NO : DAY_ABBR;
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   if (habits.length === 0) {
     return (
@@ -408,6 +415,7 @@ function MonthView({
 }) {
   const logs = useHabitStore((s) => s.logs);
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
   const [offset, setOffset] = useState(0); // 0 = current month, -1 = last month
 
   const { year, month, label, dates } = useMemo(() => {
@@ -500,6 +508,7 @@ export default function HabitsScreen() {
   const updateSettings = useSettingsStore((s) => s.update);
   const theme = useSoftTheme();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   const profileHabits = habits.filter((h) => h.childName === selectedProfile);
 
@@ -695,7 +704,7 @@ export default function HabitsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

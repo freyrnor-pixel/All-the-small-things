@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → constants/theme, lib/date
  *   Used by → app/task-form.tsx
- *   Data    → none (presentational); value/onChange/theme/labels all come from props
+ *   Data    → none (presentational); value/onChange/theme/labels all come from props; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - dayLabels must be Mon–Sun ordered (7 entries); the grid offsets weeks so Monday is column 0.
@@ -23,6 +23,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { todayStr } from '@/lib/date';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 interface CalendarLabels {
   prevMonth: string;
@@ -52,6 +53,7 @@ function toDateStr(y: number, m: number, d: number): string {
 }
 
 export default function DatePickerCalendar({ value, onChange, theme, dayLabels, monthLabels, calendarLabels }: Props) {
+  const styles = useScaledStyles(baseStyles);
   const [selY, selM, selD] = parseDateParts(value);
   const [viewYear, setViewYear] = useState(selY);
   const [viewMonth, setViewMonth] = useState(selM);
@@ -196,7 +198,7 @@ export default function DatePickerCalendar({ value, onChange, theme, dayLabels, 
 
 const CELL = 40;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
     padding: Spacing.sm,

@@ -15,7 +15,7 @@
  * Connections:
  *   Imports → components/HintCard, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
- *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders
+ *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
@@ -48,7 +48,7 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { syncReminders } from '@/lib/reminders';
 import { seedTestData } from '@/lib/seedTestData';
 import { useT } from '@/lib/i18n';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
 import TimePickerWheel from '@/components/TimePickerWheel';
@@ -63,6 +63,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const clearTasks = useTaskStore((s) => s.clearAll);
@@ -826,7 +827,7 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

@@ -11,7 +11,7 @@
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useTaskStore (Task type only)
  *   Used by → app/index.tsx (3-item preview), app/plans.tsx (full day)
- *   Data    → pure presentational component; reads no stores directly
+ *   Data    → pure presentational component; reads no stores directly; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Tasks without a `time` render first, in array order (no time column, just
@@ -28,7 +28,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Task } from '@/store/useTaskStore';
 import { FontSize, Radius, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 
 type Props = {
@@ -67,6 +67,7 @@ function useNowMinutes(): number {
 export default function DayTimeline({ tasks, onPress }: Props) {
   const theme = useAppTheme();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
   const nowMinutes = useNowMinutes();
 
   const anytimeEntries = useMemo(() => tasks.filter((task) => !task.time), [tasks]);
@@ -180,7 +181,7 @@ export default function DayTimeline({ tasks, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   wrap: { paddingVertical: Spacing.xs },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center' },

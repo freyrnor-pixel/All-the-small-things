@@ -16,7 +16,7 @@
  * Connections:
  *   Imports → react-native-reanimated, react-native-safe-area-context, constants/theme, lib/useAppTheme
  *   Used by → app/task-form, app/meals, app/shopping (save/add confirmations)
- *   Data    → reads reducedMotion via useAccessibility(); colours from useAppTheme()
+ *   Data    → reads reducedMotion via useAccessibility(); colours from useAppTheme(); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Controlled: parent owns the message string and clears it in onDismiss.
@@ -33,7 +33,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
   /** The confirmation text; null/empty hides the banner. */
@@ -46,6 +46,7 @@ type Props = {
 export default function ConfirmationBanner({ message, onDismiss, duration = 2200 }: Props) {
   const theme = useAppTheme();
   const { reducedMotion } = useAccessibility();
+  const styles = useScaledStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const progress = useSharedValue(0);
 
@@ -89,7 +90,7 @@ export default function ConfirmationBanner({ message, onDismiss, duration = 2200
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   wrap: {
     position: 'absolute',
     left: Spacing.md,

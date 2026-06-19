@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → constants/theme, store/useShoppingStore
  *   Used by → app/shopping.tsx
- *   Data    → consumes the ShoppingItem type from useShoppingStore; selections flow out via onConfirm (no direct store writes here)
+ *   Data    → consumes the ShoppingItem type from useShoppingStore; selections flow out via onConfirm (no direct store writes here); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Per-item max is `amount - monthlyAllocated`; steppers clamp to that remaining count.
@@ -27,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 const CATEGORY_ORDER = [
   'produce', 'dairy', 'meat', 'fish', 'bread', 'frozen',
@@ -52,6 +53,7 @@ interface Props {
 
 export default function MonthlyPickerSheet({ visible, monthlyItems, categoryLabels, onConfirm, onClose, theme, t }: Props) {
   const { bottom: bottomInset } = useSafeAreaInsets();
+  const styles = useScaledStyles(baseStyles);
   const [qtys, setQtys] = useState<{ [id: string]: number }>({});
 
   function adjust(id: string, delta: number, max: number) {
@@ -190,7 +192,7 @@ export default function MonthlyPickerSheet({ visible, monthlyItems, categoryLabe
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: {
     position: 'absolute',
     top: 0,

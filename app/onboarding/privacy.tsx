@@ -21,10 +21,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 export default function PrivacyScreen() {
   const router = useRouter();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -59,7 +61,7 @@ export default function PrivacyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: {
     flex: 1,

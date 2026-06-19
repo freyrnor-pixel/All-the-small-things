@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/HintCard, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/shared"
- *   Data    → useSharedStore (shared_tasks + shared_shopping_items tables); mirrors actions to useTaskStore (tasks) / useShoppingStore (shopping_items) via the source ids
+ *   Data    → useSharedStore (shared_tasks + shared_shopping_items tables); mirrors actions to useTaskStore (tasks) / useShoppingStore (shopping_items) via the source ids; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); direction 'in'/'out' decides the "from X" vs "shared by you" meta label.
@@ -31,7 +31,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 type Tab = 'tasks' | 'shopping';
 
@@ -41,6 +41,7 @@ export default function SharedScreen() {
 
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   const sharedTasks = useSharedStore((s) => s.tasks);
   const sharedShopping = useSharedStore((s) => s.shoppingItems);
@@ -215,6 +216,7 @@ function SharedShoppingRow({
   theme: AppColors;
   t: TType;
 }) {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View style={styles.row}>
       <Pressable
@@ -247,6 +249,7 @@ function SharedTaskRow({
   theme: AppColors;
   t: TType;
 }) {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View style={styles.row}>
       <Pressable
@@ -270,7 +273,7 @@ function SharedTaskRow({
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

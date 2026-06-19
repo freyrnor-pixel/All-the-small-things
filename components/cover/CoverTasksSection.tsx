@@ -8,13 +8,14 @@
  * Connections:
  *   Imports → react-native, constants/theme, lib/i18n, store/useTaskStore
  *   Used by → components/cover/CoverScreen
- *   Data    → receives tasks + callbacks as props
+ *   Data    → receives tasks + callbacks as props; scaled fontSize via useScaledStyles()
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
 import { Task } from '@/store/useTaskStore';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
   tasks: Task[];
@@ -33,6 +34,7 @@ export default function CoverTasksSection({
   theme,
   t,
 }: Props) {
+  const styles = useScaledStyles(baseStyles);
   const visible = tasks.slice(0, 2);
   const overflow = totalPendingCount - visible.length;
 
@@ -85,7 +87,7 @@ export default function CoverTasksSection({
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
     borderWidth: 1,

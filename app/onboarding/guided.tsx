@@ -23,11 +23,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 export default function GuidedScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
 
   function goGuided() {
     settings.update({ showHints: true });
@@ -80,7 +82,7 @@ export default function GuidedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   content: {
     flex: 1,

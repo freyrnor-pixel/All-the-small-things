@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
- *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping
+ *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); MEAL_TYPES holds only icon/colour metadata.
@@ -44,7 +44,7 @@ import PressableScale from '@/components/PressableScale';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 const MEAL_TYPES: { value: MealType; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
   { value: 'breakfast', icon: 'sunny-outline', color: '#F6C344' },
@@ -67,6 +67,7 @@ export default function MealsScreen() {
   const suggest = useCatalogStore((s) => s.suggest);
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const addToShopping = useShoppingStore((s) => s.add);
   const mealLabel = (v: MealType) => t.mealTypes[v];
 
@@ -419,7 +420,7 @@ export default function MealsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

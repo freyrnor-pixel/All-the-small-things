@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → components/CompletionGlow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → app/index.tsx
- *   Data    → consumes the Task type from useTaskStore; toggle/open handled by parent callbacks (no direct store writes)
+ *   Data    → consumes the Task type from useTaskStore; toggle/open handled by parent callbacks; reads reducedMotion + scaled fontSize via useAccessibility()/useScaledStyles()
  *
  * Edit notes:
  *   - All colors come from useAppTheme() and are applied inline — do NOT reintroduce static Colors/* (broke dark mode; see OLD comments inline).
@@ -26,7 +26,7 @@ import { Task } from '@/store/useTaskStore';
 //      Colors was used for hardcoded warm-theme values that ignored the user's
 //      chosen colour theme and broke dark mode (dark text on dark backgrounds).
 import { FeatureColors, FontSize, Radius, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { success } from '@/lib/haptics';
 import CompletionGlow from '@/components/CompletionGlow';
@@ -45,6 +45,8 @@ type Props = {
 export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const theme = useAppTheme();
   const t = useT();
+  const { reducedMotion } = useAccessibility();
+  const styles = useScaledStyles(baseStyles);
   const isTimebox = task.taskType === 'time-box';
   const isEssential = task.importance === 'essential';
   const checkScale = useRef(new Animated.Value(1)).current;
@@ -56,14 +58,14 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
     if (task.done && !wasDone.current) {
       success();
     }
-    if (task.done) {
+    if (task.done && !reducedMotion) {
       Animated.sequence([
         Animated.timing(checkScale, { toValue: 1.35, duration: 120, useNativeDriver: true }),
         Animated.spring(checkScale, { toValue: 1, friction: 4, useNativeDriver: true }),
       ]).start();
     }
     wasDone.current = task.done;
-  }, [task.done]);
+  }, [task.done, reducedMotion]);
 
   // start-at vs time-box accent — consistent with task-form's TYPE_ACCENT.
   const typeAccent = isTimebox ? FeatureColors.task : FeatureColors.shared;
@@ -164,7 +166,7 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   // Relatively-positioned wrapper so CompletionGlow can absolute-fill the row.
   wrap: {
     position: 'relative',

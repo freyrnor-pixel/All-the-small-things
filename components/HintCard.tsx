@@ -7,7 +7,7 @@
  * Connections:
  *   Imports → constants/theme, store/useSettingsStore
  *   Used by → app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx
- *   Data    → reads showHints + colorTheme from useSettingsStore (no writes)
+ *   Data    → reads showHints + colorTheme from useSettingsStore (no writes); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Gated on showHints; renders nothing when hints are off — callers should still pass text/example.
@@ -17,7 +17,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FontSize, Radius, Spacing } from '@/constants/theme';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
   text: string;
@@ -27,6 +27,7 @@ type Props = {
 export default function HintCard({ text, example }: Props) {
   const showHints = useSettingsStore((s) => s.showHints);
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   if (!showHints) return null;
 
@@ -38,7 +39,7 @@ export default function HintCard({ text, example }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   card: {
     borderRadius: Radius.md,
     padding: Spacing.md,

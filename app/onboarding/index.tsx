@@ -31,6 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -38,6 +39,7 @@ export default function OnboardingWelcome() {
   const router = useRouter();
   const update = useSettingsStore((s) => s.update);
   const t = useT();
+  const styles = useScaledStyles(baseStyles);
   const [name, setName] = useState('');
   const [nameFocused, setNameFocused] = useState(false);
 
@@ -114,7 +116,7 @@ export default function OnboardingWelcome() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.cream },
   flex: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },

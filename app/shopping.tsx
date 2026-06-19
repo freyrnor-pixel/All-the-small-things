@@ -9,7 +9,7 @@
  * Connections:
  *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ShoppingRow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount
+ *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
@@ -49,7 +49,7 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 const CATEGORY_ORDER = [
@@ -63,6 +63,7 @@ type Tab = 'weekly' | 'monthly';
 export default function ShoppingScreen() {
   const router = useRouter();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const { bottom: bottomInset } = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('weekly');
   const [showAddSheet, setShowAddSheet] = useState(false);
@@ -672,7 +673,7 @@ export default function ShoppingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

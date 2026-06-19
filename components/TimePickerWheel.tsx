@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → constants/theme
  *   Used by → app/settings.tsx, app/task-form.tsx
- *   Data    → none (presentational); value in / onChange out
+ *   Data    → none (presentational); value in / onChange out; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Selected values are tracked in refs (curHour/curMin) to avoid closure staleness inside scroll handlers; keep state + refs in sync if changing.
@@ -28,6 +28,7 @@ import {
   View,
 } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 const ITEM_H = 44;
 const VISIBLE = 3; // must be odd
@@ -51,6 +52,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 export default function TimePickerWheel({ value, onChange, theme }: Props) {
+  const styles = useScaledStyles(baseStyles);
   const [initH, initM] = parseTime(value || '12:00');
 
   const hourRef = useRef<FlatList>(null);
@@ -166,7 +168,7 @@ export default function TimePickerWheel({ value, onChange, theme }: Props) {
 const WHEEL_H = ITEM_H * VISIBLE;
 const PAD = ITEM_H * Math.floor(VISIBLE / 2);
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
     height: WHEEL_H,

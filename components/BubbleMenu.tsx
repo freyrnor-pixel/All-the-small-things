@@ -11,9 +11,9 @@
  * space inside the wheel's bounding square) closes the menu.
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/haptics, store/useSettingsStore
+ *   Imports → constants/theme, lib/i18n, lib/haptics, lib/useAppTheme, store/useSettingsStore
  *   Used by → app/index.tsx
- *   Data    → none (presentational); reads colorTheme + leftHanded from useSettingsStore
+ *   Data    → none (presentational); reads colorTheme + leftHanded from useSettingsStore, reducedMotion via useAccessibility()
  *
  * Edit notes:
  *   - To add a screen, append a BASE_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
@@ -56,7 +56,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, MaterialStyle } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { tap, tug } from '@/lib/haptics';
@@ -176,6 +176,7 @@ function BubbleItemView({
   item, material, baseAngle, wheelAngle, openProgress, windowStart, windowEnd, onPress, pointerEvents,
 }: BubbleItemViewProps) {
   const pressAnim = useSharedValue(1);
+  const { reducedMotion } = useAccessibility();
 
   const animStyle = useAnimatedStyle(() => {
     const currentAngle = baseAngle + wheelAngle.value;
@@ -187,8 +188,8 @@ function BubbleItemView({
     return { transform: [{ translateX: x }, { translateY: y }, { scale }], opacity };
   });
 
-  function handlePressIn() { pressAnim.value = withTiming(0.94, { duration: 60 }); }
-  function handlePressOut() { pressAnim.value = withSpring(1, { damping: 40, stiffness: 700 }); }
+  function handlePressIn() { if (!reducedMotion) pressAnim.value = withTiming(0.94, { duration: 60 }); }
+  function handlePressOut() { if (!reducedMotion) pressAnim.value = withSpring(1, { damping: 40, stiffness: 700 }); }
 
   return (
     <Animated.View
@@ -241,6 +242,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const router = useRouter();
   const theme = useAppTheme();
   const t = useT();
+  const { reducedMotion } = useAccessibility();
 
   const items = useMemo((): BubbleEntry[] =>
     BASE_ITEMS.map((item) => ({
@@ -260,16 +262,16 @@ export default function BubbleMenu({ onNewTask }: Props) {
   function toggle() {
     tap();
     const toValue = open ? 0 : 1;
-    openProgress.value = withSpring(toValue, OPEN_SPRING);
+    openProgress.value = reducedMotion ? toValue : withSpring(toValue, OPEN_SPRING);
     setOpen((v) => !v);
   }
 
   function navigate(item: BubbleEntry) {
     tap();
-    openProgress.value = withSpring(0, OPEN_SPRING);
+    openProgress.value = reducedMotion ? 0 : withSpring(0, OPEN_SPRING);
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
-    setTimeout(action, 130);
+    setTimeout(action, reducedMotion ? 0 : 130);
   }
 
   const minWheel = leftHanded ? MIN_WHEEL_LH : MIN_WHEEL_RH;
@@ -310,6 +312,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
       const snapped = Math.max(minWheel, Math.min(maxWheel,
         Math.round(clamped / STEP_ANGLE) * STEP_ANGLE));
 
+      if (reducedMotion) {
+        wheelAngle.value = snapped;
+        return;
+      }
       // Coast briefly (lottery spin inertia), then spring to nearest slot.
       wheelAngle.value = withSequence(
         withTiming(clamped, { duration: 180, easing: Easing.out(Easing.cubic) }),

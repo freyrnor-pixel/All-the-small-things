@@ -6,10 +6,11 @@
  * useSoftTheme() returns the same palette softened for emotional/health screens.
  * useIsDark() returns just the resolved dark/light boolean.
  * useAccessibility() returns { reducedMotion, fontScale } for animation and font scaling.
+ * useScaledStyles() takes a StyleSheet.create() result and rescales every fontSize per the user's text-size setting.
  *
  * Connections:
  *   Imports → constants/theme, store/useSettingsStore
- *   Used by → app/focus.tsx, app/index.tsx, app/plans.tsx, app/settings.tsx, app/shopping.tsx, app/task-form.tsx, components/DayTimeline.tsx, components/TaskItem.tsx
+ *   Used by → app/automations.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/CompletionGlow.tsx, components/ConfirmationBanner.tsx, components/DatePickerCalendar.tsx, components/DayTimeline.tsx, components/ExpandableCard.tsx, components/HintCard.tsx, components/MonthlyPickerSheet.tsx, components/Pet.tsx, components/PressableScale.tsx, components/QuickAddSheet.tsx, components/ShoppingRow.tsx, components/TaskItem.tsx, components/TimePickerWheel.tsx, components/cover/CoverHabitsSection.tsx, components/cover/CoverHeader.tsx, components/cover/CoverScreen.tsx, components/cover/CoverTasksSection.tsx
  *   Data    → reads `colorTheme`, `darkMode`, `reducedMotion`, `fontSize` from the settings Zustand store
  *
  * Edit notes:
@@ -18,6 +19,7 @@
  *   - darkMode 'system' defers to useColorScheme(); keep the on/system/off logic
  *     in sync between useAppTheme and useIsDark.
  */
+import { useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { getTheme, getSoftTheme, getFontSize, AppColors, FontSizeScale } from '@/constants/theme';
@@ -63,4 +65,27 @@ export function useAccessibility(): {
     reducedMotion,
     getFontSize: (base: number) => getFontSize(base, fontSize),
   };
+}
+
+/**
+ * Returns `base` (a StyleSheet.create() result) with every style's `fontSize`
+ * scaled by the user's text-size setting. Call once per component that
+ * renders styles from a module-level StyleSheet.create() object — if several
+ * components share one styles object, each must call this hook separately.
+ */
+export function useScaledStyles<T extends Record<string, any>>(base: T): T {
+  const fontSize = useSettingsStore((s) => s.fontSize) as FontSizeScale;
+  return useMemo(() => {
+    if (fontSize === 'default') return base;
+    const out = {} as T;
+    for (const key in base) {
+      const style = base[key];
+      if (style && typeof style === 'object' && typeof (style as any).fontSize === 'number') {
+        out[key] = { ...style, fontSize: getFontSize((style as any).fontSize, fontSize) };
+      } else {
+        out[key] = style;
+      }
+    }
+    return out;
+  }, [base, fontSize]);
 }

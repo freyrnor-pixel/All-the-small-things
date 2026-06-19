@@ -31,7 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -41,6 +41,7 @@ export default function FocusScreen() {
   const today = todayStr();
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
   const settings = useSettingsStore();
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const toggle = useTaskStore((s) => s.toggle);
@@ -148,7 +149,7 @@ export default function FocusScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

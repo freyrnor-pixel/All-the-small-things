@@ -9,7 +9,7 @@
  * Connections:
  *   Imports → components/HintCard, components/PressableScale, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
- *   Data    → confirmed items write to THREE stores: useShoppingStore (shopping_items) + useCatalogStore.recordPurchases (purchase_log + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks)
+ *   Data    → confirmed items write to THREE stores: useShoppingStore (shopping_items) + useCatalogStore.recordPurchases (purchase_log + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → reviewable checklist → confirm via addToList.
@@ -46,7 +46,7 @@ import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
 import { decodeSharePayload } from '@/lib/share';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 const NORWEGIAN_STORES = [
   'REMA 1000', 'Kiwi', 'Coop Extra', 'Coop Mega', 'Meny', 'Spar', 'Bunnpris', 'Joker', 'Prix',
@@ -81,6 +81,7 @@ export default function ScanScreen() {
   const settings = useSettingsStore();
   const t = useT();
   const theme = useAppTheme();
+  const styles = useScaledStyles(baseStyles);
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -453,7 +454,7 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',

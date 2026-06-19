@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → constants/theme, store/useShoppingStore
  *   Used by → app/shopping.tsx
- *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onRemove/onAdjust
+ *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onRemove/onAdjust; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - The stepper shows when amount is a positive integer, onAdjust is provided, and the item is unchecked. Otherwise amount+unit appear in the meta sub-row.
@@ -21,6 +21,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
   item: ShoppingItem;
@@ -35,6 +36,7 @@ type Props = {
 };
 
 export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel, monthlyTotal, inStockLabel, monthlyLeftLabel }: Props) {
+  const styles = useScaledStyles(baseStyles);
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
   const showStepper = isNumeric && !!onAdjust && !item.checked;
@@ -111,7 +113,7 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
