@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/Pet, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/HintCard, components/QuickAddSheet, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -29,7 +29,7 @@
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
- *   - Pet renders as a screen-level overlay (bottom-left) when petEnabled; passes completedCount so it triggers excited animation on task completion.
+ *   - Pet feature is currently disabled (code intact on feature branch).
  *   - `tasks` is selected directly from useTaskStore (not just the tasksForDate/backlogTasks/completedCount
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
@@ -56,7 +56,7 @@ import { useT } from '@/lib/i18n';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
 import BubbleMenu from '@/components/BubbleMenu';
-import Pet from '@/components/Pet';
+// import Pet from '@/components/Pet'; // Disabled for now
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -420,7 +420,8 @@ export default function HomeScreen() {
       </ScrollView>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
-      {settings.petEnabled && <Pet completedToday={completedCount} />}
+      {/* Pets disabled for now */}
+      {/* {settings.petEnabled && <Pet completedToday={completedCount} />} */}
       <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
   );

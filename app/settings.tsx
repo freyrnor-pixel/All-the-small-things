@@ -22,7 +22,7 @@
  *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
  *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, holidays, automations link) → Work Mode group → Data group (test data, then destructive resets last).
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
- *   - Companion pet sub-card visible only when petEnabled; colour swatches pull from active theme palette.
+ *   - Companion pet section is currently disabled (code intact, ready to re-enable when feature launches).
  *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
  */
 import React, { useState } from 'react';
@@ -40,7 +40,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useSettingsStore, Settings, FontSizePref, PetType } from '@/store/useSettingsStore';
+import { useSettingsStore, Settings, FontSizePref } from '@/store/useSettingsStore';
+// import type { PetType } from '@/store/useSettingsStore'; // Used by pet feature (disabled)
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useHabitStore } from '@/store/useHabitStore';
@@ -54,8 +55,9 @@ import TimePickerWheel from '@/components/TimePickerWheel';
 import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
-const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
-const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
+// Pet feature (disabled for now)
+// const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
+// const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -68,15 +70,15 @@ export default function SettingsScreen() {
   const syncHabitNotifs = useHabitStore((s) => s.syncAllHabitReminders);
   const t = useT();
   const [name, setName] = useState(settings.userName);
-  const [petNameInput, setPetNameInput] = useState(settings.petName);
+  // const [petNameInput, setPetNameInput] = useState(settings.petName); // Pet feature (disabled)
   const [monthlyDateInput, setMonthlyDateInput] = useState(String(settings.monthlyResetDate));
 
   const DAY_LABELS = t.dayFull;
 
-  // Colour swatches for the pet colour picker — pulled from the active theme palette.
-  const petSwatches = [
-    theme.orange, theme.green, '#A78BFA', '#F472B6', '#60A5FA', '#34D399',
-  ];
+  // Colour swatches for the pet colour picker — pulled from the active theme palette. (disabled for now)
+  // const petSwatches = [
+  //   theme.orange, theme.green, '#A78BFA', '#F472B6', '#60A5FA', '#34D399',
+  // ];
 
   function applyAndSync(patch: Partial<Settings>) {
     settings.update(patch);
@@ -426,8 +428,8 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Companion pet (Proposal 6) — Appearance group */}
-        <View style={styles.section}>
+        {/* Companion pet (Proposal 6) — DISABLED FOR NOW */}
+        {/* <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.pet.toggle}</Text>
           <View style={[styles.card, { backgroundColor: theme.white }]}>
             <View style={styles.switchRow}>
@@ -448,7 +450,7 @@ export default function SettingsScreen() {
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
                 {/* Pet name */}
-                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.name}</Text>
+                {/* <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.name}</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
                   value={petNameInput}
@@ -462,7 +464,7 @@ export default function SettingsScreen() {
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
                 {/* Pet type */}
-                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.type}</Text>
+                {/* <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.type}</Text>
                 <View style={styles.petTypeRow}>
                   {PET_TYPES.map((pt) => (
                     <Pressable
@@ -485,7 +487,7 @@ export default function SettingsScreen() {
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
                 {/* Colour picker */}
-                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.colour}</Text>
+                {/* <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.colour}</Text>
                 <View style={styles.swatchRow}>
                   {petSwatches.map((color) => (
                     <Pressable
@@ -502,7 +504,7 @@ export default function SettingsScreen() {
               </>
             )}
           </View>
-        </View>
+        </View> */}
 
         {/* Shopping list — its own settings, not a notification */}
         <View style={styles.section}>
