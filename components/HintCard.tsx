@@ -1,8 +1,10 @@
 /**
  * HintCard.tsx — dismissible inline helper card shown on most screens.
  *
- * Renders a green-tinted card with a hint line plus an example. Returns null
- * when the user has disabled hints, so screens can mount it unconditionally.
+ * Renders a flat, bordered hint with an info icon and a left accent bar —
+ * deliberately flatter than the elevated/material function cards so hints
+ * read as "explanation", not "content". Returns null when the user has
+ * disabled hints, so screens can mount it unconditionally.
  *
  * Connections:
  *   Imports → constants/theme, store/useSettingsStore
@@ -12,16 +14,19 @@
  * Edit notes:
  *   - Gated on showHints; renders nothing when hints are off — callers should still pass text/example.
  *   - text/example are passed in already-localized; this component does not call useT() itself.
+ *   - Uses theme.hintBg/hintBorder/hintAccent (derived from the theme's own primary colour),
+ *     not greenLight — keeps the hint surface in tune with whichever theme/colour is active.
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { FontSize, Radius, Spacing } from '@/constants/theme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAppTheme } from '@/lib/useAppTheme';
 
 type Props = {
   text: string;
-  example: string;
+  example?: string;
 };
 
 export default function HintCard({ text, example }: Props) {
@@ -31,19 +36,40 @@ export default function HintCard({ text, example }: Props) {
   if (!showHints) return null;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.greenLight }]}>
-      <Text style={[styles.text, { color: theme.text }]}>{text}</Text>
-      <Text style={[styles.example, { color: theme.textLight }]}>{example}</Text>
+    <View style={[styles.card, { backgroundColor: theme.hintBg, borderColor: theme.hintBorder }]}>
+      <View style={[styles.accentBar, { backgroundColor: theme.hintAccent }]} />
+      <Ionicons name="information-circle-outline" size={16} color={theme.hintAccent} style={styles.icon} />
+      <View style={styles.body}>
+        <Text style={[styles.text, { color: theme.text }]}>{text}</Text>
+        {example ? <Text style={[styles.example, { color: theme.textLight }]}>{example}</Text> : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    overflow: 'hidden',
+    paddingVertical: Spacing.sm,
+    paddingRight: Spacing.md,
     marginBottom: Spacing.sm,
+  },
+  accentBar: {
+    width: 3,
+    alignSelf: 'stretch',
+    marginRight: Spacing.sm,
+  },
+  icon: {
+    marginTop: 2,
+    marginRight: Spacing.xs,
+  },
+  body: {
+    flex: 1,
+    gap: Spacing.xs,
   },
   text: {
     fontSize: FontSize.sm,

@@ -210,7 +210,11 @@ function BubbleItemView({
       pointerEvents={pointerEvents}
     >
       <View style={[styles.bubbleMask, { backgroundColor: material.backgroundColor }]}>
-        <View pointerEvents="none" style={[styles.bubbleSheen, { backgroundColor: material.sheenColor }]} />
+        {/* Stacked, decreasing-opacity layers fake a smooth highlight falloff instead of one
+            flat-edged sheen rectangle — stays OTA-safe (no native gradient module). */}
+        <View pointerEvents="none" style={[styles.bubbleSheenOuter, { backgroundColor: material.sheenColor, opacity: 0.35 }]} />
+        <View pointerEvents="none" style={[styles.bubbleSheenMid, { backgroundColor: material.sheenColor, opacity: 0.55 }]} />
+        <View pointerEvents="none" style={[styles.bubbleSheenInner, { backgroundColor: material.sheenColor, opacity: 1 }]} />
         <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
           <Ionicons name={item.icon} size={22} color="#fff" />
           <Text style={styles.bubbleLabel}>{item.label}</Text>
@@ -336,6 +340,10 @@ export default function BubbleMenu({ onNewTask }: Props) {
   // so the contrast decision stays valid across every finish.
   const fabMaterial = useMemo(() => getMaterialStyle(theme.orange, bubbleMaterial), [theme.orange, bubbleMaterial]);
 
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: openProgress.value * 0.35,
+  }));
+
   // Press feedback for the closed-state tree logo: a quick tint flash to the opposite
   // contrastOn() output (always readable, no new color constants needed) that eases back
   // to fabIconColor. Only applies to the tree logo, not the open-state "close" Ionicon.
@@ -349,7 +357,13 @@ export default function BubbleMenu({ onNewTask }: Props) {
   }
 
   return (
-    <View style={[styles.container, sideStyle]} pointerEvents="box-none">
+    <>
+      {/* Soft dim behind the open wheel so it reads as floating above the screen rather than
+          abruptly occluding it. Driven by the same openProgress as the bubbles' own fade.
+          Rendered as a sibling (not inside styles.container, which is sized to its own
+          bottom-corner content, not the full screen) so absoluteFill actually covers the screen. */}
+      <Animated.View pointerEvents="none" style={[styles.backdrop, backdropStyle]} />
+      <View style={[styles.container, sideStyle]} pointerEvents="box-none">
       {open && <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />}
 
       <GestureDetector gesture={wheelGesture}>
@@ -391,7 +405,9 @@ export default function BubbleMenu({ onNewTask }: Props) {
         accessibilityState={{ expanded: open }}
       >
         <View style={[styles.fabMask, { backgroundColor: fabMaterial.backgroundColor }]}>
-          <View pointerEvents="none" style={[styles.fabSheen, { backgroundColor: fabMaterial.sheenColor }]} />
+          <View pointerEvents="none" style={[styles.fabSheenOuter, { backgroundColor: fabMaterial.sheenColor, opacity: 0.35 }]} />
+          <View pointerEvents="none" style={[styles.fabSheenMid, { backgroundColor: fabMaterial.sheenColor, opacity: 0.55 }]} />
+          <View pointerEvents="none" style={[styles.fabSheenInner, { backgroundColor: fabMaterial.sheenColor, opacity: 1 }]} />
           {open ? (
             <Ionicons name="close" size={28} color={fabIconColor} />
           ) : (
@@ -403,11 +419,16 @@ export default function BubbleMenu({ onNewTask }: Props) {
           )}
         </View>
       </Pressable>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000',
+  },
   container: {
     position: 'absolute',
     bottom: 48,
@@ -442,12 +463,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fabSheen: {
+  fabSheenOuter: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: FAB_SIZE * 0.45,
+    height: FAB_SIZE * 0.55,
+    borderTopLeftRadius: FAB_SIZE / 2,
+    borderTopRightRadius: FAB_SIZE / 2,
+  },
+  fabSheenMid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: FAB_SIZE * 0.38,
+    borderTopLeftRadius: FAB_SIZE / 2,
+    borderTopRightRadius: FAB_SIZE / 2,
+  },
+  fabSheenInner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: FAB_SIZE * 0.2,
     borderTopLeftRadius: FAB_SIZE / 2,
     borderTopRightRadius: FAB_SIZE / 2,
   },
@@ -478,12 +517,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bubbleSheen: {
+  bubbleSheenOuter: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: BUBBLE_SIZE * 0.45,
+    height: BUBBLE_SIZE * 0.55,
+    borderTopLeftRadius: BUBBLE_SIZE / 2,
+    borderTopRightRadius: BUBBLE_SIZE / 2,
+  },
+  bubbleSheenMid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: BUBBLE_SIZE * 0.38,
+    borderTopLeftRadius: BUBBLE_SIZE / 2,
+    borderTopRightRadius: BUBBLE_SIZE / 2,
+  },
+  bubbleSheenInner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: BUBBLE_SIZE * 0.2,
     borderTopLeftRadius: BUBBLE_SIZE / 2,
     borderTopRightRadius: BUBBLE_SIZE / 2,
   },
