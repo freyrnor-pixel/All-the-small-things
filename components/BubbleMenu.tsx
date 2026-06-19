@@ -87,22 +87,22 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const FAB_MARGIN_SIDE = 34; // must match sideStyle left/right value below
+const FAB_MARGIN_SIDE = 44; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
 // Orbit radius = FAB center's distance from the screen edge. At angle 0 (RH) / π (LH)
 // this lands the edge item's center exactly on the screen boundary, so the OS compositor
 // clips it to a clean static half-circle instead of letting it hang fully past the edge —
 // which previously caused spring-oscillation flicker there. This value is load-bearing for
 // that fix — do not change it without re-deriving the edge math below.
-const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 64
+const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 74
 // RADIUS == RADIUS_X: the orbit is a true circle, not an ellipse, so bubble spacing is
 // uniform all the way around (a mismatched RADIUS previously made this a tall, pointy
 // ellipse instead of a round cluster).
-const RADIUS = RADIUS_X; // = 64
+const RADIUS = RADIUS_X; // = 74
 // Adjacent bubbles sit STEP_ANGLE (45°) apart on the circle, so every pair is the same
-// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 49px. BUBBLE_SIZE must stay under that or
+// distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 57px. BUBBLE_SIZE must stay under that or
 // adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 44
-// (the platform touch-target minimum) clears it with ~5px to spare.
+// (the platform touch-target minimum) clears it with ~13px to spare.
 const BUBBLE_SIZE = 44;
 const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
