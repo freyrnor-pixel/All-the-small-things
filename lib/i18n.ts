@@ -377,9 +377,8 @@ const en = {
     habitReminderTitle: (title: string) => `Habit: ${title}`,
     habitReminderBody: 'A gentle nudge for today.',
     overviewTitle: "Today's overview",
-    overviewBodyTasks: (n: number) => n === 1 ? '1 task left today' : `${n} tasks left today`,
     overviewBodyNoTasks: 'No tasks left today',
-    overviewBodyShopping: (n: number) => n === 1 ? '1 item on the shopping list' : `${n} items on the shopping list`,
+    overviewNothingElse: 'Nothing else queued today',
   },
   // Radial menu labels
   nav: {
@@ -1089,9 +1088,8 @@ const no: typeof en = {
     habitReminderTitle: (title: string) => `Vane: ${title}`,
     habitReminderBody: 'En liten påminnelse for i dag.',
     overviewTitle: 'Dagens oversikt',
-    overviewBodyTasks: (n: number) => n === 1 ? '1 oppgave igjen i dag' : `${n} oppgaver igjen i dag`,
     overviewBodyNoTasks: 'Ingen oppgaver igjen i dag',
-    overviewBodyShopping: (n: number) => n === 1 ? '1 vare på handlelisten' : `${n} varer på handlelisten`,
+    overviewNothingElse: 'Ingenting mer i kø i dag',
   },
   nav: {
     newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
