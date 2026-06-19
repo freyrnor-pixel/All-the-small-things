@@ -87,18 +87,18 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
 ];
 
-const FAB_MARGIN_SIDE = 54; // must match sideStyle left/right value below
+const FAB_MARGIN_SIDE = 64; // must match sideStyle left/right value below
 const FAB_SIZE = 60;
 // Orbit radius = FAB center's distance from the screen edge. At angle 0 (RH) / π (LH)
-// this lands the edge item's center exactly on the screen boundary, so the OS compositor
-// clips it to a clean static half-circle instead of letting it hang fully past the edge —
-// which previously caused spring-oscillation flicker there. This value is load-bearing for
-// that fix — do not change it without re-deriving the edge math below.
-const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 84
+// this used to land the edge item's center exactly on the screen boundary for a clean
+// compositor clip. That slot is now outside the visible window (focus moved to NW/NE,
+// see windowStart/windowEnd below), so the edge-clip behavior no longer applies there —
+// this formula is kept anyway since it still gives a sensible, edge-anchored orbit size.
+const RADIUS_X = FAB_MARGIN_SIDE + FAB_SIZE / 2; // = 94
 // RADIUS == RADIUS_X: the orbit is a true circle, not an ellipse, so bubble spacing is
 // uniform all the way around (a mismatched RADIUS previously made this a tall, pointy
 // ellipse instead of a round cluster).
-const RADIUS = RADIUS_X; // = 84
+const RADIUS = RADIUS_X; // = 94
 // Adjacent bubbles sit STEP_ANGLE (45°) apart on the circle, so every pair is the same
 // distance apart: 2·RADIUS·sin(STEP_ANGLE/2) ≈ 64px. BUBBLE_SIZE must stay under that or
 // adjacent bubbles visibly overlap every time the menu is open, not just mid-drag. 44
@@ -108,13 +108,14 @@ const STEP_ANGLE = (2 * Math.PI) / BASE_ITEMS.length; // 45° = π/4
 
 const WHEEL_SIZE = RADIUS * 2 + BUBBLE_SIZE;
 
-const DRAG_SENSITIVITY = 140; // px per radian — slightly higher for the clamped range
+const DRAG_SENSITIVITY = 100; // px per radian — lower = lighter drag feel; final rest position is always snapped to the nearest step regardless, so this only affects feel, not precision
 
 // Window is π (180°) wide — 4 steps. Opacity grades down with distance from the centered
 // focus item: 1.0 at center, OPACITY_NEAR for the immediate neighbor on each side,
 // OPACITY_FAR for the item at winStart/winEnd (the half-visible "peek" bubbles), then fades
-// to 0 over the WINDOW_FADE margin beyond that. Right-handed: from −π (left) sweeping up to
-// 0 (right).
+// to 0 over the WINDOW_FADE margin beyond that. Right-handed window is shifted one step
+// past straight-up so its center (the focus position) sits at NW instead of N; left-handed
+// is mirrored to NE.
 const WINDOW_FADE = STEP_ANGLE / 2; // ~22.5°
 const OPACITY_NEAR = 0.72;
 const OPACITY_FAR = 0.4;
@@ -124,18 +125,17 @@ const OPACITY_FAR = 0.4;
 // leaves a fully-empty adjacent slot on its far side (there's no item -1 or item 8) —
 // stopping one item short still leaves one empty half-visible peek slot at each extreme,
 // but not an empty full-opacity slot too. That's 5 × STEP_ANGLE = 5π/4 of total travel.
+// Shifted by −STEP_ANGLE (RH) / +STEP_ANGLE (LH) from the original N-centered window so
+// the same items (1 and 6) still land in the focus slot, now at its new NW/NE position.
 // Right-handed clamps wheelAngle in [MIN_WHEEL, MAX_WHEEL].
-const MIN_WHEEL_RH = -2 * Math.PI;       // item 6 centered
-const MAX_WHEEL_RH = -3 * Math.PI / 4;   // item 1 centered
-const MIN_WHEEL_LH = -Math.PI;           // item 6 centered
-const MAX_WHEEL_LH = Math.PI / 4;        // item 1 centered
+const MIN_WHEEL_RH = -9 * Math.PI / 4;   // item 6 centered
+const MAX_WHEEL_RH = -Math.PI;           // item 1 centered
+const MIN_WHEEL_LH = -7 * Math.PI / 4;   // item 6 centered
+const MAX_WHEEL_LH = -Math.PI / 2;       // item 1 centered
 
-// Default rest pose, shifted one step off the symmetric center so the default focus item
-// sits at NW rather than dead-center N. Same raw delta for both handedness (not mirrored
-// in sign) — each window's own absolute angle range determines its own give before the
-// clamp, not the sign of the default value.
-const DEFAULT_WHEEL_RH = -Math.PI - STEP_ANGLE;
-const DEFAULT_WHEEL_LH = -STEP_ANGLE;
+// Default rest pose: item 2 centered in the focus slot (now at NW/NE).
+const DEFAULT_WHEEL_RH = -5 * Math.PI / 4;
+const DEFAULT_WHEEL_LH = -3 * Math.PI / 4;
 
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
@@ -223,10 +223,11 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const [open, setOpen] = useState(false);
   const { leftHanded, bubbleMaterial } = useSettingsStore();
 
-  // Right-handed: window from −π (left) to 0 (right), π wide.
-  // Left-handed:  window from 0 (right) to π (left), mirrored.
-  const windowStart = leftHanded ? 0 : -Math.PI;
-  const windowEnd   = leftHanded ? Math.PI : 0;
+  // Right-handed: window from −5π/4 to −π/4, centered at −3π/4 (NW), π wide.
+  // Left-handed:  window from −3π/4 to π/4, centered at −π/4 (NE) — the left-right mirror
+  // of the right-handed window (x flips sign, up/down stays the same).
+  const windowStart = leftHanded ? -3 * Math.PI / 4 : -5 * Math.PI / 4;
+  const windowEnd   = leftHanded ? Math.PI / 4 : -Math.PI / 4;
 
   const wheelAngle   = useSharedValue(leftHanded ? DEFAULT_WHEEL_LH : DEFAULT_WHEEL_RH);
   const openProgress = useSharedValue(0);
@@ -393,7 +394,7 @@ export default function BubbleMenu({ onNewTask }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 32,
+    bottom: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
