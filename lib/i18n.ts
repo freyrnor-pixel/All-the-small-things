@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/budget.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -50,14 +50,6 @@ const en = {
   plansEssentialsHidden: (n: number) => `+ ${n} regular plan${n !== 1 ? 's' : ''} hidden →`,
   timelineEmpty: 'Nothing planned — enjoy your day 🌿',
   timelineNow: 'Now',
-  // Focus view (Proposal 1)
-  focusView: {
-    currentTask: 'Up next',
-    done: 'Done ✓',
-    skip: 'Skip for now',
-    allDone: 'All done for now!',
-    allDoneSubtitle: (n: number) => `You've completed ${n} thing${n !== 1 ? 's' : ''} — small things add up!`,
-  }, // currentTask key name unchanged (low-risk); renders generically, no "task" wording in value
   shoppingPreview: 'Shop soon',
   seeAll: 'See all →',
   shoppingEmpty: 'Shopping list is empty — well done!',
@@ -415,9 +407,9 @@ const en = {
   },
   // Radial menu labels
   nav: {
-    newTask: 'New', shop: 'Shop', shared: 'Shared', habits: 'Habits',
+    newTask: 'New task', shop: 'Shopping', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
-    focus: 'Focus', capture: 'Capture',
+    capture: 'Quick note',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -658,6 +650,13 @@ const en = {
     promote: '→ Task',
     discard: 'Discard',
   },
+  // Per-screen incoming shared-item prompts (components/SharedRequestsSection.tsx)
+  sharedRequests: {
+    sectionTitle: 'Shared with you',
+    fromLabel: (name: string) => (name ? `${name}:` : ''),
+    accept: 'Add',
+    dismiss: 'Dismiss',
+  },
   // AP-06B — receipts + monthly grocery budget (app/budget.tsx)
   budget: {
     title: 'Budget',
@@ -703,10 +702,6 @@ const en = {
     },
     habits: {
       text: 'Tap + each time you build or resist a habit.',
-      example: '',
-    },
-    focus: {
-      text: 'One plan at a time — Done or Skip to move on.',
       example: '',
     },
     plans: {
@@ -769,13 +764,6 @@ const no: typeof en = {
   plansEssentialsHidden: (n: number) => `+ ${n} vanlige planer skjult →`,
   timelineEmpty: 'Ingenting planlagt — nyt dagen 🌿',
   timelineNow: 'Nå',
-  focusView: {
-    currentTask: 'Neste',
-    done: 'Ferdig ✓',
-    skip: 'Hopp over for nå',
-    allDone: 'Alt er gjort for nå!',
-    allDoneSubtitle: (n: number) => `Du har fullført ${n} ting — småting teller!`,
-  },
   shoppingPreview: 'Handle snart',
   seeAll: 'Se alt →',
   shoppingEmpty: 'Handlelisten er tom — bra jobbet!',
@@ -1254,9 +1242,9 @@ const no: typeof en = {
     renudgeBody: 'Ingen hast — bare en mild påminnelse når du er klar.',
   },
   nav: {
-    newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
+    newTask: 'Ny oppgave', shop: 'Handleliste', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
-    focus: 'Fokus', capture: 'Fang opp',
+    capture: 'Notér',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',
@@ -1355,6 +1343,13 @@ const no: typeof en = {
     promote: '→ Oppgave',
     discard: 'Forkast',
   },
+  // Per-skjerm "delt med deg"-forslag (components/SharedRequestsSection.tsx)
+  sharedRequests: {
+    sectionTitle: 'Delt med deg',
+    fromLabel: (name: string) => (name ? `${name}:` : ''),
+    accept: 'Legg til',
+    dismiss: 'Avvis',
+  },
   // AP-06B — kvitteringer + månedlig handlebudsjett (app/budget.tsx)
   budget: {
     title: 'Budsjett',
@@ -1400,10 +1395,6 @@ const no: typeof en = {
     },
     habits: {
       text: 'Trykk + hver gang du bygger eller motstår en vane.',
-      example: '',
-    },
-    focus: {
-      text: 'Én plan om gangen — Ferdig eller Hopp over for å gå videre.',
       example: '',
     },
     plans: {

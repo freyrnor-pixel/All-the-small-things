@@ -28,7 +28,7 @@
  *     affordance, so a stray tap on the button never leaves the user stuck unable
  *     to use the screen underneath.
  *   - The 4 RANGES below must stay in sync with the clamps in components/BubbleMenu.tsx
- *     (bubbleSize 30-70, bubbleSpacing 60-110) — that component re-clamps defensively
+ *     (bubbleSize 34-78, bubbleSpacing 68-120) — that component re-clamps defensively
  *     too, but keep both in sync so this UI never suggests a value the wheel would
  *     silently override.
  *   - Export groups ALL screens' notes (not just the current one) plus the 4 live
@@ -67,8 +67,8 @@ type BubbleKey = 'bubbleSize' | 'bubbleSpacing' | 'bubbleSpringIntensity' | 'bub
 type Composer = { x: number; y: number; editId: string | null; text: string };
 
 const RANGES: Record<BubbleKey, { min: number; max: number; step: number; default: number }> = {
-  bubbleSize: { min: 30, max: 70, step: 2, default: 50 },
-  bubbleSpacing: { min: 60, max: 110, step: 2, default: 78 },
+  bubbleSize: { min: 34, max: 78, step: 2, default: 58 },
+  bubbleSpacing: { min: 68, max: 120, step: 2, default: 88 },
   bubbleSpringIntensity: { min: 0, max: 100, step: 5, default: 50 },
   bubbleAnimSpeed: { min: 0, max: 100, step: 5, default: 50 },
 };

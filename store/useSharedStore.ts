@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → lib/db, lib/id
- *   Used by → app/_layout.tsx, app/scan.tsx, app/share-modal.tsx, app/shared.tsx
+ *   Used by → app/_layout.tsx, app/scan.tsx, app/share-modal.tsx, app/shared.tsx, components/SharedRequestsSection.tsx
  *   Data    → defines a Zustand store; owns SQLite tables shared_tasks and shared_shopping_items
  *
  * Edit notes:

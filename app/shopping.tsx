@@ -10,13 +10,14 @@
  * history via "Finish shopping".
  *
  * Connections:
- *   Imports → components/CarryOverPromptModal, components/ConfirmationBanner, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/CarryOverPromptModal, components/ConfirmationBanner, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/SharedRequestsSection, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay/monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
- *   - Header Share button opens the /share-modal modal with params { kind: 's' }.
+ *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it goes to /shared (full sent/received history).
+ *   - SharedRequestsSection (kind='shopping') sits above the summary row — inline accept/dismiss for items a partner asked for via the scan flow, replacing the old bubble-wheel "Shared" entry.
  *   - Weekly vs monthly are visually distinguished by the per-tab accent (green vs orange) applied to section headers + a thick accent rule.
  *   - Autocomplete suggestions render as large PressableScale chips; "clear checked" lives at the BOTTOM and reuses removeWithSource per checked item (no dedicated store action).
  *   - weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed, so the label is t.days[(weeklyResetDay + 1) % 7].
@@ -40,6 +41,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -51,6 +53,7 @@ import { useAutomationStore } from '@/store/useAutomationStore';
 import ShoppingRow from '@/components/ShoppingRow';
 import MonthlyTableRow from '@/components/MonthlyTableRow';
 import CarryOverPromptModal from '@/components/CarryOverPromptModal';
+import SharedRequestsSection from '@/components/SharedRequestsSection';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
@@ -354,12 +357,17 @@ export default function ShoppingScreen() {
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
         <Text style={[styles.title, { color: theme.text }]}>{t.shoppingTitle}</Text>
-        <Pressable
-          style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
-          onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
-        >
-          <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
+            <Ionicons name="link-outline" size={20} color={theme.textLight} />
+          </Pressable>
+          <Pressable
+            style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
+            onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
+          >
+            <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Tabs — styled per tab */}
@@ -405,6 +413,8 @@ export default function ShoppingScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
+
+          <SharedRequestsSection kind="shopping" />
 
           {/* Summary + reset-day row */}
           <View style={styles.summaryRow}>
@@ -871,6 +881,7 @@ const baseStyles = StyleSheet.create({
   },
   back: { fontSize: FontSize.md, fontWeight: '600' },
   title: { fontSize: FontSize.xl, fontWeight: '700' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   shareHeaderBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
   shareHeaderBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
 
