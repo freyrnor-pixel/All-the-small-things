@@ -9,7 +9,7 @@
  * trigger different speech-bubble reactions.
  *
  * Connections:
- *   Imports → constants/petData, constants/theme, lib/useAppTheme,
+ *   Imports → constants/petData, constants/theme, lib/haptics, lib/useAppTheme,
  *             store/useSettingsStore, store/useShoppingStore
  *   Used by → app/index.tsx
  *   Props   → completedToday: triggers excited animation when it increases
@@ -30,6 +30,7 @@ import Reanimated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { tap } from '@/lib/haptics';
 import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -309,7 +310,7 @@ export default function Pet({ completedToday }: Props) {
       </View>
 
       {/* Pet in habitat — measurement anchor (ref on outer, animation on inner) */}
-      <Pressable onPress={triggerHappy} hitSlop={10}>
+      <Pressable onPress={() => { tap(); triggerHappy(); }} hitSlop={10}>
         <View ref={petRef} style={styles.petAnchor}>
           <Animated.View
             style={{

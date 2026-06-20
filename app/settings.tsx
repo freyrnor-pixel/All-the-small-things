@@ -49,7 +49,7 @@ import { syncReminders } from '@/lib/reminders';
 import { seedTestData } from '@/lib/seedTestData';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import { selection } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
+import { selection, warning, heavy } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -98,12 +98,13 @@ export default function SettingsScreen() {
   }
 
   function confirmReset(label: string, action: () => void) {
+    warning();
     Alert.alert(
       t.resetConfirmTitle(label),
       t.resetConfirmBody,
       [
         { text: t.cancel, style: 'cancel' },
-        { text: t.resetConfirmBtn, style: 'destructive', onPress: action },
+        { text: t.resetConfirmBtn, style: 'destructive', onPress: () => { heavy(); action(); } },
       ]
     );
   }

@@ -49,7 +49,7 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
-import { success } from '@/lib/haptics';
+import { success, selection, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -161,9 +161,13 @@ export default function ShoppingScreen() {
 
   // Swipe-down-to-close on the add sheet's drag handle
   const sheetTranslateY = useSharedValue(0);
+  const sheetCloseArmed = useSharedValue(false);
   useEffect(() => {
-    if (showAddSheet) sheetTranslateY.value = 0;
-  }, [showAddSheet, sheetTranslateY]);
+    if (showAddSheet) {
+      sheetTranslateY.value = 0;
+      sheetCloseArmed.value = false;
+    }
+  }, [showAddSheet, sheetTranslateY, sheetCloseArmed]);
 
   function closeAddSheet() {
     setShowAddSheet(false);
@@ -172,10 +176,20 @@ export default function ShoppingScreen() {
   const sheetPanGesture = Gesture.Pan()
     .onUpdate((e) => {
       if (e.translationY > 0) sheetTranslateY.value = e.translationY;
+      // One-shot tick the moment the drag crosses the close threshold — not on every frame.
+      if (e.translationY > 100) {
+        if (!sheetCloseArmed.value) {
+          sheetCloseArmed.value = true;
+          runOnJS(selection)();
+        }
+      } else {
+        sheetCloseArmed.value = false;
+      }
     })
     .onEnd((e) => {
       if (e.translationY > 100 || e.velocityY > 800) {
         sheetTranslateY.value = reducedMotion ? 600 : withTiming(600, { duration: 180 });
+        runOnJS(heavy)();
         runOnJS(closeAddSheet)();
       } else {
         sheetTranslateY.value = reducedMotion ? 0 : withSpring(0, { damping: 16, stiffness: 180 });
