@@ -471,6 +471,7 @@ export default function ShoppingScreen() {
                         <ShoppingRow
                           item={item}
                           theme={theme}
+                          variant="planned"
                           onToggle={() => toggle(item.id)}
                           onRemove={() => removeWithSource(item.id)}
                           onAdjust={(d) => adjustAmount(item.id, d)}
@@ -500,6 +501,7 @@ export default function ShoppingScreen() {
                     <ShoppingRow
                       item={item}
                       theme={theme}
+                      variant="planned"
                       onToggle={() => toggle(item.id)}
                       onRemove={() => removeWithSource(item.id)}
                       onAdjust={(d) => adjustAmount(item.id, d)}
@@ -562,6 +564,7 @@ export default function ShoppingScreen() {
                     <ShoppingRow
                       item={item}
                       theme={theme}
+                      variant="cart"
                       onToggle={() => toggle(item.id)}
                       onRemove={() => removeWithSource(item.id)}
                     />
@@ -608,7 +611,7 @@ export default function ShoppingScreen() {
                 <Surface style={styles.card}>
                   {monthlyPurchased.map((item, idx) => (
                     <View key={item.id}>
-                      <ShoppingRow item={item} theme={theme} onToggle={() => {}} onRemove={() => removeWithSource(item.id)} />
+                      <ShoppingRow item={item} theme={theme} variant="purchased" onToggle={() => {}} onRemove={() => removeWithSource(item.id)} />
                       {idx < monthlyPurchased.length - 1 && (
                         <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                       )}
@@ -631,7 +634,7 @@ export default function ShoppingScreen() {
                   <Surface style={styles.card}>
                     {weekItems.map((item, idx) => (
                       <View key={item.id}>
-                        <ShoppingRow item={item} theme={theme} onToggle={() => {}} onRemove={() => removeWithSource(item.id)} />
+                        <ShoppingRow item={item} theme={theme} variant="purchased" onToggle={() => {}} onRemove={() => removeWithSource(item.id)} />
                         {idx < weekItems.length - 1 && (
                           <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                         )}

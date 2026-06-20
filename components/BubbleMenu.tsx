@@ -322,13 +322,13 @@ export default function BubbleMenu({ onNewTask }: Props) {
     return clamp(bSize + extra * 1.6, bSize, maxItemSize);
   }
 
-  // ζ≈0.9 at the default springScale=1 — fast expansion that settles into place almost
-  // immediately, with only a faint hint of bounce rather than a visible overshoot/wobble.
+  // ζ≈0.41 at the default springScale=1 — "sprettball" (bouncing-ball) feel: a visible
+  // springy overshoot before it settles, rather than a calm critically-damped-ish glide.
   // Both stiffness and damping scale with springScale so the debug overlay's "spring
-  // intensity" slider still has a consistent feel (and the damping ratio stays the same)
+  // intensity" slider keeps a consistent feel (and the damping ratio stays the same)
   // across its whole range, instead of damping staying fixed while only stiffness moved.
   const openStiffness = clamp(350 * springScale, 80, 1400);
-  const OPEN_SPRING = { damping: 1.8 * Math.sqrt(openStiffness), stiffness: openStiffness };
+  const OPEN_SPRING = { damping: 0.82 * Math.sqrt(openStiffness), stiffness: openStiffness };
 
   function toggleWheel() {
     tap();

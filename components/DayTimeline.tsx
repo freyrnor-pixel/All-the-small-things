@@ -19,7 +19,10 @@
  *   - Tasks with a `time` are sorted chronologically; the live "now" marker
  *     (re-rendered on a 60s interval, see useNowMinutes) is inserted only among
  *     the timed entries, right before the first one that hasn't started yet.
- *   - Time-box tasks show their start–end span; start-at tasks show a single time.
+ *   - Time-box tasks show their start–end span as one "08:00–09:30" line (not stacked
+ *     start/end lines — that was hard to read); start-at tasks show a single time. Both
+ *     always use the dimmed-aware color (theme.text vs theme.textLight), never a hardcoded
+ *     textLight, so done/past rows dim consistently with the title.
  *   - Essential tasks get a small star indicator — regular tasks get none. Done
  *     tasks are muted (not hidden) so the day's shape stays visible.
  */
@@ -109,13 +112,8 @@ export default function DayTimeline({ tasks, onPress }: Props) {
       <Pressable key={task.id} style={styles.row} onPress={() => onPress(task)}>
         <View style={styles.timeCol}>
           {showLine && (
-            <Text style={[styles.timeText, { color: dimmed ? theme.textLight : theme.text }]}>
-              {task.time}
-            </Text>
-          )}
-          {showLine && task.taskType === 'time-box' && (
-            <Text style={[styles.timeEndText, { color: theme.textLight }]}>
-              {minutesToLabel(end)}
+            <Text style={[styles.timeText, { color: dimmed ? theme.textLight : theme.text }]} numberOfLines={1}>
+              {task.taskType === 'time-box' ? `${task.time}–${minutesToLabel(end)}` : task.time}
             </Text>
           )}
         </View>
@@ -186,16 +184,15 @@ const baseStyles = StyleSheet.create({
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'flex-start' },
-  timeCol: { width: 48, alignItems: 'flex-end', paddingTop: 1, paddingRight: Spacing.sm },
-  timeText: { fontSize: FontSize.sm, fontWeight: '600' },
-  timeEndText: { fontSize: FontSize.xs, marginTop: 1 },
+  timeCol: { width: 68, alignItems: 'flex-end', paddingTop: 1, paddingRight: Spacing.sm },
+  timeText: { fontSize: FontSize.sm, fontWeight: '700' },
   lineCol: { alignItems: 'center', width: 16 },
   dot: { width: 10, height: 10, borderRadius: Radius.full, borderWidth: 2 },
   connector: { width: 2, flex: 1, minHeight: Spacing.lg, marginVertical: 2 },
   contentCol: { flex: 1, paddingLeft: Spacing.sm, paddingBottom: Spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   title: { fontSize: FontSize.md, fontWeight: '500', flexShrink: 1 },
-  nowRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 48 + Spacing.sm, marginVertical: 2 },
+  nowRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 68 + Spacing.sm, marginVertical: 2 },
   nowDot: { width: 6, height: 6, borderRadius: Radius.full, marginRight: 6 },
   nowLine: { flex: 1, height: 1.5, opacity: 0.6 },
   nowLabel: { fontSize: FontSize.xs, fontWeight: '700', marginLeft: 6 },

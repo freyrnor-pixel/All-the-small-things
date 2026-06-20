@@ -12,6 +12,9 @@
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
+ *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard right
+ *     below it is purely the ⭐ focus-mode instruction (t.hints.home.text) — keep these
+ *     two separate, don't recombine them into one string.
  *   - The update-ready banner mirrors the work-mode banner's look (theme.green
  *     pill) and calls Updates.reloadAsync() directly on tap — app/_layout.tsx
  *     only sets the updateReady flag, never auto-reloads or pops an Alert.
@@ -308,6 +311,7 @@ export default function HomeScreen() {
           </View>
         )}
 
+        <Text style={[styles.dailyOverviewHeader, { color: theme.text }]}>{t.dailyOverview}</Text>
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
 
         <InboxSection />
@@ -516,6 +520,7 @@ const baseStyles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
+  dailyOverviewHeader: { fontSize: FontSize.lg, fontFamily: Fonts.semibold },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   shareBtn: { borderRadius: Radius.full, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },

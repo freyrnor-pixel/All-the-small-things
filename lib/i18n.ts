@@ -639,6 +639,10 @@ const en = {
     title: 'Up next',
     markDone: 'Mark done',
     empty: "Nothing urgent right now — you're caught up.",
+    now: 'Now',
+    inMinutes: (m: number) => `in ${m} min`,
+    inHours: (h: number) => `in ${h}h`,
+    inHoursMinutes: (h: number, m: number) => `in ${h}h ${m}min`,
   },
   // AP-02 — quick-capture inbox (app/capture.tsx, components/InboxSection.tsx)
   inbox: {
@@ -1332,6 +1336,10 @@ const no: typeof en = {
     title: 'Neste på tur',
     markDone: 'Merk som gjort',
     empty: 'Ingenting presserende akkurat nå — du er à jour.',
+    now: 'Nå',
+    inMinutes: (m: number) => `om ${m} min`,
+    inHours: (h: number) => `om ${h}t`,
+    inHoursMinutes: (h: number, m: number) => `om ${h}t ${m}min`,
   },
   // AP-02 — hurtigfangst-innboks (app/capture.tsx, components/InboxSection.tsx)
   inbox: {
