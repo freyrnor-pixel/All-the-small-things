@@ -62,7 +62,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, MaterialStyle } from '@/constants/theme';
+import { Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, tintToTheme, MaterialStyle } from '@/constants/theme';
 import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -290,15 +290,19 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const t = useT();
   const { reducedMotion } = useAccessibility();
 
+  // Feature colors are leaned toward the active theme's accent here — without this,
+  // satellite bubbles show the exact same fixed hues no matter which color theme is
+  // selected, which is what made them read as disconnected from "the rest of the app".
+  // Only the FAB itself (theme.orange) was theme-aware before this.
   const items = useMemo((): BubbleEntry[] =>
     BASE_ITEMS.map((item) => ({
       icon: item.icon,
       label: t.nav[item.labelKey],
       route: item.route,
-      color: item.color,
+      color: tintToTheme(item.color, theme.orange),
       onPress: item.route === '/task-form' && onNewTask ? onNewTask : undefined,
     })),
-    [onNewTask, t]
+    [onNewTask, t, theme.orange]
   );
 
   // ζ≈0.9 at the default springScale=1 — fast expansion that settles into place almost

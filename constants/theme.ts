@@ -11,6 +11,10 @@
  * `getMaterialStyle(base, material)` computes bubble/FAB surface-finish tokens
  * (glass/metal/rock/paper) from a single base colour, tinted toward that
  * finish's real-world hue — see "Materials" section below.
+ * `tintToTheme(base, themeAccent)` leans a fixed feature colour (FeatureColors.*)
+ * toward the active theme's accent hue/saturation, so per-feature colours (bubble
+ * wheel, task-type accents) shift with the selected colour theme instead of always
+ * rendering the exact same hardcoded hues.
  *
  * Connections:
  *   Imports → —
@@ -694,6 +698,18 @@ function tint(base: string, target: string, ratio: number): string {
   const [targetH, targetS] = hexToHsl(target);
   const relit = hslToHex(targetH, targetS, baseL);
   return mix(base, relit, ratio);
+}
+
+/**
+ * Pulls a fixed feature color (FeatureColors.*) toward the active theme's accent
+ * hue/saturation, so the bubble wheel actually shifts with the selected color theme
+ * instead of always showing the same hardcoded hues regardless of theme. Each
+ * feature keeps enough of its own identity (ratio kept below 0.5) that habits is
+ * still recognizably green-ish, health red-ish, etc. — it just leans toward the
+ * theme's accent rather than sitting completely outside the palette.
+ */
+export function tintToTheme(base: string, themeAccent: string, ratio = 0.38): string {
+  return tint(base, themeAccent, ratio);
 }
 
 /** Real-world reference hue + blend strength each finish tints its base toward. */
