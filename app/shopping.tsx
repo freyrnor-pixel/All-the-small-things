@@ -2,28 +2,31 @@
  * shopping.tsx — weekly & monthly shopping lists
  *
  * Tabbed shopping screen (weekly / monthly) with per-category grouping,
- * a three-section Planned / In cart / Purchased flow, quantity adjust, and
- * add via the catalog-backed autocomplete (useCatalogStore.suggest). Monthly
- * items can be allocated into the weekly list through the MonthlyPickerSheet.
+ * check-off, quantity adjust, and add via the catalog-backed autocomplete
+ * (useCatalogStore.suggest). Monthly items can be allocated into the weekly
+ * list via the add sheet's "From monthly" tab. Monthly items also run through
+ * a staged → in_cart → purchased pipeline rendered as an Excel-style table;
+ * weekly items keep their checked/in-cart flow but gain a purchased-by-week
+ * history via "Finish shopping".
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ScreenBackground, components/ShoppingRow, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/CarryOverPromptModal, components/ConfirmationBanner, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/SharedRequestsSection, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay, read-only) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
+ *   Data    → useShoppingStore (shopping_items table) + useCatalogStore (store_items, for suggestions) + useSettingsStore (weeklyResetDay/monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
- *   - Header Share button opens the /share-modal modal with params { kind: 's' }.
+ *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it goes to /shared (full sent/received history).
+ *   - SharedRequestsSection (kind='shopping') sits above the summary row — inline accept/dismiss for items a partner asked for via the scan flow, replacing the old bubble-wheel "Shared" entry.
  *   - Weekly vs monthly are visually distinguished by the per-tab accent (green vs orange) applied to section headers + a thick accent rule.
- *   - Three sections per tab: Planned (!checked, ShoppingRow variant="planned", "+" moves into cart), In cart
- *     (checked && !purchased, variant="cart", "−" moves back to planned), Purchased (checked && purchased,
- *     variant="purchased", read-only checkmark). "Shopping done" calls markPurchased(tab) to finalize the whole
- *     cart at once; "Clear purchased" is the only thing that deletes purchased rows (via removeWithSource, so
- *     monthly allocations are released) — there is no dedicated bulk-delete store action.
+ *   - Autocomplete suggestions render as large PressableScale chips; "clear checked" lives at the BOTTOM and reuses removeWithSource per checked item (no dedicated store action).
  *   - weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed, so the label is t.days[(weeklyResetDay + 1) % 7].
- *   - Planned items with a dishName (pushed from app/meals.tsx) render grouped under that dish in their own cards, above the plain alphabetical list; ungroupedPlanned feeds the latter so items aren't duplicated.
+ *   - Unchecked items with a dishName (pushed from app/meals.tsx) render grouped under that dish in their own cards, above the plain alphabetical list; ungroupedUnchecked feeds the latter so items aren't duplicated.
  *   - Add sheet supports swipe-down-to-close via a Gesture.Pan on the handle/title row only (not the whole sheet, so inner ScrollView/TextInput touches aren't hijacked); past 100px or a fast flick closes it, otherwise it springs back.
  *   - The 'shopping_opened' trigger fires once per mount ([] deps) — not on every re-render as items change.
+ *   - Monthly "list"-status items render as an Excel-style table (MonthlyTableRow); staging is reversible (tap again) until "Save/Add to shopping list" commits staged → in_cart. "Finish shopping" then commits in_cart → purchased.
+ *   - The monthly reset button + an automatic on-mount payday check both route through resetMonthlyWithCarryOver(); when temporary unpurchased items exist, CarryOverPromptModal collects per-item carry/drop decisions first. lastMonthlyReset (YYYY-MM-DD) in settings guards the automatic check to once per payday period.
+ *   - weekKey for weekly "purchased" history is the YYYY-MM-DD of the most recent occurrence of weeklyResetDay; sections group by that key, newest first.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -38,16 +41,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { useShoppingStore } from '@/store/useShoppingStore';
+import { useShoppingStore, getCarryOverCandidates } from '@/store/useShoppingStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import ShoppingRow from '@/components/ShoppingRow';
-import MonthlyPickerSheet from '@/components/MonthlyPickerSheet';
+import MonthlyTableRow from '@/components/MonthlyTableRow';
+import CarryOverPromptModal from '@/components/CarryOverPromptModal';
+import SharedRequestsSection from '@/components/SharedRequestsSection';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
@@ -55,8 +61,19 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import { success, selection, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
+import { todayStr, dateStr } from '@/lib/date';
 import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+
+/** YYYY-MM-DD of the most recent occurrence of weeklyResetDay (0=Mon..6=Sun), inclusive of today. */
+function currentWeekKey(weeklyResetDay: number): string {
+  const now = new Date();
+  const jsDay = (now.getDay() + 6) % 7; // convert Sunday-indexed JS day to Monday-indexed
+  const back = (jsDay - weeklyResetDay + 7) % 7;
+  const start = new Date(now);
+  start.setDate(now.getDate() - back);
+  return dateStr(start);
+}
 
 const CATEGORY_ORDER = [
   'produce', 'dairy', 'meat', 'fish', 'bread', 'frozen',
@@ -74,14 +91,15 @@ export default function ShoppingScreen() {
   const [tab, setTab] = useState<Tab>('weekly');
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [addSheetTab, setAddSheetTab] = useState<'freely' | 'monthly'>('freely');
-  const [showMonthlyPicker, setShowMonthlyPicker] = useState(false);
   const [categoryExpanded, setCategoryExpanded] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('1');
   const [newUnit, setNewUnit] = useState('');
   const [newCategory, setNewCategory] = useState<Category>('other');
   const [newPrice, setNewPrice] = useState(0);
+  const [addAsTemporary, setAddAsTemporary] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [carryOverVisible, setCarryOverVisible] = useState(false);
 
   const items = useShoppingStore((s) => s.items);
   const add = useShoppingStore((s) => s.add);
@@ -89,12 +107,17 @@ export default function ShoppingScreen() {
   const removeWithSource = useShoppingStore((s) => s.removeWithSource);
   const adjustAmount = useShoppingStore((s) => s.adjustAmount);
   const addFromMonthly = useShoppingStore((s) => s.addFromMonthly);
-  const markPurchased = useShoppingStore((s) => s.markPurchased);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
-  const resetMonthly = useShoppingStore((s) => s.resetMonthly);
+  const stageItem = useShoppingStore((s) => s.stageItem);
+  const commitStaged = useShoppingStore((s) => s.commitStaged);
+  const finishShopping = useShoppingStore((s) => s.finishShopping);
+  const resetMonthlyWithCarryOver = useShoppingStore((s) => s.resetMonthlyWithCarryOver);
   const suggest = useCatalogStore((s) => s.suggest);
   const catalog = useCatalogStore((s) => s.items);
   const weeklyResetDay = useSettingsStore((s) => s.weeklyResetDay);
+  const monthlyResetDate = useSettingsStore((s) => s.monthlyResetDate);
+  const lastMonthlyReset = useSettingsStore((s) => s.lastMonthlyReset);
+  const updateSettings = useSettingsStore((s) => s.update);
   const dishes = useMealStore((s) => s.dishes);
   const { reducedMotion } = useAccessibility();
   const t = useT();
@@ -106,6 +129,28 @@ export default function ShoppingScreen() {
   useEffect(() => {
     useAutomationStore.getState().fireTrigger('shopping_opened');
   }, []);
+
+  // Automatic payday-boundary reset: once per period, when today's day-of-month
+  // has reached monthlyResetDate and we haven't already reset for this period.
+  useEffect(() => {
+    const today = todayStr();
+    const periodKey = today.slice(0, 7); // YYYY-MM
+    if (lastMonthlyReset.slice(0, 7) === periodKey) return;
+    if (new Date().getDate() < monthlyResetDate) return;
+    const candidates = getCarryOverCandidates(useShoppingStore.getState().items);
+    if (candidates.length > 0) {
+      setCarryOverVisible(true);
+    } else {
+      resetMonthlyWithCarryOver([], []);
+      updateSettings({ lastMonthlyReset: today });
+    }
+  }, [lastMonthlyReset, monthlyResetDate, resetMonthlyWithCarryOver, updateSettings]);
+
+  function handleCarryOverConfirm(carryIds: string[], dropIds: string[]) {
+    resetMonthlyWithCarryOver(carryIds, dropIds);
+    updateSettings({ lastMonthlyReset: todayStr() });
+    setCarryOverVisible(false);
+  }
 
   const suggestions = useMemo(() => {
     const exact = newName.trim().toLowerCase();
@@ -126,45 +171,67 @@ export default function ShoppingScreen() {
     setCategoryExpanded(false);
   }
 
-  const weeklyItems = items.filter((i) => i.listType === 'weekly');
-  const monthlyItems = items.filter((i) => i.listType === 'monthly');
+  const weeklyItems = items.filter((i) => i.listType === 'weekly' && i.status !== 'purchased');
+  const monthlyItemsAll = items.filter((i) => i.listType === 'monthly');
+  const monthlyItems = monthlyItemsAll.filter((i) => i.status !== 'purchased');
   const filtered = tab === 'weekly' ? weeklyItems : monthlyItems;
-  const planned = filtered.filter((i) => !i.checked);
-  const inCart = filtered.filter((i) => i.checked && !i.purchased);
-  const purchasedItems = filtered.filter((i) => i.checked && i.purchased);
+  const unchecked = tab === 'weekly' ? filtered.filter((i) => !i.checked) : filtered.filter((i) => i.status === 'list' || i.status === 'staged');
+  const checked = tab === 'weekly' ? filtered.filter((i) => i.checked) : filtered.filter((i) => i.status === 'in_cart');
 
-  // Alphabetically sorted planned items for current tab
-  const sortedPlanned = useMemo(
-    () => [...planned].sort((a, b) => a.name.localeCompare(b.name)),
-    [planned]
+  // Monthly-only: purchased history (kept for review, collapsible)
+  const monthlyPurchased = useMemo(
+    () => monthlyItemsAll.filter((i) => i.status === 'purchased'),
+    [monthlyItemsAll]
+  );
+  const [purchasedExpanded, setPurchasedExpanded] = useState(false);
+
+  // Monthly-only: items currently staged (for the "Save/Add to shopping list" commit step)
+  const stagedCount = monthlyItems.filter((i) => i.status === 'staged').length;
+
+  // Monthly grand total — sum of price * amount over the visible main-list rows
+  const monthlyGrandTotal = useMemo(
+    () => unchecked
+      .filter((i) => i.status === 'list')
+      .reduce((sum, i) => sum + i.price * (parseInt(i.amount, 10) || 1), 0),
+    [unchecked]
+  );
+
+  // Weekly-only: purchased history grouped by week, newest first
+  const weeklyPurchasedByWeek = useMemo(() => {
+    const purchased = items.filter((i) => i.listType === 'weekly' && i.status === 'purchased');
+    const map = new Map<string, typeof purchased>();
+    for (const item of purchased) {
+      const key = item.weekKey ?? 'unknown';
+      const group = map.get(key);
+      if (group) group.push(item);
+      else map.set(key, [item]);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [items]);
+  const [weeklyHistoryExpanded, setWeeklyHistoryExpanded] = useState(false);
+
+  // Alphabetically sorted unchecked items for current tab
+  const sortedUnchecked = useMemo(
+    () => [...unchecked].sort((a, b) => a.name.localeCompare(b.name)),
+    [unchecked]
   );
 
   // Items pushed from a dish (app/meals.tsx) are grouped under that dish's name;
   // everything else stays in the plain alphabetical list below.
   const dishGroups = useMemo(() => {
-    const map = new Map<string, typeof sortedPlanned>();
-    for (const item of sortedPlanned) {
+    const map = new Map<string, typeof sortedUnchecked>();
+    for (const item of sortedUnchecked) {
       if (!item.dishName) continue;
       const group = map.get(item.dishName);
       if (group) group.push(item);
       else map.set(item.dishName, [item]);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [sortedPlanned]);
+  }, [sortedUnchecked]);
 
-  const ungroupedPlanned = useMemo(
-    () => sortedPlanned.filter((i) => !i.dishName),
-    [sortedPlanned]
-  );
-
-  const sortedInCart = useMemo(
-    () => [...inCart].sort((a, b) => a.name.localeCompare(b.name)),
-    [inCart]
-  );
-
-  const sortedPurchased = useMemo(
-    () => [...purchasedItems].sort((a, b) => a.name.localeCompare(b.name)),
-    [purchasedItems]
+  const ungroupedUnchecked = useMemo(
+    () => sortedUnchecked.filter((i) => !i.dishName),
+    [sortedUnchecked]
   );
 
   // Monthly items that still have remaining quantity (available to add to weekly)
@@ -218,8 +285,9 @@ export default function ShoppingScreen() {
 
   function addItem() {
     if (!newName.trim()) return;
+    const name = newName.trim();
     add({
-      name: newName.trim(),
+      name,
       amount: newAmount || '1',
       unit: newUnit,
       listType: tab,
@@ -227,38 +295,52 @@ export default function ShoppingScreen() {
       price: newPrice,
       category: newCategory,
       inventoryQty: 0,
+      isTemporary: tab === 'monthly' ? addAsTemporary : false,
     });
     setNewName('');
     setNewAmount('1');
     setNewUnit('');
     setNewCategory('other');
     setNewPrice(0);
+    setAddAsTemporary(false);
     setShowAddSheet(false);
     setCategoryExpanded(false);
+    success();
+    setConfirm(t.itemAddedToList(name));
   }
 
-  function handleMonthlyPickerConfirm(selections: { id: string; qty: number }[]) {
-    for (const { id, qty } of selections) {
-      addFromMonthly(id, qty);
+  function openUpdateInventory() {
+    setAddAsTemporary(true);
+    setAddSheetTab('freely');
+    setShowAddSheet(true);
+  }
+
+  function handleSaveToCart() {
+    if (stagedCount === 0) return;
+    commitStaged();
+    success();
+    setConfirm(t.saveAddToShoppingListBtn);
+  }
+
+  function handleFinishShopping() {
+    if (checked.length === 0) return;
+    if (tab === 'monthly') {
+      finishShopping('monthly');
+    } else {
+      finishShopping('weekly', currentWeekKey(weeklyResetDay));
     }
-    setShowMonthlyPicker(false);
-  }
-
-  // Finalize the in-cart items for the current tab into "purchased".
-  function finishShopping() {
-    if (inCart.length === 0) return;
-    markPurchased(tab);
     success();
+    setConfirm(t.finishShoppingBtn);
   }
 
-  // Clear only the purchased items in the current tab. Reuses removeWithSource
+  // Clear only the checked-off items in the current tab. Reuses removeWithSource
   // so monthly allocations get released; there is no dedicated store action.
-  function clearPurchased() {
-    if (purchasedItems.length === 0) return;
-    const n = purchasedItems.length;
-    purchasedItems.forEach((item) => removeWithSource(item.id));
+  function clearChecked() {
+    if (checked.length === 0) return;
+    const n = checked.length;
+    checked.forEach((item) => removeWithSource(item.id));
     success();
-    setConfirm(t.clearPurchasedItems(n));
+    setConfirm(t.clearCheckedItems(n));
   }
 
   // Per-tab accent colour
@@ -275,12 +357,17 @@ export default function ShoppingScreen() {
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
         <Text style={[styles.title, { color: theme.text }]}>{t.shoppingTitle}</Text>
-        <Pressable
-          style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
-          onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
-        >
-          <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
+            <Ionicons name="link-outline" size={20} color={theme.textLight} />
+          </Pressable>
+          <Pressable
+            style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
+            onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
+          >
+            <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Tabs — styled per tab */}
@@ -327,11 +414,13 @@ export default function ShoppingScreen() {
         >
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
 
+          <SharedRequestsSection kind="shopping" />
+
           {/* Summary + reset-day row */}
           <View style={styles.summaryRow}>
             <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
               <Text style={[styles.summaryText, { color: theme.text }]}>
-                {t.shoppingRemaining(planned.length, inCart.length, purchasedItems.length)}
+                {t.shoppingRemaining(unchecked.length, checked.length)}
               </Text>
             </View>
             {tab === 'weekly' && (
@@ -345,51 +434,25 @@ export default function ShoppingScreen() {
 
           {/* no inline add form — use FAB button below */}
 
-          {/* Weekly tab: Monthly-source section + Weekly items */}
-          {tab === 'weekly' && monthlyAvailable.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.monthlySourceSection}</Text>
-                <Pressable onPress={() => setShowMonthlyPicker(true)} hitSlop={8}>
-                  <Text style={[styles.addAllBtn, { color: theme.orange }]}>{t.addFromMonthly}</Text>
+          {/* Monthly tab: action row — update inventory + commit staged items to cart */}
+          {tab === 'monthly' && (
+            <View style={styles.actionRow}>
+              <Pressable style={[styles.actionBtn, { backgroundColor: theme.orangeLight }]} onPress={openUpdateInventory}>
+                <Text style={[styles.actionBtnText, { color: theme.orange }]}>{t.updateInventoryBtn}</Text>
+              </Pressable>
+              {stagedCount > 0 && (
+                <Pressable style={[styles.actionBtn, { backgroundColor: theme.orange }]} onPress={handleSaveToCart}>
+                  <Text style={[styles.actionBtnText, { color: '#fff' }]}>{t.saveAddToShoppingListBtn}</Text>
                 </Pressable>
-              </View>
-              <Surface style={styles.card}>
-                {monthlyAvailable.map((item, idx) => {
-                  const remaining = (parseInt(item.amount, 10) || 1) - item.monthlyAllocated;
-                  return (
-                    <View key={item.id}>
-                      <View style={styles.monthlySourceRow}>
-                        <View style={styles.monthlySourceInfo}>
-                          <Text style={[styles.monthlySourceName, { color: theme.text }]} numberOfLines={1}>
-                            {item.name}
-                          </Text>
-                          <Text style={[styles.monthlySourceMeta, { color: theme.textLight }]}>
-                            {t.monthlyRemaining(remaining, item.unit)}
-                          </Text>
-                        </View>
-                        <Pressable
-                          style={[styles.monthlyAddBtn, { backgroundColor: theme.orange }]}
-                          onPress={() => addFromMonthly(item.id, 1)}
-                        >
-                          <Text style={styles.monthlyAddBtnText}>{t.addOneToWeekly}</Text>
-                        </Pressable>
-                      </View>
-                      {idx < monthlyAvailable.length - 1 && (
-                        <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
-                      )}
-                    </View>
-                  );
-                })}
-              </Surface>
+              )}
             </View>
           )}
 
-          {/* Planned — items pushed from a dish (app/meals.tsx) grouped under that dish's name, plus the plain alphabetical list */}
-          {(dishGroups.length > 0 || ungroupedPlanned.length > 0) && (
+          {/* Items pushed from a dish (app/meals.tsx), grouped under that dish's name */}
+          {dishGroups.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.plannedSection}</Text>
+                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.fromMealsSection}</Text>
                 <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
               </View>
               {dishGroups.map(([dishName, groupItems]) => {
@@ -422,37 +485,81 @@ export default function ShoppingScreen() {
                   </View>
                 );
               })}
-              {ungroupedPlanned.length > 0 && (
-                <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
-                  {ungroupedPlanned.map((item, idx) => (
-                    <View key={item.id}>
-                      <ShoppingRow
-                        item={item}
-                        theme={theme}
-                        variant="planned"
-                        onToggle={() => toggle(item.id)}
-                        onRemove={() => removeWithSource(item.id)}
-                        onAdjust={(d) => adjustAmount(item.id, d)}
-                        fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
-                        inStockLabel={t.inStockLabel}
-                        monthlyLeftLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
-                      />
-                      {idx < ungroupedPlanned.length - 1 && (
-                        <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
-                      )}
-                    </View>
-                  ))}
-                </View>
-              )}
             </View>
           )}
 
-          {/* In cart */}
-          {sortedInCart.length > 0 && (
+          {/* Alphabetical unchecked items — weekly keeps the card list; monthly renders an Excel-style table */}
+          {ungroupedUnchecked.length > 0 && tab === 'weekly' && (
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.orange }]}>{t.inCart}</Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.weeklyItemsSection}</Text>
+                <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
+              </View>
+              <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
+                {ungroupedUnchecked.map((item, idx) => (
+                  <View key={item.id}>
+                    <ShoppingRow
+                      item={item}
+                      theme={theme}
+                      variant="planned"
+                      onToggle={() => toggle(item.id)}
+                      onRemove={() => removeWithSource(item.id)}
+                      onAdjust={(d) => adjustAmount(item.id, d)}
+                      fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
+                      inStockLabel={t.inStockLabel}
+                      monthlyLeftLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
+                    />
+                    {idx < ungroupedUnchecked.length - 1 && (
+                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {ungroupedUnchecked.length > 0 && tab === 'monthly' && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.monthlyTabLabel}</Text>
+                <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
+              </View>
+              <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
+                <View style={styles.tableHeaderRow}>
+                  <Text style={[styles.tableHeaderCheck]} />
+                  <Text style={[styles.tableHeaderItem, { color: theme.textLight }]}>{t.tableHeaderItem}</Text>
+                  <Text style={[styles.tableHeaderPrice, { color: theme.textLight }]}>{t.tableHeaderPrice}</Text>
+                  <Text style={[styles.tableHeaderTotal, { color: theme.textLight }]}>{t.tableHeaderTotal}</Text>
+                  <Text style={[styles.tableHeaderAmount, { color: theme.textLight }]}>{t.tableHeaderAmount}</Text>
+                </View>
+                {ungroupedUnchecked.map((item, idx) => (
+                  <View key={item.id}>
+                    <MonthlyTableRow
+                      item={item}
+                      theme={theme}
+                      onStage={() => stageItem(item.id)}
+                      onRemove={() => removeWithSource(item.id)}
+                      onAdjust={(d) => adjustAmount(item.id, d)}
+                      temporaryLabel={t.temporaryItemTag}
+                    />
+                    {idx < ungroupedUnchecked.length - 1 && (
+                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                    )}
+                  </View>
+                ))}
+                <View style={[styles.grandTotalRow, { borderTopColor: theme.grayLight }]}>
+                  <Text style={[styles.grandTotalText, { color: theme.text }]}>{t.grandTotalLabel(monthlyGrandTotal)}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Checked / In cart */}
+          {checked.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.inCartSection}</Text>
               <Surface style={styles.card}>
-                {sortedInCart.map((item, idx) => (
+                {checked.map((item, idx) => (
                   <View key={item.id}>
                     <ShoppingRow
                       item={item}
@@ -460,9 +567,8 @@ export default function ShoppingScreen() {
                       variant="cart"
                       onToggle={() => toggle(item.id)}
                       onRemove={() => removeWithSource(item.id)}
-                      inStockLabel={t.inStockLabel}
                     />
-                    {idx < sortedInCart.length - 1 && (
+                    {idx < checked.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                     )}
                   </View>
@@ -471,51 +577,73 @@ export default function ShoppingScreen() {
             </View>
           )}
 
-          {/* Shopping done — finalizes everything currently in the cart as purchased */}
-          {sortedInCart.length > 0 && (
-            <PressableScale
-              style={[styles.shoppingDoneBtn, { backgroundColor: theme.orange }]}
-              onPress={finishShopping}
-            >
-              <Text style={styles.shoppingDoneText}>
-                {t.shoppingDoneBtn(sortedInCart.length)}
-              </Text>
-            </PressableScale>
-          )}
-
-          {/* Purchased */}
-          {sortedPurchased.length > 0 && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.green }]}>{t.purchasedSection}</Text>
-              <Surface style={styles.card}>
-                {sortedPurchased.map((item, idx) => (
-                  <View key={item.id}>
-                    <ShoppingRow
-                      item={item}
-                      theme={theme}
-                      variant="purchased"
-                      onToggle={() => {}}
-                      onRemove={() => removeWithSource(item.id)}
-                    />
-                    {idx < sortedPurchased.length - 1 && (
-                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
-                    )}
-                  </View>
-                ))}
-              </Surface>
-            </View>
-          )}
-
-          {/* Clear purchased items — bottom of the list, only removes finalized items */}
-          {sortedPurchased.length > 0 && (
+          {/* Weekly tab: clear checked + finish shopping; Monthly tab: finish shopping only (in-cart items move to Purchased, not cleared) */}
+          {tab === 'weekly' && checked.length > 0 && (
             <PressableScale
               style={[styles.clearCheckedBtn, { backgroundColor: theme.greenLight }]}
-              onPress={clearPurchased}
+              onPress={clearChecked}
             >
               <Text style={[styles.clearCheckedText, { color: theme.green }]}>
-                {t.clearPurchasedItems(sortedPurchased.length)}
+                {t.clearCheckedItems(checked.length)}
               </Text>
             </PressableScale>
+          )}
+
+          {checked.length > 0 && (
+            <PressableScale
+              style={[styles.clearCheckedBtn, { backgroundColor: theme.orangeLight }]}
+              onPress={handleFinishShopping}
+            >
+              <Text style={[styles.clearCheckedText, { color: theme.orange }]}>
+                {t.finishShoppingBtn}
+              </Text>
+            </PressableScale>
+          )}
+
+          {/* Purchased history */}
+          {tab === 'monthly' && monthlyPurchased.length > 0 && (
+            <View style={styles.section}>
+              <Pressable style={styles.sectionHeaderRow} onPress={() => setPurchasedExpanded((v) => !v)}>
+                <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.purchasedCount(monthlyPurchased.length)}</Text>
+                <Text style={[styles.disclosureChevron, { color: theme.textLight }]}>{purchasedExpanded ? '▲' : '▼'}</Text>
+              </Pressable>
+              {purchasedExpanded && (
+                <Surface style={styles.card}>
+                  {monthlyPurchased.map((item, idx) => (
+                    <View key={item.id}>
+                      <ShoppingRow item={item} theme={theme} variant="purchased" onToggle={() => {}} onRemove={() => removeWithSource(item.id)} />
+                      {idx < monthlyPurchased.length - 1 && (
+                        <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                      )}
+                    </View>
+                  ))}
+                </Surface>
+              )}
+            </View>
+          )}
+
+          {tab === 'weekly' && weeklyPurchasedByWeek.length > 0 && (
+            <View style={styles.section}>
+              <Pressable style={styles.sectionHeaderRow} onPress={() => setWeeklyHistoryExpanded((v) => !v)}>
+                <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.purchasedCount(weeklyPurchasedByWeek.reduce((n, [, g]) => n + g.length, 0))}</Text>
+                <Text style={[styles.disclosureChevron, { color: theme.textLight }]}>{weeklyHistoryExpanded ? '▲' : '▼'}</Text>
+              </Pressable>
+              {weeklyHistoryExpanded && weeklyPurchasedByWeek.map(([weekKey, weekItems]) => (
+                <View key={weekKey} style={{ gap: Spacing.xs }}>
+                  <Text style={[styles.weekLabel, { color: theme.textLight }]}>{t.weekOfLabel(weekKey)}</Text>
+                  <Surface style={styles.card}>
+                    {weekItems.map((item, idx) => (
+                      <View key={item.id}>
+                        <ShoppingRow item={item} theme={theme} variant="purchased" onToggle={() => {}} onRemove={() => removeWithSource(item.id)} />
+                        {idx < weekItems.length - 1 && (
+                          <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                        )}
+                      </View>
+                    ))}
+                  </Surface>
+                </View>
+              ))}
+            </View>
           )}
 
           {/* Reset buttons */}
@@ -524,15 +652,19 @@ export default function ShoppingScreen() {
               style={[styles.resetBtn, { backgroundColor: theme.dangerLight }]}
               onPress={resetWeekly}
             >
-              <Text style={[styles.resetBtnText, { color: theme.danger }]}>{t.resetWeekly}</Text>
+              <Text style={[styles.resetBtnText, { color: theme.danger }]}>{t.moveBackToMonthly}</Text>
             </Pressable>
           )}
           {tab === 'monthly' && filtered.length > 0 && (
             <Pressable
               style={[styles.resetBtn, { backgroundColor: theme.dangerLight }]}
-              onPress={resetMonthly}
+              onPress={() => {
+                const candidates = getCarryOverCandidates(monthlyItemsAll);
+                if (candidates.length > 0) setCarryOverVisible(true);
+                else resetMonthlyWithCarryOver([], []);
+              }}
             >
-              <Text style={[styles.resetBtnText, { color: theme.danger }]}>{t.resetMonthly}</Text>
+              <Text style={[styles.resetBtnText, { color: theme.danger }]}>{t.monthlyResetBtnLabel}</Text>
             </Pressable>
           )}
 
@@ -721,21 +853,20 @@ export default function ShoppingScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Monthly picker sheet */}
-      <MonthlyPickerSheet
-        visible={showMonthlyPicker}
-        monthlyItems={monthlyItems}
-        categoryLabels={t.shoppingCategories as Record<string, string>}
-        onConfirm={handleMonthlyPickerConfirm}
-        onClose={() => setShowMonthlyPicker(false)}
+      {/* Carry-over prompt — payday-boundary monthly reset with leftover temporary items */}
+      <CarryOverPromptModal
+        visible={carryOverVisible}
+        candidates={getCarryOverCandidates(monthlyItemsAll)}
+        onConfirm={handleCarryOverConfirm}
         theme={theme}
         t={{
-          monthlyPickerTitle: t.monthlyPickerTitle,
-          monthlyPickerConfirm: t.monthlyPickerConfirm,
-          noMonthlyItems: t.noMonthlyItems,
-          monthlyRemaining: t.monthlyRemaining,
-          monthlyInWeekly: t.monthlyInWeekly,
-          cancel: t.cancel,
+          carryOverPromptTitle: t.carryOverPromptTitle,
+          carryOverPromptBody: t.carryOverPromptBody,
+          carryOverItemCarry: t.carryOverItemCarry,
+          carryOverItemDrop: t.carryOverItemDrop,
+          carryOverAllCarry: t.carryOverAllCarry,
+          carryOverAllDrop: t.carryOverAllDrop,
+          carryOverConfirmBtn: t.carryOverConfirmBtn,
         }}
       />
     </SafeAreaView>
@@ -753,6 +884,7 @@ const baseStyles = StyleSheet.create({
   },
   back: { fontSize: FontSize.md, fontWeight: '600' },
   title: { fontSize: FontSize.xl, fontWeight: '700' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   shareHeaderBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
   shareHeaderBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
 
@@ -893,10 +1025,35 @@ const baseStyles = StyleSheet.create({
   },
   monthlyAddBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.xs },
 
+  actionRow: { flexDirection: 'row', gap: Spacing.sm },
+  actionBtn: { flex: 1, borderRadius: Radius.md, paddingVertical: Spacing.sm, alignItems: 'center' },
+  actionBtnText: { fontSize: FontSize.sm, fontWeight: '700' },
+
+  tableHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    gap: Spacing.xs,
+  },
+  tableHeaderCheck: { width: 24 },
+  tableHeaderItem: { flex: 2, fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase' },
+  tableHeaderPrice: { flex: 1, fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' },
+  tableHeaderTotal: { flex: 1, fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' },
+  tableHeaderAmount: { fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', minWidth: 70, textAlign: 'center' },
+
+  grandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+  },
+  grandTotalText: { fontSize: FontSize.md, fontWeight: '700' },
+
+  disclosureChevron: { fontSize: FontSize.sm, fontWeight: '700' },
+  weekLabel: { fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+
   clearCheckedBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   clearCheckedText: { fontFamily: Fonts.bold, fontSize: FontSize.md },
-  shoppingDoneBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
-  shoppingDoneText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
   resetBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   resetBtnText: { fontWeight: '600', fontSize: FontSize.md },
 

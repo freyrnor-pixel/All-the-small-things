@@ -94,7 +94,7 @@ app/
 components/
   BubbleMenu.tsx         # Radial FAB navigation (labels via t.nav)
   QuickAddSheet.tsx, TaskItem.tsx, ExpandableCard.tsx, ShoppingRow.tsx,
-  MonthlyPickerSheet.tsx, DatePickerCalendar.tsx, TimePickerWheel.tsx,
+  MonthlyTableRow.tsx, CarryOverPromptModal.tsx, DatePickerCalendar.tsx, TimePickerWheel.tsx,
   HintCard.tsx, QRCodeDisplay.tsx
 store/                   # Zustand stores, one per domain (each owns its SQLite table[s])
   useTaskStore, useShoppingStore, useMealStore, useHealthStore,

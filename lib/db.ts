@@ -277,8 +277,13 @@ export function initDb() {
     // AP-06B — receipts + budget tracking
     "ALTER TABLE purchase_log ADD COLUMN receipt_id TEXT DEFAULT NULL",
     "ALTER TABLE settings ADD COLUMN monthly_budget_nok REAL DEFAULT 0",
-    // Shopping: third "purchased" state, finalized via the "Shopping done" action
-    "ALTER TABLE shopping_items ADD COLUMN purchased INTEGER DEFAULT 0",
+    // Shopping list redesign — monthly staged/in-cart/purchased pipeline + temporary items,
+    // weekly purchased-by-week history, and automatic payday-boundary reset tracking
+    "ALTER TABLE shopping_items ADD COLUMN status TEXT DEFAULT 'list'",
+    "ALTER TABLE shopping_items ADD COLUMN is_temporary INTEGER DEFAULT 0",
+    "ALTER TABLE shopping_items ADD COLUMN purchased_at TEXT DEFAULT NULL",
+    "ALTER TABLE shopping_items ADD COLUMN week_key TEXT DEFAULT NULL",
+    "ALTER TABLE settings ADD COLUMN last_monthly_reset TEXT DEFAULT ''",
   ];
   for (const sql of migrations) {
     try {

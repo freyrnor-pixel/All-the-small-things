@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -28,7 +28,8 @@
  *     Layout.cardPadding for a consistent calm rhythm.
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
- *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; DayTimeline rows push /task-form (also a modal).
+ *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; the link icon next to it goes to /shared (full sent/received history). DayTimeline rows push /task-form (also a modal).
+ *   - SharedRequestsSection (kind='task') sits right under InboxSection — inline accept/dismiss for tasks a partner asked for via the scan flow, replacing the old bubble-wheel "Shared" entry.
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
@@ -80,6 +81,7 @@ import HintCard from '@/components/HintCard';
 import EnergyCheckIn from '@/components/EnergyCheckIn';
 import NextTaskCard from '@/components/NextTaskCard';
 import InboxSection from '@/components/InboxSection';
+import SharedRequestsSection from '@/components/SharedRequestsSection';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -314,6 +316,8 @@ export default function HomeScreen() {
 
         <InboxSection />
 
+        <SharedRequestsSection kind="task" />
+
         <EnergyCheckIn />
 
         <NextTaskCard task={nextTask} />
@@ -327,6 +331,9 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
             <View style={styles.sectionActions}>
+              <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
+                <Ionicons name="link-outline" size={16} color={theme.textLight} />
+              </Pressable>
               <Pressable
                 style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
                 onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}

@@ -2,8 +2,9 @@
  * DebugOverlay.tsx — floating debug button + annotate-mode feedback pins + bubble-wheel tuning panel
  *
  * Mounted once in app/_layout.tsx, gated on settings.loaded && settings.debugModeEnabled.
- * Renders a small floating bug-icon button (top-right, clear of the FAB's bottom
- * corner) that opens a Modal panel with two tabs:
+ * Renders a small floating bug-icon button (top-right, offset down past the home
+ * screen's header row so it doesn't sit on top of the settings gear, and clear of
+ * the FAB's bottom corner) that opens a Modal panel with two tabs:
  *   - "Comments": an Annotate-mode switch (closes the panel so taps reach the
  *     screen below), a list of this screen's notes (tap to edit/delete), and an
  *     "Export all" action.
@@ -27,7 +28,7 @@
  *     affordance, so a stray tap on the button never leaves the user stuck unable
  *     to use the screen underneath.
  *   - The 4 RANGES below must stay in sync with the clamps in components/BubbleMenu.tsx
- *     (bubbleSize 30-70, bubbleSpacing 60-110) — that component re-clamps defensively
+ *     (bubbleSize 34-78, bubbleSpacing 68-120) — that component re-clamps defensively
  *     too, but keep both in sync so this UI never suggests a value the wheel would
  *     silently override.
  *   - Export groups ALL screens' notes (not just the current one) plus the 4 live
@@ -66,8 +67,8 @@ type BubbleKey = 'bubbleSize' | 'bubbleSpacing' | 'bubbleSpringIntensity' | 'bub
 type Composer = { x: number; y: number; editId: string | null; text: string };
 
 const RANGES: Record<BubbleKey, { min: number; max: number; step: number; default: number }> = {
-  bubbleSize: { min: 30, max: 70, step: 2, default: 50 },
-  bubbleSpacing: { min: 60, max: 110, step: 2, default: 78 },
+  bubbleSize: { min: 34, max: 78, step: 2, default: 58 },
+  bubbleSpacing: { min: 68, max: 120, step: 2, default: 88 },
   bubbleSpringIntensity: { min: 0, max: 100, step: 5, default: 50 },
   bubbleAnimSpeed: { min: 0, max: 100, step: 5, default: 50 },
 };
@@ -210,7 +211,7 @@ export default function DebugOverlay() {
       <Pressable
         style={[
           styles.fab,
-          { top: insets.top + Spacing.sm, borderColor: theme.border },
+          { top: insets.top + 60, borderColor: theme.border },
           { backgroundColor: annotateMode ? theme.orange : theme.white },
         ]}
         onPress={handleFabPress}

@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/budget.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -50,14 +50,6 @@ const en = {
   plansEssentialsHidden: (n: number) => `+ ${n} regular plan${n !== 1 ? 's' : ''} hidden →`,
   timelineEmpty: 'Nothing planned — enjoy your day 🌿',
   timelineNow: 'Now',
-  // Focus view (Proposal 1)
-  focusView: {
-    currentTask: 'Up next',
-    done: 'Done ✓',
-    skip: 'Skip for now',
-    allDone: 'All done for now!',
-    allDoneSubtitle: (n: number) => `You've completed ${n} thing${n !== 1 ? 's' : ''} — small things add up!`,
-  }, // currentTask key name unchanged (low-risk); renders generically, no "task" wording in value
   shoppingPreview: 'Shop soon',
   seeAll: 'See all →',
   shoppingEmpty: 'Shopping list is empty — well done!',
@@ -242,19 +234,16 @@ const en = {
   permissionBody: 'Camera access is required to scan receipts.',
   // Shopping screen
   shoppingTitle: 'Shopping list',
-  shoppingRemaining: (p: number, c: number, d: number) => `${p} planned · ${c} in cart · ${d} purchased`,
+  shoppingRemaining: (r: number, c: number) => `${r} remaining · ${c} in cart`,
   shoppingItemPlaceholder: 'Item',
   shoppingAmountPlaceholder: 'Qty',
   shoppingUnitPlaceholder: 'Unit (pcs, kg, l…)',
   inCart: 'In cart',
   // --- W-C Grocery additions (shopping) ---
   weeklyResetsOnShort: (day: string) => `Resets ${day}`,
+  clearCheckedItems: (n: number) => `Clear ${n} checked ${n === 1 ? 'item' : 'items'}`,
+  itemAddedToList: (name: string) => `${name} added ✓`,
   // --- end W-C additions ---
-  // Three-section shopping list: planned / in cart / purchased
-  plannedSection: 'Planned',
-  purchasedSection: 'Purchased',
-  shoppingDoneBtn: (n: number) => `Shopping done (${n})`,
-  clearPurchasedItems: (n: number) => `Clear ${n} purchased ${n === 1 ? 'item' : 'items'}`,
   addItemTrigger: '+ Add item',
   addFromMonthly: '+ From monthly',
   monthlyPickerTitle: 'Add from monthly list',
@@ -264,9 +253,34 @@ const en = {
   monthlyInWeekly: (n: number) => `${n} in weekly`,
   fromMonthlyLabel: 'Monthly →',
   monthlySourceSection: 'Monthly list',
+  weeklyItemsSection: 'Weekly list',
+  fromMealsSection: 'From your meals',
   addOneToWeekly: '+ Add',
   weeklyTabLabel: 'Weekly',
   monthlyTabLabel: 'Monthly',
+  // --- Shopping list redesign ---
+  updateInventoryBtn: 'Update inventory',
+  saveAddToShoppingListBtn: 'Save / Add to shopping list',
+  finishShoppingBtn: 'Finish shopping',
+  moveBackToMonthly: 'Move items back to monthly list',
+  monthlyResetBtnLabel: 'Reset for new month',
+  inCartSection: 'In cart',
+  purchasedSection: 'Purchased',
+  purchasedCount: (n: number) => `Purchased (${n})`,
+  carryOverPromptTitle: 'New month — carry over leftovers?',
+  carryOverPromptBody: 'These temporary items were never bought. Carry them to next month or drop them.',
+  carryOverItemCarry: 'Carry over',
+  carryOverItemDrop: 'Drop',
+  carryOverAllCarry: 'Carry all',
+  carryOverAllDrop: 'Drop all',
+  carryOverConfirmBtn: 'Confirm',
+  tableHeaderItem: 'Item',
+  tableHeaderPrice: 'Price',
+  tableHeaderTotal: 'Total',
+  tableHeaderAmount: 'Amount',
+  grandTotalLabel: (n: number) => `Total: ${n.toFixed(0)} kr`,
+  temporaryItemTag: 'Temporary',
+  weekOfLabel: (date: string) => `Week of ${date}`,
   category: 'Category',
   shoppingCategories: {
     produce: 'Fruit & veg',
@@ -393,9 +407,9 @@ const en = {
   },
   // Radial menu labels
   nav: {
-    newTask: 'New', shop: 'Shop', shared: 'Shared', habits: 'Habits',
+    newTask: 'New task', shop: 'Shopping', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
-    focus: 'Focus', capture: 'Capture',
+    capture: 'Quick note',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -640,6 +654,13 @@ const en = {
     promote: '→ Task',
     discard: 'Discard',
   },
+  // Per-screen incoming shared-item prompts (components/SharedRequestsSection.tsx)
+  sharedRequests: {
+    sectionTitle: 'Shared with you',
+    fromLabel: (name: string) => (name ? `${name}:` : ''),
+    accept: 'Add',
+    dismiss: 'Dismiss',
+  },
   // AP-06B — receipts + monthly grocery budget (app/budget.tsx)
   budget: {
     title: 'Budget',
@@ -652,7 +673,7 @@ const en = {
   },
   hints: {
     home: {
-      text: 'Tap ⭐ to focus on essentials only.',
+      text: 'Your daily overview — tap ⭐ to focus on essentials only.',
       example: '',
     },
     taskForm: {
@@ -685,10 +706,6 @@ const en = {
     },
     habits: {
       text: 'Tap + each time you build or resist a habit.',
-      example: '',
-    },
-    focus: {
-      text: 'One plan at a time — Done or Skip to move on.',
       example: '',
     },
     plans: {
@@ -751,13 +768,6 @@ const no: typeof en = {
   plansEssentialsHidden: (n: number) => `+ ${n} vanlige planer skjult →`,
   timelineEmpty: 'Ingenting planlagt — nyt dagen 🌿',
   timelineNow: 'Nå',
-  focusView: {
-    currentTask: 'Neste',
-    done: 'Ferdig ✓',
-    skip: 'Hopp over for nå',
-    allDone: 'Alt er gjort for nå!',
-    allDoneSubtitle: (n: number) => `Du har fullført ${n} ting — småting teller!`,
-  },
   shoppingPreview: 'Handle snart',
   seeAll: 'Se alt →',
   shoppingEmpty: 'Handlelisten er tom — bra jobbet!',
@@ -937,19 +947,16 @@ const no: typeof en = {
   permissionTitle: 'Tilgang nødvendig',
   permissionBody: 'Kameraet trenger tilgang for å skanne kvitteringer.',
   shoppingTitle: 'Handleliste',
-  shoppingRemaining: (p: number, c: number, d: number) => `${p} planlagt · ${c} i kurven · ${d} kjøpt`,
+  shoppingRemaining: (r: number, c: number) => `${r} gjenstår · ${c} i kurven`,
   shoppingItemPlaceholder: 'Vare',
   shoppingAmountPlaceholder: 'Antall',
   shoppingUnitPlaceholder: 'Enhet (stk, kg, l…)',
   inCart: 'I kurven',
   // --- W-C Grocery additions (shopping) ---
   weeklyResetsOnShort: (day: string) => `Nullstilles ${day}`,
+  clearCheckedItems: (n: number) => `Fjern ${n} avkrysset${n === 1 ? '' : 'e'}`,
+  itemAddedToList: (name: string) => `${name} lagt til ✓`,
   // --- end W-C additions ---
-  // Tre seksjoner i handlelisten: planlagt / i kurven / kjøpt
-  plannedSection: 'Planlagt',
-  purchasedSection: 'Kjøpt',
-  shoppingDoneBtn: (n: number) => `Handling ferdig (${n})`,
-  clearPurchasedItems: (n: number) => `Fjern ${n} kjøpt${n === 1 ? '' : 'e'}`,
   addItemTrigger: '+ Legg til vare',
   addFromMonthly: '+ Fra månedsliste',
   monthlyPickerTitle: 'Legg til fra månedsliste',
@@ -959,9 +966,34 @@ const no: typeof en = {
   monthlyInWeekly: (n: number) => `${n} i ukeliste`,
   fromMonthlyLabel: 'Fra månedsliste',
   monthlySourceSection: 'Månedsliste',
+  weeklyItemsSection: 'Ukeliste',
+  fromMealsSection: 'Fra middagene dine',
   addOneToWeekly: '+ Legg til',
   weeklyTabLabel: 'Ukeliste',
   monthlyTabLabel: 'Månedsliste',
+  // --- Shopping list redesign ---
+  updateInventoryBtn: 'Oppdater lager',
+  saveAddToShoppingListBtn: 'Lagre / Legg til handleliste',
+  finishShoppingBtn: 'Fullfør handling',
+  moveBackToMonthly: 'Flytt varer tilbake til månedsliste',
+  monthlyResetBtnLabel: 'Nullstill for ny måned',
+  inCartSection: 'I kurven',
+  purchasedSection: 'Kjøpt',
+  purchasedCount: (n: number) => `Kjøpt (${n})`,
+  carryOverPromptTitle: 'Ny måned — overfør gjenstående varer?',
+  carryOverPromptBody: 'Disse midlertidige varene ble aldri kjøpt. Overfør dem til neste måned, eller fjern dem.',
+  carryOverItemCarry: 'Overfør',
+  carryOverItemDrop: 'Fjern',
+  carryOverAllCarry: 'Overfør alle',
+  carryOverAllDrop: 'Fjern alle',
+  carryOverConfirmBtn: 'Bekreft',
+  tableHeaderItem: 'Vare',
+  tableHeaderPrice: 'Pris',
+  tableHeaderTotal: 'Totalt',
+  tableHeaderAmount: 'Antall',
+  grandTotalLabel: (n: number) => `Totalt: ${n.toFixed(0)} kr`,
+  temporaryItemTag: 'Midlertidig',
+  weekOfLabel: (date: string) => `Uke fra ${date}`,
   category: 'Kategori',
   shoppingCategories: {
     produce: 'Frukt og grønt',
@@ -1214,9 +1246,9 @@ const no: typeof en = {
     renudgeBody: 'Ingen hast — bare en mild påminnelse når du er klar.',
   },
   nav: {
-    newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
+    newTask: 'Ny oppgave', shop: 'Handleliste', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
-    focus: 'Fokus', capture: 'Fang opp',
+    capture: 'Notér',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',
@@ -1319,6 +1351,13 @@ const no: typeof en = {
     promote: '→ Oppgave',
     discard: 'Forkast',
   },
+  // Per-skjerm "delt med deg"-forslag (components/SharedRequestsSection.tsx)
+  sharedRequests: {
+    sectionTitle: 'Delt med deg',
+    fromLabel: (name: string) => (name ? `${name}:` : ''),
+    accept: 'Legg til',
+    dismiss: 'Avvis',
+  },
   // AP-06B — kvitteringer + månedlig handlebudsjett (app/budget.tsx)
   budget: {
     title: 'Budsjett',
@@ -1331,7 +1370,7 @@ const no: typeof en = {
   },
   hints: {
     home: {
-      text: 'Trykk ⭐ for kun det viktigste.',
+      text: 'Din daglige oversikt — trykk ⭐ for kun det viktigste.',
       example: '',
     },
     taskForm: {
@@ -1364,10 +1403,6 @@ const no: typeof en = {
     },
     habits: {
       text: 'Trykk + hver gang du bygger eller motstår en vane.',
-      example: '',
-    },
-    focus: {
-      text: 'Én plan om gangen — Ferdig eller Hopp over for å gå videre.',
       example: '',
     },
     plans: {

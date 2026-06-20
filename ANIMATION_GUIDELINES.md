@@ -64,8 +64,11 @@ withSpring(1, { damping: 18, stiffness: 320 });
 
 // Normal — BubbleMenu open/close (components/BubbleMenu.tsx)
 // "Sprettball" (bouncing-ball) feel — fast launch with a visible springy overshoot,
-// ζ≈0.41 at the default debug-overlay spring-intensity (stiffness scales with that setting).
-withSpring(toValue, { damping: 18, stiffness: 480 });
+// ζ≈0.41 across the full range. Uses variable stiffness scaled by spring-intensity (debug overlay),
+// with damping scaling proportionally so the ratio stays constant.
+// At default spring-intensity: openStiffness=350, damping=0.82*√350≈15.3 → ζ≈0.41
+const openStiffness = clamp(350 * springScale, 80, 1400);
+withSpring(toValue, { damping: 0.82 * Math.sqrt(openStiffness), stiffness: openStiffness });
 
 // Playful/bouncy — pet & drag-and-drop interactions (components/Pet.tsx)
 // (legacy Animated API, tension/friction rather than damping/stiffness — see below)
@@ -168,8 +171,9 @@ Real implementations in this codebase, with where they differ from generic best-
   half-visible bubbles spin into a clamped range and spring-snap to rest (`BubbleMenu.tsx`).
   There's no per-item stagger to add; the whole wheel moves as one physics object. The
   open/close spring (`OPEN_SPRING`) is tuned for a "sprettball" feel — launches fast and
-  settles with a visible bounce (`damping: 18, stiffness: 480` at the default spring-intensity,
-  ζ≈0.41) rather than a calm, lightly-damped pop.
+  settles with a visible bounce (variable stiffness via `openStiffness = clamp(350 * springScale, 80, 1400)`
+  and `damping = 0.82 * √openStiffness`, maintaining ζ≈0.41 across the full range) rather than
+  a calm, lightly-damped pop.
 - **Companion pet**: idle bob is a 1400ms-out/1400ms-back loop (2800ms full cycle); tap
   triggers a happy bounce (`tension: 280, friction: 4` → `tension: 80, friction: 6`) plus a
   floating heart and a `tap()` haptic; eating is a 4-bounce squish (~440ms total). Pet never
@@ -245,7 +249,7 @@ BUTTONS:
 
 SPRINGS (react-native-reanimated, primary pattern in this codebase):
   - Snappy UI: withSpring(v, { damping: 18-40, stiffness: 320-700 })
-  - Normal/bouncy (BubbleMenu "sprettball" open/close): withSpring(v, { damping: 18, stiffness: 480 })
+  - Normal/bouncy (BubbleMenu "sprettball" open/close): variable formula with openStiffness=clamp(350*springScale,80,1400) and damping=0.82*√openStiffness, maintaining ζ≈0.41
   - Playful/alive (pet-like): lower damping, lower stiffness
   - Legacy Animated API (speed/bounciness or tension/friction) only exists in
     components/Pet.tsx, components/TaskItem.tsx, components/ExpandableCard.tsx,

@@ -7,10 +7,10 @@
  *
  * Connections:
  *   Imports → expo-haptics
- *   Used by → components/BubbleMenu, components/PressableScale, components/Pet, task/habit
- *             completion flows, app/focus.tsx (mode entry), app/shopping.tsx (sheet
- *             swipe-to-close), destructive confirmations in app/automations.tsx,
- *             app/habit-form.tsx, app/settings.tsx, app/habits.tsx
+ *   Used by → components/BubbleMenu, components/PressableScale, components/Pet, components/SharedRequestsSection, task/habit
+ *             completion flows, app/shopping.tsx (sheet swipe-to-close), destructive
+ *             confirmations in app/automations.tsx, app/habit-form.tsx, app/settings.tsx,
+ *             app/habits.tsx
  *   Data    → none
  *
  * Edit notes:

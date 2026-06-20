@@ -11,10 +11,14 @@
  * `getMaterialStyle(base, material)` computes bubble/FAB surface-finish tokens
  * (glass/metal/rock/paper) from a single base colour, tinted toward that
  * finish's real-world hue — see "Materials" section below.
+ * `tintToTheme(base, themeAccent)` leans a fixed feature colour (FeatureColors.*)
+ * toward the active theme's accent hue/saturation, so per-feature colours (bubble
+ * wheel, task-type accents) shift with the selected colour theme instead of always
+ * rendering the exact same hardcoded hues.
  *
  * Connections:
  *   Imports → —
- *   Used by → app/_layout.tsx, app/budget.tsx, app/capture.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DatePickerCalendar.tsx, components/DayTimeline.tsx, components/ExpandableCard.tsx, components/HintCard.tsx, components/MonthlyPickerSheet.tsx, components/QuickAddSheet.tsx, components/ShoppingRow.tsx, components/TaskItem.tsx, components/TimePickerWheel.tsx, lib/useAppTheme.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/capture.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DatePickerCalendar.tsx, components/DayTimeline.tsx, components/ExpandableCard.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, components/ShoppingRow.tsx, components/TaskItem.tsx, components/TimePickerWheel.tsx, lib/useAppTheme.ts
  *   Data    → none (pure constants)
  *
  * Edit notes:
@@ -25,11 +29,14 @@
  *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
  *   - The 'custom' theme is computed from user's primary/secondary colors via buildCustomTheme().
  *   - Materials are a separate axis from colour themes (a bubble's hue + its finish are
- *     independent settings), but getMaterialStyle() now also tints the input base toward
- *     a per-finish reference hue (icy blue glass, steel grey metal, stone grey rock, warm
- *     paper) before shading it — so the same base colour still looks recognizably
- *     different per finish. The tint blends hue/saturation at the base's own lightness
- *     (see tint() below), which keeps existing text-contrast assumptions intact.
+ *     independent settings). metal/rock/paper tint the input base toward a per-finish
+ *     reference hue (steel grey metal, stone grey rock, warm paper) before shading it —
+ *     so the same base colour still looks recognizably different per finish (see tint()
+ *     below, which blends hue/saturation at the base's own lightness to keep existing
+ *     text-contrast assumptions intact). glass deliberately does NOT tint toward an
+ *     unrelated reference hue — it just lightens the base colour itself (lighten(base,
+ *     0.16) at higher alpha) so every theme/feature colour keeps its own identity instead
+ *     of washing toward a flat icy grey-blue.
  */
 export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
@@ -693,9 +700,20 @@ function tint(base: string, target: string, ratio: number): string {
   return mix(base, relit, ratio);
 }
 
+/**
+ * Pulls a fixed feature color (FeatureColors.*) toward the active theme's accent
+ * hue/saturation, so the bubble wheel actually shifts with the selected color theme
+ * instead of always showing the same hardcoded hues regardless of theme. Each
+ * feature keeps enough of its own identity (ratio kept below 0.5) that habits is
+ * still recognizably green-ish, health red-ish, etc. — it just leans toward the
+ * theme's accent rather than sitting completely outside the palette.
+ */
+export function tintToTheme(base: string, themeAccent: string, ratio = 0.38): string {
+  return tint(base, themeAccent, ratio);
+}
+
 /** Real-world reference hue + blend strength each finish tints its base toward. */
-const MATERIAL_TINT: Record<'glass' | 'metal' | 'rock' | 'paper', { color: string; ratio: number }> = {
-  glass: { color: '#5AB4E6', ratio: 0.55 }, // icy window blue
+const MATERIAL_TINT: Record<'metal' | 'rock' | 'paper', { color: string; ratio: number }> = {
   metal: { color: '#9AA5AD', ratio: 0.6 }, // brushed steel grey
   rock: { color: '#7D7870', ratio: 0.62 }, // stone grey
   paper: { color: '#E0D2B0', ratio: 0.5 }, // cream / kraft paper
@@ -765,9 +783,13 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
       };
     }
     case 'glass': {
-      const tinted = tint(base, MATERIAL_TINT.glass.color, MATERIAL_TINT.glass.ratio);
+      // Frosted-pane look from the base colour's own hue (lightened, not blended toward
+      // an unrelated icy-blue) — every theme/feature colour keeps its identity instead of
+      // washing toward grey-blue, and the higher alpha keeps it from diluting into the
+      // backdrop behind it.
+      const tinted = lighten(base, 0.16);
       return {
-        backgroundColor: rgba(tinted, 0.72),
+        backgroundColor: rgba(tinted, 0.84),
         borderWidth: MATERIAL_BORDER_WIDTH,
         borderColor: rgba('#FFFFFF', 0.5),
         borderTopColor: rgba('#FFFFFF', 0.75),

@@ -13,7 +13,7 @@
  * Edit notes:
  *   - `variant` drives the move button: 'planned' shows a "+" (move into cart, calls onToggle),
  *     'cart' shows a "−" (move back out, calls onToggle), 'purchased' shows a static checkmark
- *     (read-only — purchased items only leave via "Clear purchased", never onToggle).
+ *     (read-only — purchased/history rows only leave via removeWithSource, never onToggle).
  *   - The stepper shows when amount is a positive integer, onAdjust is provided, and variant is 'planned'. Otherwise amount+unit appear in the meta sub-row.
  *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just move-button + name + (stepper) + remove.
  *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels (fromMonthlyLabel) are passed in pre-formatted/localized.
