@@ -82,6 +82,8 @@ export type Settings = {
   bubbleSpacing: number;
   bubbleSpringIntensity: number;
   bubbleAnimSpeed: number;
+  // Last payday-boundary monthly reset, as YYYY-MM-DD; drives the automatic reset check in app/shopping.tsx
+  lastMonthlyReset: string;
 };
 
 type SettingsStore = Settings & {
@@ -146,6 +148,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   bubbleSpacing: 78,
   bubbleSpringIntensity: 50,
   bubbleAnimSpeed: 50,
+  lastMonthlyReset: '',
   loaded: false,
   workModeSessionOverride: false,
 
@@ -193,6 +196,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         bubble_spacing: number | null;
         bubble_spring_intensity: number | null;
         bubble_anim_speed: number | null;
+        last_monthly_reset: string | null;
       }>('SELECT * FROM settings WHERE id = 1');
       if (!row) { set({ loaded: true }); return; }
       set({
@@ -237,6 +241,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         bubbleSpacing: row.bubble_spacing ?? 78,
         bubbleSpringIntensity: row.bubble_spring_intensity ?? 50,
         bubbleAnimSpeed: row.bubble_anim_speed ?? 50,
+        lastMonthlyReset: row.last_monthly_reset ?? '',
         loaded: true,
       });
     } catch {
@@ -264,7 +269,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             quiet_hours_enabled = ?, quiet_hours_start = ?, quiet_hours_end = ?,
             monthly_budget_nok = ?,
             debug_mode_enabled = ?, bubble_size = ?, bubble_spacing = ?,
-            bubble_spring_intensity = ?, bubble_anim_speed = ?
+            bubble_spring_intensity = ?, bubble_anim_speed = ?, last_monthly_reset = ?
           WHERE id = 1`,
           [
             next.userName,
@@ -308,6 +313,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.bubbleSpacing,
             next.bubbleSpringIntensity,
             next.bubbleAnimSpeed,
+            next.lastMonthlyReset,
           ]
         );
       } catch {
