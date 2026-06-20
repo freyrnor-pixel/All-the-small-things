@@ -91,6 +91,7 @@ type Props = {
 
 const WHEEL_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
+  { icon: 'list-outline',       labelKey: 'plans',   route: '/plans',     color: FeatureColors.shared },
   { icon: 'cart-outline',       labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
   { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
   { icon: 'heart-outline',      labelKey: 'health',  route: '/health',    color: FeatureColors.health },

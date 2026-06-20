@@ -81,6 +81,9 @@ const en = {
   pickOtherDate: (date: string) => `Pick another date (${date})`,
   hideCalendar: 'Hide calendar',
   timeLabel: 'Time',
+  timeModeSet: 'Set time',
+  timeModeWhenever: 'Whenever',
+  wheneverHint: "No fixed time — it'll show up as something to do that day.",
   sectionAppearance: 'Appearance',
   darkModeLabel: 'Dark mode',
   darkModeSystem: 'System',
@@ -407,7 +410,7 @@ const en = {
   },
   // Radial menu labels
   nav: {
-    newTask: 'New task', shop: 'Shopping', habits: 'Habits',
+    newTask: 'New task', plans: 'Plans', shop: 'Shopping', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
     capture: 'Quick note',
   },
@@ -798,6 +801,9 @@ const no: typeof en = {
   pickOtherDate: (date: string) => `Velg en annen dato (${date})`,
   hideCalendar: 'Skjul kalender',
   timeLabel: 'Tidspunkt',
+  timeModeSet: 'Sett tidspunkt',
+  timeModeWhenever: 'Når som helst',
+  wheneverHint: 'Ingen fast tid – dukker opp som noe å gjøre den dagen.',
   sectionAppearance: 'Utseende',
   darkModeLabel: 'Mørk modus',
   darkModeSystem: 'System',
@@ -1246,7 +1252,7 @@ const no: typeof en = {
     renudgeBody: 'Ingen hast — bare en mild påminnelse når du er klar.',
   },
   nav: {
-    newTask: 'Ny oppgave', shop: 'Handleliste', habits: 'Vaner',
+    newTask: 'Ny oppgave', plans: 'Planer', shop: 'Handleliste', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
     capture: 'Notér',
   },

@@ -2,8 +2,9 @@
  * QuickAddSheet.tsx — bottom-sheet for quickly adding a task from the home screen.
  *
  * Modal with a title input, a horizontal day picker (today + next 6 days), and
- * an optional time field. On save it creates a default 'start-at' task via the
- * task store. State resets each time the sheet becomes visible.
+ * a time field defaulted to the next hour — tap "Whenever" to clear it and mean
+ * "sometime that day" instead of a fixed time. On save it creates a default
+ * 'start-at' task via the task store. State resets each time the sheet becomes visible.
  *
  * Connections:
  *   Imports → components/ConfirmationBanner, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore, react-native-safe-area-context
@@ -11,6 +12,7 @@
  *   Data    → calls useTaskStore.add() to insert a task; reads colorTheme from useSettingsStore; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
+ *   - Time defaults to shown + next-hour-prefilled (showTime starts true); "Whenever" clears it to undefined.
  *   - dayOptions is memoized on t.today/t.tomorrow; a language change remounts the sheet so dayShort stays in sync.
  *   - save() builds a task with fixed defaults (taskType 'start-at', recurring 'none', importance 'regular') — extend here for richer quick-add.
  *   - All visible strings via useT(); placeholders like "HH:MM" are format hints, not user copy.
@@ -39,6 +41,11 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 
 type DayOption = { label: string; date: string };
 
+function nextHourStr(): string {
+  const h = (new Date().getHours() + 1) % 24;
+  return `${String(h).padStart(2, '0')}:00`;
+}
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -53,8 +60,8 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
 
   const [title, setTitle] = useState('');
   const [selectedDate, setSelectedDate] = useState(todayStr);
-  const [showTime, setShowTime] = useState(false);
-  const [time, setTime] = useState('');
+  const [showTime, setShowTime] = useState(true);
+  const [time, setTime] = useState(nextHourStr);
   const [confirm, setConfirm] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -78,8 +85,8 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
     if (visible) {
       setTitle('');
       setSelectedDate(todayStr());
-      setShowTime(false);
-      setTime('');
+      setShowTime(true);
+      setTime(nextHourStr());
       setConfirm(null);
       setTimeout(() => inputRef.current?.focus(), 80);
     }
@@ -158,14 +165,27 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
               </Text>
             </Pressable>
           ) : (
-            <TextInput
-              style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
-              placeholder="HH:MM"
-              placeholderTextColor={theme.gray}
-              value={time}
-              onChangeText={setTime}
-              keyboardType="numbers-and-punctuation"
-            />
+            <View style={styles.timeRow}>
+              <TextInput
+                style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+                placeholder="HH:MM"
+                placeholderTextColor={theme.gray}
+                value={time}
+                onChangeText={setTime}
+                keyboardType="numbers-and-punctuation"
+              />
+              <Pressable
+                style={styles.timeToggle}
+                onPress={() => {
+                  setShowTime(false);
+                  setTime('');
+                }}
+              >
+                <Text style={[styles.timeToggleText, { color: theme.textLight }]}>
+                  {t.timeModeWhenever}
+                </Text>
+              </Pressable>
+            </View>
           )}
 
           <Pressable
@@ -225,6 +245,7 @@ const baseStyles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   dayChipText: { fontSize: FontSize.sm, fontWeight: '600' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   timeToggle: { paddingVertical: Spacing.xs },
   timeToggleText: { fontSize: FontSize.sm, fontWeight: '600' },
   timeInput: {
@@ -232,6 +253,7 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.sm,
     fontSize: FontSize.md,
     textAlign: 'center',
+    width: 90,
   },
   saveBtn: {
     borderRadius: Radius.md,
