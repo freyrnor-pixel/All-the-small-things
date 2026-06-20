@@ -8,8 +8,8 @@
  *
  * Connections:
  *   Imports → lib/date
- *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes
+ *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useMealStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
@@ -182,6 +182,11 @@ export function initDb() {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS energy_logs (
+      log_date TEXT PRIMARY KEY,
+      level TEXT DEFAULT 'medium'
+    );
+
     -- Indexes for the columns we filter / sort / join on most often.
     CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(task_date);
     CREATE INDEX IF NOT EXISTS idx_shopping_list ON shopping_items(list_type);
@@ -245,6 +250,9 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN bubble_spacing REAL DEFAULT 78",
     "ALTER TABLE settings ADD COLUMN bubble_spring_intensity REAL DEFAULT 50",
     "ALTER TABLE settings ADD COLUMN bubble_anim_speed REAL DEFAULT 50",
+    // AP-03 — task priority (separate from importance), energy check-in, habit rest days
+    "ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'medium'",
+    "ALTER TABLE habit_logs ADD COLUMN rest_day INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try {

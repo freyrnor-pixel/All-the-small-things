@@ -98,6 +98,7 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
       recurring: 'none',
       recurringDays: [],
       importance: 'regular',
+      priority: 'medium',
     });
     setConfirm(t.taskSavedSimple);
     // Let the confirmation land before the sheet closes — mirrors task-form.tsx.

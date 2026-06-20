@@ -12,7 +12,7 @@
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
  *   - next() writes `userName` (trimmed) to settings, then router.push to "/onboarding/step2".
- *   - Progress dot index 0 here; keep the 5-dot row in sync across steps.
+ *   - Progress dot index 0 here; keep the 6-dot row in sync across steps.
  */
 import React, { useState } from 'react';
 import {
@@ -100,7 +100,7 @@ export default function OnboardingWelcome() {
           </View>
 
           <View style={styles.progress}>
-            {[0, 1, 2, 3, 4].map((i) => (
+            {[0, 1, 2, 3, 4, 5].map((i) => (
               <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
             ))}
           </View>

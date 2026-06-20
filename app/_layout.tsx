@@ -4,7 +4,7 @@
  * Mounts on launch: loads the rounded Nunito font (gating render until ready and
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
- * habits, catalog, automations, feedback). After requesting notification permission it
+ * habits, energy, catalog, automations, feedback). After requesting notification permission it
  * re-syncs all reminders/notifications to the loaded data and language, and keeps the
  * persistent "today's overview" notification (if enabled) refreshed as tasks/shopping change.
  * Defines the expo-router Stack and per-screen options, redirects to onboarding
@@ -12,7 +12,7 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
  *
@@ -63,6 +63,7 @@ import { useMealStore } from '@/store/useMealStore';
 import { useHealthStore } from '@/store/useHealthStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useEnergyStore } from '@/store/useEnergyStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
@@ -131,6 +132,7 @@ export default function RootLayout() {
   const loadHealth = useHealthStore((s) => s.load);
   const loadShared = useSharedStore((s) => s.load);
   const loadHabits = useHabitStore((s) => s.load);
+  const loadEnergy = useEnergyStore((s) => s.load);
   const loadCatalog = useCatalogStore((s) => s.load);
   const loadAutomations = useAutomationStore((s) => s.load);
   const loadFeedback = useFeedbackStore((s) => s.load);
@@ -150,6 +152,7 @@ export default function RootLayout() {
     loadHealth();
     loadShared();
     loadHabits();
+    loadEnergy();
     loadCatalog();
     loadAutomations();
     loadFeedback();

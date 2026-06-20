@@ -2,12 +2,12 @@
  * useTaskStore.ts — tasks (one-off + weekly recurring) and their reminders
  *
  * Zustand store for to-do tasks: one-off and weekly-recurring, start-at and
- * time-box types, with importance and a backlog view. Owns per-task notification
- * scheduling (start, and end reminders for time-box tasks).
+ * time-box types, with importance, priority, and a backlog view. Owns per-task
+ * notification scheduling (start, and end reminders for time-box tasks).
  *
  * Connections:
  *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useAutomationStore, store/useSettingsStore
- *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx
+ *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx
  *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications; fires the 'task_completed' automation trigger
  *
  * Edit notes:
@@ -34,6 +34,7 @@ import {
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
 export type Importance = 'regular' | 'essential';
+export type Priority = 'high' | 'medium' | 'low';
 
 export type Task = {
   id: string;
@@ -46,6 +47,7 @@ export type Task = {
   recurring: Recurring;
   recurringDays: number[]; // 0=Mon … 6=Sun
   importance: Importance;
+  priority: Priority;
 };
 
 type TaskStore = {
@@ -178,6 +180,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     recurring: (row.recurring as Recurring) ?? 'none',
     recurringDays: JSON.parse((row.recurring_days as string) || '[]'),
     importance: (row.importance as Importance) ?? 'regular',
+    priority: (row.priority as Priority) ?? 'medium',
   };
 }
 
@@ -198,8 +201,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   add(t) {
     const id = generateId();
     db.runSync(
-      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days, importance)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days, importance, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         t.title,
@@ -211,6 +214,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         t.recurring,
         JSON.stringify(t.recurringDays),
         t.importance ?? 'regular',
+        t.priority ?? 'medium',
       ]
     );
     const task: Task = { ...t, id, done: false };
@@ -225,7 +229,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const next = { ...task, ...patch };
     db.runSync(
       `UPDATE tasks SET title=?, task_date=?, task_time=?, task_type=?, duration_minutes=?,
-       done=?, recurring=?, recurring_days=?, importance=? WHERE id=?`,
+       done=?, recurring=?, recurring_days=?, importance=?, priority=? WHERE id=?`,
       [
         next.title,
         next.date,
@@ -236,6 +240,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         next.recurring,
         JSON.stringify(next.recurringDays),
         next.importance ?? 'regular',
+        next.priority ?? 'medium',
         id,
       ]
     );

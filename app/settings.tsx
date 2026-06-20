@@ -22,7 +22,7 @@
  *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
  *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, holidays, automations link) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
- *   - Companion pet section is currently disabled (code intact, ready to re-enable when feature launches).
+ *   - Companion pet is configured during onboarding step6 by default; this section lets returning users change it later.
  *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
  */
 import React, { useState } from 'react';
@@ -40,8 +40,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useSettingsStore, Settings, FontSizePref } from '@/store/useSettingsStore';
-// import type { PetType } from '@/store/useSettingsStore'; // Used by pet feature (disabled)
+import { useSettingsStore, Settings, FontSizePref, PetType } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useHabitStore } from '@/store/useHabitStore';
@@ -57,9 +56,8 @@ import TimePickerWheel from '@/components/TimePickerWheel';
 import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 
-// Pet feature (disabled for now)
-// const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
-// const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
+const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
+const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -73,15 +71,15 @@ export default function SettingsScreen() {
   const syncHabitNotifs = useHabitStore((s) => s.syncAllHabitReminders);
   const t = useT();
   const [name, setName] = useState(settings.userName);
-  // const [petNameInput, setPetNameInput] = useState(settings.petName); // Pet feature (disabled)
+  const [petNameInput, setPetNameInput] = useState(settings.petName);
   const [monthlyDateInput, setMonthlyDateInput] = useState(String(settings.monthlyResetDate));
 
   const DAY_LABELS = t.dayFull;
 
-  // Colour swatches for the pet colour picker — pulled from the active theme palette. (disabled for now)
-  // const petSwatches = [
-  //   theme.orange, theme.green, '#A78BFA', '#F472B6', '#60A5FA', '#34D399',
-  // ];
+  // Colour swatches for the pet colour picker — pulled from the active theme palette.
+  const petSwatches = [
+    theme.orange, theme.green, '#A78BFA', '#F472B6', '#60A5FA', '#34D399',
+  ];
 
   function applyAndSync(patch: Partial<Settings>) {
     settings.update(patch);
@@ -463,10 +461,10 @@ export default function SettingsScreen() {
           </Surface>
         </View>
 
-        {/* Companion pet (Proposal 6) — DISABLED FOR NOW */}
-        {/* <View style={styles.section}>
+        {/* Companion pet (Proposal 6) */}
+        <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.pet.toggle}</Text>
-          <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
                 <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.pet.toggle}</Text>
@@ -484,8 +482,7 @@ export default function SettingsScreen() {
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
-                {/* Pet name */}
-                {/* <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.name}</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.name}</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
                   value={petNameInput}
@@ -498,8 +495,7 @@ export default function SettingsScreen() {
 
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
-                {/* Pet type */}
-                {/* <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.type}</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.type}</Text>
                 <View style={styles.petTypeRow}>
                   {PET_TYPES.map((pt) => (
                     <Pressable
@@ -521,8 +517,7 @@ export default function SettingsScreen() {
 
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
-                {/* Colour picker */}
-                {/* <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.colour}</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.colour}</Text>
                 <View style={styles.swatchRow}>
                   {petSwatches.map((color) => (
                     <Pressable
@@ -538,8 +533,8 @@ export default function SettingsScreen() {
                 </View>
               </>
             )}
-          </View>
-        </View> */}
+          </Surface>
+        </View>
 
         {/* Shopping list — its own settings, not a notification */}
         <View style={styles.section}>

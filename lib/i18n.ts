@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -101,6 +101,10 @@ const en = {
   importanceLabel: 'Importance',
   importanceRegular: 'Regular',
   importanceEssential: '⭐ Essential',
+  priorityLabel: 'Priority',
+  priorityHigh: 'High',
+  priorityMedium: 'Medium',
+  priorityLow: 'Low',
   repeatWeekly: 'Repeat weekly',
   deleteTask: 'Delete plan',
   // Task form — save confirmation (W-B). `day` is a localized reference (Today / Tomorrow / Monday…).
@@ -461,6 +465,9 @@ const en = {
     moreOptions: 'More options',
     fewerOptions: 'Fewer options',
     // --- end W-D additions ---
+    restDay: 'Rest day',
+    restingToday: 'Resting today',
+    restDayHint: 'Resting keeps your streak — no catching up needed.',
   },
   // IFTTT-style automations
   automations: {
@@ -491,6 +498,11 @@ const en = {
       local: 'Everything is stored only on this device — nothing is sent anywhere.',
       free: 'UnFocus is free and always will be.',
       cta: 'Got it →',
+    },
+    step6: {
+      title: 'Meet your companion',
+      subtitle: 'A small friend that cheers you on. Give it a name and make it yours.',
+      namePlaceholder: 'Give your pet a name',
     },
   },
   // Accessibility settings (Proposal 4)
@@ -581,6 +593,14 @@ const en = {
     habitsToday: 'Habits',
     habitsSummary: (done: number, total: number) => `${done}/${total} done`,
     moreTasksHint: (n: number) => `+${n} more`,
+  },
+  // AP-03 — once-a-day energy check-in (components/EnergyCheckIn.tsx)
+  energy: {
+    checkInPrompt: "How's your energy today?",
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    lowEnergyHint: 'Showing just your must-dos for today — the rest will keep.',
   },
   hints: {
     home: {
@@ -732,6 +752,10 @@ const no: typeof en = {
   importanceLabel: 'Viktighet',
   importanceRegular: 'Vanlig',
   importanceEssential: '⭐ Viktig',
+  priorityLabel: 'Prioritet',
+  priorityHigh: 'Høy',
+  priorityMedium: 'Middels',
+  priorityLow: 'Lav',
   repeatWeekly: 'Gjentas ukentlig',
   deleteTask: 'Slett plan',
   // Task form — lagringsbekreftelse (W-B). `day` er en lokalisert referanse (I dag / Imorgen / Mandag…).
@@ -917,6 +941,9 @@ const no: typeof en = {
     moreOptions: 'Flere valg',
     fewerOptions: 'Færre valg',
     // --- end W-D additions ---
+    restDay: 'Hviledag',
+    restingToday: 'Hviler i dag',
+    restDayHint: 'Hvile bevarer streaken din — ingen innhenting nødvendig.',
   },
   automations: {
     title: 'Automatiseringer',
@@ -945,6 +972,11 @@ const no: typeof en = {
       local: 'Alt lagres kun på denne enheten — ingenting sendes noe sted.',
       free: 'UnFocus er gratis og vil alltid være det.',
       cta: 'Skjønner →',
+    },
+    step6: {
+      title: 'Møt følgesvennen din',
+      subtitle: 'En liten vennen som heier på deg. Gi den et navn og gjør den til din egen.',
+      namePlaceholder: 'Gi kjæledyret et navn',
     },
   },
   settings: {
@@ -1192,6 +1224,14 @@ const no: typeof en = {
     habitsToday: 'Vaner',
     habitsSummary: (done: number, total: number) => `${done}/${total} ferdig`,
     moreTasksHint: (n: number) => `+${n} til`,
+  },
+  // AP-03 — daglig energi-innsjekk (components/EnergyCheckIn.tsx)
+  energy: {
+    checkInPrompt: 'Hvordan er energien din i dag?',
+    low: 'Lav',
+    medium: 'Middels',
+    high: 'Høy',
+    lowEnergyHint: 'Viser bare det viktigste i dag — resten venter.',
   },
   hints: {
     home: {

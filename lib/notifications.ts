@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → —
- *   Used by → app/_layout.tsx, app/onboarding/step5.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/onboarding/step6.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → schedules OS notifications (no SQLite/store)
  *
  * Edit notes:

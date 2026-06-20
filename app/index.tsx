@@ -7,9 +7,9 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/HintCard, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
  *   - The update-ready banner mirrors the work-mode banner's look (theme.green
@@ -29,7 +29,10 @@
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
- *   - Pet feature is currently disabled (code intact on feature branch).
+ *   - Pet companion is shown when settings.petEnabled (set during onboarding step6 or via Settings).
+ *   - EnergyCheckIn sits above the Plans section; on a 'low' energy day, visibleTodayTasks
+ *     is narrowed further to priority === 'high' tasks, strictly on top of the essentials
+ *     filter (never as a replacement for it).
  *   - `tasks` is selected directly from useTaskStore (not just the tasksForDate/backlogTasks/completedCount
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
@@ -50,6 +53,7 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useEnergyStore } from '@/store/useEnergyStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
@@ -57,9 +61,10 @@ import { rankTodayTasks } from '@/lib/taskOrder';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
 import BubbleMenu from '@/components/BubbleMenu';
-// import Pet from '@/components/Pet'; // Disabled for now
+import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
+import EnergyCheckIn from '@/components/EnergyCheckIn';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -98,6 +103,7 @@ export default function HomeScreen() {
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
+  const energyLevels = useEnergyStore((s) => s.levels);
   const updateReady = useUpdateStore((s) => s.updateReady);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
@@ -131,9 +137,15 @@ export default function HomeScreen() {
     [tasks, tasksForDate, today]
   );
 
-  const visibleTodayTasks = settings.essentialsModeEnabled
+  const essentialsFilteredTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((task) => task.importance === 'essential')
     : allTodayTasks;
+  // Low-energy day: narrow further to must-dos only, on top of (never instead
+  // of) the essentials/work-mode filter above.
+  const todayEnergyLevel = energyLevels[today] ?? null;
+  const visibleTodayTasks = todayEnergyLevel === 'low'
+    ? essentialsFilteredTasks.filter((task) => task.priority === 'high')
+    : essentialsFilteredTasks;
 
   // Plans widget: a short 3-item preview by default, expandable in place to the
   // full day via the "•••" strip — no separate cap/overflow-nudge mechanism.
@@ -277,6 +289,8 @@ export default function HomeScreen() {
 
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
 
+        <EnergyCheckIn />
+
         {/* Plans — unified preview of today's agenda; tap the title for the full /plans screen */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -410,8 +424,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
-      {/* Pets disabled for now */}
-      {/* {settings.petEnabled && <Pet completedToday={completedCount} />} */}
+      {settings.petEnabled && <Pet completedToday={completedCount} />}
       <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
     </SafeAreaView>
   );
