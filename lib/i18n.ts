@@ -388,7 +388,7 @@ const en = {
   nav: {
     newTask: 'New', shop: 'Shop', shared: 'Shared', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
-    focus: 'Focus',
+    focus: 'Focus', capture: 'Capture',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -607,6 +607,16 @@ const en = {
     title: 'Up next',
     markDone: 'Mark done',
     empty: "Nothing urgent right now — you're caught up.",
+  },
+  // AP-02 — quick-capture inbox (app/capture.tsx, components/InboxSection.tsx)
+  inbox: {
+    title: 'Capture',
+    placeholder: "What's on your mind?",
+    captureButton: 'Capture',
+    captured: 'Captured',
+    sectionTitle: 'Captured',
+    promote: '→ Task',
+    discard: 'Discard',
   },
   hints: {
     home: {
@@ -1156,7 +1166,7 @@ const no: typeof en = {
   nav: {
     newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
-    focus: 'Fokus',
+    focus: 'Fokus', capture: 'Fang opp',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',
@@ -1244,6 +1254,16 @@ const no: typeof en = {
     title: 'Neste på tur',
     markDone: 'Merk som gjort',
     empty: 'Ingenting presserende akkurat nå — du er à jour.',
+  },
+  // AP-02 — hurtigfangst-innboks (app/capture.tsx, components/InboxSection.tsx)
+  inbox: {
+    title: 'Fang opp',
+    placeholder: 'Hva tenker du på?',
+    captureButton: 'Fang opp',
+    captured: 'Fanget opp',
+    sectionTitle: 'Fanget opp',
+    promote: '→ Oppgave',
+    discard: 'Forkast',
   },
   hints: {
     home: {

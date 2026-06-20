@@ -3,12 +3,13 @@
  *
  * Floating action button that opens into a spinnable circle of bubbles. Shows
  * 3 full + 2 half-visible bubbles at any time. Dragging the wheel rotates it
- * through a clamped range (5 × 45° = 5π/4), stopping when the second-from-each-
- * end item (index 1 or 6) reaches the centered "focus" slot — stopping at the
- * true edge items (0/7) would leave a fully-empty bubble slot on their far
- * side. Release snaps with a lottery-wheel feel: a short ease-out coast before
- * the spring settles. Tapping anywhere outside the bubbles (including empty
- * space inside the wheel's bounding square) closes the menu.
+ * through a clamped range ((BASE_ITEMS.length - 3) × STEP_ANGLE), stopping when
+ * the second-from-each-end item (index 1 or BASE_ITEMS.length - 2) reaches the
+ * centered "focus" slot — stopping at the true edge items (0 / last) would leave
+ * a fully-empty bubble slot on their far side. Release snaps with a lottery-wheel
+ * feel: a short ease-out coast before the spring settles. Tapping anywhere
+ * outside the bubbles (including empty space inside the wheel's bounding square)
+ * closes the menu.
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/haptics, lib/useAppTheme, store/useSettingsStore
@@ -91,6 +92,7 @@ const BASE_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: 
   { icon: 'restaurant-outline', labelKey: 'meals',   route: '/meals',     color: FeatureColors.meals },
   { icon: 'camera-outline',     labelKey: 'scan',    route: '/scan',      color: FeatureColors.scan },
   { icon: 'link-outline',       labelKey: 'shared',  route: '/shared',    color: FeatureColors.shared },
+  { icon: 'bulb-outline',       labelKey: 'capture', route: '/capture',   color: FeatureColors.capture },
 ];
 
 const FAB_MARGIN_SIDE = 48; // must match sideStyle left/right value below — kept equal to styles.container's bottom (48) so the FAB sits the same distance from the bottom edge as the side edge
@@ -114,32 +116,39 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-// Window is π (180°) wide — 4 steps. Opacity grades down with distance from the centered
-// focus item: 1.0 at center, OPACITY_NEAR for the immediate neighbor on each side,
-// OPACITY_FAR for the item at winStart/winEnd (the half-visible "peek" bubbles), then fades
-// to 0 over the WINDOW_FADE margin beyond that. Right-handed window is shifted one step
-// past straight-up so its center (the focus position) sits at NW instead of N; left-handed
-// is mirrored to NE.
-const WINDOW_FADE = STEP_ANGLE / 2; // ~22.5°
+// Window is always 4 × STEP_ANGLE wide (4 steps — at the original 45° step that's π,
+// i.e. 180°, but it scales with however many BASE_ITEMS there are). Opacity grades down with distance
+// from the centered focus item: 1.0 at center, OPACITY_NEAR for the immediate neighbor on
+// each side, OPACITY_FAR for the item at winStart/winEnd (the half-visible "peek" bubbles),
+// then fades to 0 over the WINDOW_FADE margin beyond that. Right-handed window is shifted
+// one step past straight-up so its center (the focus position) sits at NW instead of N;
+// left-handed is mirrored to NE.
+const WINDOW_FADE = STEP_ANGLE / 2; // half a step
 const OPACITY_NEAR = 0.72;
 const OPACITY_FAR = 0.4;
 
-// Clamped rotation: stops one item short of each end (item 1 / item 6 reach the focus
-// slot, not item 0 / item 7) rather than the true edges. Centering a true edge item
-// leaves a fully-empty adjacent slot on its far side (there's no item -1 or item 8) —
-// stopping one item short still leaves one empty half-visible peek slot at each extreme,
-// but not an empty full-opacity slot too. That's 5 × STEP_ANGLE = 5π/4 of total travel.
-// Shifted by −STEP_ANGLE (RH) / +STEP_ANGLE (LH) from the original N-centered window so
-// the same items (1 and 6) still land in the focus slot, now at its new NW/NE position.
-// Right-handed clamps wheelAngle in [MIN_WHEEL, MAX_WHEEL].
-const MIN_WHEEL_RH = -9 * Math.PI / 4;   // item 6 centered
-const MAX_WHEEL_RH = -Math.PI;           // item 1 centered
-const MIN_WHEEL_LH = -7 * Math.PI / 4;   // item 6 centered
-const MAX_WHEEL_LH = -Math.PI / 2;       // item 1 centered
+// Clamped rotation: stops one item short of each end (item 1 / item LAST_IDX-1 reach the
+// focus slot, not item 0 / item LAST_IDX) rather than the true edges. Centering a true
+// edge item leaves a fully-empty adjacent slot on its far side (there's no item -1 or
+// item LAST_IDX+1) — stopping one item short still leaves one empty half-visible peek slot
+// at each extreme, but not an empty full-opacity slot too. Expressed generally (in terms of
+// STEP_ANGLE/BASE_ITEMS.length, not the old fixed 8-item/45° assumption) so the wheel stays
+// correct however many bubbles BASE_ITEMS holds. Shifted by −STEP_ANGLE (RH) / +STEP_ANGLE
+// (LH) from the original N-centered window so the same items (1 and LAST_IDX-1) still land
+// in the focus slot, now at its new NW/NE position. Right-handed clamps wheelAngle in
+// [MIN_WHEEL, MAX_WHEEL]. At the original 8-item step (STEP_ANGLE=π/4) these formulas reduce
+// to exactly the old hardcoded values (-9π/4/-π RH, -7π/4/-π/2 LH, -5π/4/-3π/4 default).
+const LAST_IDX = BASE_ITEMS.length - 1;
+const WINDOW_CENTER_RH = -3 * Math.PI / 4; // NW
+const WINDOW_CENTER_LH = -Math.PI / 4;     // NE
+const MIN_WHEEL_RH = WINDOW_CENTER_RH - (LAST_IDX - 1) * STEP_ANGLE; // item LAST_IDX-1 centered
+const MAX_WHEEL_RH = WINDOW_CENTER_RH - STEP_ANGLE;                  // item 1 centered
+const MIN_WHEEL_LH = WINDOW_CENTER_LH - (LAST_IDX - 1) * STEP_ANGLE; // item LAST_IDX-1 centered
+const MAX_WHEEL_LH = WINDOW_CENTER_LH - STEP_ANGLE;                  // item 1 centered
 
 // Default rest pose: item 2 centered in the focus slot (now at NW/NE).
-const DEFAULT_WHEEL_RH = -5 * Math.PI / 4;
-const DEFAULT_WHEEL_LH = -3 * Math.PI / 4;
+const DEFAULT_WHEEL_RH = WINDOW_CENTER_RH - 2 * STEP_ANGLE;
+const DEFAULT_WHEEL_LH = WINDOW_CENTER_LH - 2 * STEP_ANGLE;
 
 function windowOpacity(angle: number, winStart: number, winEnd: number): number {
   'worklet';
@@ -259,11 +268,14 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const navigateDelay = clamp(130 / animScale, 30, 600);
   const snapStiffness = clamp(600 * springScale, 150, 2400);
 
-  // Right-handed: window from −5π/4 to −π/4, centered at −3π/4 (NW), π wide.
-  // Left-handed:  window from −3π/4 to π/4, centered at −π/4 (NE) — the left-right mirror
-  // of the right-handed window (x flips sign, up/down stays the same).
-  const windowStart = leftHanded ? -3 * Math.PI / 4 : -5 * Math.PI / 4;
-  const windowEnd   = leftHanded ? Math.PI / 4 : -Math.PI / 4;
+  // Window is always 4×STEP_ANGLE wide (2 full neighbor steps either side of the focus
+  // slot), centered at WINDOW_CENTER_RH (NW) for right-handed or WINDOW_CENTER_LH (NE) for
+  // left-handed — the left-right mirror of the right-handed window (x flips sign, up/down
+  // stays the same). At the original 8-item/45° step this reduces to exactly −5π/4..−π/4
+  // (RH) / −3π/4..π/4 (LH), unchanged from before.
+  const windowCenter = leftHanded ? WINDOW_CENTER_LH : WINDOW_CENTER_RH;
+  const windowStart = windowCenter - 2 * STEP_ANGLE;
+  const windowEnd   = windowCenter + 2 * STEP_ANGLE;
 
   const wheelAngle   = useSharedValue(leftHanded ? DEFAULT_WHEEL_LH : DEFAULT_WHEEL_RH);
   const openProgress = useSharedValue(0);

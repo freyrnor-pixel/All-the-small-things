@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -30,6 +30,10 @@
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
  *   - Pet companion is shown when settings.petEnabled (set during onboarding step6 or via Settings).
+ *   - InboxSection (AP-02) sits right under the home HintCard, above EnergyCheckIn —
+ *     lists whatever's currently captured via app/capture.tsx and renders nothing
+ *     when the inbox is empty (mirrors the Backlog section's hide-when-empty pattern
+ *     further down, since capture is incidental/optional, not a permanent fixture).
  *   - EnergyCheckIn sits above the Plans section; on a 'low' energy day, visibleTodayTasks
  *     is narrowed further to priority === 'high' tasks, strictly on top of the essentials
  *     filter (never as a replacement for it).
@@ -72,6 +76,7 @@ import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import EnergyCheckIn from '@/components/EnergyCheckIn';
 import NextTaskCard from '@/components/NextTaskCard';
+import InboxSection from '@/components/InboxSection';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -302,6 +307,8 @@ export default function HomeScreen() {
         )}
 
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
+
+        <InboxSection />
 
         <EnergyCheckIn />
 

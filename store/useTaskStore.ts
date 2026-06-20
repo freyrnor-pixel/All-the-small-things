@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useAutomationStore, store/useSettingsStore
- *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx
+ *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx, store/useInboxStore.ts (add() only, for promoteToTask)
  *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications; fires the 'task_completed' automation trigger
  *
  * Edit notes:
