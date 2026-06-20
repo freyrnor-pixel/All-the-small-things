@@ -8,7 +8,7 @@
  * false all tasks show in time/id order.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, store/useSettingsStore, store/useTaskStore, lib/useAppTheme
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, store/useSettingsStore, store/useTaskStore, lib/useAppTheme
  *   Used by → Expo Router route "/focus", BubbleMenu (nav.focus bubble)
  *   Data    → useTaskStore (tasksForDate, toggle); useSettingsStore (workModeEnabled, workModeSessionOverride)
  *
@@ -16,8 +16,10 @@
  *   - focusTask selector: from today's tasks, exclude done, filter by work mode, sort time-first.
  *   - skipIndex is local component state; never touches the DB.
  *   - All strings through useT().
+ *   - Fires confirm() once on mount — the "entering a distinct mode" haptic signal from
+ *     ANIMATION_GUIDELINES.md §5; not gated by reducedMotion (haptics aren't visual motion).
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -31,6 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
+import { confirm } from '@/lib/haptics';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
@@ -50,6 +53,8 @@ export default function FocusScreen() {
   const completedCountFn = useTaskStore((s) => s.completedCount);
 
   const [skipIndex, setSkipIndex] = useState(0);
+
+  useEffect(() => { confirm(); }, []);
 
   const workModeActive = settings.workModeEnabled && !settings.workModeSessionOverride;
 

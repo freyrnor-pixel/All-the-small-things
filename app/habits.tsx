@@ -43,7 +43,7 @@ import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
 import { Ionicons } from '@expo/vector-icons';
-import { success } from '@/lib/haptics';
+import { success, warning, heavy } from '@/lib/haptics';
 import { todayStr, dateStr } from '@/lib/date';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
@@ -540,11 +540,13 @@ export default function HabitsScreen() {
   }
 
   function removeChild(name: string) {
+    warning();
     Alert.alert(t.habitRemoveChild(name), t.habitRemoveChildBody, [
       { text: t.cancel, style: 'cancel' },
       {
         text: t.resetConfirmBtn, style: 'destructive',
         onPress: () => {
+          heavy();
           updateSettings({ childProfiles: childProfiles.filter((c) => c !== name) });
           if (selectedProfile === name) setSelectedProfile('');
         },

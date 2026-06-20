@@ -7,7 +7,10 @@
  *
  * Connections:
  *   Imports → expo-haptics
- *   Used by → components/BubbleMenu, components/PressableScale, task/habit completion flows
+ *   Used by → components/BubbleMenu, components/PressableScale, components/Pet, task/habit
+ *             completion flows, app/focus.tsx (mode entry), app/shopping.tsx (sheet
+ *             swipe-to-close), destructive confirmations in app/automations.tsx,
+ *             app/habit-form.tsx, app/settings.tsx, app/habits.tsx
  *   Data    → none
  *
  * Edit notes:
@@ -63,4 +66,22 @@ export function tug(): void {
   }
 }
 
-export default { tap, success, selection, warning, tug };
+/** Firm tap — primary/confirm actions, entering a distinct mode (e.g. Focus). */
+export function confirm(): void {
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  } catch {
+    // no-op
+  }
+}
+
+/** Solid thud — lands right after a destructive action is confirmed. Pair with warning() beforehand. */
+export function heavy(): void {
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  } catch {
+    // no-op
+  }
+}
+
+export default { tap, success, selection, warning, tug, confirm, heavy };

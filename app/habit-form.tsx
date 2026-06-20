@@ -7,7 +7,7 @@
  * delete); a `kind` param pre-seeds build vs. break for new habits.
  *
  * Connections:
- *   Imports → components/HabitIcon, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HabitIcon, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder; scaled fontSize via useScaledStyles()
  *
@@ -39,6 +39,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useHabitStore, HabitKind, HabitRecurrence, HabitCategory } from '@/store/useHabitStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
+import { warning, heavy } from '@/lib/haptics';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -121,6 +122,7 @@ export default function HabitForm() {
   }
 
   function confirmDelete() {
+    warning();
     Alert.alert(
       t.resetConfirmTitle(form.title),
       t.resetConfirmBody,
@@ -129,7 +131,7 @@ export default function HabitForm() {
         {
           text: t.resetConfirmBtn,
           style: 'destructive',
-          onPress: () => { if (params.id) remove(params.id); router.back(); },
+          onPress: () => { heavy(); if (params.id) remove(params.id); router.back(); },
         },
       ]
     );

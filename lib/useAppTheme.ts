@@ -11,16 +11,20 @@
  * Connections:
  *   Imports → constants/theme, store/useSettingsStore
  *   Used by → app/automations.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/CompletionGlow.tsx, components/ConfirmationBanner.tsx, components/DatePickerCalendar.tsx, components/DayTimeline.tsx, components/ExpandableCard.tsx, components/HintCard.tsx, components/MonthlyPickerSheet.tsx, components/Pet.tsx, components/PressableScale.tsx, components/QuickAddSheet.tsx, components/ShoppingRow.tsx, components/TaskItem.tsx, components/TimePickerWheel.tsx, components/cover/CoverHabitsSection.tsx, components/cover/CoverHeader.tsx, components/cover/CoverScreen.tsx, components/cover/CoverTasksSection.tsx
- *   Data    → reads `colorTheme`, `darkMode`, `reducedMotion`, `fontSize` from the settings Zustand store
+ *   Data    → reads `colorTheme`, `darkMode`, `reducedMotion`, `fontSize` from the settings Zustand
+ *             store; reducedMotion is OR'd with the live OS-level AccessibilityInfo setting
  *
  * Edit notes:
  *   - These are hooks — only call from React components/other hooks, never from
  *     stores or schedulers (use getTheme() directly there).
  *   - darkMode 'system' defers to useColorScheme(); keep the on/system/off logic
  *     in sync between useAppTheme and useIsDark.
+ *   - useAccessibility()'s reducedMotion is `manual setting OR system setting` — the
+ *     in-app toggle (store/useSettingsStore.ts) never overrides an OS-level reduce-motion
+ *     preference, it only adds to it. See ANIMATION_GUIDELINES.md §7.
  */
-import { useMemo } from 'react';
-import { useColorScheme } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AccessibilityInfo, useColorScheme } from 'react-native';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { getTheme, getSoftTheme, getFontSize, AppColors, FontSizeScale } from '@/constants/theme';
 
@@ -59,10 +63,18 @@ export function useAccessibility(): {
   reducedMotion: boolean;
   getFontSize: (base: number) => number;
 } {
-  const reducedMotion = useSettingsStore((s) => s.reducedMotion);
+  const manualReducedMotion = useSettingsStore((s) => s.reducedMotion);
   const fontSize = useSettingsStore((s) => s.fontSize) as FontSizeScale;
+  const [systemReducedMotion, setSystemReducedMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setSystemReducedMotion);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setSystemReducedMotion);
+    return () => sub.remove();
+  }, []);
+
   return {
-    reducedMotion,
+    reducedMotion: manualReducedMotion || systemReducedMotion,
     getFontSize: (base: number) => getFontSize(base, fontSize),
   };
 }

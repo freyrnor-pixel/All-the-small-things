@@ -7,7 +7,7 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
  *   Used by → Expo Router route "/automations", reached via a nav row in app/settings.tsx
  *   Data    → useAutomationStore (ifttt_rules table)
  *
@@ -25,6 +25,7 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useT } from '@/lib/i18n';
+import { warning, heavy } from '@/lib/haptics';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -51,9 +52,10 @@ function RuleCard({ rule, onToggle, onDelete }: {
   const styles = useScaledStyles(baseStyles);
 
   function confirmDelete() {
+    warning();
     Alert.alert(t.automations.deleteTitle, t.automations.deleteBody, [
       { text: t.cancel, style: 'cancel' },
-      { text: t.automations.deleteBtn, style: 'destructive', onPress: () => onDelete(rule.id) },
+      { text: t.automations.deleteBtn, style: 'destructive', onPress: () => { heavy(); onDelete(rule.id); } },
     ]);
   }
 
