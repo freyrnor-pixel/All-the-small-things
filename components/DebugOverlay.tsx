@@ -2,8 +2,9 @@
  * DebugOverlay.tsx — floating debug button + annotate-mode feedback pins + bubble-wheel tuning panel
  *
  * Mounted once in app/_layout.tsx, gated on settings.loaded && settings.debugModeEnabled.
- * Renders a small floating bug-icon button (top-right, clear of the FAB's bottom
- * corner) that opens a Modal panel with two tabs:
+ * Renders a small floating bug-icon button (top-right, offset down past the home
+ * screen's header row so it doesn't sit on top of the settings gear, and clear of
+ * the FAB's bottom corner) that opens a Modal panel with two tabs:
  *   - "Comments": an Annotate-mode switch (closes the panel so taps reach the
  *     screen below), a list of this screen's notes (tap to edit/delete), and an
  *     "Export all" action.
@@ -210,7 +211,7 @@ export default function DebugOverlay() {
       <Pressable
         style={[
           styles.fab,
-          { top: insets.top + Spacing.sm, borderColor: theme.border },
+          { top: insets.top + 60, borderColor: theme.border },
           { backgroundColor: annotateMode ? theme.orange : theme.white },
         ]}
         onPress={handleFabPress}
