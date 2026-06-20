@@ -242,15 +242,19 @@ const en = {
   permissionBody: 'Camera access is required to scan receipts.',
   // Shopping screen
   shoppingTitle: 'Shopping list',
-  shoppingRemaining: (r: number, c: number) => `${r} remaining · ${c} in cart`,
+  shoppingRemaining: (p: number, c: number, d: number) => `${p} planned · ${c} in cart · ${d} purchased`,
   shoppingItemPlaceholder: 'Item',
   shoppingAmountPlaceholder: 'Qty',
   shoppingUnitPlaceholder: 'Unit (pcs, kg, l…)',
   inCart: 'In cart',
   // --- W-C Grocery additions (shopping) ---
   weeklyResetsOnShort: (day: string) => `Resets ${day}`,
-  clearCheckedItems: (n: number) => `Clear ${n} checked ${n === 1 ? 'item' : 'items'}`,
   // --- end W-C additions ---
+  // Three-section shopping list: planned / in cart / purchased
+  plannedSection: 'Planned',
+  purchasedSection: 'Purchased',
+  shoppingDoneBtn: (n: number) => `Shopping done (${n})`,
+  clearPurchasedItems: (n: number) => `Clear ${n} purchased ${n === 1 ? 'item' : 'items'}`,
   addItemTrigger: '+ Add item',
   addFromMonthly: '+ From monthly',
   monthlyPickerTitle: 'Add from monthly list',
@@ -260,8 +264,6 @@ const en = {
   monthlyInWeekly: (n: number) => `${n} in weekly`,
   fromMonthlyLabel: 'Monthly →',
   monthlySourceSection: 'Monthly list',
-  weeklyItemsSection: 'Weekly list',
-  fromMealsSection: 'From your meals',
   addOneToWeekly: '+ Add',
   weeklyTabLabel: 'Weekly',
   monthlyTabLabel: 'Monthly',
@@ -623,6 +625,10 @@ const en = {
     title: 'Up next',
     markDone: 'Mark done',
     empty: "Nothing urgent right now — you're caught up.",
+    now: 'Now',
+    inMinutes: (m: number) => `in ${m} min`,
+    inHours: (h: number) => `in ${h}h`,
+    inHoursMinutes: (h: number, m: number) => `in ${h}h ${m}min`,
   },
   // AP-02 — quick-capture inbox (app/capture.tsx, components/InboxSection.tsx)
   inbox: {
@@ -646,7 +652,7 @@ const en = {
   },
   hints: {
     home: {
-      text: 'Your daily overview — tap ⭐ to focus on essentials only.',
+      text: 'Tap ⭐ to focus on essentials only.',
       example: '',
     },
     taskForm: {
@@ -931,15 +937,19 @@ const no: typeof en = {
   permissionTitle: 'Tilgang nødvendig',
   permissionBody: 'Kameraet trenger tilgang for å skanne kvitteringer.',
   shoppingTitle: 'Handleliste',
-  shoppingRemaining: (r: number, c: number) => `${r} gjenstår · ${c} i kurven`,
+  shoppingRemaining: (p: number, c: number, d: number) => `${p} planlagt · ${c} i kurven · ${d} kjøpt`,
   shoppingItemPlaceholder: 'Vare',
   shoppingAmountPlaceholder: 'Antall',
   shoppingUnitPlaceholder: 'Enhet (stk, kg, l…)',
   inCart: 'I kurven',
   // --- W-C Grocery additions (shopping) ---
   weeklyResetsOnShort: (day: string) => `Nullstilles ${day}`,
-  clearCheckedItems: (n: number) => `Fjern ${n} avkrysset${n === 1 ? '' : 'e'}`,
   // --- end W-C additions ---
+  // Tre seksjoner i handlelisten: planlagt / i kurven / kjøpt
+  plannedSection: 'Planlagt',
+  purchasedSection: 'Kjøpt',
+  shoppingDoneBtn: (n: number) => `Handling ferdig (${n})`,
+  clearPurchasedItems: (n: number) => `Fjern ${n} kjøpt${n === 1 ? '' : 'e'}`,
   addItemTrigger: '+ Legg til vare',
   addFromMonthly: '+ Fra månedsliste',
   monthlyPickerTitle: 'Legg til fra månedsliste',
@@ -949,8 +959,6 @@ const no: typeof en = {
   monthlyInWeekly: (n: number) => `${n} i ukeliste`,
   fromMonthlyLabel: 'Fra månedsliste',
   monthlySourceSection: 'Månedsliste',
-  weeklyItemsSection: 'Ukeliste',
-  fromMealsSection: 'Fra middagene dine',
   addOneToWeekly: '+ Legg til',
   weeklyTabLabel: 'Ukeliste',
   monthlyTabLabel: 'Månedsliste',
@@ -1296,6 +1304,10 @@ const no: typeof en = {
     title: 'Neste på tur',
     markDone: 'Merk som gjort',
     empty: 'Ingenting presserende akkurat nå — du er à jour.',
+    now: 'Nå',
+    inMinutes: (m: number) => `om ${m} min`,
+    inHours: (h: number) => `om ${h}t`,
+    inHoursMinutes: (h: number, m: number) => `om ${h}t ${m}min`,
   },
   // AP-02 — hurtigfangst-innboks (app/capture.tsx, components/InboxSection.tsx)
   inbox: {
@@ -1319,7 +1331,7 @@ const no: typeof en = {
   },
   hints: {
     home: {
-      text: 'Din daglige oversikt — trykk ⭐ for kun det viktigste.',
+      text: 'Trykk ⭐ for kun det viktigste.',
       example: '',
     },
     taskForm: {

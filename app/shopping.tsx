@@ -2,9 +2,9 @@
  * shopping.tsx — weekly & monthly shopping lists
  *
  * Tabbed shopping screen (weekly / monthly) with per-category grouping,
- * check-off, quantity adjust, and add via the catalog-backed autocomplete
- * (useCatalogStore.suggest). Monthly items can be allocated into the weekly
- * list through the MonthlyPickerSheet.
+ * a three-section Planned / In cart / Purchased flow, quantity adjust, and
+ * add via the catalog-backed autocomplete (useCatalogStore.suggest). Monthly
+ * items can be allocated into the weekly list through the MonthlyPickerSheet.
  *
  * Connections:
  *   Imports → components/ConfirmationBanner, components/HintCard, components/MonthlyPickerSheet, components/PressableScale, components/ScreenBackground, components/ShoppingRow, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
@@ -15,9 +15,13 @@
  *   - All visible strings go through useT(); CATEGORY_ORDER is the canonical category list and ordering.
  *   - Header Share button opens the /share-modal modal with params { kind: 's' }.
  *   - Weekly vs monthly are visually distinguished by the per-tab accent (green vs orange) applied to section headers + a thick accent rule.
- *   - Autocomplete suggestions render as large PressableScale chips; "clear checked" lives at the BOTTOM and reuses removeWithSource per checked item (no dedicated store action).
+ *   - Three sections per tab: Planned (!checked, ShoppingRow variant="planned", "+" moves into cart), In cart
+ *     (checked && !purchased, variant="cart", "−" moves back to planned), Purchased (checked && purchased,
+ *     variant="purchased", read-only checkmark). "Shopping done" calls markPurchased(tab) to finalize the whole
+ *     cart at once; "Clear purchased" is the only thing that deletes purchased rows (via removeWithSource, so
+ *     monthly allocations are released) — there is no dedicated bulk-delete store action.
  *   - weeklyResetDay is 0=Mon..6=Sun; t.days is Sunday-indexed, so the label is t.days[(weeklyResetDay + 1) % 7].
- *   - Unchecked items with a dishName (pushed from app/meals.tsx) render grouped under that dish in their own cards, above the plain alphabetical list; ungroupedUnchecked feeds the latter so items aren't duplicated.
+ *   - Planned items with a dishName (pushed from app/meals.tsx) render grouped under that dish in their own cards, above the plain alphabetical list; ungroupedPlanned feeds the latter so items aren't duplicated.
  *   - Add sheet supports swipe-down-to-close via a Gesture.Pan on the handle/title row only (not the whole sheet, so inner ScrollView/TextInput touches aren't hijacked); past 100px or a fast flick closes it, otherwise it springs back.
  *   - The 'shopping_opened' trigger fires once per mount ([] deps) — not on every re-render as items change.
  */
@@ -85,6 +89,7 @@ export default function ShoppingScreen() {
   const removeWithSource = useShoppingStore((s) => s.removeWithSource);
   const adjustAmount = useShoppingStore((s) => s.adjustAmount);
   const addFromMonthly = useShoppingStore((s) => s.addFromMonthly);
+  const markPurchased = useShoppingStore((s) => s.markPurchased);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
   const resetMonthly = useShoppingStore((s) => s.resetMonthly);
   const suggest = useCatalogStore((s) => s.suggest);
@@ -124,31 +129,42 @@ export default function ShoppingScreen() {
   const weeklyItems = items.filter((i) => i.listType === 'weekly');
   const monthlyItems = items.filter((i) => i.listType === 'monthly');
   const filtered = tab === 'weekly' ? weeklyItems : monthlyItems;
-  const unchecked = filtered.filter((i) => !i.checked);
-  const checked = filtered.filter((i) => i.checked);
+  const planned = filtered.filter((i) => !i.checked);
+  const inCart = filtered.filter((i) => i.checked && !i.purchased);
+  const purchasedItems = filtered.filter((i) => i.checked && i.purchased);
 
-  // Alphabetically sorted unchecked items for current tab
-  const sortedUnchecked = useMemo(
-    () => [...unchecked].sort((a, b) => a.name.localeCompare(b.name)),
-    [unchecked]
+  // Alphabetically sorted planned items for current tab
+  const sortedPlanned = useMemo(
+    () => [...planned].sort((a, b) => a.name.localeCompare(b.name)),
+    [planned]
   );
 
   // Items pushed from a dish (app/meals.tsx) are grouped under that dish's name;
   // everything else stays in the plain alphabetical list below.
   const dishGroups = useMemo(() => {
-    const map = new Map<string, typeof sortedUnchecked>();
-    for (const item of sortedUnchecked) {
+    const map = new Map<string, typeof sortedPlanned>();
+    for (const item of sortedPlanned) {
       if (!item.dishName) continue;
       const group = map.get(item.dishName);
       if (group) group.push(item);
       else map.set(item.dishName, [item]);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [sortedUnchecked]);
+  }, [sortedPlanned]);
 
-  const ungroupedUnchecked = useMemo(
-    () => sortedUnchecked.filter((i) => !i.dishName),
-    [sortedUnchecked]
+  const ungroupedPlanned = useMemo(
+    () => sortedPlanned.filter((i) => !i.dishName),
+    [sortedPlanned]
+  );
+
+  const sortedInCart = useMemo(
+    () => [...inCart].sort((a, b) => a.name.localeCompare(b.name)),
+    [inCart]
+  );
+
+  const sortedPurchased = useMemo(
+    () => [...purchasedItems].sort((a, b) => a.name.localeCompare(b.name)),
+    [purchasedItems]
   );
 
   // Monthly items that still have remaining quantity (available to add to weekly)
@@ -228,14 +244,21 @@ export default function ShoppingScreen() {
     setShowMonthlyPicker(false);
   }
 
-  // Clear only the checked-off items in the current tab. Reuses removeWithSource
-  // so monthly allocations get released; there is no dedicated store action.
-  function clearChecked() {
-    if (checked.length === 0) return;
-    const n = checked.length;
-    checked.forEach((item) => removeWithSource(item.id));
+  // Finalize the in-cart items for the current tab into "purchased".
+  function finishShopping() {
+    if (inCart.length === 0) return;
+    markPurchased(tab);
     success();
-    setConfirm(t.clearCheckedItems(n));
+  }
+
+  // Clear only the purchased items in the current tab. Reuses removeWithSource
+  // so monthly allocations get released; there is no dedicated store action.
+  function clearPurchased() {
+    if (purchasedItems.length === 0) return;
+    const n = purchasedItems.length;
+    purchasedItems.forEach((item) => removeWithSource(item.id));
+    success();
+    setConfirm(t.clearPurchasedItems(n));
   }
 
   // Per-tab accent colour
@@ -308,7 +331,7 @@ export default function ShoppingScreen() {
           <View style={styles.summaryRow}>
             <View style={[styles.summaryChip, { backgroundColor: tabAccentLight }]}>
               <Text style={[styles.summaryText, { color: theme.text }]}>
-                {t.shoppingRemaining(unchecked.length, checked.length)}
+                {t.shoppingRemaining(planned.length, inCart.length, purchasedItems.length)}
               </Text>
             </View>
             {tab === 'weekly' && (
@@ -362,11 +385,11 @@ export default function ShoppingScreen() {
             </View>
           )}
 
-          {/* Items pushed from a dish (app/meals.tsx), grouped under that dish's name */}
-          {dishGroups.length > 0 && (
+          {/* Planned — items pushed from a dish (app/meals.tsx) grouped under that dish's name, plus the plain alphabetical list */}
+          {(dishGroups.length > 0 || ungroupedPlanned.length > 0) && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.fromMealsSection}</Text>
+                <Text style={[styles.sectionLabel, { color: tabAccent }]}>{t.plannedSection}</Text>
                 <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
               </View>
               {dishGroups.map(([dishName, groupItems]) => {
@@ -385,6 +408,7 @@ export default function ShoppingScreen() {
                         <ShoppingRow
                           item={item}
                           theme={theme}
+                          variant="planned"
                           onToggle={() => toggle(item.id)}
                           onRemove={() => removeWithSource(item.id)}
                           onAdjust={(d) => adjustAmount(item.id, d)}
@@ -398,54 +422,47 @@ export default function ShoppingScreen() {
                   </View>
                 );
               })}
+              {ungroupedPlanned.length > 0 && (
+                <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
+                  {ungroupedPlanned.map((item, idx) => (
+                    <View key={item.id}>
+                      <ShoppingRow
+                        item={item}
+                        theme={theme}
+                        variant="planned"
+                        onToggle={() => toggle(item.id)}
+                        onRemove={() => removeWithSource(item.id)}
+                        onAdjust={(d) => adjustAmount(item.id, d)}
+                        fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
+                        inStockLabel={t.inStockLabel}
+                        monthlyLeftLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
+                      />
+                      {idx < ungroupedPlanned.length - 1 && (
+                        <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
-          {/* Alphabetical unchecked items — header coloured per list (green weekly / orange monthly) */}
-          {ungroupedUnchecked.length > 0 && (
+          {/* In cart */}
+          {sortedInCart.length > 0 && (
             <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionLabel, { color: tabAccent }]}>
-                  {tab === 'weekly' ? t.weeklyItemsSection : t.monthlyTabLabel}
-                </Text>
-                <View style={[styles.sectionRule, { backgroundColor: tabAccent }]} />
-              </View>
-              <View style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: tabAccent }]}>
-                {ungroupedUnchecked.map((item, idx) => (
-                  <View key={item.id}>
-                    <ShoppingRow
-                      item={item}
-                      theme={theme}
-                      onToggle={() => toggle(item.id)}
-                      onRemove={() => removeWithSource(item.id)}
-                      onAdjust={(d) => adjustAmount(item.id, d)}
-                      fromMonthlyLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
-                      inStockLabel={t.inStockLabel}
-                      monthlyLeftLabel={item.monthlySourceId ? t.fromMonthlyLabel : undefined}
-                    />
-                    {idx < ungroupedUnchecked.length - 1 && (
-                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
-                    )}
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Checked / In cart */}
-          {checked.length > 0 && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.inCart}</Text>
+              <Text style={[styles.sectionLabel, { color: theme.orange }]}>{t.inCart}</Text>
               <Surface style={styles.card}>
-                {checked.map((item, idx) => (
+                {sortedInCart.map((item, idx) => (
                   <View key={item.id}>
                     <ShoppingRow
                       item={item}
                       theme={theme}
+                      variant="cart"
                       onToggle={() => toggle(item.id)}
                       onRemove={() => removeWithSource(item.id)}
+                      inStockLabel={t.inStockLabel}
                     />
-                    {idx < checked.length - 1 && (
+                    {idx < sortedInCart.length - 1 && (
                       <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                     )}
                   </View>
@@ -454,14 +471,49 @@ export default function ShoppingScreen() {
             </View>
           )}
 
-          {/* Clear checked items — bottom of the list, only removes in-cart items */}
-          {checked.length > 0 && (
+          {/* Shopping done — finalizes everything currently in the cart as purchased */}
+          {sortedInCart.length > 0 && (
+            <PressableScale
+              style={[styles.shoppingDoneBtn, { backgroundColor: theme.orange }]}
+              onPress={finishShopping}
+            >
+              <Text style={styles.shoppingDoneText}>
+                {t.shoppingDoneBtn(sortedInCart.length)}
+              </Text>
+            </PressableScale>
+          )}
+
+          {/* Purchased */}
+          {sortedPurchased.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: theme.green }]}>{t.purchasedSection}</Text>
+              <Surface style={styles.card}>
+                {sortedPurchased.map((item, idx) => (
+                  <View key={item.id}>
+                    <ShoppingRow
+                      item={item}
+                      theme={theme}
+                      variant="purchased"
+                      onToggle={() => {}}
+                      onRemove={() => removeWithSource(item.id)}
+                    />
+                    {idx < sortedPurchased.length - 1 && (
+                      <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                    )}
+                  </View>
+                ))}
+              </Surface>
+            </View>
+          )}
+
+          {/* Clear purchased items — bottom of the list, only removes finalized items */}
+          {sortedPurchased.length > 0 && (
             <PressableScale
               style={[styles.clearCheckedBtn, { backgroundColor: theme.greenLight }]}
-              onPress={clearChecked}
+              onPress={clearPurchased}
             >
               <Text style={[styles.clearCheckedText, { color: theme.green }]}>
-                {t.clearCheckedItems(checked.length)}
+                {t.clearPurchasedItems(sortedPurchased.length)}
               </Text>
             </PressableScale>
           )}
@@ -843,6 +895,8 @@ const baseStyles = StyleSheet.create({
 
   clearCheckedBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   clearCheckedText: { fontFamily: Fonts.bold, fontSize: FontSize.md },
+  shoppingDoneBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  shoppingDoneText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
   resetBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   resetBtnText: { fontWeight: '600', fontSize: FontSize.md },
 

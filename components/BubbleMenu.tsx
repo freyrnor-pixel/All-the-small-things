@@ -301,11 +301,11 @@ export default function BubbleMenu({ onNewTask }: Props) {
     [onNewTask, t]
   );
 
-  // ζ≈0.71 at the default springScale=1 — quicker pop-out with a touch of bounce, between
-  // the old too-springy { damping: 20, stiffness: 400 } (ζ≈0.5) and the too-stiff
-  // overshoot-clamped version. stiffness scales with the debug overlay's spring-intensity
-  // setting; damping stays fixed.
-  const OPEN_SPRING = { damping: 20, stiffness: clamp(200 * springScale, 50, 800) };
+  // ζ≈0.41 at the default springScale=1 — "sprettball" (bouncing-ball) feel: a fast launch
+  // (higher stiffness than the old ζ≈0.71 pop) with a visible springy overshoot before it
+  // settles, rather than a calm critically-damped-ish glide. stiffness scales with the debug
+  // overlay's spring-intensity setting; damping stays fixed.
+  const OPEN_SPRING = { damping: 18, stiffness: clamp(480 * springScale, 100, 1600) };
 
   function toggle() {
     tap();

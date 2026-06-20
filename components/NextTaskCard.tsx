@@ -18,8 +18,11 @@
  *     if the same task is also visible as a TaskItem row elsewhere on screen, that
  *     component already animates the rising edge of "done"; a second effect here
  *     would double it up.
+ *   - Countdown badge (toMinutes/useNowMinutes, mirrored from DayTimeline.tsx rather
+ *     than shared) re-renders every 60s; colour cue escalates textLight → orange
+ *     (≤15min) → danger (now/overdue) so the badge itself signals urgency, not just the text.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useT } from '@/lib/i18n';
@@ -33,11 +36,34 @@ type Props = {
   task: Task | null;
 };
 
+function toMinutes(time: string): number | null {
+  const [h, m] = time.split(':').map((n) => parseInt(n, 10));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+/** Re-renders every 60s so the countdown badge stays current. */
+function useNowMinutes(): number {
+  const [now, setNow] = useState(() => {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  });
+  useEffect(() => {
+    const id = setInterval(() => {
+      const d = new Date();
+      setNow(d.getHours() * 60 + d.getMinutes());
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 export default function NextTaskCard({ task }: Props) {
   const t = useT();
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
   const toggle = useTaskStore((s) => s.toggle);
+  const nowMinutes = useNowMinutes();
 
   if (!task) {
     return (
@@ -48,13 +74,46 @@ export default function NextTaskCard({ task }: Props) {
     );
   }
 
+  const start = task.time ? toMinutes(task.time) : null;
+  const end = start !== null && task.taskType === 'time-box' ? start + (task.durationMinutes ?? 30) : start;
+  const isHappeningNow = start !== null && end !== null && task.taskType === 'time-box' && nowMinutes >= start && nowMinutes < end;
+  const diff = start !== null ? start - nowMinutes : null;
+
+  let countdownLabel: string | null = null;
+  let countdownColor = theme.textLight;
+  if (start !== null && diff !== null) {
+    if (isHappeningNow || diff <= 0) {
+      countdownLabel = t.nextTask.now;
+      countdownColor = theme.danger;
+    } else if (diff <= 15) {
+      countdownLabel = t.nextTask.inMinutes(diff);
+      countdownColor = theme.orange;
+    } else if (diff < 60) {
+      countdownLabel = t.nextTask.inMinutes(diff);
+    } else {
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      countdownLabel = m === 0 ? t.nextTask.inHours(h) : t.nextTask.inHoursMinutes(h, m);
+    }
+  }
+
   return (
     <View style={[styles.card, { backgroundColor: theme.hintBg, borderColor: theme.hintBorder }]}>
       <View style={[styles.accentBar, { backgroundColor: theme.hintAccent }]} />
       <View style={styles.body}>
         <Text style={[styles.label, { color: theme.hintAccent }]}>{t.nextTask.title}</Text>
         <Text style={[styles.taskTitle, { color: theme.text }]} numberOfLines={1}>{task.title}</Text>
-        {task.time ? <Text style={[styles.taskTime, { color: theme.textLight }]}>{task.time}</Text> : null}
+        {task.time ? (
+          <View style={styles.taskTimeRow}>
+            <Text style={[styles.taskTime, { color: theme.textLight }]}>{task.time}</Text>
+            {countdownLabel ? (
+              <View style={[styles.countdownChip, { backgroundColor: countdownColor + '22' }]}>
+                <Ionicons name="alarm-outline" size={11} color={countdownColor} />
+                <Text style={[styles.countdownText, { color: countdownColor }]}>{countdownLabel}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
       <PressableScale
         style={[styles.doneBtn, { backgroundColor: theme.hintAccent }]}
@@ -88,7 +147,17 @@ const baseStyles = StyleSheet.create({
   emptyText: { flex: 1, fontSize: FontSize.sm, fontStyle: 'italic', paddingHorizontal: Spacing.sm },
   label: { fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   taskTitle: { fontSize: FontSize.sm, fontWeight: '600' },
+  taskTimeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   taskTime: { fontSize: FontSize.xs },
+  countdownChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: Radius.full,
+  },
+  countdownText: { fontSize: FontSize.xs, fontWeight: '700' },
   doneBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -277,6 +277,8 @@ export function initDb() {
     // AP-06B — receipts + budget tracking
     "ALTER TABLE purchase_log ADD COLUMN receipt_id TEXT DEFAULT NULL",
     "ALTER TABLE settings ADD COLUMN monthly_budget_nok REAL DEFAULT 0",
+    // Shopping: third "purchased" state, finalized via the "Shopping done" action
+    "ALTER TABLE shopping_items ADD COLUMN purchased INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try {

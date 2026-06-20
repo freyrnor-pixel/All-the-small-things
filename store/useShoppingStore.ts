@@ -12,9 +12,13 @@
  *
  * Edit notes:
  *   - monthly_source_id links a weekly item back to its monthly staple; removeWithSource()/adjustAmount()/resetWeekly() must release the parent's monthly_allocated — use these, not the bare remove().
- *   - resetWeekly() deletes all weekly rows (releasing allocations first); resetMonthly() only unchecks + zeroes monthly_allocated, it does not delete.
- *   - New columns (e.g. monthly_allocated, monthly_source_id) go through the migrations array in lib/db.ts; never recreate tables.
+ *   - resetWeekly() deletes all weekly rows (releasing allocations first); resetMonthly() only unchecks + zeroes monthly_allocated + purchased, it does not delete.
+ *   - New columns (e.g. monthly_allocated, monthly_source_id, purchased) go through the migrations array in lib/db.ts; never recreate tables.
  *   - dishName (dish_name column) is set when an item was pushed from a meal dish (app/meals.tsx); used to group shopping items by dish in app/shopping.tsx.
+ *   - `checked` + `purchased` together give app/shopping.tsx its three sections: planned
+ *     (!checked), in cart (checked && !purchased), purchased (checked && purchased).
+ *     toggleCheck() still just flips `checked` — that's the planned↔cart move; markPurchased()
+ *     is the only thing that sets `purchased`, and only resetMonthly() clears it back.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -34,9 +38,10 @@ export type ShoppingItem = {
   monthlySourceId?: string;
   inventoryQty: number;
   dishName?: string;
+  purchased: boolean;
 };
 
-type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId'> & {
+type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId' | 'purchased'> & {
   category?: string;
 };
 
@@ -50,6 +55,7 @@ type ShoppingStore = {
   removeWithSource: (id: string) => void;
   adjustAmount: (id: string, delta: number) => void;
   addFromMonthly: (monthlyId: string, qty: number) => void;
+  markPurchased: (listType: 'weekly' | 'monthly') => void;
   resetWeekly: () => void;
   resetMonthly: () => void;
 };
@@ -69,6 +75,7 @@ function rowToItem(row: Record<string, unknown>): ShoppingItem {
     monthlySourceId: (row.monthly_source_id as string) || undefined,
     inventoryQty: (row.inventory_qty as number) || 0,
     dishName: (row.dish_name as string) || undefined,
+    purchased: row.purchased === 1,
   };
 }
 
@@ -91,12 +98,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     const category = item.category ?? 'other';
     db.runSync(
       `INSERT INTO shopping_items
-         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id, inventory_qty, dish_name)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL, ?, ?)`,
+         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id, inventory_qty, dish_name, purchased)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL, ?, ?, 0)`,
       [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category, item.inventoryQty ?? 0, item.dishName ?? null]
     );
     set((s) => ({
-      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined, inventoryQty: item.inventoryQty ?? 0 }],
+      items: [...s.items, { ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined, inventoryQty: item.inventoryQty ?? 0, purchased: false }],
     }));
   },
 
@@ -107,12 +114,13 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     db.runSync(
       `UPDATE shopping_items
          SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=?, category=?,
-             monthly_allocated=?, monthly_source_id=?, inventory_qty=?, dish_name=?
+             monthly_allocated=?, monthly_source_id=?, inventory_qty=?, dish_name=?, purchased=?
        WHERE id=?`,
       [
         next.name, next.amount, next.unit, next.listType,
         next.checked ? 1 : 0, next.store, next.price, next.category,
-        next.monthlyAllocated, next.monthlySourceId ?? null, next.inventoryQty ?? 0, next.dishName ?? null, id,
+        next.monthlyAllocated, next.monthlySourceId ?? null, next.inventoryQty ?? 0, next.dishName ?? null,
+        next.purchased ? 1 : 0, id,
       ]
     );
     set((s) => ({ items: s.items.map((i) => (i.id === id ? next : i)) }));
@@ -203,8 +211,21 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
           monthlyAllocated: 0,
           monthlySourceId: monthlyId,
           inventoryQty: 0,
+          purchased: false,
         },
       ],
+    }));
+  },
+
+  markPurchased(listType) {
+    db.runSync(
+      'UPDATE shopping_items SET purchased = 1 WHERE list_type = ? AND checked = 1',
+      [listType]
+    );
+    set((s) => ({
+      items: s.items.map((i) =>
+        i.listType === listType && i.checked ? { ...i, purchased: true } : i
+      ),
     }));
   },
 
@@ -239,10 +260,10 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   },
 
   resetMonthly() {
-    db.runSync("UPDATE shopping_items SET checked = 0, monthly_allocated = 0 WHERE list_type = 'monthly'");
+    db.runSync("UPDATE shopping_items SET checked = 0, monthly_allocated = 0, purchased = 0 WHERE list_type = 'monthly'");
     set((s) => ({
       items: s.items.map((i) =>
-        i.listType === 'monthly' ? { ...i, checked: false, monthlyAllocated: 0 } : i
+        i.listType === 'monthly' ? { ...i, checked: false, monthlyAllocated: 0, purchased: false } : i
       ),
     }));
   },

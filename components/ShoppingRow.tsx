@@ -1,9 +1,9 @@
 /**
- * ShoppingRow.tsx — single row in the shopping list with check, qty stepper, and remove.
+ * ShoppingRow.tsx — single row in the shopping list with a move button, qty stepper, and remove.
  *
- * Presentational row for a ShoppingItem: a check toggle, name + meta (unit /
- * store / monthly-source tag), an inline qty stepper for numeric amounts, an
- * optional price, and a remove button. All actions are bubbled up via callbacks.
+ * Presentational row for a ShoppingItem: a planned/cart/purchased move button, name + meta
+ * (unit / store / monthly-source tag), an inline qty stepper for numeric amounts, an optional
+ * price, and a remove button. All actions are bubbled up via callbacks.
  *
  * Connections:
  *   Imports → constants/theme, store/useShoppingStore
@@ -11,10 +11,13 @@
  *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onRemove/onAdjust; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
- *   - The stepper shows when amount is a positive integer, onAdjust is provided, and the item is unchecked. Otherwise amount+unit appear in the meta sub-row.
- *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just check + name + (stepper) + remove.
+ *   - `variant` drives the move button: 'planned' shows a "+" (move into cart, calls onToggle),
+ *     'cart' shows a "−" (move back out, calls onToggle), 'purchased' shows a static checkmark
+ *     (read-only — purchased items only leave via "Clear purchased", never onToggle).
+ *   - The stepper shows when amount is a positive integer, onAdjust is provided, and variant is 'planned'. Otherwise amount+unit appear in the meta sub-row.
+ *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just move-button + name + (stepper) + remove.
  *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels (fromMonthlyLabel) are passed in pre-formatted/localized.
- *   - Checked rows recede: the whole row dims (opacity) and the name greys + strikes through, but the row STAYS visible until cleared.
+ *   - Cart/purchased rows recede: the whole row dims (opacity) and the name greys + strikes through, but the row STAYS visible until moved/cleared.
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -23,9 +26,12 @@ import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 
+type Variant = 'planned' | 'cart' | 'purchased';
+
 type Props = {
   item: ShoppingItem;
   theme: AppColors;
+  variant?: Variant;
   onToggle: () => void;
   onRemove: () => void;
   onAdjust?: (delta: number) => void;
@@ -35,11 +41,12 @@ type Props = {
   monthlyLeftLabel?: string;
 };
 
-export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust, fromMonthlyLabel, monthlyTotal, inStockLabel, monthlyLeftLabel }: Props) {
+export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onRemove, onAdjust, fromMonthlyLabel, monthlyTotal, inStockLabel, monthlyLeftLabel }: Props) {
   const styles = useScaledStyles(baseStyles);
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
-  const showStepper = isNumeric && !!onAdjust && !item.checked;
+  const showStepper = isNumeric && !!onAdjust && variant === 'planned';
+  const dimmed = variant !== 'planned';
 
   const priceTotal = item.price > 0 && isNumeric ? item.price * qty : null;
 
@@ -54,17 +61,25 @@ export default function ShoppingRow({ item, theme, onToggle, onRemove, onAdjust,
   if (priceTotal !== null) metaParts.push(`= ${priceTotal.toFixed(0)} kr`);
 
   return (
-    <View style={[styles.row, item.checked && styles.rowChecked]}>
+    <View style={[styles.row, dimmed && styles.rowChecked]}>
       <Pressable
-        style={[styles.check, { borderColor: theme.green }, item.checked && { backgroundColor: theme.green, borderColor: theme.green }]}
+        style={[
+          styles.check,
+          variant === 'planned' && { borderColor: theme.green },
+          variant === 'cart' && { borderColor: theme.orange },
+          variant === 'purchased' && { backgroundColor: theme.green, borderColor: theme.green },
+        ]}
         onPress={onToggle}
+        disabled={variant === 'purchased'}
         hitSlop={6}
       >
-        {item.checked && <Ionicons name="checkmark" size={14} color={theme.white} />}
+        {variant === 'planned' && <Ionicons name="add" size={16} color={theme.green} />}
+        {variant === 'cart' && <Ionicons name="remove" size={16} color={theme.orange} />}
+        {variant === 'purchased' && <Ionicons name="checkmark" size={14} color={theme.white} />}
       </Pressable>
 
       <View style={styles.content}>
-        <Text style={[styles.name, { color: theme.text }, item.checked && { color: theme.gray, textDecorationLine: 'line-through' }]}>
+        <Text style={[styles.name, { color: theme.text }, dimmed && { color: theme.gray, textDecorationLine: 'line-through' }]}>
           {item.name}
         </Text>
         {(metaParts.length > 0 || (item.monthlySourceId && fromMonthlyLabel) || item.inventoryQty > 0 || monthlyLeftLabel) && (
