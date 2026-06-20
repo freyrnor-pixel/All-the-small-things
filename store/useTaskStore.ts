@@ -13,6 +13,7 @@
  * Edit notes:
  *   - Per-task notification scheduling lives here (syncTaskNotification); add/update auto-reschedule. Call syncAllTaskNotifications() after a settings/language change since notification copy is baked in at schedule time.
  *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
+ *   - Quiet hours (AP-05) only defer the *reminder*, never the task's own date/time/duration — deferPastQuietHours/deferOccurrencePastQuietHours wrap lib/notifications.ts's pushPastQuietHours right before scheduling.
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
  *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
  *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
@@ -28,6 +29,7 @@ import {
   scheduleTaskNotification,
   scheduleWeeklyTaskNotifications,
   cancelTaskNotification,
+  pushPastQuietHours,
   WeeklyTaskOccurrence,
 } from '@/lib/notifications';
 
@@ -79,6 +81,31 @@ function parseTime(time: string): [number, number] | null {
 /** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
 function toExpoWeekday(mon0: number): number {
   return ((mon0 + 1) % 7) + 1;
+}
+
+type QuietHours = { quietHoursEnabled: boolean; quietHoursStart: string; quietHoursEnd: string };
+
+/** Pushes a notification's fire time past quiet hours, if enabled — the task itself keeps its real time, only the reminder is deferred. */
+function deferPastQuietHours(date: Date, s: QuietHours): Date {
+  if (!s.quietHoursEnabled) return date;
+  const pushed = pushPastQuietHours(date.getHours(), date.getMinutes(), s.quietHoursStart, s.quietHoursEnd);
+  const out = new Date(date);
+  out.setHours(pushed.hour, pushed.minute, 0, 0);
+  if (pushed.rolledOver) out.setDate(out.getDate() + 1);
+  return out;
+}
+
+/** Same idea as deferPastQuietHours but for a weekly occurrence's hour/minute/weekday (no absolute Date to work with). */
+function deferOccurrencePastQuietHours(o: WeeklyTaskOccurrence, s: QuietHours): WeeklyTaskOccurrence {
+  if (!s.quietHoursEnabled) return o;
+  const pushed = pushPastQuietHours(o.hour, o.minute, s.quietHoursStart, s.quietHoursEnd);
+  if (!pushed.rolledOver && pushed.hour === o.hour && pushed.minute === o.minute) return o;
+  return {
+    ...o,
+    hour: pushed.hour,
+    minute: pushed.minute,
+    weekday: pushed.rolledOver ? (o.weekday === 7 ? 1 : o.weekday + 1) : o.weekday,
+  };
 }
 
 /**
@@ -138,7 +165,10 @@ function syncTaskNotification(task: Task): void {
         });
       }
     }
-    void scheduleWeeklyTaskNotifications(task.id, occurrences);
+    void scheduleWeeklyTaskNotifications(
+      task.id,
+      occurrences.map((o) => deferOccurrencePastQuietHours(o, s))
+    );
     return;
   }
 
@@ -156,12 +186,12 @@ function syncTaskNotification(task: Task): void {
     const end = new Date(start.getTime() + dur * 60 * 1000);
     void scheduleTaskNotification(
       task.id,
-      start,
+      deferPastQuietHours(start, s),
       { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
-      { date: end, content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
+      { date: deferPastQuietHours(end, s), content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
     );
   } else {
-    void scheduleTaskNotification(task.id, start, {
+    void scheduleTaskNotification(task.id, deferPastQuietHours(start, s), {
       title: t.notif.taskStartTitle(task.title),
       body: t.notif.taskStartBody,
     });

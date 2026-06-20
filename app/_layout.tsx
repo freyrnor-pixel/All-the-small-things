@@ -5,7 +5,9 @@
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
  * habits, energy, inbox, catalog, automations, feedback). After requesting notification
- * permission it re-syncs all reminders/notifications to the loaded data and language, and
+ * permission it re-syncs all reminders/notifications to the loaded data and language,
+ * registers the interactive "Done"/"Remind me later" notification action buttons
+ * (syncNotificationCategories) and listens for taps on them (onNotificationAction), and
  * keeps the persistent "today's overview" notification (if enabled) refreshed as tasks/shopping change.
  * Defines the expo-router Stack and per-screen options, redirects to onboarding
  * until setup is complete, mounts the global DebugOverlay when debug mode is on, and
@@ -14,11 +16,12 @@
  * Connections:
  *   Imports → components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
- *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect
+ *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
  *
  * Edit notes:
  *   - task-form, habit-form, share-modal and capture are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
+ *   - The notification-action effect (AP-05) is separate from the startup effect and mounted once too — onNotificationAction's handler always reads fresh store state via .getState() rather than closing over stale props, so it doesn't need deps.
  *   - DebugOverlay is gated on `loaded && debugModeEnabled` so it never flashes before settings load and is fully absent for users who haven't enabled it in Settings.
  *   - segments are read inside the onboarding-guard effect but intentionally kept out of its deps — do not add them.
  *   - OTA updates do not auto-apply or pop up a dismissible Alert: a fetched update sets
@@ -49,7 +52,14 @@ import {
   Nunito_800ExtraBold,
 } from '@expo-google-fonts/nunito';
 import { initDb, pruneOldData } from '@/lib/db';
-import { requestPermissions, refreshPersistentNotification, cancelPersistentNotification } from '@/lib/notifications';
+import {
+  requestPermissions,
+  refreshPersistentNotification,
+  cancelPersistentNotification,
+  syncNotificationCategories,
+  onNotificationAction,
+  scheduleReNudge,
+} from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
 import { getTranslations } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
@@ -78,6 +88,9 @@ import DebugOverlay from '@/components/DebugOverlay';
  * component's style still wins (use the Fonts.* tokens for weighted text). Runs
  * once; merges rather than stacking onto any existing default style.
  */
+/** How long a "Remind me later" tap defers a task notification (AP-05 re-nudge). */
+const RENUDGE_DELAY_MS = 15 * 60 * 1000;
+
 let fontDefaultsApplied = false;
 function applyDefaultFontFamily() {
   if (fontDefaultsApplied) return;
@@ -166,6 +179,27 @@ export default function RootLayout() {
       syncReminders();
       useTaskStore.getState().syncAllTaskNotifications();
       useHabitStore.getState().syncAllHabitReminders();
+      const t = getTranslations(useSettingsStore.getState().language);
+      void syncNotificationCategories(t.notif.actionDone, t.notif.actionRemindLater);
+    });
+  }, []);
+
+  // Interactive notification action buttons (AP-05): "Done" toggles the task in
+  // place; "Remind me later" snoozes a follow-up via scheduleReNudge. Mounted
+  // once — onNotificationAction reads fresh store state per tap, not a closure.
+  useEffect(() => {
+    return onNotificationAction((action, taskId) => {
+      if (action === 'done') {
+        useTaskStore.getState().toggle(taskId);
+        return;
+      }
+      const task = useTaskStore.getState().tasks.find((tk) => tk.id === taskId);
+      if (!task) return;
+      const t = getTranslations(useSettingsStore.getState().language);
+      void scheduleReNudge(taskId, RENUDGE_DELAY_MS, {
+        title: t.notif.renudgeTitle(task.title),
+        body: t.notif.renudgeBody,
+      });
     });
   }, []);
 

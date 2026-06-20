@@ -383,6 +383,11 @@ const en = {
     overviewTitle: "Today's overview",
     overviewBodyNoTasks: 'No tasks left today',
     overviewNothingElse: 'Nothing else queued today',
+    // AP-05 — interactive notification action buttons + snooze follow-up
+    actionDone: 'Done',
+    actionRemindLater: 'Remind me later',
+    renudgeTitle: (title: string) => `Still there: ${title}`,
+    renudgeBody: "No rush — just a gentle nudge whenever you're ready.",
   },
   // Radial menu labels
   nav: {
@@ -539,6 +544,11 @@ const en = {
         fox: 'Fox',
         bunny: 'Bunny',
       },
+    },
+    // AP-05 — notification quiet hours
+    quietHours: {
+      label: 'Quiet hours',
+      hint: "Task reminders wait until quiet hours end instead of firing — they're never lost.",
     },
   },
   // --- W-E Config additions (grouped settings + onboarding) ---
@@ -1027,6 +1037,11 @@ const no: typeof en = {
         bunny: 'Kanin',
       },
     },
+    // AP-05 — varslingsfri (stille) periode
+    quietHours: {
+      label: 'Stille periode',
+      hint: 'Oppgavepåminnelser venter til den stille perioden er over i stedet for å avbryte — de går ikke tapt.',
+    },
   },
   // --- W-E Config additions (grouped settings + onboarding) ---
   config: {
@@ -1162,6 +1177,11 @@ const no: typeof en = {
     overviewTitle: 'Dagens oversikt',
     overviewBodyNoTasks: 'Ingen oppgaver igjen i dag',
     overviewNothingElse: 'Ingenting mer i kø i dag',
+    // AP-05 — interaktive varselknapper + utsettelse-påminnelse
+    actionDone: 'Ferdig',
+    actionRemindLater: 'Påminn meg senere',
+    renudgeTitle: (title: string) => `Fortsatt der: ${title}`,
+    renudgeBody: 'Ingen hast — bare en mild påminnelse når du er klar.',
   },
   nav: {
     newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',

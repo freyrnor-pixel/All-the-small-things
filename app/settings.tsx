@@ -13,14 +13,14 @@
  * settings re-syncs the scheduled reminders.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/HintCard, components/ScreenBackground, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
- *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders; scaled fontSize via useScaledStyles()
+ *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled, quietHours*); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders / syncNotificationCategories; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
- *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly.
- *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, holidays, automations link) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
+ *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly. Quiet-hours keys re-sync task notifications (so existing reminders honour the new window); a language change also re-registers the interactive notification action button labels via syncNotificationCategories.
+ *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, task notifications, persistent overview, quiet hours, holidays, automations link) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet is configured during onboarding step6 by default; this section lets returning users change it later.
  *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
@@ -45,8 +45,9 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { syncReminders } from '@/lib/reminders';
+import { syncNotificationCategories } from '@/lib/notifications';
 import { seedTestData } from '@/lib/seedTestData';
-import { useT } from '@/lib/i18n';
+import { useT, getTranslations } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { selection, warning, heavy } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import HintCard from '@/components/HintCard';
@@ -87,11 +88,13 @@ export default function SettingsScreen() {
     if (keys.some((k) => ['remindersEnabled', 'reminderTime', 'weeklyResetDay', 'monthlyResetDate', 'language'].includes(k))) {
       void syncReminders();
     }
-    if (keys.some((k) => ['taskNotificationsEnabled', 'language'].includes(k))) {
+    if (keys.some((k) => ['taskNotificationsEnabled', 'language', 'quietHoursEnabled', 'quietHoursStart', 'quietHoursEnd'].includes(k))) {
       syncTaskNotifs();
     }
     if (keys.includes('language')) {
       syncHabitNotifs();
+      const tNew = getTranslations(useSettingsStore.getState().language);
+      void syncNotificationCategories(tNew.notif.actionDone, tNew.notif.actionRemindLater);
     }
   }
 
@@ -670,6 +673,36 @@ export default function SettingsScreen() {
                 thumbColor={settings.persistentNotifEnabled ? theme.orange : theme.gray}
               />
             </View>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.quietHours.label}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.settings.quietHours.hint}</Text>
+              </View>
+              <Switch
+                value={settings.quietHoursEnabled}
+                onValueChange={(v) => applyAndSync({ quietHoursEnabled: v })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.quietHoursEnabled ? theme.orange : theme.gray}
+              />
+            </View>
+            {settings.quietHoursEnabled && (
+              <>
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
+                <TimePickerWheel
+                  value={settings.quietHoursStart || '21:00'}
+                  onChange={(v) => applyAndSync({ quietHoursStart: v })}
+                  theme={theme}
+                />
+                <Text style={[styles.fieldLabel, { color: theme.textLight, marginTop: Spacing.md }]}>{t.workHoursTo}</Text>
+                <TimePickerWheel
+                  value={settings.quietHoursEnd || '08:00'}
+                  onChange={(v) => applyAndSync({ quietHoursEnd: v })}
+                  theme={theme}
+                />
+              </>
+            )}
           </Surface>
         </View>
 

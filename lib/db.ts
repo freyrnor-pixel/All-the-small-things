@@ -259,6 +259,10 @@ export function initDb() {
     // AP-03 — task priority (separate from importance), energy check-in, habit rest days
     "ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'medium'",
     "ALTER TABLE habit_logs ADD COLUMN rest_day INTEGER DEFAULT 0",
+    // AP-05 — notification quiet hours
+    "ALTER TABLE settings ADD COLUMN quiet_hours_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN quiet_hours_start TEXT DEFAULT '21:00'",
+    "ALTER TABLE settings ADD COLUMN quiet_hours_end TEXT DEFAULT '08:00'",
   ];
   for (const sql of migrations) {
     try {
