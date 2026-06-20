@@ -229,8 +229,7 @@ export default function SettingsScreen() {
                     style={[
                       styles.themeOption,
                       { backgroundColor: theme.offWhite, borderColor: isActive ? primaryColor : theme.grayLight },
-                      isActive && { borderWidth: 3, ...Shadow.cardHeavy },
-                      !isActive && { borderWidth: 1 },
+                      isActive && Shadow.cardHeavy,
                     ]}
                     onPress={() => {
                       settings.update({ colorTheme: key });
@@ -307,8 +306,7 @@ export default function SettingsScreen() {
                     style={[
                       styles.themeOption,
                       { backgroundColor: theme.offWhite, borderColor: isActive ? theme.orange : theme.grayLight },
-                      isActive && { borderWidth: 3, ...Shadow.cardHeavy },
-                      !isActive && { borderWidth: 1 },
+                      isActive && Shadow.cardHeavy,
                     ]}
                     onPress={() => settings.update({ bubbleMaterial: key })}
                   >
@@ -887,7 +885,10 @@ const baseStyles = StyleSheet.create({
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  themeOption: { width: '30%', flexGrow: 1, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', justifyContent: 'center' },
+  // borderWidth is constant (active state varies only borderColor + shadow) so selecting
+  // a theme/material never grows the card — a varying borderWidth would change a
+  // content-sized box's height when active, making cards visibly jump size on selection.
+  themeOption: { width: '30%', flexGrow: 1, borderWidth: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', justifyContent: 'center' },
   themeSwatches: { flexDirection: 'row', gap: 3, justifyContent: 'center' },
   swatch: { width: 14, height: 14, borderRadius: Radius.full },
   swatchLarge: { width: 18, height: 18 },
