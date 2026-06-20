@@ -602,6 +602,12 @@ const en = {
     high: 'High',
     lowEnergyHint: 'Showing just your must-dos for today — the rest will keep.',
   },
+  // AP-04 — "up next" single-task suggestion (components/NextTaskCard.tsx)
+  nextTask: {
+    title: 'Up next',
+    markDone: 'Mark done',
+    empty: "Nothing urgent right now — you're caught up.",
+  },
   hints: {
     home: {
       text: 'Your daily overview — tap ⭐ to focus on essentials only.',
@@ -1232,6 +1238,12 @@ const no: typeof en = {
     medium: 'Middels',
     high: 'Høy',
     lowEnergyHint: 'Viser bare det viktigste i dag — resten venter.',
+  },
+  // AP-04 — forslag til "neste oppgave" (components/NextTaskCard.tsx)
+  nextTask: {
+    title: 'Neste på tur',
+    markDone: 'Merk som gjort',
+    empty: 'Ingenting presserende akkurat nå — du er à jour.',
   },
   hints: {
     home: {

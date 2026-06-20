@@ -7,7 +7,7 @@
  * (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -33,6 +33,11 @@
  *   - EnergyCheckIn sits above the Plans section; on a 'low' energy day, visibleTodayTasks
  *     is narrowed further to priority === 'high' tasks, strictly on top of the essentials
  *     filter (never as a replacement for it).
+ *   - NextTaskCard (AP-04) sits between EnergyCheckIn and the Plans section, fed by
+ *     suggestNextTask() (lib/taskSuggestion.ts) — a separate "single best next thing"
+ *     ranking from rankTodayTasks()'s whole-list ordering used by the Plans widget below;
+ *     mounted unconditionally — it shows its own "caught up" empty state when there's
+ *     no suggestion, rather than disappearing.
  *   - `tasks` is selected directly from useTaskStore (not just the tasksForDate/backlogTasks/completedCount
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
@@ -58,6 +63,7 @@ import { useUpdateStore } from '@/store/useUpdateStore';
 import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
 import { rankTodayTasks } from '@/lib/taskOrder';
+import { suggestNextTask } from '@/lib/taskSuggestion';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
 import BubbleMenu from '@/components/BubbleMenu';
@@ -65,6 +71,7 @@ import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
 import EnergyCheckIn from '@/components/EnergyCheckIn';
+import NextTaskCard from '@/components/NextTaskCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -146,6 +153,13 @@ export default function HomeScreen() {
   const visibleTodayTasks = todayEnergyLevel === 'low'
     ? essentialsFilteredTasks.filter((task) => task.priority === 'high')
     : essentialsFilteredTasks;
+
+  // The single "best next thing" — separate ranking from the Plans list above,
+  // folding in priority + today's energy level (see lib/taskSuggestion.ts).
+  const nextTask = useMemo(
+    () => suggestNextTask(tasksForDate(today), today, todayEnergyLevel, isWorkModeActive),
+    [tasks, tasksForDate, today, todayEnergyLevel, isWorkModeActive]
+  );
 
   // Plans widget: a short 3-item preview by default, expandable in place to the
   // full day via the "•••" strip — no separate cap/overflow-nudge mechanism.
@@ -290,6 +304,8 @@ export default function HomeScreen() {
         <HintCard text={t.hints.home.text} example={t.hints.home.example} />
 
         <EnergyCheckIn />
+
+        <NextTaskCard task={nextTask} />
 
         {/* Plans — unified preview of today's agenda; tap the title for the full /plans screen */}
         <View style={styles.section}>
