@@ -301,22 +301,26 @@ export default function BubbleMenu({ onNewTask }: Props) {
     [onNewTask, t]
   );
 
-  // ζ≈0.71 at the default springScale=1 — quicker pop-out with a touch of bounce, between
-  // the old too-springy { damping: 20, stiffness: 400 } (ζ≈0.5) and the too-stiff
-  // overshoot-clamped version. stiffness scales with the debug overlay's spring-intensity
-  // setting; damping stays fixed.
-  const OPEN_SPRING = { damping: 20, stiffness: clamp(200 * springScale, 50, 800) };
+  // ζ≈0.9 at the default springScale=1 — fast expansion that settles into place almost
+  // immediately, with only a faint hint of bounce rather than a visible overshoot/wobble.
+  // Both stiffness and damping scale with springScale so the debug overlay's "spring
+  // intensity" slider still has a consistent feel (and the damping ratio stays the same)
+  // across its whole range, instead of damping staying fixed while only stiffness moved.
+  const openStiffness = clamp(350 * springScale, 80, 1400);
+  const OPEN_SPRING = { damping: 1.8 * Math.sqrt(openStiffness), stiffness: openStiffness };
 
   function toggle() {
     tap();
     const toValue = open ? 0 : 1;
     openProgress.value = reducedMotion ? toValue : withSpring(toValue, OPEN_SPRING);
+    backdropDim.value = reducedMotion ? toValue : withTiming(toValue, { duration: clamp(220 / animScale, 60, 600), easing: Easing.out(Easing.quad) });
     setOpen((v) => !v);
   }
 
   function navigate(item: BubbleEntry) {
     tap();
     openProgress.value = reducedMotion ? 0 : withSpring(0, OPEN_SPRING);
+    backdropDim.value = reducedMotion ? 0 : withTiming(0, { duration: clamp(220 / animScale, 60, 600), easing: Easing.out(Easing.quad) });
     setOpen(false);
     const action = item.onPress ?? (() => router.push(item.route as never));
     setTimeout(action, reducedMotion ? 0 : navigateDelay);
@@ -389,8 +393,13 @@ export default function BubbleMenu({ onNewTask }: Props) {
   // resolved background enough to flip which contrastOn() output actually reads clearly.
   const fabIconColor = contrastOn(fabMaterial.contrastBase);
 
+  // Driven by its own withTiming, not openProgress directly — openProgress is a spring
+  // that's still settling (coasting/snapping back) well after the wheel visually looks
+  // "open", so tying the dim to it made the backdrop flicker/shift with every bubble
+  // wobble instead of just gradually darkening on open and lightening on close.
+  const backdropDim = useSharedValue(0);
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: openProgress.value * 0.35,
+    opacity: backdropDim.value * 0.35,
   }));
 
   // Press feedback for the tree logo: a quick tint flash to the opposite contrastOn()

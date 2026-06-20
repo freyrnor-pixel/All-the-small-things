@@ -25,11 +25,14 @@
  *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
  *   - The 'custom' theme is computed from user's primary/secondary colors via buildCustomTheme().
  *   - Materials are a separate axis from colour themes (a bubble's hue + its finish are
- *     independent settings), but getMaterialStyle() now also tints the input base toward
- *     a per-finish reference hue (icy blue glass, steel grey metal, stone grey rock, warm
- *     paper) before shading it — so the same base colour still looks recognizably
- *     different per finish. The tint blends hue/saturation at the base's own lightness
- *     (see tint() below), which keeps existing text-contrast assumptions intact.
+ *     independent settings). metal/rock/paper tint the input base toward a per-finish
+ *     reference hue (steel grey metal, stone grey rock, warm paper) before shading it —
+ *     so the same base colour still looks recognizably different per finish (see tint()
+ *     below, which blends hue/saturation at the base's own lightness to keep existing
+ *     text-contrast assumptions intact). glass deliberately does NOT tint toward an
+ *     unrelated reference hue — it just lightens the base colour itself (lighten(base,
+ *     0.16) at higher alpha) so every theme/feature colour keeps its own identity instead
+ *     of washing toward a flat icy grey-blue.
  */
 export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
@@ -694,8 +697,7 @@ function tint(base: string, target: string, ratio: number): string {
 }
 
 /** Real-world reference hue + blend strength each finish tints its base toward. */
-const MATERIAL_TINT: Record<'glass' | 'metal' | 'rock' | 'paper', { color: string; ratio: number }> = {
-  glass: { color: '#5AB4E6', ratio: 0.55 }, // icy window blue
+const MATERIAL_TINT: Record<'metal' | 'rock' | 'paper', { color: string; ratio: number }> = {
   metal: { color: '#9AA5AD', ratio: 0.6 }, // brushed steel grey
   rock: { color: '#7D7870', ratio: 0.62 }, // stone grey
   paper: { color: '#E0D2B0', ratio: 0.5 }, // cream / kraft paper
@@ -765,9 +767,13 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
       };
     }
     case 'glass': {
-      const tinted = tint(base, MATERIAL_TINT.glass.color, MATERIAL_TINT.glass.ratio);
+      // Frosted-pane look from the base colour's own hue (lightened, not blended toward
+      // an unrelated icy-blue) — every theme/feature colour keeps its identity instead of
+      // washing toward grey-blue, and the higher alpha keeps it from diluting into the
+      // backdrop behind it.
+      const tinted = lighten(base, 0.16);
       return {
-        backgroundColor: rgba(tinted, 0.72),
+        backgroundColor: rgba(tinted, 0.84),
         borderWidth: MATERIAL_BORDER_WIDTH,
         borderColor: rgba('#FFFFFF', 0.5),
         borderTopColor: rgba('#FFFFFF', 0.75),
