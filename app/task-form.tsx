@@ -1,7 +1,8 @@
 /**
  * task-form.tsx — add / edit a task
  *
- * Modal form for creating or editing a single task: title, date, optional time,
+ * Modal form for creating or editing a single task: title, date, time (defaults to
+ * a specific time, with a "Whenever" segment to mean "sometime that day" instead),
  * type (start-at / time-box with duration), importance, priority, and weekly recurrence.
  * Presence of an `id` route param switches it into edit mode (with a delete action).
  *
@@ -79,7 +80,7 @@ export default function TaskFormScreen() {
 
   const [title, setTitle] = useState(existing?.title ?? '');
   const [date, setDate] = useState(existing?.date ?? todayStr());
-  const [timeEnabled, setTimeEnabled] = useState(!!existing?.time);
+  const [timeEnabled, setTimeEnabled] = useState(existing ? !!existing.time : true);
   const [time, setTime] = useState(existing?.time ?? nextHourStr());
   const [taskType, setTaskType] = useState<TaskType>(existing?.taskType ?? 'start-at');
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? '30'));
@@ -249,26 +250,40 @@ export default function TaskFormScreen() {
             )}
           </View>
 
-          {/* Time — scroll wheel */}
+          {/* Time — set time (default) vs. whenever on the day */}
           <View style={styles.field}>
-            <View style={styles.switchRow}>
-              <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
-              <Switch
-                value={timeEnabled}
-                onValueChange={(v) => {
-                  setTimeEnabled(v);
-                  if (!v) setTime(nextHourStr());
-                }}
-                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
-                thumbColor={timeEnabled ? theme.orange : theme.gray}
-              />
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+              {[true, false].map((isSet) => (
+                <Pressable
+                  key={String(isSet)}
+                  style={[styles.seg, timeEnabled === isSet && [styles.segActive, { backgroundColor: theme.white }]]}
+                  onPress={() => {
+                    tap();
+                    setTimeEnabled(isSet);
+                    if (!isSet) setTime(nextHourStr());
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.segText,
+                      { color: theme.textLight },
+                      timeEnabled === isSet && { color: theme.text, fontWeight: '600' },
+                    ]}
+                  >
+                    {isSet ? t.timeModeSet : t.timeModeWhenever}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
-            {timeEnabled && (
+            {timeEnabled ? (
               <TimePickerWheel
                 value={time}
                 onChange={setTime}
                 theme={theme}
               />
+            ) : (
+              <Text style={[styles.wheneverHint, { color: theme.textLight }]}>{t.wheneverHint}</Text>
             )}
           </View>
 
@@ -462,6 +477,7 @@ const baseStyles = StyleSheet.create({
   segActive: { ...Shadow.card },
   segText: { fontSize: FontSize.sm, textAlign: 'center' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  wheneverHint: { fontSize: FontSize.sm, marginTop: Spacing.xs },
   durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, alignItems: 'center' },
   durationChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.full },
   durationText: { fontSize: FontSize.sm },
