@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → —
- *   Used by → app/habits.tsx, app/health.tsx, app/index.tsx, app/plans.tsx, app/share-modal.tsx, app/task-form.tsx, components/QuickAddSheet.tsx, lib/db.ts, lib/holidays.ts
+ *   Used by → app/budget.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/plans.tsx, app/scan.tsx, app/share-modal.tsx, app/task-form.tsx, components/QuickAddSheet.tsx, lib/db.ts, lib/holidays.ts, store/useReceiptStore.ts
  *   Data    → none (pure functions)
  *
  * Edit notes:
@@ -21,4 +21,9 @@ export function todayStr(): string {
 
 export function dateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Current local month as `YYYY-MM` (e.g. receipts/budget tracking). */
+export function currentMonthStr(): string {
+  return todayStr().slice(0, 7);
 }

@@ -3,12 +3,15 @@
  *
  * Configures the foreground notification handler and exposes language-agnostic
  * schedule/cancel helpers (weekly, monthly, per-task one-off, recurring weekly
- * task, daily/habit, persistent overview). Callers pass already-localised Content;
- * this module never builds strings itself. Uses stable identifiers so re-scheduling replaces.
+ * task, daily/habit, persistent overview, snooze re-nudge). Callers pass
+ * already-localised Content; this module never builds strings itself. Uses
+ * stable identifiers so re-scheduling replaces. Also owns quiet-hours time math
+ * (isWithinQuietHours/pushPastQuietHours) and the interactive "Done"/"Remind me
+ * later" notification action buttons (syncNotificationCategories, onNotificationAction).
  *
  * Connections:
  *   Imports → —
- *   Used by → app/_layout.tsx, app/onboarding/step5.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/onboarding/step6.tsx, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → schedules OS notifications (no SQLite/store)
  *
  * Edit notes:
@@ -16,6 +19,8 @@
  *     (e.g. `task-${id}`, `daily-${key}`) or cancellation silently misses.
  *   - Scheduling failures are swallowed via `ignore` — intentional, never crash the UI.
  *   - Content must already be localised by the caller; do not import i18n here.
+ *     syncNotificationCategories() follows the same rule — it takes already-localised
+ *     button labels rather than a language code, so this file never imports lib/i18n.
  *   - refreshPersistentNotification only calls scheduleNotificationAsync when the
  *     content actually changed since the last call (module-level cache) — Android
  *     bumps a notification's position/recency on every notify(), so re-posting
@@ -25,6 +30,15 @@
  *     never contributes an app-icon badge count or a heads-up popup.
  *   - Content.color (optional) tints the small notification icon on Android —
  *     used by the persistent overview to mirror a task's in-app accent color.
+ *   - This is the ONLY file that imports 'expo-notifications' directly — other
+ *     files (e.g. app/_layout.tsx) must go through onNotificationAction() rather
+ *     than adding their own response listener, so the native import stays here.
+ *   - isWithinQuietHours/pushPastQuietHours are pure time-of-day math (HH:MM in,
+ *     no Date objects) so the same helpers work for both one-off tasks (which
+ *     have a real Date) and weekly-recurring occurrences (which only have
+ *     hour/minute/weekday) — callers convert their own Date/weekday as needed.
+ *   - scheduleReNudge/cancelReNudge use the `${taskId}-renudge` identifier suffix,
+ *     parallel to cancelTaskNotification's `-s${day}`/`-e${day}` convention.
  */
 import * as Notifications from 'expo-notifications';
 
@@ -114,14 +128,14 @@ export async function scheduleTaskNotification(
   await cancelTaskNotification(id);
   await Notifications.scheduleNotificationAsync({
     identifier: `task-${id}`,
-    content: { ...content, data: { taskId: id } },
+    content: { ...content, data: { taskId: id }, categoryIdentifier: 'task-reminder' },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date },
   }).catch(ignore);
 
   if (end) {
     await Notifications.scheduleNotificationAsync({
       identifier: `task-end-${id}`,
-      content: { ...end.content, data: { taskId: id, isEnd: true } },
+      content: { ...end.content, data: { taskId: id, isEnd: true }, categoryIdentifier: 'task-reminder' },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: end.date },
     }).catch(ignore);
   }
@@ -146,7 +160,7 @@ export async function scheduleWeeklyTaskNotifications(
   for (const o of occurrences) {
     await Notifications.scheduleNotificationAsync({
       identifier: `task-${id}-${o.suffix}`,
-      content: { ...o.content, data: { taskId: id } },
+      content: { ...o.content, data: { taskId: id }, categoryIdentifier: 'task-reminder' },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
         weekday: o.weekday,
@@ -191,6 +205,46 @@ export async function cancelDailyReminder(key: string) {
   await Notifications.cancelScheduledNotificationAsync(`daily-${key}`).catch(ignore);
 }
 
+// ── Quiet hours ──────────────────────────────────────────────────────────────
+/** Parses "HH:MM" into minutes-since-midnight; malformed input reads as 0. */
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map((n) => parseInt(n, 10));
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+/**
+ * True when `hour`/`minute` falls inside the [start, end) quiet window. Handles
+ * windows that cross midnight (e.g. start='21:00', end='08:00') as well as
+ * same-day windows (e.g. start='13:00', end='15:00'). A zero-width window
+ * (start === end) is treated as "always off", not "always on".
+ */
+export function isWithinQuietHours(hour: number, minute: number, start: string, end: string): boolean {
+  const t = hour * 60 + minute;
+  const s = toMinutes(start);
+  const e = toMinutes(end);
+  if (s === e) return false;
+  return s < e ? t >= s && t < e : t >= s || t < e;
+}
+
+/**
+ * If `hour`/`minute` falls inside quiet hours, returns the window's end time
+ * instead (so the caller can defer a notification past it); otherwise returns
+ * the original time unchanged. `rolledOver` tells the caller whether the
+ * pushed time lands on the next calendar day (true whenever the quiet window
+ * wraps past midnight and the original time was on its "evening" side).
+ */
+export function pushPastQuietHours(
+  hour: number,
+  minute: number,
+  start: string,
+  end: string
+): { hour: number; minute: number; rolledOver: boolean } {
+  if (!isWithinQuietHours(hour, minute, start, end)) return { hour, minute, rolledOver: false };
+  const [eh, em] = end.split(':').map((n) => parseInt(n, 10));
+  const rolledOver = eh * 60 + em <= hour * 60 + minute;
+  return { hour: eh, minute: em, rolledOver };
+}
+
 // ── Persistent "today's overview" notification ──────────────────────────────
 const PERSISTENT_CHANNEL_ID = 'persistent-overview';
 
@@ -229,4 +283,54 @@ export async function cancelPersistentNotification() {
   lastPersistentContentKey = null;
   await Notifications.dismissNotificationAsync('persistent-overview').catch(ignore);
   await Notifications.cancelScheduledNotificationAsync('persistent-overview').catch(ignore);
+}
+
+// ── Re-nudge (snooze follow-up) ─────────────────────────────────────────────
+/** One-off follow-up notification fired `delayMs` after the original reminder was snoozed. */
+export async function scheduleReNudge(taskId: string, delayMs: number, content: Content) {
+  await cancelReNudge(taskId);
+  await Notifications.scheduleNotificationAsync({
+    identifier: `${taskId}-renudge`,
+    content: { ...content, data: { taskId }, categoryIdentifier: 'task-reminder' },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: Math.max(1, Math.round(delayMs / 1000)),
+    },
+  }).catch(ignore);
+}
+
+export async function cancelReNudge(taskId: string) {
+  await Notifications.cancelScheduledNotificationAsync(`${taskId}-renudge`).catch(ignore);
+}
+
+// ── Interactive notification actions (Done / Remind me later) ──────────────
+/**
+ * Registers the "task-reminder" category's action buttons. Button titles are
+ * already-localised strings (see the file-level edit note) — call again
+ * whenever the language changes so the OS-level buttons stay in sync.
+ */
+export async function syncNotificationCategories(doneLabel: string, snoozeLabel: string) {
+  await Notifications.setNotificationCategoryAsync('task-reminder', [
+    { identifier: 'done', buttonTitle: doneLabel },
+    { identifier: 'snooze', buttonTitle: snoozeLabel },
+  ]).catch(ignore);
+}
+
+export type NotificationActionId = 'done' | 'snooze';
+
+/**
+ * Subscribes to taps on the action buttons registered by syncNotificationCategories.
+ * Only fires for responses carrying a `data.taskId` (i.e. task reminders, not
+ * weekly/monthly/habit/persistent notifications). Returns an unsubscribe function.
+ */
+export function onNotificationAction(
+  handler: (action: NotificationActionId, taskId: string) => void
+): () => void {
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    const taskId = response.notification.request.content.data?.taskId as string | undefined;
+    const actionId = response.actionIdentifier;
+    if (!taskId || (actionId !== 'done' && actionId !== 'snooze')) return;
+    handler(actionId, taskId);
+  });
+  return () => subscription.remove();
 }

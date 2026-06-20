@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → lib/i18n, lib/notifications, store/useSettingsStore
- *   Used by → app/_layout.tsx, app/onboarding/step5.tsx, app/settings.tsx
+ *   Used by → app/_layout.tsx, app/onboarding/step6.tsx, app/settings.tsx
  *   Data    → reads settings store; schedules OS notifications
  *
  * Edit notes:

@@ -12,7 +12,7 @@
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
- *   - No OS permission prompt or scheduling here — step5.finish() does that.
+ *   - No OS permission prompt or scheduling here — step6.finish() does that.
  *   - next() → router.push "/onboarding/step5"; Previous uses router.back().
  */
 import React, { useEffect } from 'react';
@@ -69,7 +69,7 @@ export default function OnboardingStep4() {
         </View>
 
         <View style={styles.progress}>
-          {[0, 1, 2, 3, 4].map((i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <View key={i} style={[styles.dot, i === 3 && styles.dotActive]} />
           ))}
         </View>

@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -101,6 +101,10 @@ const en = {
   importanceLabel: 'Importance',
   importanceRegular: 'Regular',
   importanceEssential: '⭐ Essential',
+  priorityLabel: 'Priority',
+  priorityHigh: 'High',
+  priorityMedium: 'Medium',
+  priorityLow: 'Low',
   repeatWeekly: 'Repeat weekly',
   deleteTask: 'Delete plan',
   // Task form — save confirmation (W-B). `day` is a localized reference (Today / Tomorrow / Monday…).
@@ -379,12 +383,17 @@ const en = {
     overviewTitle: "Today's overview",
     overviewBodyNoTasks: 'No tasks left today',
     overviewNothingElse: 'Nothing else queued today',
+    // AP-05 — interactive notification action buttons + snooze follow-up
+    actionDone: 'Done',
+    actionRemindLater: 'Remind me later',
+    renudgeTitle: (title: string) => `Still there: ${title}`,
+    renudgeBody: "No rush — just a gentle nudge whenever you're ready.",
   },
   // Radial menu labels
   nav: {
     newTask: 'New', shop: 'Shop', shared: 'Shared', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
-    focus: 'Focus',
+    focus: 'Focus', capture: 'Capture',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -461,6 +470,9 @@ const en = {
     moreOptions: 'More options',
     fewerOptions: 'Fewer options',
     // --- end W-D additions ---
+    restDay: 'Rest day',
+    restingToday: 'Resting today',
+    restDayHint: 'Resting keeps your streak — no catching up needed.',
   },
   // IFTTT-style automations
   automations: {
@@ -491,6 +503,11 @@ const en = {
       local: 'Everything is stored only on this device — nothing is sent anywhere.',
       free: 'UnFocus is free and always will be.',
       cta: 'Got it →',
+    },
+    step6: {
+      title: 'Meet your companion',
+      subtitle: 'A small friend that cheers you on. Give it a name and make it yours.',
+      namePlaceholder: 'Give your pet a name',
     },
   },
   // Accessibility settings (Proposal 4)
@@ -527,6 +544,17 @@ const en = {
         fox: 'Fox',
         bunny: 'Bunny',
       },
+    },
+    // AP-05 — notification quiet hours
+    quietHours: {
+      label: 'Quiet hours',
+      hint: "Task reminders wait until quiet hours end instead of firing — they're never lost.",
+    },
+    // AP-06B — monthly grocery budget, compared against receipts in app/budget.tsx
+    monthlyBudget: {
+      label: 'Monthly budget',
+      hint: "Optional — see how this month's grocery spend compares on the Budget screen.",
+      placeholder: 'e.g. 3000',
     },
   },
   // --- W-E Config additions (grouped settings + onboarding) ---
@@ -581,6 +609,40 @@ const en = {
     habitsToday: 'Habits',
     habitsSummary: (done: number, total: number) => `${done}/${total} done`,
     moreTasksHint: (n: number) => `+${n} more`,
+  },
+  // AP-03 — once-a-day energy check-in (components/EnergyCheckIn.tsx)
+  energy: {
+    checkInPrompt: "How's your energy today?",
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    lowEnergyHint: 'Showing just your must-dos for today — the rest will keep.',
+  },
+  // AP-04 — "up next" single-task suggestion (components/NextTaskCard.tsx)
+  nextTask: {
+    title: 'Up next',
+    markDone: 'Mark done',
+    empty: "Nothing urgent right now — you're caught up.",
+  },
+  // AP-02 — quick-capture inbox (app/capture.tsx, components/InboxSection.tsx)
+  inbox: {
+    title: 'Capture',
+    placeholder: "What's on your mind?",
+    captureButton: 'Capture',
+    captured: 'Captured',
+    sectionTitle: 'Captured',
+    promote: '→ Task',
+    discard: 'Discard',
+  },
+  // AP-06B — receipts + monthly grocery budget (app/budget.tsx)
+  budget: {
+    title: 'Budget',
+    spentOfBudget: (spent: string, budget: string) => `${spent} kr of ${budget} kr this month`,
+    overBudgetHint: "A bit over this month — here's where it went.",
+    onTrackHint: 'Right on track this month.',
+    noBudgetSet: 'Set a monthly budget in Settings to see how this month compares.',
+    receiptsTitle: 'Receipts this month',
+    noReceipts: 'No receipts yet this month.',
   },
   hints: {
     home: {
@@ -732,6 +794,10 @@ const no: typeof en = {
   importanceLabel: 'Viktighet',
   importanceRegular: 'Vanlig',
   importanceEssential: '⭐ Viktig',
+  priorityLabel: 'Prioritet',
+  priorityHigh: 'Høy',
+  priorityMedium: 'Middels',
+  priorityLow: 'Lav',
   repeatWeekly: 'Gjentas ukentlig',
   deleteTask: 'Slett plan',
   // Task form — lagringsbekreftelse (W-B). `day` er en lokalisert referanse (I dag / Imorgen / Mandag…).
@@ -917,6 +983,9 @@ const no: typeof en = {
     moreOptions: 'Flere valg',
     fewerOptions: 'Færre valg',
     // --- end W-D additions ---
+    restDay: 'Hviledag',
+    restingToday: 'Hviler i dag',
+    restDayHint: 'Hvile bevarer streaken din — ingen innhenting nødvendig.',
   },
   automations: {
     title: 'Automatiseringer',
@@ -945,6 +1014,11 @@ const no: typeof en = {
       local: 'Alt lagres kun på denne enheten — ingenting sendes noe sted.',
       free: 'UnFocus er gratis og vil alltid være det.',
       cta: 'Skjønner →',
+    },
+    step6: {
+      title: 'Møt følgesvennen din',
+      subtitle: 'En liten vennen som heier på deg. Gi den et navn og gjør den til din egen.',
+      namePlaceholder: 'Gi kjæledyret et navn',
     },
   },
   settings: {
@@ -978,6 +1052,17 @@ const no: typeof en = {
         fox: 'Rev',
         bunny: 'Kanin',
       },
+    },
+    // AP-05 — varslingsfri (stille) periode
+    quietHours: {
+      label: 'Stille periode',
+      hint: 'Oppgavepåminnelser venter til den stille perioden er over i stedet for å avbryte — de går ikke tapt.',
+    },
+    // AP-06B — månedlig handlebudsjett, sammenlignet med kvitteringer i app/budget.tsx
+    monthlyBudget: {
+      label: 'Månedlig budsjett',
+      hint: 'Valgfritt — se hvordan handlebeløpet denne måneden ligger an på Budsjett-skjermen.',
+      placeholder: 'f.eks. 3000',
     },
   },
   // --- W-E Config additions (grouped settings + onboarding) ---
@@ -1114,11 +1199,16 @@ const no: typeof en = {
     overviewTitle: 'Dagens oversikt',
     overviewBodyNoTasks: 'Ingen oppgaver igjen i dag',
     overviewNothingElse: 'Ingenting mer i kø i dag',
+    // AP-05 — interaktive varselknapper + utsettelse-påminnelse
+    actionDone: 'Ferdig',
+    actionRemindLater: 'Påminn meg senere',
+    renudgeTitle: (title: string) => `Fortsatt der: ${title}`,
+    renudgeBody: 'Ingen hast — bare en mild påminnelse når du er klar.',
   },
   nav: {
     newTask: 'Ny', shop: 'Handle', shared: 'Delt', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
-    focus: 'Fokus',
+    focus: 'Fokus', capture: 'Fang opp',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',
@@ -1192,6 +1282,40 @@ const no: typeof en = {
     habitsToday: 'Vaner',
     habitsSummary: (done: number, total: number) => `${done}/${total} ferdig`,
     moreTasksHint: (n: number) => `+${n} til`,
+  },
+  // AP-03 — daglig energi-innsjekk (components/EnergyCheckIn.tsx)
+  energy: {
+    checkInPrompt: 'Hvordan er energien din i dag?',
+    low: 'Lav',
+    medium: 'Middels',
+    high: 'Høy',
+    lowEnergyHint: 'Viser bare det viktigste i dag — resten venter.',
+  },
+  // AP-04 — forslag til "neste oppgave" (components/NextTaskCard.tsx)
+  nextTask: {
+    title: 'Neste på tur',
+    markDone: 'Merk som gjort',
+    empty: 'Ingenting presserende akkurat nå — du er à jour.',
+  },
+  // AP-02 — hurtigfangst-innboks (app/capture.tsx, components/InboxSection.tsx)
+  inbox: {
+    title: 'Fang opp',
+    placeholder: 'Hva tenker du på?',
+    captureButton: 'Fang opp',
+    captured: 'Fanget opp',
+    sectionTitle: 'Fanget opp',
+    promote: '→ Oppgave',
+    discard: 'Forkast',
+  },
+  // AP-06B — kvitteringer + månedlig handlebudsjett (app/budget.tsx)
+  budget: {
+    title: 'Budsjett',
+    spentOfBudget: (spent: string, budget: string) => `${spent} kr av ${budget} kr denne måneden`,
+    overBudgetHint: 'Litt over denne måneden — her er hvor pengene gikk.',
+    onTrackHint: 'Helt i rute denne måneden.',
+    noBudgetSet: 'Sett et månedlig budsjett i Innstillinger for å se hvordan denne måneden ligger an.',
+    receiptsTitle: 'Kvitteringer denne måneden',
+    noReceipts: 'Ingen kvitteringer denne måneden ennå.',
   },
   hints: {
     home: {

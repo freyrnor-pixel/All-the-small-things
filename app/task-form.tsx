@@ -2,7 +2,7 @@
  * task-form.tsx — add / edit a task
  *
  * Modal form for creating or editing a single task: title, date, optional time,
- * type (start-at / time-box with duration), importance, and weekly recurrence.
+ * type (start-at / time-box with duration), importance, priority, and weekly recurrence.
  * Presence of an `id` route param switches it into edit mode (with a delete action).
  *
  * Connections:
@@ -14,7 +14,7 @@
  *   - All visible strings go through useT(); date defaults to todayStr() (YYYY-MM-DD).
  *   - Edit vs. add is keyed off the `id` param resolved against the store; save()/del() then router.back().
  *   - recurringDays is only persisted when recurring === 'weekly' (cleared to [] otherwise).
- *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Repeat → Importance).
+ *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Importance → Priority → Repeat).
  *   - On save a ConfirmationBanner is shown, then navigation is briefly delayed (~900ms) so it's visible.
  *     start-at vs time-box is colour/icon-coded via FeatureColors (consistent with TaskItem).
  *   - Date field is a Mon–Sun chip row (current calendar week) for one-tap picking; the full
@@ -36,7 +36,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTaskStore, TaskType, Importance } from '@/store/useTaskStore';
+import { useTaskStore, TaskType, Importance, Priority } from '@/store/useTaskStore';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -86,6 +86,7 @@ export default function TaskFormScreen() {
   const [recurring, setRecurring] = useState(existing?.recurring ?? 'none');
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
+  const [priority, setPriority] = useState<Priority>(existing?.priority ?? 'medium');
   const [confirm, setConfirm] = useState<string | null>(null);
   const [calExpanded, setCalExpanded] = useState(false);
 
@@ -133,6 +134,7 @@ export default function TaskFormScreen() {
       recurring: recurring as 'none' | 'weekly',
       recurringDays: recurring === 'weekly' ? recurringDays : [],
       importance,
+      priority,
     };
     if (existing) {
       updateTask(existing.id, payload);
@@ -349,6 +351,24 @@ export default function TaskFormScreen() {
                 >
                   <Text style={[styles.segText, { color: theme.textLight }, importance === imp && { color: theme.text, fontWeight: '600' }]}>
                     {imp === 'regular' ? t.importanceRegular : t.importanceEssential}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Priority — "must-do on a low-energy day" maps to high */}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.priorityLabel}</Text>
+            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+              {(['high', 'medium', 'low'] as Priority[]).map((p) => (
+                <Pressable
+                  key={p}
+                  style={[styles.seg, priority === p && [styles.segActive, { backgroundColor: theme.white }]]}
+                  onPress={() => setPriority(p)}
+                >
+                  <Text style={[styles.segText, { color: theme.textLight }, priority === p && { color: theme.text, fontWeight: '600' }]}>
+                    {p === 'high' ? t.priorityHigh : p === 'medium' ? t.priorityMedium : t.priorityLow}
                   </Text>
                 </Pressable>
               ))}

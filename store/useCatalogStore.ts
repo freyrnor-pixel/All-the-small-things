@@ -8,12 +8,13 @@
  * Connections:
  *   Imports → lib/catalogSeed, lib/db, lib/id
  *   Used by → app/_layout.tsx, app/scan.tsx, app/shopping.tsx
- *   Data    → defines a Zustand store; owns SQLite tables store_items (catalog) and purchase_log (append-only history)
+ *   Data    → defines a Zustand store; owns SQLite tables store_items (catalog) and purchase_log (append-only history, optionally linked to a receipts row via receipt_id)
  *
  * Edit notes:
  *   - seedCatalog() runs on every load() and uses stable name-derived IDs ('cat_<name>') with INSERT OR IGNORE — safe to re-run, but renaming seed items orphans old rows.
  *   - price_source ('seed' | 'purchase') tracks where a row's price came from: seedCatalog() keeps 'seed' rows in sync with lib/catalogSeed.ts on every load, but never overwrites a price once a real purchase sets it to 'purchase'.
  *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/price/category.
+ *   - recordPurchases()'s optional receiptId (AP-06B) links each purchase_log row to a store/useReceiptStore.ts receipt for the budget screen — pass it whenever app/scan.tsx has already created the receipt; omit it for purchases with no receipt (e.g. manual catalog edits).
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  */
 import { create } from 'zustand';
@@ -41,7 +42,7 @@ type CatalogStore = {
   items: StoreItem[];
   load: () => void;
   suggest: (query: string, limit?: number) => StoreItem[];
-  recordPurchases: (purchases: PurchaseInput[]) => void;
+  recordPurchases: (purchases: PurchaseInput[], receiptId?: string) => void;
 };
 
 function rowToItem(row: Record<string, unknown>): StoreItem {
@@ -108,7 +109,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
     return matches.slice(0, limit);
   },
 
-  recordPurchases(purchases) {
+  recordPurchases(purchases, receiptId) {
     if (purchases.length === 0) return;
     const now = new Date().toISOString();
     const next = [...get().items];
@@ -118,9 +119,9 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
       if (!name) continue;
       try {
         db.runSync(
-          `INSERT INTO purchase_log (id, item_name, store, price, was_on_list, purchased_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [generateId(), name, p.store, p.price, p.wasOnList ? 1 : 0, now]
+          `INSERT INTO purchase_log (id, item_name, store, price, was_on_list, purchased_at, receipt_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [generateId(), name, p.store, p.price, p.wasOnList ? 1 : 0, now, receiptId ?? null]
         );
       } catch { /* logging is best-effort */ }
 

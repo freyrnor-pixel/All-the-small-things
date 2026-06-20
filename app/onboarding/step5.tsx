@@ -1,26 +1,21 @@
 /**
- * step5.tsx — Color theme + finish (guided step 5 of 5)
+ * step5.tsx — Color theme (guided step 5 of 6)
  *
- * Final wizard step: pick a color theme, then complete onboarding. On finish it
- * marks setup complete, requests notification permission, and schedules the
- * reminders/task notifications configured in earlier steps.
+ * Pick a color theme and handedness, then continue to the companion-pet step.
+ * Finishing onboarding (setup complete + notification scheduling) now happens
+ * in step6.tsx.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/notifications, @/lib/reminders,
- *             @/store/useTaskStore, @/lib/i18n, @/constants/theme
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
  *   Used by → Expo Router route "/onboarding/step5"
- *   Data    → useSettingsStore (writes `colorTheme`, `setupComplete`);
- *             schedules notifications via requestPermissions + syncReminders +
- *             useTaskStore.syncAllTaskNotifications; scaled fontSize via useScaledStyles()
+ *   Data    → useSettingsStore (writes `colorTheme`, `leftHanded`); scaled
+ *             fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All user-facing strings go through useT() — no hardcoded text.
- *   - finish() sets `setupComplete:true` plus the new-user defaults
- *     `essentialsModeEnabled:true` + `showPoints:true` (onboarding-only — never
- *     mutates an existing user's saved row), then requests OS notification
- *     permission and, regardless of outcome, syncs reminders and task
- *     notifications; finally router.replace "/" to home.
- *   - Previous uses router.back(); Finish button color is theme-driven.
+ *   - Next button → router.push "/onboarding/step6" (companion pet naming,
+ *     which now owns setupComplete + notification scheduling).
+ *   - Previous uses router.back(); Next button color is theme-driven.
  */
 import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
@@ -28,9 +23,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { requestPermissions } from '@/lib/notifications';
-import { syncReminders } from '@/lib/reminders';
-import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, ThemeName } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
@@ -40,20 +32,6 @@ export default function OnboardingStep5() {
   const settings = useSettingsStore();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
-
-  function finish() {
-    // W-E: new-user defaults — Essentials Mode ON + points visible by default, so new
-    // users start simple. Set here so the guided path gets them too (idempotent with
-    // the explore path). Onboarding-only — never mutates an existing user's saved row.
-    settings.update({ setupComplete: true, essentialsModeEnabled: true, showPoints: true });
-    // Ask for notification permission once setup is done, then schedule the
-    // reminders the user just configured during onboarding.
-    requestPermissions().finally(() => {
-      syncReminders();
-      useTaskStore.getState().syncAllTaskNotifications();
-    });
-    router.replace('/');
-  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -112,7 +90,7 @@ export default function OnboardingStep5() {
         </View>
 
         <View style={styles.progress}>
-          {[0, 1, 2, 3, 4].map((i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <View key={i} style={[styles.dot, i === 4 && styles.dotActive]} />
           ))}
         </View>
@@ -124,9 +102,9 @@ export default function OnboardingStep5() {
         </Pressable>
         <Pressable
           style={[styles.doneBtn, { backgroundColor: THEMES[settings.colorTheme]?.orange ?? Colors.orange }]}
-          onPress={finish}
+          onPress={() => router.push('/onboarding/step6')}
         >
-          <Text style={styles.doneBtnText}>{t.finishBtn}</Text>
+          <Text style={styles.doneBtnText}>{t.next}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

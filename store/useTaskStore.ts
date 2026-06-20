@@ -2,17 +2,18 @@
  * useTaskStore.ts — tasks (one-off + weekly recurring) and their reminders
  *
  * Zustand store for to-do tasks: one-off and weekly-recurring, start-at and
- * time-box types, with importance and a backlog view. Owns per-task notification
- * scheduling (start, and end reminders for time-box tasks).
+ * time-box types, with importance, priority, and a backlog view. Owns per-task
+ * notification scheduling (start, and end reminders for time-box tasks).
  *
  * Connections:
  *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useAutomationStore, store/useSettingsStore
- *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step5.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx
+ *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/TaskItem.tsx, store/useInboxStore.ts (add() only, for promoteToTask)
  *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications; fires the 'task_completed' automation trigger
  *
  * Edit notes:
  *   - Per-task notification scheduling lives here (syncTaskNotification); add/update auto-reschedule. Call syncAllTaskNotifications() after a settings/language change since notification copy is baked in at schedule time.
  *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
+ *   - Quiet hours (AP-05) only defer the *reminder*, never the task's own date/time/duration — deferPastQuietHours/deferOccurrencePastQuietHours wrap lib/notifications.ts's pushPastQuietHours right before scheduling.
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
  *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
  *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
@@ -28,12 +29,14 @@ import {
   scheduleTaskNotification,
   scheduleWeeklyTaskNotifications,
   cancelTaskNotification,
+  pushPastQuietHours,
   WeeklyTaskOccurrence,
 } from '@/lib/notifications';
 
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
 export type Importance = 'regular' | 'essential';
+export type Priority = 'high' | 'medium' | 'low';
 
 export type Task = {
   id: string;
@@ -46,6 +49,7 @@ export type Task = {
   recurring: Recurring;
   recurringDays: number[]; // 0=Mon … 6=Sun
   importance: Importance;
+  priority: Priority;
 };
 
 type TaskStore = {
@@ -77,6 +81,31 @@ function parseTime(time: string): [number, number] | null {
 /** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
 function toExpoWeekday(mon0: number): number {
   return ((mon0 + 1) % 7) + 1;
+}
+
+type QuietHours = { quietHoursEnabled: boolean; quietHoursStart: string; quietHoursEnd: string };
+
+/** Pushes a notification's fire time past quiet hours, if enabled — the task itself keeps its real time, only the reminder is deferred. */
+function deferPastQuietHours(date: Date, s: QuietHours): Date {
+  if (!s.quietHoursEnabled) return date;
+  const pushed = pushPastQuietHours(date.getHours(), date.getMinutes(), s.quietHoursStart, s.quietHoursEnd);
+  const out = new Date(date);
+  out.setHours(pushed.hour, pushed.minute, 0, 0);
+  if (pushed.rolledOver) out.setDate(out.getDate() + 1);
+  return out;
+}
+
+/** Same idea as deferPastQuietHours but for a weekly occurrence's hour/minute/weekday (no absolute Date to work with). */
+function deferOccurrencePastQuietHours(o: WeeklyTaskOccurrence, s: QuietHours): WeeklyTaskOccurrence {
+  if (!s.quietHoursEnabled) return o;
+  const pushed = pushPastQuietHours(o.hour, o.minute, s.quietHoursStart, s.quietHoursEnd);
+  if (!pushed.rolledOver && pushed.hour === o.hour && pushed.minute === o.minute) return o;
+  return {
+    ...o,
+    hour: pushed.hour,
+    minute: pushed.minute,
+    weekday: pushed.rolledOver ? (o.weekday === 7 ? 1 : o.weekday + 1) : o.weekday,
+  };
 }
 
 /**
@@ -136,7 +165,10 @@ function syncTaskNotification(task: Task): void {
         });
       }
     }
-    void scheduleWeeklyTaskNotifications(task.id, occurrences);
+    void scheduleWeeklyTaskNotifications(
+      task.id,
+      occurrences.map((o) => deferOccurrencePastQuietHours(o, s))
+    );
     return;
   }
 
@@ -154,12 +186,12 @@ function syncTaskNotification(task: Task): void {
     const end = new Date(start.getTime() + dur * 60 * 1000);
     void scheduleTaskNotification(
       task.id,
-      start,
+      deferPastQuietHours(start, s),
       { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
-      { date: end, content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
+      { date: deferPastQuietHours(end, s), content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
     );
   } else {
-    void scheduleTaskNotification(task.id, start, {
+    void scheduleTaskNotification(task.id, deferPastQuietHours(start, s), {
       title: t.notif.taskStartTitle(task.title),
       body: t.notif.taskStartBody,
     });
@@ -178,6 +210,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     recurring: (row.recurring as Recurring) ?? 'none',
     recurringDays: JSON.parse((row.recurring_days as string) || '[]'),
     importance: (row.importance as Importance) ?? 'regular',
+    priority: (row.priority as Priority) ?? 'medium',
   };
 }
 
@@ -198,8 +231,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   add(t) {
     const id = generateId();
     db.runSync(
-      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days, importance)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days, importance, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         t.title,
@@ -211,6 +244,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         t.recurring,
         JSON.stringify(t.recurringDays),
         t.importance ?? 'regular',
+        t.priority ?? 'medium',
       ]
     );
     const task: Task = { ...t, id, done: false };
@@ -225,7 +259,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const next = { ...task, ...patch };
     db.runSync(
       `UPDATE tasks SET title=?, task_date=?, task_time=?, task_type=?, duration_minutes=?,
-       done=?, recurring=?, recurring_days=?, importance=? WHERE id=?`,
+       done=?, recurring=?, recurring_days=?, importance=?, priority=? WHERE id=?`,
       [
         next.title,
         next.date,
@@ -236,6 +270,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         next.recurring,
         JSON.stringify(next.recurringDays),
         next.importance ?? 'regular',
+        next.priority ?? 'medium',
         id,
       ]
     );

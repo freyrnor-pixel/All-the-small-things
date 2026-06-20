@@ -15,6 +15,9 @@
  *   - load() only fetches active habits and the last 35 days of logs (streak window) — not full history.
  *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ *   - markRestDay() toggles the rest_day flag on a habit_logs row (upserting one if it doesn't
+ *     exist yet) — a no-shame opt-out, framed as "Resting today" in app/habits.tsx, never "skipped".
+ *     computeStreak() in app/habits.tsx treats a rest day like a met day so the streak survives it.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -55,6 +58,7 @@ export type HabitLog = {
   habitId: string;
   logDate: string;
   count: number;
+  restDay: boolean;
 };
 
 type HabitStore = {
@@ -67,6 +71,8 @@ type HabitStore = {
   reorder: (id: string, direction: 'up' | 'down') => void;
   increment: (habitId: string, date: string) => void;
   decrement: (habitId: string, date: string) => void;
+  /** Toggle a day between "resting" and normal — no-shame opt-out that keeps the streak alive. */
+  markRestDay: (habitId: string, date: string) => void;
   /** Re-schedule every habit's daily reminder (after a language change). */
   syncAllHabitReminders: () => void;
 };
@@ -116,6 +122,7 @@ function rowToLog(row: Record<string, unknown>): HabitLog {
     habitId: row.habit_id as string,
     logDate: row.log_date as string,
     count: (row.count as number) || 0,
+    restDay: row.rest_day === 1,
   };
 }
 
@@ -225,7 +232,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
         'INSERT INTO habit_logs (id, habit_id, log_date, count) VALUES (?, ?, ?, 1)',
         [id, habitId, date]
       );
-      set((s) => ({ logs: [...s.logs, { id, habitId, logDate: date, count: 1 }] }));
+      set((s) => ({ logs: [...s.logs, { id, habitId, logDate: date, count: 1, restDay: false }] }));
     }
   },
 
@@ -238,6 +245,25 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     set((s) => ({
       logs: s.logs.map((l) => (l.id === existing.id ? { ...l, count: newCount } : l)),
     }));
+  },
+
+  markRestDay(habitId, date) {
+    const { logs } = get();
+    const existing = logs.find((l) => l.habitId === habitId && l.logDate === date);
+    if (existing) {
+      const restDay = !existing.restDay;
+      db.runSync('UPDATE habit_logs SET rest_day = ? WHERE id = ?', [restDay ? 1 : 0, existing.id]);
+      set((s) => ({
+        logs: s.logs.map((l) => (l.id === existing.id ? { ...l, restDay } : l)),
+      }));
+    } else {
+      const id = generateId();
+      db.runSync(
+        'INSERT INTO habit_logs (id, habit_id, log_date, count, rest_day) VALUES (?, ?, ?, 0, 1)',
+        [id, habitId, date]
+      );
+      set((s) => ({ logs: [...s.logs, { id, habitId, logDate: date, count: 0, restDay: true }] }));
+    }
   },
 
   syncAllHabitReminders() {

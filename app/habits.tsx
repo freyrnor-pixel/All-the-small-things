@@ -21,6 +21,10 @@
  *   - W-D: emotional screen — uses useSoftTheme(). habitColor() resolves build=green / break=blue
  *     (NEVER red). computeStreak() derives the current streak locally from logs (no store getter
  *     exists). Completed cards lock into a satisfied fill + success() haptic + CompletionGlow.
+ *   - Rest day (AP-03c): each expanded HabitCard has a "Resting today" toggle (markRestDay) for
+ *     today only — framed gently, never "skipped". computeStreak() treats a rest day as met, so
+ *     resting never breaks the streak. WeekStrip shows past rest days as a solid theme.neutral dot,
+ *     distinct from both a met day (build/break colour) and a missed one (empty/transparent).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -43,7 +47,7 @@ import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
 import { Ionicons } from '@expo/vector-icons';
-import { success, warning, heavy } from '@/lib/haptics';
+import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr } from '@/lib/date';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
@@ -86,15 +90,18 @@ function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string
 }
 
 /**
- * Current streak: consecutive met days (count ≥ dailyGoal) ending today (or, if today
- * isn't met yet, ending yesterday so an in-progress day never breaks the display).
- * No store getter exists, so this is derived locally from the loaded log window.
+ * Current streak: consecutive met days (count ≥ dailyGoal, or marked as a rest day)
+ * ending today (or, if today isn't met yet, ending yesterday so an in-progress day
+ * never breaks the display). Rest days count as met — that's the point of resting
+ * without losing the streak. No store getter exists, so this is derived locally
+ * from the loaded log window.
  */
 function computeStreak(habitId: string, goal: number, today: string, logs: HabitLog[]): number {
   if (goal <= 0) return 0;
   const metOn = (date: string) => {
     const log = logs.find((l) => l.habitId === habitId && l.logDate === date);
-    return (log?.count ?? 0) >= goal;
+    if (!log) return false;
+    return log.restDay || log.count >= goal;
   };
   let streak = 0;
   const cursor = new Date(today + 'T12:00:00');
@@ -180,9 +187,11 @@ function WeekStrip({
         const count = log?.count ?? 0;
         const ratio = goal > 0 ? Math.min(count / goal, 1) : 0;
         const isFuture = date > today;
+        const isRest = !!log?.restDay;
         // Past zero-progress days: neutral border, transparent fill (empty circle — no shame).
-        const color = isFuture ? theme.grayLight : progressColor(ratio, kind, theme);
-        const filled = !isFuture && ratio > 0;
+        // Rest days get a solid neutral fill — visually distinct from both "met" and "missed".
+        const color = isFuture ? theme.grayLight : isRest ? theme.neutral : progressColor(ratio, kind, theme);
+        const filled = !isFuture && (isRest || ratio > 0);
         const isToday = date === today;
         return (
           <View key={date} style={styles.dayCol}>
@@ -210,12 +219,14 @@ function HabitCard({
   const logs = useHabitStore((s) => s.logs);
   const increment = useHabitStore((s) => s.increment);
   const decrement = useHabitStore((s) => s.decrement);
+  const markRestDay = useHabitStore((s) => s.markRestDay);
   const t = useT();
   const { reducedMotion } = useAccessibility();
   const styles = useScaledStyles(baseStyles);
 
   const log = logs.find((l) => l.habitId === habit.id && l.logDate === today);
   const count = log?.count ?? 0;
+  const isRestToday = log?.restDay ?? false;
   const ratio = habit.dailyGoal > 0 ? Math.min(count / habit.dailyGoal, 1) : 0;
   const isDone = ratio >= 1;
 
@@ -334,6 +345,25 @@ function HabitCard({
                 theme={theme}
               />
             </View>
+            <Pressable
+              style={[
+                styles.restDayBtn,
+                { borderColor: theme.grayLight },
+                isRestToday && { backgroundColor: theme.neutral, borderColor: theme.neutral },
+              ]}
+              onPress={() => {
+                selection();
+                markRestDay(habit.id, today);
+              }}
+            >
+              <Ionicons name="moon" size={14} color={isRestToday ? theme.white : theme.textLight} />
+              <Text style={[styles.restDayText, { color: isRestToday ? theme.white : theme.textLight }]}>
+                {isRestToday ? t.habits.restingToday : t.habits.restDay}
+              </Text>
+            </Pressable>
+            {isRestToday && (
+              <Text style={[styles.restDayHint, { color: theme.textLight }]}>{t.habits.restDayHint}</Text>
+            )}
           </View>
         )}
       </View>
@@ -848,6 +878,18 @@ const baseStyles = StyleSheet.create({
     borderTopWidth: 1,
   },
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between' },
+  restDayBtn: {
+    marginTop: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  restDayText: { fontSize: FontSize.xs, fontWeight: '600' },
+  restDayHint: { fontSize: FontSize.xs, fontStyle: 'italic', textAlign: 'center', marginTop: 4 },
   dayCol: { alignItems: 'center', gap: 3 },
   dayAbbr: { fontSize: 9, fontWeight: '600' },
   dayAbbrToday: { fontWeight: '700' },
