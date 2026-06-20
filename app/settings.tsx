@@ -15,7 +15,7 @@
  * Connections:
  *   Imports → components/HintCard, components/ScreenBackground, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
- *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled, quietHours*); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders / syncNotificationCategories; scaled fontSize via useScaledStyles()
+ *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled, quietHours*, monthlyBudgetNok); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders / syncNotificationCategories; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
@@ -24,6 +24,7 @@
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet is configured during onboarding step6 by default; this section lets returning users change it later.
  *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
+ *   - Monthly budget (AP-06B) lives at the bottom of the Shopping List card; an empty input means "no budget set" (monthlyBudgetNok = 0), which app/budget.tsx reads as "don't show a progress bar."
  */
 import React, { useState } from 'react';
 import {
@@ -74,6 +75,9 @@ export default function SettingsScreen() {
   const [name, setName] = useState(settings.userName);
   const [petNameInput, setPetNameInput] = useState(settings.petName);
   const [monthlyDateInput, setMonthlyDateInput] = useState(String(settings.monthlyResetDate));
+  const [monthlyBudgetInput, setMonthlyBudgetInput] = useState(
+    settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : ''
+  );
 
   const DAY_LABELS = t.dayFull;
 
@@ -614,6 +618,36 @@ export default function SettingsScreen() {
               maxLength={2}
             />
             <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.monthlyDateInputHint}</Text>
+
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.monthlyBudget.label}</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+              value={monthlyBudgetInput}
+              onChangeText={(v) => {
+                setMonthlyBudgetInput(v);
+                if (v.trim() === '') {
+                  applyAndSync({ monthlyBudgetNok: 0 });
+                  return;
+                }
+                const n = parseFloat(v.replace(',', '.'));
+                if (!isNaN(n) && n >= 0) {
+                  applyAndSync({ monthlyBudgetNok: n });
+                }
+              }}
+              onBlur={() => {
+                const n = parseFloat(monthlyBudgetInput.replace(',', '.'));
+                if (monthlyBudgetInput.trim() !== '' && (isNaN(n) || n < 0)) {
+                  setMonthlyBudgetInput(settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : '');
+                }
+              }}
+              keyboardType="number-pad"
+              placeholder={t.settings.monthlyBudget.placeholder}
+              placeholderTextColor={theme.gray}
+              maxLength={6}
+            />
+            <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.settings.monthlyBudget.hint}</Text>
           </Surface>
         </View>
 

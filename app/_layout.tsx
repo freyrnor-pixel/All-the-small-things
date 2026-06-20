@@ -4,17 +4,18 @@
  * Mounts on launch: loads the rounded Nunito font (gating render until ready and
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, meals, health, shared,
- * habits, energy, inbox, catalog, automations, feedback). After requesting notification
- * permission it re-syncs all reminders/notifications to the loaded data and language,
- * registers the interactive "Done"/"Remind me later" notification action buttons
- * (syncNotificationCategories) and listens for taps on them (onNotificationAction), and
- * keeps the persistent "today's overview" notification (if enabled) refreshed as tasks/shopping change.
+ * habits, energy, inbox, catalog, receipts, automations, feedback). After requesting
+ * notification permission it re-syncs all reminders/notifications to the loaded data
+ * and language, registers the interactive "Done"/"Remind me later" notification
+ * action buttons (syncNotificationCategories) and listens for taps on them
+ * (onNotificationAction), and keeps the persistent "today's overview" notification
+ * (if enabled) refreshed as tasks/shopping change.
  * Defines the expo-router Stack and per-screen options, redirects to onboarding
  * until setup is complete, mounts the global DebugOverlay when debug mode is on, and
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
  *
@@ -76,6 +77,7 @@ import { useHabitStore } from '@/store/useHabitStore';
 import { useEnergyStore } from '@/store/useEnergyStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import { useReceiptStore } from '@/store/useReceiptStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import { useFeedbackStore } from '@/store/useFeedbackStore';
@@ -149,6 +151,7 @@ export default function RootLayout() {
   const loadEnergy = useEnergyStore((s) => s.load);
   const loadInbox = useInboxStore((s) => s.load);
   const loadCatalog = useCatalogStore((s) => s.load);
+  const loadReceipts = useReceiptStore((s) => s.load);
   const loadAutomations = useAutomationStore((s) => s.load);
   const loadFeedback = useFeedbackStore((s) => s.load);
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
@@ -170,6 +173,7 @@ export default function RootLayout() {
     loadEnergy();
     loadInbox();
     loadCatalog();
+    loadReceipts();
     loadAutomations();
     loadFeedback();
 
@@ -278,6 +282,7 @@ export default function RootLayout() {
         <Stack.Screen name="meals" />
         <Stack.Screen name="health" />
         <Stack.Screen name="scan" />
+        <Stack.Screen name="budget" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="shared" />

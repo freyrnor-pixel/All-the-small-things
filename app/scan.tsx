@@ -7,9 +7,9 @@
  * shared shopping/task payloads into the shared store.
  *
  * Connections:
- *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/i18n, lib/share, store/useCatalogStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
- *   Data    → confirmed items write to THREE stores: useShoppingStore (shopping_items) + useCatalogStore.recordPurchases (purchase_log + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
+ *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → reviewable checklist → confirm via addToList.
@@ -17,6 +17,8 @@
  *   - On OCR failure/empty result, a friendly message shows and the manual-entry sheet opens automatically.
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
  *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
+ *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt (no price is parsed there worth tracking).
+ *   - Header's right-side link (reusing t.budget.title) pushes to /budget — a plain navigation, not a 9th BubbleMenu slot, per the AP-06B plan.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
@@ -40,8 +42,10 @@ import { useRouter } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import { useReceiptStore } from '@/store/useReceiptStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
+import { todayStr } from '@/lib/date';
 import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
@@ -78,6 +82,7 @@ export default function ScanScreen() {
   const addShopping = useShoppingStore((s) => s.add);
   const shoppingItems = useShoppingStore((s) => s.items);
   const recordPurchases = useCatalogStore((s) => s.recordPurchases);
+  const addReceipt = useReceiptStore((s) => s.addReceipt);
   const addSharedShopping = useSharedStore((s) => s.addSharedShopping);
   const addSharedTasks = useSharedStore((s) => s.addSharedTasks);
   const settings = useSettingsStore();
@@ -186,6 +191,17 @@ export default function ScanScreen() {
     selected.forEach((item) => {
       addShopping({ name: item.name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: item.price, inventoryQty: 0 });
     });
+    // Record this trip as a receipt (AP-06B) before logging purchases, so each
+    // purchase_log row can link back to it for app/budget.tsx's monthly total.
+    // Skipped when nothing is selected — never log an empty $0 receipt.
+    const receiptId = selected.length
+      ? addReceipt({
+          date: todayStr(),
+          store: selectedStore,
+          total: selected.reduce((sum, item) => sum + item.price, 0),
+          category: 'groceries',
+        }).id
+      : undefined;
     // Log the receipt as purchases and keep the catalog's prices current.
     recordPurchases(
       selected.map((item) => ({
@@ -193,7 +209,8 @@ export default function ScanScreen() {
         store: selectedStore,
         price: item.price,
         wasOnList: existingNames.has(item.name.toLowerCase()),
-      }))
+      })),
+      receiptId
     );
     Alert.alert(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);
   }
@@ -257,7 +274,9 @@ export default function ScanScreen() {
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
         <Text style={[styles.title, { color: theme.text }]}>{t.scanReceipt}</Text>
-        <View style={{ width: 60 }} />
+        <Pressable onPress={() => router.push('/budget')} hitSlop={6}>
+          <Text style={[styles.back, { color: theme.orange, textAlign: 'right' }]}>{t.budget.title}</Text>
+        </Pressable>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>

@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -550,6 +550,12 @@ const en = {
       label: 'Quiet hours',
       hint: "Task reminders wait until quiet hours end instead of firing — they're never lost.",
     },
+    // AP-06B — monthly grocery budget, compared against receipts in app/budget.tsx
+    monthlyBudget: {
+      label: 'Monthly budget',
+      hint: "Optional — see how this month's grocery spend compares on the Budget screen.",
+      placeholder: 'e.g. 3000',
+    },
   },
   // --- W-E Config additions (grouped settings + onboarding) ---
   config: {
@@ -627,6 +633,16 @@ const en = {
     sectionTitle: 'Captured',
     promote: '→ Task',
     discard: 'Discard',
+  },
+  // AP-06B — receipts + monthly grocery budget (app/budget.tsx)
+  budget: {
+    title: 'Budget',
+    spentOfBudget: (spent: string, budget: string) => `${spent} kr of ${budget} kr this month`,
+    overBudgetHint: "A bit over this month — here's where it went.",
+    onTrackHint: 'Right on track this month.',
+    noBudgetSet: 'Set a monthly budget in Settings to see how this month compares.',
+    receiptsTitle: 'Receipts this month',
+    noReceipts: 'No receipts yet this month.',
   },
   hints: {
     home: {
@@ -1042,6 +1058,12 @@ const no: typeof en = {
       label: 'Stille periode',
       hint: 'Oppgavepåminnelser venter til den stille perioden er over i stedet for å avbryte — de går ikke tapt.',
     },
+    // AP-06B — månedlig handlebudsjett, sammenlignet med kvitteringer i app/budget.tsx
+    monthlyBudget: {
+      label: 'Månedlig budsjett',
+      hint: 'Valgfritt — se hvordan handlebeløpet denne måneden ligger an på Budsjett-skjermen.',
+      placeholder: 'f.eks. 3000',
+    },
   },
   // --- W-E Config additions (grouped settings + onboarding) ---
   config: {
@@ -1284,6 +1306,16 @@ const no: typeof en = {
     sectionTitle: 'Fanget opp',
     promote: '→ Oppgave',
     discard: 'Forkast',
+  },
+  // AP-06B — kvitteringer + månedlig handlebudsjett (app/budget.tsx)
+  budget: {
+    title: 'Budsjett',
+    spentOfBudget: (spent: string, budget: string) => `${spent} kr av ${budget} kr denne måneden`,
+    overBudgetHint: 'Litt over denne måneden — her er hvor pengene gikk.',
+    onTrackHint: 'Helt i rute denne måneden.',
+    noBudgetSet: 'Sett et månedlig budsjett i Innstillinger for å se hvordan denne måneden ligger an.',
+    receiptsTitle: 'Kvitteringer denne måneden',
+    noReceipts: 'Ingen kvitteringer denne måneden ennå.',
   },
   hints: {
     home: {

@@ -4,13 +4,14 @@
  * Zustand store mirroring the one settings row: user name, language, theme,
  * dark mode, reminder/notification toggles (including quiet hours), reset cadence,
  * work/essentials modes, onboarding state, accessibility flags, companion pet
- * settings, and the debug overlay's enable flag + bubble-wheel tuning values.
+ * settings, monthly grocery budget (monthlyBudgetNok), and the debug overlay's
+ * enable flag + bubble-wheel tuning values.
  * persistentNotifEnabled toggles the always-current "today's overview" notification
  * (refreshed by app/_layout.tsx, see lib/notifications.ts's refreshPersistentNotification).
  *
  * Connections:
  *   Imports → lib/db
- *   Used by → app/_layout.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/DebugOverlay.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/focus.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/DebugOverlay.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns the single-row SQLite table settings (id = 1)
  *
  * Edit notes:
@@ -73,6 +74,8 @@ export type Settings = {
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
+  // Monthly grocery budget (AP-06B), shown against receipts in app/budget.tsx
+  monthlyBudgetNok: number;
   // Debug mode — feedback pins + bubble-wheel tuning overlay
   debugModeEnabled: boolean;
   bubbleSize: number;
@@ -137,6 +140,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   quietHoursEnabled: false,
   quietHoursStart: '21:00',
   quietHoursEnd: '08:00',
+  monthlyBudgetNok: 0,
   debugModeEnabled: false,
   bubbleSize: 50,
   bubbleSpacing: 78,
@@ -183,6 +187,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         quiet_hours_enabled: number | null;
         quiet_hours_start: string | null;
         quiet_hours_end: string | null;
+        monthly_budget_nok: number | null;
         debug_mode_enabled: number | null;
         bubble_size: number | null;
         bubble_spacing: number | null;
@@ -226,6 +231,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
         quietHoursEnabled: row.quiet_hours_enabled === 1,
         quietHoursStart: row.quiet_hours_start ?? '21:00',
         quietHoursEnd: row.quiet_hours_end ?? '08:00',
+        monthlyBudgetNok: row.monthly_budget_nok ?? 0,
         debugModeEnabled: row.debug_mode_enabled === 1,
         bubbleSize: row.bubble_size ?? 50,
         bubbleSpacing: row.bubble_spacing ?? 78,
@@ -256,6 +262,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?,
             bubble_material = ?, persistent_notif_enabled = ?,
             quiet_hours_enabled = ?, quiet_hours_start = ?, quiet_hours_end = ?,
+            monthly_budget_nok = ?,
             debug_mode_enabled = ?, bubble_size = ?, bubble_spacing = ?,
             bubble_spring_intensity = ?, bubble_anim_speed = ?
           WHERE id = 1`,
@@ -295,6 +302,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
             next.quietHoursEnabled ? 1 : 0,
             next.quietHoursStart,
             next.quietHoursEnd,
+            next.monthlyBudgetNok,
             next.debugModeEnabled ? 1 : 0,
             next.bubbleSize,
             next.bubbleSpacing,
