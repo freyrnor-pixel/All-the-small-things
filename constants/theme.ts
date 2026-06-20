@@ -9,7 +9,8 @@
  * `Fonts` holds the rounded Nunito family tokens, `Layout` the shared card padding/rhythm.
  * `getFontSize(base, scale)` applies the user's fontSize preference to a base pt.
  * `getMaterialStyle(base, material)` computes bubble/FAB surface-finish tokens
- * (glass/metal/rock/paper) from a single base colour — see "Materials" section below.
+ * (glass/metal/rock/paper) from a single base colour, tinted toward that
+ * finish's real-world hue — see "Materials" section below.
  *
  * Connections:
  *   Imports → —
@@ -24,8 +25,11 @@
  *   - `neutral` is a muted mid-tone used for shame-free UI elements (empty habit circles, backlog badges).
  *   - The 'custom' theme is computed from user's primary/secondary colors via buildCustomTheme().
  *   - Materials are a separate axis from colour themes (a bubble's hue + its finish are
- *     independent settings) — getMaterialStyle() only ever computes border/shadow/sheen
- *     tokens, never a hue, so it composes with any theme or FeatureColors value.
+ *     independent settings), but getMaterialStyle() now also tints the input base toward
+ *     a per-finish reference hue (icy blue glass, steel grey metal, stone grey rock, warm
+ *     paper) before shading it — so the same base colour still looks recognizably
+ *     different per finish. The tint blends hue/saturation at the base's own lightness
+ *     (see tint() below), which keeps existing text-contrast assumptions intact.
  */
 export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
@@ -87,11 +91,31 @@ function darken(hex: string, amount: number): string {
   return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
 }
 
-/** Relative-luminance check: returns a readable foreground color for any background hex. */
+function relLuminance(hex: string): number {
+  const lin = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const [r, g, b] = hexToRgb(hex);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+const DARK_TEXT = '#1E293B';
+
+/**
+ * Returns whichever of near-black (DARK_TEXT) or white text has the higher WCAG
+ * contrast ratio against hexBg. Picking the actual winner (rather than a flat
+ * luminance>0.6 threshold, which this replaced) matters once a background's
+ * luminance lands in a mid-range zone — e.g. an amber bubble tinted toward
+ * paper's cream hue scored only 2.96:1 against white but 4.95:1 against dark
+ * text, and the old threshold picked the worse one.
+ */
 export function contrastOn(hexBg: string): string {
-  const [r, g, b] = hexToRgb(hexBg);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? '#1E293B' : '#FFFFFF';
+  const bgLum = relLuminance(hexBg);
+  const darkLum = relLuminance(DARK_TEXT);
+  const contrastWithWhite = (Math.max(bgLum, 1) + 0.05) / (Math.min(bgLum, 1) + 0.05);
+  const contrastWithDark = (Math.max(bgLum, darkLum) + 0.05) / (Math.min(bgLum, darkLum) + 0.05);
+  return contrastWithDark >= contrastWithWhite ? DARK_TEXT : '#FFFFFF';
 }
 
 function buildCustomTheme(primary: string, secondary: string, isDark: boolean): AppColors {
@@ -104,16 +128,20 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
       greenLight: darken(secondary, 0.6),
       brown: lighten(primary, 0.4),
       brownLight: darken(primary, 0.5),
-      white: '#141420',
-      offWhite: '#0E0E1A',
+      // Same ~10%-step elevation ladder as the static dark themes (see
+      // DARK_THEMES above) — white/offWhite/grayLight rise from cream in
+      // increasingly bright layers instead of all sitting within a hair of it.
+      white: lighten(lighten('#0C0C14', 0.08), 0.1),
+      offWhite: lighten('#0C0C14', 0.08),
       gray: '#6A6A80',
-      grayLight: '#1E1E30',
+      grayLight: lighten(lighten(lighten('#0C0C14', 0.08), 0.1), 0.1),
       text: '#EEEEF8',
       textLight: '#9090B0',
       danger: '#F87171',
       dangerLight: '#280808',
       shadow: 'rgba(0,0,0,0.6)',
-      border: darken(primary, 0.4),
+      // Full accent colour, undimmed — see DARK_THEMES border comment.
+      border: primary,
       neutral: '#505068',
       hintBg: darken(primary, 0.75),
       hintBorder: darken(primary, 0.5),
@@ -289,16 +317,22 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#0D2A1A',
     brown: '#8FC7FF',
     brownLight: '#16335E',
-    white: '#121928',
-    offWhite: '#0C1220',
+    // white/offWhite/grayLight step up from cream in ~10%-lighter layers (each
+    // visibly brighter than the one below) so cards actually read as raised —
+    // a flat near-cream-vs-near-black gap was nearly invisible before.
+    white: '#32353e',
+    offWhite: '#1b1f29',
     gray: '#6A8AA0',
-    grayLight: '#18233C',
+    grayLight: '#474951',
     text: '#E6F1FE',
     textLight: '#8FB8DE',
     danger: '#FC8181',
     dangerLight: '#2A0A0A',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#1A3460',
+    // Full accent colour, undimmed — a darkened/desaturated border all but
+    // disappeared against the lightened white above; the raw accent reads
+    // as a clear, deliberate outline instead.
+    border: '#4EA8FC',
     neutral: '#52708C',
     hintBg: darken('#4EA8FC', 0.75),
     hintBorder: darken('#4EA8FC', 0.5),
@@ -312,16 +346,16 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#081820',
     brown: '#7DD3FC',
     brownLight: '#0C1A28',
-    white: '#101822',
-    offWhite: '#0C1420',
+    white: '#33373e',
+    offWhite: '#1c2129',
     gray: '#4A6070',
-    grayLight: '#141E2A',
+    grayLight: '#474b51',
     text: '#D0E8F8',
     textLight: '#6AA8C8',
     danger: '#FB7185',
     dangerLight: '#280810',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#142030',
+    border: '#38BDF8',
     neutral: '#3A5870',
     hintBg: darken('#38BDF8', 0.75),
     hintBorder: darken('#38BDF8', 0.5),
@@ -336,16 +370,16 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#1A0830',
     brown: '#E9D5FF',
     brownLight: '#3A1870',
-    white: '#180C28',
-    offWhite: '#120820',
+    white: '#37333f',
+    offWhite: '#211c2a',
     gray: '#7850A0',
-    grayLight: '#200E38',
+    grayLight: '#4b4752',
     text: '#F3E8FF',
     textLight: '#C4A0E8',
     danger: '#F472B6',
     dangerLight: '#2A0820',
     shadow: 'rgba(0,0,0,0.7)',
-    border: '#3A1860',
+    border: '#A855F7',
     neutral: '#6840A0',
     hintBg: darken('#A855F7', 0.75),
     hintBorder: darken('#A855F7', 0.5),
@@ -359,16 +393,16 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     greenLight: '#061608',
     brown: '#FB923C',
     brownLight: '#2A1408',
-    white: '#101C12',
-    offWhite: '#0C160E',
+    white: '#333d35',
+    offWhite: '#1c271e',
     gray: '#4A7050',
-    grayLight: '#101E12',
+    grayLight: '#475049',
     text: '#D0F0D8',
     textLight: '#6AB87A',
     danger: '#F87171',
     dangerLight: '#280808',
     shadow: 'rgba(0,0,0,0.6)',
-    border: '#142818',
+    border: '#22C55E',
     neutral: '#387048',
     hintBg: darken('#22C55E', 0.75),
     hintBorder: darken('#22C55E', 0.5),
@@ -433,10 +467,11 @@ export const Colors = THEMES.default;
  * ~16-41° apart around the wheel (no two adjacent, so every bubble is unambiguous at a
  * glance — the old set had habits/health as near-identical greens and meals/shop as
  * near-identical cyans), saturation held in a 56-85% band, and lightness tuned per-hue
- * so every value's luminance lands in a tight ~0.42-0.55 range. That luminance cap is
- * deliberate: BubbleMenu renders a hardcoded white icon + white label on top of these
- * (no contrastOn() there), so every entry must stay dark/saturated enough for white to
- * read clearly — the old `scan`/`meals` picks were close to failing this.
+ * so every value's luminance lands in a tight ~0.42-0.55 range. That luminance band is
+ * still worth keeping tight even though BubbleMenu now resolves its icon/label color
+ * dynamically via contrastOn(material.contrastBase) rather than a hardcoded white —
+ * the tighter the band, the more predictable each entry looks across every material
+ * finish's tint/shade.
  * Hue stays anchored to the feature's natural semantic family (task=blue/trust,
  * health=red/heart, habits=green/growth, shared=violet/connection, focus=red-orange/
  * energy) so the mapping still feels intuitive, not just decorative.
@@ -544,8 +579,11 @@ export const CUSTOM_COLOR_PRESETS = [
 
 // ─── Materials: bubble/FAB surface finish ───────────────────────────────────
 // A finish is a set of pure style tokens (no native gradient/blur deps, so it
-// stays OTA-safe) derived from a single base colour. Independent from colour
-// themes — any bubble's hue and finish can vary separately.
+// stays OTA-safe) derived from a single base colour, tinted toward that
+// finish's real-world hue (see MATERIAL_TINT) before the existing
+// lighten/darken shading is applied. Independent from colour themes — any
+// bubble's hue and finish can vary separately, the tint just makes sure two
+// finishes never render as the literal same colour for the same base.
 
 export type MaterialName = 'glass' | 'metal' | 'rock' | 'paper' | 'plain';
 
@@ -573,6 +611,12 @@ export type MaterialStyle = {
   elevation: number;
   /** Faint highlight overlay for the top portion of the surface. */
   sheenColor: string;
+  /**
+   * Opaque hex equivalent of `backgroundColor` — pass this to contrastOn(),
+   * never `backgroundColor` itself, since glass's backgroundColor is a
+   * translucent rgba() string that contrastOn() can't parse.
+   */
+  contrastBase: string;
 };
 
 /** lighten() for amount >= 0, darken() for amount < 0 — one knob, either direction. */
@@ -585,6 +629,84 @@ function rgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/** Per-channel linear blend toward hexB; t=0 → hexA, t=1 → hexB. */
+function mix(hexA: string, hexB: string, t: number): string {
+  const [r1, g1, b1] = hexToRgb(hexA);
+  const [r2, g2, b2] = hexToRgb(hexB);
+  return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
+}
+
+function hexToHsl(hex: string): [number, number, number] {
+  const [r0, g0, b0] = hexToRgb(hex);
+  const r = r0 / 255, g = g0 / 255, b = b0 / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h, s, l];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  let r: number, g: number, b: number;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  return rgbToHex(r * 255, g * 255, b * 255);
+}
+
+/**
+ * Blend `base` toward `target`'s hue/saturation while keeping base's own
+ * lightness — re-lighting the target to base's lightness *before* mixing
+ * means the blend shifts hue/chroma rather than just averaging two different
+ * brightness levels (which mostly cancels out hue and barely moves it; tried
+ * that first). Keeping lightness anchored to `base` is also what keeps this
+ * contrast-safe: every existing shade()/contrastOn() call downstream of this
+ * was tuned against `base`'s lightness, so preserving it means the finish's
+ * colour changes without quietly breaking text contrast on top of it.
+ */
+function tint(base: string, target: string, ratio: number): string {
+  const [, , baseL] = hexToHsl(base);
+  const [targetH, targetS] = hexToHsl(target);
+  const relit = hslToHex(targetH, targetS, baseL);
+  return mix(base, relit, ratio);
+}
+
+/** Real-world reference hue + blend strength each finish tints its base toward. */
+const MATERIAL_TINT: Record<'glass' | 'metal' | 'rock' | 'paper', { color: string; ratio: number }> = {
+  glass: { color: '#5AB4E6', ratio: 0.55 }, // icy window blue
+  metal: { color: '#9AA5AD', ratio: 0.6 }, // brushed steel grey
+  rock: { color: '#7D7870', ratio: 0.62 }, // stone grey
+  paper: { color: '#E0D2B0', ratio: 0.5 }, // cream / kraft paper
+};
+
+// Constant across every finish so switching materials never resizes a card —
+// RN/Yoga grows a content-sized box when borderWidth increases (border adds
+// onto the intrinsic size unless an explicit width/height is set), so the
+// old per-finish widths (1 / 1.5 / 2 / 1 / 1) made cards visibly jump size
+// when the material setting changed.
+const MATERIAL_BORDER_WIDTH = 1.5;
+
 /**
  * Per-finish surface tokens for bubble/FAB rendering, computed from a single
  * base colour. Spread the border/shadow keys onto the outer (shadow-casting)
@@ -593,46 +715,59 @@ function rgba(hex: string, alpha: number): string {
  */
 export function getMaterialStyle(base: string, material: MaterialName): MaterialStyle {
   switch (material) {
-    case 'metal':
+    case 'metal': {
+      const tinted = tint(base, MATERIAL_TINT.metal.color, MATERIAL_TINT.metal.ratio);
+      const bg = shade(tinted, -0.08);
       return {
-        backgroundColor: shade(base, -0.08),
-        borderWidth: 1.5,
-        borderColor: shade(base, -0.3),
-        borderTopColor: shade(base, 0.4),
-        borderBottomColor: shade(base, -0.5),
+        backgroundColor: bg,
+        borderWidth: MATERIAL_BORDER_WIDTH,
+        borderColor: shade(tinted, -0.3),
+        borderTopColor: shade(tinted, 0.4),
+        borderBottomColor: shade(tinted, -0.5),
         shadowOpacity: 0.32,
         shadowRadius: 8,
         elevation: 9,
         sheenColor: rgba('#FFFFFF', 0.3),
+        contrastBase: bg,
       };
-    case 'rock':
+    }
+    case 'rock': {
+      const tinted = tint(base, MATERIAL_TINT.rock.color, MATERIAL_TINT.rock.ratio);
+      const bg = shade(tinted, -0.18);
       return {
-        backgroundColor: shade(base, -0.18),
-        borderWidth: 2,
-        borderColor: shade(base, -0.4),
-        borderTopColor: shade(base, -0.05),
-        borderBottomColor: shade(base, -0.55),
+        backgroundColor: bg,
+        borderWidth: MATERIAL_BORDER_WIDTH,
+        borderColor: shade(tinted, -0.4),
+        borderTopColor: shade(tinted, -0.05),
+        borderBottomColor: shade(tinted, -0.55),
         shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 12,
         sheenColor: rgba('#FFFFFF', 0.06),
+        contrastBase: bg,
       };
-    case 'paper':
+    }
+    case 'paper': {
+      const tinted = tint(base, MATERIAL_TINT.paper.color, MATERIAL_TINT.paper.ratio);
+      const bg = shade(tinted, 0.08);
       return {
-        backgroundColor: shade(base, 0.1),
-        borderWidth: 1,
-        borderColor: shade(base, -0.08),
-        borderTopColor: shade(base, 0.18),
-        borderBottomColor: shade(base, -0.12),
+        backgroundColor: bg,
+        borderWidth: MATERIAL_BORDER_WIDTH,
+        borderColor: shade(tinted, -0.08),
+        borderTopColor: shade(tinted, 0.18),
+        borderBottomColor: shade(tinted, -0.12),
         shadowOpacity: 0.09,
         shadowRadius: 4,
         elevation: 2,
         sheenColor: rgba('#FFFFFF', 0.18),
+        contrastBase: bg,
       };
-    case 'glass':
+    }
+    case 'glass': {
+      const tinted = tint(base, MATERIAL_TINT.glass.color, MATERIAL_TINT.glass.ratio);
       return {
-        backgroundColor: rgba(base, 0.72),
-        borderWidth: 1,
+        backgroundColor: rgba(tinted, 0.72),
+        borderWidth: MATERIAL_BORDER_WIDTH,
         borderColor: rgba('#FFFFFF', 0.5),
         borderTopColor: rgba('#FFFFFF', 0.75),
         borderBottomColor: rgba('#000000', 0.15),
@@ -640,7 +775,9 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 16,
         elevation: 6,
         sheenColor: rgba('#FFFFFF', 0.5),
+        contrastBase: tinted,
       };
+    }
     // No-finish baseline: a flat, even fill with a hairline border and no
     // bevel/sheen — for anyone who wants surfaces to just sit there quietly
     // rather than read as glass/metal/rock/paper.
@@ -648,7 +785,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
     default:
       return {
         backgroundColor: base,
-        borderWidth: 1,
+        borderWidth: MATERIAL_BORDER_WIDTH,
         borderColor: shade(base, -0.06),
         borderTopColor: shade(base, -0.06),
         borderBottomColor: shade(base, -0.06),
@@ -656,6 +793,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 7,
         elevation: 3,
         sheenColor: rgba('#FFFFFF', 0),
+        contrastBase: base,
       };
   }
 }

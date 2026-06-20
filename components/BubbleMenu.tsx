@@ -27,10 +27,11 @@
  *   - All labels go through useT() — no hardcoded text.
  *   - FAB always shows the tree logo (assets/android-icon-monochrome.png), open or closed — no
  *     "×" close glyph; tapping the same tree icon toggles the wheel either way. Tinted via
- *     contrastOn(theme.orange) so it stays readable against any theme's accent color, including
- *     arbitrary custom-theme colors — don't replace this with a hardcoded white/dark tint. On
- *     press, the tint flashes to the opposite contrastOn() output (fabWaveColor) and eases back —
- *     this needs Animated.Image (not a plain Image) since tintColor is driven by an animated style.
+ *     contrastOn(fabMaterial.contrastBase) so it stays readable against any theme's accent color
+ *     AND any material finish (glass/metal/rock/paper tint the accent before this reads it) —
+ *     don't replace this with a hardcoded white/dark tint. On press, the tint flashes to the
+ *     opposite contrastOn() output (fabWaveColor) and eases back — this needs Animated.Image
+ *     (not a plain Image) since tintColor is driven by an animated style.
  *   - HIGH MERGE-CONFLICT RISK: this file has a documented history of parallel claude/* branches
  *     independently rewriting it (two competing redesigns were merged via 96891b4 and 9b02162,
  *     and a careless merge would have let the older variant silently win). When merging or
@@ -60,7 +61,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, MaterialStyle } from '@/constants/theme';
+import { Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, MaterialStyle } from '@/constants/theme';
 import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -223,8 +224,8 @@ function BubbleItemView({
         <View pointerEvents="none" style={[styles.bubbleSheenMid, { height: bubbleSize * 0.38, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 0.55 }]} />
         <View pointerEvents="none" style={[styles.bubbleSheenInner, { height: bubbleSize * 0.2, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 1 }]} />
         <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-          <Ionicons name={item.icon} size={22} color="#fff" />
-          <Text style={styles.bubbleLabel}>{item.label}</Text>
+          <Ionicons name={item.icon} size={22} color={contrastOn(material.contrastBase)} />
+          <Text style={[styles.bubbleLabel, { color: contrastOn(material.contrastBase) }]}>{item.label}</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -370,11 +371,11 @@ export default function BubbleMenu({ onNewTask }: Props) {
   const wheelGesture = Gesture.Race(spinGesture, closeTapGesture);
 
   const sideStyle = leftHanded ? { left: FAB_MARGIN_SIDE } : { right: FAB_MARGIN_SIDE };
-  const fabIconColor = contrastOn(theme.orange);
-  // fabIconColor is deliberately derived from theme.orange (the semantic accent), not
-  // fabMaterial.backgroundColor — materials only shade/tint that accent, never invert it,
-  // so the contrast decision stays valid across every finish.
   const fabMaterial = useMemo(() => getMaterialStyle(theme.orange, bubbleMaterial), [theme.orange, bubbleMaterial]);
+  // fabMaterial.contrastBase (not theme.orange directly) since materials now tint the
+  // accent toward their own finish hue — glass/metal/rock/paper can each shift the
+  // resolved background enough to flip which contrastOn() output actually reads clearly.
+  const fabIconColor = contrastOn(fabMaterial.contrastBase);
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: openProgress.value * 0.35,
@@ -577,7 +578,6 @@ const styles = StyleSheet.create({
   },
   bubbleLabel: {
     fontSize: 11,
-    color: Colors.white,
     fontWeight: '700',
     textAlign: 'center',
   },
