@@ -6,7 +6,7 @@
  * user to scan. Also records the selection as outbound shared items locally.
  *
  * Connections:
- *   Imports → components/QRCodeDisplay, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/QRCodeDisplay, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/share-modal" (presented as a modal — see app/_layout.tsx)
  *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -33,6 +33,7 @@ import { encodeSharePayload } from '@/lib/share';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -138,13 +139,7 @@ export default function ShareModal() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.shareTitle}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={t.shareTitle} onBack={() => router.back()} bordered />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {!shared ? (

@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -46,32 +46,15 @@ import HintCard from '@/components/HintCard';
 import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
-import { todayStr, dateStr } from '@/lib/date';
+import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getWeekDates(today: string): string[] {
-  const d = new Date(today + 'T12:00:00');
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(mon);
-    day.setDate(mon.getDate() + i);
-    return dateStr(day);
-  });
-}
-
-function getMonthDates(year: number, month: number): string[] {
-  const days = new Date(year, month, 0).getDate();
-  return Array.from({ length: days }, (_, i) => {
-    const d = i + 1;
-    return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  });
-}
+// Week/month date helpers live in lib/date (getWeekDates, getMonthDates).
 
 // W-D: build = warm/green, break = cool/blue. NEVER red — breaking a habit is not failure.
 // Break uses a calm blue so it reads as a different (cool) family from build's green.
@@ -98,8 +81,12 @@ function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string
  */
 function computeStreak(habitId: string, goal: number, today: string, logs: HabitLog[]): number {
   if (goal <= 0) return 0;
+  // Index this habit's logs by date once, instead of re-scanning all logs for
+  // each of the (up to 35) days walked below.
+  const byDate = new Map<string, HabitLog>();
+  for (const l of logs) if (l.habitId === habitId) byDate.set(l.logDate, l);
   const metOn = (date: string) => {
-    const log = logs.find((l) => l.habitId === habitId && l.logDate === date);
+    const log = byDate.get(date);
     if (!log) return false;
     return log.restDay || log.count >= goal;
   };
@@ -589,21 +576,21 @@ export default function HabitsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.habitsTitle}</Text>
-        <Pressable
-          style={[styles.addBtn, { backgroundColor: theme.orange }]}
-          onPress={() => router.push({
-            pathname: '/habit-form',
-            params: selectedProfile ? { childName: selectedProfile } : {},
-          })}
-        >
-          <Text style={styles.addBtnText}>+</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={t.habitsTitle}
+        onBack={() => router.back()}
+        right={
+          <Pressable
+            style={[styles.addBtn, { backgroundColor: theme.orange }]}
+            onPress={() => router.push({
+              pathname: '/habit-form',
+              params: selectedProfile ? { childName: selectedProfile } : {},
+            })}
+          >
+            <Text style={styles.addBtnText}>+</Text>
+          </Pressable>
+        }
+      />
 
       {/* Profile selector */}
       {showProfiles && (

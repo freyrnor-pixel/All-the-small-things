@@ -6,7 +6,7 @@
  * suggest() typeahead and learns from recordPurchases() so suggestions improve.
  *
  * Connections:
- *   Imports → lib/catalogSeed, lib/db, lib/id
+ *   Imports → lib/catalogSeed, lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/scan.tsx, app/shopping.tsx
  *   Data    → defines a Zustand store; owns SQLite tables store_items (catalog) and purchase_log (append-only history, optionally linked to a receipts row via receipt_id)
  *
@@ -19,6 +19,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, loadAll, insertRow, readStr, readReal, tx } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { CATALOG_SEED } from '@/lib/catalogSeed';
 
@@ -45,13 +46,13 @@ type CatalogStore = {
   recordPurchases: (purchases: PurchaseInput[], receiptId?: string) => void;
 };
 
-function rowToItem(row: Record<string, unknown>): StoreItem {
+function rowToItem(row: Row): StoreItem {
   return {
-    id: row.id as string,
-    name: row.name as string,
-    category: (row.category as string) || 'other',
-    store: (row.store as string) || '',
-    price: (row.price as number) || 0,
+    id: readStr(row, 'id'),
+    name: readStr(row, 'name'),
+    category: readStr(row, 'category') || 'other',
+    store: readStr(row, 'store'),
+    price: readReal(row, 'price'),
   };
 }
 
@@ -80,15 +81,8 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
   items: [],
 
   load() {
-    try {
-      seedCatalog();
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM store_items ORDER BY name'
-      );
-      set({ items: rows.map(rowToItem) });
-    } catch {
-      set({ items: [] });
-    }
+    seedCatalog();
+    set({ items: loadAll('store_items', rowToItem, { orderBy: 'name' }) });
   },
 
   suggest(query, limit = 8) {
@@ -114,15 +108,23 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
     const now = new Date().toISOString();
     const next = [...get().items];
 
+    // One transaction for all per-item writes (was up to 2 autocommits per item);
+    // per-item try/catch still keeps logging best-effort. set() runs after, so a
+    // rollback can't leave in-memory state ahead of the DB.
+    tx(() => {
     for (const p of purchases) {
       const name = p.name.trim();
       if (!name) continue;
       try {
-        db.runSync(
-          `INSERT INTO purchase_log (id, item_name, store, price, was_on_list, purchased_at, receipt_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [generateId(), name, p.store, p.price, p.wasOnList ? 1 : 0, now, receiptId ?? null]
-        );
+        insertRow('purchase_log', {
+          id: generateId(),
+          item_name: name,
+          store: p.store,
+          price: p.price,
+          was_on_list: p.wasOnList ? 1 : 0,
+          purchased_at: now,
+          receipt_id: receiptId ?? null,
+        });
       } catch { /* logging is best-effort */ }
 
       const idx = next.findIndex((i) => i.name.toLowerCase() === name.toLowerCase());
@@ -147,13 +149,19 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
         const item: StoreItem = { id, name, category: p.category ?? 'other', store: p.store, price: p.price };
         next.push(item);
         try {
-          db.runSync(
-            `INSERT INTO store_items (id, name, category, store, price, last_updated, price_source) VALUES (?, ?, ?, ?, ?, ?, 'purchase')`,
-            [id, item.name, item.category, item.store, item.price, now]
-          );
+          insertRow('store_items', {
+            id,
+            name: item.name,
+            category: item.category,
+            store: item.store,
+            price: item.price,
+            last_updated: now,
+            price_source: 'purchase',
+          });
         } catch { /* ignore */ }
       }
     }
+    });
 
     next.sort((a, b) => a.name.localeCompare(b.name, 'no'));
     set({ items: next });

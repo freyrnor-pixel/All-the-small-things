@@ -10,7 +10,7 @@
  * (refreshed by app/_layout.tsx, see lib/notifications.ts's refreshPersistentNotification).
  *
  * Connections:
- *   Imports → lib/db
+ *   Imports → lib/dataAccess
  *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/DebugOverlay.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns the single-row SQLite table settings (id = 1)
  *
@@ -21,7 +21,18 @@
  *   - New settings columns go through the migrations array in lib/db.ts; add to Settings type, load() mapping, and update()'s column list.
  */
 import { create } from 'zustand';
-import db from '@/lib/db';
+import {
+  Row,
+  FieldMap,
+  loadFirst,
+  updateRow,
+  rowValues,
+  readStr,
+  readInt,
+  readReal,
+  readBool,
+  readJson,
+} from '@/lib/dataAccess';
 
 export type ColorTheme = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
 export type Language = 'en' | 'no';
@@ -106,6 +117,101 @@ function migrateThemeName(name: string | null): ColorTheme {
   return valid.includes(name as ColorTheme) ? (name as ColorTheme) : 'default';
 }
 
+/** Map the single settings row to the persisted Settings (defaults mirror the old load()). */
+function rowToSettings(row: Row): Settings {
+  return {
+    userName: readStr(row, 'user_name'),
+    weeklyResetDay: readInt(row, 'weekly_reset_day', 1),
+    monthlyResetDate: readInt(row, 'monthly_reset_date', 1),
+    shoppingListMode: readStr(row, 'shopping_list_mode', 'weekly') as 'weekly' | 'monthly',
+    remindersEnabled: readBool(row, 'reminders_enabled'),
+    reminderTime: readStr(row, 'reminder_time', '08:00'),
+    taskNotificationsEnabled: readBool(row, 'task_notifications_enabled'),
+    setupComplete: readBool(row, 'setup_complete'),
+    colorTheme: migrateThemeName(readStr(row, 'color_theme') || null),
+    workModeEnabled: readBool(row, 'work_mode_enabled'),
+    workHoursStart: readStr(row, 'work_hours_start', '07:00'),
+    workHoursEnd: readStr(row, 'work_hours_end', '17:00'),
+    enforceWorkHours: readBool(row, 'enforce_work_hours'),
+    workDays: readJson<number[]>(row, 'work_days', [0, 1, 2, 3, 4]),
+    essentialsModeEnabled: readBool(row, 'essentials_mode_enabled'),
+    showPoints: readBool(row, 'show_points'),
+    showHints: readInt(row, 'show_hints', 1) !== 0,
+    language: readStr(row, 'language', 'no') as Language,
+    holidaysEnabled: readInt(row, 'holidays_enabled', 1) !== 0,
+    darkMode: readStr(row, 'dark_mode', 'system') as DarkMode,
+    childProfiles: readJson<string[]>(row, 'child_profiles', []),
+    reducedMotion: readBool(row, 'reduced_motion'),
+    fontSize: readStr(row, 'font_size', 'default') as FontSizePref,
+    petEnabled: readBool(row, 'pet_enabled'),
+    petName: readStr(row, 'pet_name'),
+    petType: readStr(row, 'pet_type', 'cat') as PetType,
+    petColor: readStr(row, 'pet_color', '#A78BFA'),
+    leftHanded: readBool(row, 'left_handed'),
+    customPrimaryColor: readStr(row, 'custom_primary_color', '#3B82F6'),
+    customSecondaryColor: readStr(row, 'custom_secondary_color', '#10B981'),
+    bubbleMaterial: readStr(row, 'bubble_material', 'glass') as BubbleMaterial,
+    persistentNotifEnabled: readBool(row, 'persistent_notif_enabled'),
+    quietHoursEnabled: readBool(row, 'quiet_hours_enabled'),
+    quietHoursStart: readStr(row, 'quiet_hours_start', '21:00'),
+    quietHoursEnd: readStr(row, 'quiet_hours_end', '08:00'),
+    monthlyBudgetNok: readReal(row, 'monthly_budget_nok'),
+    debugModeEnabled: readBool(row, 'debug_mode_enabled'),
+    bubbleSize: readReal(row, 'bubble_size', 50),
+    bubbleSpacing: readReal(row, 'bubble_spacing', 78),
+    bubbleSpringIntensity: readReal(row, 'bubble_spring_intensity', 50),
+    bubbleAnimSpeed: readReal(row, 'bubble_anim_speed', 50),
+    lastMonthlyReset: readStr(row, 'last_monthly_reset'),
+  };
+}
+
+/** Settings field → column mapping; booleans/arrays serialised, so update() writes only changed columns. */
+const bool = (v: boolean) => (v ? 1 : 0);
+const SETTINGS_COLUMNS: FieldMap<Settings> = {
+  userName: { col: 'user_name' },
+  weeklyResetDay: { col: 'weekly_reset_day' },
+  monthlyResetDate: { col: 'monthly_reset_date' },
+  shoppingListMode: { col: 'shopping_list_mode' },
+  remindersEnabled: { col: 'reminders_enabled', to: bool },
+  reminderTime: { col: 'reminder_time' },
+  taskNotificationsEnabled: { col: 'task_notifications_enabled', to: bool },
+  setupComplete: { col: 'setup_complete', to: bool },
+  colorTheme: { col: 'color_theme' },
+  workModeEnabled: { col: 'work_mode_enabled', to: bool },
+  workHoursStart: { col: 'work_hours_start' },
+  workHoursEnd: { col: 'work_hours_end' },
+  enforceWorkHours: { col: 'enforce_work_hours', to: bool },
+  workDays: { col: 'work_days', to: (v) => JSON.stringify(v) },
+  essentialsModeEnabled: { col: 'essentials_mode_enabled', to: bool },
+  showPoints: { col: 'show_points', to: bool },
+  showHints: { col: 'show_hints', to: bool },
+  language: { col: 'language' },
+  holidaysEnabled: { col: 'holidays_enabled', to: bool },
+  darkMode: { col: 'dark_mode' },
+  childProfiles: { col: 'child_profiles', to: (v) => JSON.stringify(v) },
+  reducedMotion: { col: 'reduced_motion', to: bool },
+  fontSize: { col: 'font_size' },
+  petEnabled: { col: 'pet_enabled', to: bool },
+  petName: { col: 'pet_name' },
+  petType: { col: 'pet_type' },
+  petColor: { col: 'pet_color' },
+  leftHanded: { col: 'left_handed', to: bool },
+  customPrimaryColor: { col: 'custom_primary_color' },
+  customSecondaryColor: { col: 'custom_secondary_color' },
+  bubbleMaterial: { col: 'bubble_material' },
+  persistentNotifEnabled: { col: 'persistent_notif_enabled', to: bool },
+  quietHoursEnabled: { col: 'quiet_hours_enabled', to: bool },
+  quietHoursStart: { col: 'quiet_hours_start' },
+  quietHoursEnd: { col: 'quiet_hours_end' },
+  monthlyBudgetNok: { col: 'monthly_budget_nok' },
+  debugModeEnabled: { col: 'debug_mode_enabled', to: bool },
+  bubbleSize: { col: 'bubble_size' },
+  bubbleSpacing: { col: 'bubble_spacing' },
+  bubbleSpringIntensity: { col: 'bubble_spring_intensity' },
+  bubbleAnimSpeed: { col: 'bubble_anim_speed' },
+  lastMonthlyReset: { col: 'last_monthly_reset' },
+};
+
 export const useSettingsStore = create<SettingsStore>((set) => ({
   userName: '',
   weeklyResetDay: 1,
@@ -153,169 +259,16 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   workModeSessionOverride: false,
 
   load() {
-    try {
-      const row = db.getFirstSync<{
-        user_name: string;
-        weekly_reset_day: number;
-        monthly_reset_date: number;
-        shopping_list_mode: string;
-        reminders_enabled: number;
-        reminder_time: string;
-        task_notifications_enabled: number;
-        setup_complete: number;
-        color_theme: string | null;
-        work_mode_enabled: number | null;
-        work_hours_start: string | null;
-        work_hours_end: string | null;
-        enforce_work_hours: number | null;
-        work_days: string | null;
-        essentials_mode_enabled: number | null;
-        show_points: number | null;
-        show_hints: number | null;
-        language: string | null;
-        holidays_enabled: number | null;
-        dark_mode: string | null;
-        child_profiles: string | null;
-        reduced_motion: number | null;
-        font_size: string | null;
-        pet_enabled: number | null;
-        pet_name: string | null;
-        pet_type: string | null;
-        pet_color: string | null;
-        left_handed: number | null;
-        custom_primary_color: string | null;
-        custom_secondary_color: string | null;
-        bubble_material: string | null;
-        persistent_notif_enabled: number | null;
-        quiet_hours_enabled: number | null;
-        quiet_hours_start: string | null;
-        quiet_hours_end: string | null;
-        monthly_budget_nok: number | null;
-        debug_mode_enabled: number | null;
-        bubble_size: number | null;
-        bubble_spacing: number | null;
-        bubble_spring_intensity: number | null;
-        bubble_anim_speed: number | null;
-        last_monthly_reset: string | null;
-      }>('SELECT * FROM settings WHERE id = 1');
-      if (!row) { set({ loaded: true }); return; }
-      set({
-        userName: row.user_name,
-        weeklyResetDay: row.weekly_reset_day,
-        monthlyResetDate: row.monthly_reset_date,
-        shoppingListMode: row.shopping_list_mode as 'weekly' | 'monthly',
-        remindersEnabled: row.reminders_enabled === 1,
-        reminderTime: row.reminder_time,
-        taskNotificationsEnabled: row.task_notifications_enabled === 1,
-        setupComplete: row.setup_complete === 1,
-        colorTheme: migrateThemeName(row.color_theme) ?? 'default',
-        workModeEnabled: row.work_mode_enabled === 1,
-        workHoursStart: row.work_hours_start ?? '07:00',
-        workHoursEnd: row.work_hours_end ?? '17:00',
-        enforceWorkHours: row.enforce_work_hours === 1,
-        workDays: (() => { try { return JSON.parse(row.work_days ?? '[0,1,2,3,4]'); } catch { return [0,1,2,3,4]; } })(),
-        essentialsModeEnabled: row.essentials_mode_enabled === 1,
-        showPoints: row.show_points === 1,
-        showHints: row.show_hints !== 0,
-        language: (row.language as Language) ?? 'no',
-        holidaysEnabled: row.holidays_enabled !== 0,
-        darkMode: (row.dark_mode as DarkMode) ?? 'system',
-        childProfiles: (() => { try { return JSON.parse(row.child_profiles ?? '[]'); } catch { return []; } })(),
-        reducedMotion: row.reduced_motion === 1,
-        fontSize: (row.font_size as FontSizePref) ?? 'default',
-        petEnabled: row.pet_enabled === 1,
-        petName: row.pet_name ?? '',
-        petType: (row.pet_type as PetType) ?? 'cat',
-        petColor: row.pet_color ?? '#A78BFA',
-        leftHanded: row.left_handed === 1,
-        customPrimaryColor: row.custom_primary_color ?? '#3B82F6',
-        customSecondaryColor: row.custom_secondary_color ?? '#10B981',
-        bubbleMaterial: (row.bubble_material as BubbleMaterial) ?? 'glass',
-        persistentNotifEnabled: row.persistent_notif_enabled === 1,
-        quietHoursEnabled: row.quiet_hours_enabled === 1,
-        quietHoursStart: row.quiet_hours_start ?? '21:00',
-        quietHoursEnd: row.quiet_hours_end ?? '08:00',
-        monthlyBudgetNok: row.monthly_budget_nok ?? 0,
-        debugModeEnabled: row.debug_mode_enabled === 1,
-        bubbleSize: row.bubble_size ?? 50,
-        bubbleSpacing: row.bubble_spacing ?? 78,
-        bubbleSpringIntensity: row.bubble_spring_intensity ?? 50,
-        bubbleAnimSpeed: row.bubble_anim_speed ?? 50,
-        lastMonthlyReset: row.last_monthly_reset ?? '',
-        loaded: true,
-      });
-    } catch {
-      set({ loaded: true });
-    }
+    const settings = loadFirst('settings', rowToSettings, { where: 'id = 1' });
+    set(settings ? { ...settings, loaded: true } : { loaded: true });
   },
 
   update(patch) {
     set((s) => {
       const next = { ...s, ...patch };
       try {
-        db.runSync(
-          `UPDATE settings SET
-            user_name = ?, weekly_reset_day = ?, monthly_reset_date = ?,
-            shopping_list_mode = ?, reminders_enabled = ?, reminder_time = ?,
-            task_notifications_enabled = ?, setup_complete = ?,
-            color_theme = ?, work_mode_enabled = ?, work_hours_start = ?,
-            work_hours_end = ?, enforce_work_hours = ?, work_days = ?, essentials_mode_enabled = ?,
-            show_points = ?, show_hints = ?, language = ?,
-            holidays_enabled = ?, dark_mode = ?, child_profiles = ?,
-            reduced_motion = ?, font_size = ?,
-            pet_enabled = ?, pet_name = ?, pet_type = ?, pet_color = ?,
-            left_handed = ?, custom_primary_color = ?, custom_secondary_color = ?,
-            bubble_material = ?, persistent_notif_enabled = ?,
-            quiet_hours_enabled = ?, quiet_hours_start = ?, quiet_hours_end = ?,
-            monthly_budget_nok = ?,
-            debug_mode_enabled = ?, bubble_size = ?, bubble_spacing = ?,
-            bubble_spring_intensity = ?, bubble_anim_speed = ?, last_monthly_reset = ?
-          WHERE id = 1`,
-          [
-            next.userName,
-            next.weeklyResetDay,
-            next.monthlyResetDate,
-            next.shoppingListMode,
-            next.remindersEnabled ? 1 : 0,
-            next.reminderTime,
-            next.taskNotificationsEnabled ? 1 : 0,
-            next.setupComplete ? 1 : 0,
-            next.colorTheme,
-            next.workModeEnabled ? 1 : 0,
-            next.workHoursStart,
-            next.workHoursEnd,
-            next.enforceWorkHours ? 1 : 0,
-            JSON.stringify(next.workDays),
-            next.essentialsModeEnabled ? 1 : 0,
-            next.showPoints ? 1 : 0,
-            next.showHints ? 1 : 0,
-            next.language,
-            next.holidaysEnabled ? 1 : 0,
-            next.darkMode,
-            JSON.stringify(next.childProfiles),
-            next.reducedMotion ? 1 : 0,
-            next.fontSize,
-            next.petEnabled ? 1 : 0,
-            next.petName,
-            next.petType,
-            next.petColor,
-            next.leftHanded ? 1 : 0,
-            next.customPrimaryColor,
-            next.customSecondaryColor,
-            next.bubbleMaterial,
-            next.persistentNotifEnabled ? 1 : 0,
-            next.quietHoursEnabled ? 1 : 0,
-            next.quietHoursStart,
-            next.quietHoursEnd,
-            next.monthlyBudgetNok,
-            next.debugModeEnabled ? 1 : 0,
-            next.bubbleSize,
-            next.bubbleSpacing,
-            next.bubbleSpringIntensity,
-            next.bubbleAnimSpeed,
-            next.lastMonthlyReset,
-          ]
-        );
+        // Writes only the columns present in `patch` (was a 43-column rewrite per call).
+        updateRow('settings', rowValues(patch, SETTINGS_COLUMNS), 'id = 1');
       } catch {
         // DB write failed (e.g. column not yet migrated) — state still updates in memory
       }

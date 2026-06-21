@@ -7,7 +7,7 @@
  * shared shopping/task payloads into the shared store.
  *
  * Connections:
- *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -50,32 +50,15 @@ import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { decodeSharePayload } from '@/lib/share';
+import { parseReceiptText, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 const NORWEGIAN_STORES = [
   'REMA 1000', 'Kiwi', 'Coop Extra', 'Coop Mega', 'Meny', 'Spar', 'Bunnpris', 'Joker', 'Prix',
 ];
-
-type ParsedItem = { name: string; price: number; selected: boolean };
-
-function parseReceiptText(text: string): ParsedItem[] {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  const items: ParsedItem[] = [];
-  const pricePattern = /(\d+[.,]\d{2})/;
-  const skipPatterns = /^(total|sum|mva|betalt|visa|mastercard|kvittering|dato|kl\.|kr|nok)/i;
-  for (const line of lines) {
-    if (skipPatterns.test(line)) continue;
-    const priceMatch = line.match(pricePattern);
-    if (!priceMatch) continue;
-    const price = parseFloat(priceMatch[1].replace(',', '.'));
-    const name = line.replace(pricePattern, '').replace(/\s+/g, ' ').trim();
-    if (name.length < 2) continue;
-    items.push({ name, price, selected: true });
-  }
-  return items;
-}
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -269,15 +252,16 @@ export default function ScanScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.scanReceipt}</Text>
-        <Pressable onPress={() => router.push('/budget')} hitSlop={6}>
-          <Text style={[styles.back, { color: theme.orange, textAlign: 'right' }]}>{t.budget.title}</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={t.scanReceipt}
+        onBack={() => router.back()}
+        bordered
+        right={
+          <Pressable onPress={() => router.push('/budget')} hitSlop={6}>
+            <Text style={[styles.back, { color: theme.orange, textAlign: 'right' }]}>{t.budget.title}</Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <HintCard text={t.hints.scan.text} example={t.hints.scan.example} />

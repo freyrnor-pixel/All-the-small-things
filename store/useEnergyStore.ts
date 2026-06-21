@@ -7,7 +7,7 @@
  * existing essentials/work-mode filtering — never as a replacement for it.
  *
  * Connections:
- *   Imports → lib/db
+ *   Imports → lib/db, lib/dataAccess, lib/date
  *   Used by → app/_layout.tsx, app/index.tsx, components/EnergyCheckIn.tsx
  *   Data    → defines a Zustand store; owns SQLite table energy_logs (one row per date)
  *
@@ -19,6 +19,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { loadAll, readStr } from '@/lib/dataAccess';
 import { todayStr } from '@/lib/date';
 
 export type EnergyLevel = 'low' | 'medium' | 'high';
@@ -34,16 +35,13 @@ export const useEnergyStore = create<EnergyStore>((set, get) => ({
   levels: {},
 
   load() {
-    try {
-      const rows = db.getAllSync<{ log_date: string; level: EnergyLevel }>(
-        'SELECT log_date, level FROM energy_logs'
-      );
-      const levels: Record<string, EnergyLevel> = {};
-      for (const row of rows) levels[row.log_date] = row.level;
-      set({ levels });
-    } catch {
-      set({ levels: {} });
-    }
+    const rows = loadAll('energy_logs', (r) => ({
+      date: readStr(r, 'log_date'),
+      level: readStr(r, 'level', 'medium') as EnergyLevel,
+    }));
+    const levels: Record<string, EnergyLevel> = {};
+    for (const row of rows) levels[row.date] = row.level;
+    set({ levels });
   },
 
   setToday(level) {

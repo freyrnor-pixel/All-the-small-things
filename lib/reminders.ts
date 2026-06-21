@@ -7,20 +7,22 @@
  * setting change or on app start.
  *
  * Connections:
- *   Imports → lib/i18n, lib/notifications, store/useSettingsStore
+ *   Imports → lib/date, lib/time, lib/i18n, lib/notifications, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/onboarding/step6.tsx, app/settings.tsx
  *   Data    → reads settings store; schedules OS notifications
  *
  * Edit notes:
- *   - Weekday conversion: app stores 0=Mon..6=Sun, Expo wants 1=Sun..7=Sat
- *     (toExpoWeekday) — keep this mapping if you touch weekly scheduling.
- *   - parseHM falls back to 08:00 on malformed "HH:MM"; preserve that guard. The
- *     user's reminderTime always wins — the fallback only covers bad input.
+ *   - Weekday conversion: app stores 0=Mon..6=Sun, Expo wants 1=Sun..7=Sat —
+ *     use toExpoWeekday from lib/date (shared with task reminders).
+ *   - parseTimeOrDefault (lib/time) falls back to 08:00 on malformed "HH:MM";
+ *     the user's reminderTime always wins — the fallback only covers bad input.
  *   - Weekly + monthly share reminderTime, so the monthly reminder is staggered
  *     by MONTHLY_OFFSET_MIN minutes (clamped to the same day) to avoid two
  *     banners firing at the same instant when reset day and date coincide.
  */
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { toExpoWeekday } from '@/lib/date';
+import { parseTimeOrDefault } from '@/lib/time';
 import { getTranslations } from '@/lib/i18n';
 import {
   scheduleWeeklyReminder,
@@ -28,19 +30,6 @@ import {
   scheduleMonthlyReminder,
   cancelMonthlyReminder,
 } from '@/lib/notifications';
-
-/** Parse "HH:MM" into [hour, minute], falling back to 08:00 on bad input. */
-function parseHM(time: string): [number, number] {
-  const [h, m] = (time || '').split(':').map((n) => parseInt(n, 10));
-  const hour = Number.isFinite(h) ? Math.min(Math.max(h, 0), 23) : 8;
-  const minute = Number.isFinite(m) ? Math.min(Math.max(m, 0), 59) : 0;
-  return [hour, minute];
-}
-
-/** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
-function toExpoWeekday(mon0: number): number {
-  return ((mon0 + 1) % 7) + 1;
-}
 
 /**
  * Weekly + monthly reminders share the user's reminderTime, so when a reset day
@@ -72,7 +61,7 @@ export async function syncReminders() {
     return;
   }
 
-  const [hour, minute] = parseHM(s.reminderTime);
+  const [hour, minute] = parseTimeOrDefault(s.reminderTime);
   await scheduleWeeklyReminder(toExpoWeekday(s.weeklyResetDay), hour, minute, {
     title: t.notif.weeklyTitle,
     body: t.notif.weeklyBody,

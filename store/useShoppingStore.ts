@@ -13,7 +13,7 @@
  * is finished, so past weeks can be reviewed.
  *
  * Connections:
- *   Imports → lib/db, lib/id
+ *   Imports → lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/CarryOverPromptModal.tsx, components/MonthlyTableRow.tsx, components/ShoppingRow.tsx, store/useAutomationStore.ts (read-only, for the add_shopping_item action)
  *   Data    → defines a Zustand store; owns SQLite table shopping_items (both weekly and monthly rows, distinguished by list_type)
  *
@@ -26,6 +26,17 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import {
+  Row,
+  FieldMap,
+  loadAll,
+  insertRow,
+  updateRow,
+  rowValues,
+  readStr,
+  readReal,
+  readBool,
+} from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type ShoppingStatus = 'list' | 'staged' | 'in_cart' | 'purchased';
@@ -73,27 +84,48 @@ type ShoppingStore = {
   resetMonthlyWithCarryOver: (carryIds: string[], dropIds: string[]) => void;
 };
 
-function rowToItem(row: Record<string, unknown>): ShoppingItem {
+function rowToItem(row: Row): ShoppingItem {
   return {
-    id: row.id as string,
-    name: row.name as string,
-    amount: (row.amount as string) || '1',
-    unit: (row.unit as string) || '',
-    listType: (row.list_type as 'weekly' | 'monthly') ?? 'weekly',
-    checked: row.checked === 1,
-    store: (row.store as string) || '',
-    price: (row.price as number) || 0,
-    category: (row.category as string) || 'other',
-    monthlyAllocated: (row.monthly_allocated as number) || 0,
-    monthlySourceId: (row.monthly_source_id as string) || undefined,
-    inventoryQty: (row.inventory_qty as number) || 0,
-    dishName: (row.dish_name as string) || undefined,
-    status: (row.status as ShoppingStatus) || 'list',
-    isTemporary: row.is_temporary === 1,
-    purchasedAt: (row.purchased_at as string) || undefined,
-    weekKey: (row.week_key as string) || undefined,
+    id: readStr(row, 'id'),
+    name: readStr(row, 'name'),
+    amount: readStr(row, 'amount') || '1',
+    unit: readStr(row, 'unit'),
+    listType: (readStr(row, 'list_type', 'weekly') as 'weekly' | 'monthly'),
+    checked: readBool(row, 'checked'),
+    store: readStr(row, 'store'),
+    price: readReal(row, 'price'),
+    category: readStr(row, 'category') || 'other',
+    monthlyAllocated: readReal(row, 'monthly_allocated'),
+    monthlySourceId: readStr(row, 'monthly_source_id') || undefined,
+    inventoryQty: readReal(row, 'inventory_qty'),
+    dishName: readStr(row, 'dish_name') || undefined,
+    status: (readStr(row, 'status') || 'list') as ShoppingStatus,
+    isTemporary: readBool(row, 'is_temporary'),
+    purchasedAt: readStr(row, 'purchased_at') || undefined,
+    weekKey: readStr(row, 'week_key') || undefined,
   };
 }
+
+/** Field → column mapping for shopping items (serialisers preserve the old INSERT/UPDATE nulls/booleans). */
+const ITEM_COLUMNS: FieldMap<ShoppingItem> = {
+  id: { col: 'id' },
+  name: { col: 'name' },
+  amount: { col: 'amount' },
+  unit: { col: 'unit' },
+  listType: { col: 'list_type' },
+  checked: { col: 'checked', to: (v) => (v ? 1 : 0) },
+  store: { col: 'store' },
+  price: { col: 'price' },
+  category: { col: 'category' },
+  monthlyAllocated: { col: 'monthly_allocated' },
+  monthlySourceId: { col: 'monthly_source_id', to: (v) => v ?? null },
+  inventoryQty: { col: 'inventory_qty', to: (v) => v ?? 0 },
+  dishName: { col: 'dish_name', to: (v) => v ?? null },
+  status: { col: 'status' },
+  isTemporary: { col: 'is_temporary', to: (v) => (v ? 1 : 0) },
+  purchasedAt: { col: 'purchased_at', to: (v) => v ?? null },
+  weekKey: { col: 'week_key', to: (v) => v ?? null },
+};
 
 /** Candidates for the payday-boundary carry-over prompt: temporary monthly items never bought. */
 export function getCarryOverCandidates(items: ShoppingItem[]): ShoppingItem[] {
@@ -104,32 +136,28 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM shopping_items ORDER BY list_type, checked, name'
-      );
-      set({ items: rows.map(rowToItem) });
-    } catch {
-      set({ items: [] });
-    }
+    set({ items: loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' }) });
   },
 
   add(item) {
     const id = generateId();
     const category = item.category ?? 'other';
     const isTemporary = item.isTemporary ?? false;
-    db.runSync(
-      `INSERT INTO shopping_items
-         (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id, inventory_qty, dish_name, status, is_temporary, purchased_at, week_key)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 0, NULL, ?, ?, 'list', ?, NULL, NULL)`,
-      [id, item.name, item.amount, item.unit, item.listType, item.store, item.price, category, item.inventoryQty ?? 0, item.dishName ?? null, isTemporary ? 1 : 0]
-    );
-    set((s) => ({
-      items: [...s.items, {
-        ...item, id, checked: false, category, monthlyAllocated: 0, monthlySourceId: undefined,
-        inventoryQty: item.inventoryQty ?? 0, status: 'list', isTemporary, purchasedAt: undefined, weekKey: undefined,
-      }],
-    }));
+    const newItem: ShoppingItem = {
+      ...item,
+      id,
+      checked: false,
+      category,
+      monthlyAllocated: 0,
+      monthlySourceId: undefined,
+      inventoryQty: item.inventoryQty ?? 0,
+      status: 'list',
+      isTemporary,
+      purchasedAt: undefined,
+      weekKey: undefined,
+    };
+    insertRow('shopping_items', rowValues(newItem, ITEM_COLUMNS));
+    set((s) => ({ items: [...s.items, newItem] }));
     return id;
   },
 
@@ -137,19 +165,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     const item = get().items.find((i) => i.id === id);
     if (!item) return;
     const next = { ...item, ...patch };
-    db.runSync(
-      `UPDATE shopping_items
-         SET name=?, amount=?, unit=?, list_type=?, checked=?, store=?, price=?, category=?,
-             monthly_allocated=?, monthly_source_id=?, inventory_qty=?, dish_name=?,
-             status=?, is_temporary=?, purchased_at=?, week_key=?
-       WHERE id=?`,
-      [
-        next.name, next.amount, next.unit, next.listType,
-        next.checked ? 1 : 0, next.store, next.price, next.category,
-        next.monthlyAllocated, next.monthlySourceId ?? null, next.inventoryQty ?? 0, next.dishName ?? null,
-        next.status, next.isTemporary ? 1 : 0, next.purchasedAt ?? null, next.weekKey ?? null, id,
-      ]
-    );
+    updateRow('shopping_items', rowValues(patch, ITEM_COLUMNS), 'id = ?', [id]);
     set((s) => ({ items: s.items.map((i) => (i.id === id ? next : i)) }));
   },
 
@@ -208,12 +224,19 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
 
     const weeklyId = generateId();
     try {
-      db.runSync(
-        `INSERT INTO shopping_items
-           (id, name, amount, unit, list_type, checked, store, price, category, monthly_allocated, monthly_source_id)
-         VALUES (?, ?, ?, ?, 'weekly', 0, ?, ?, ?, 0, ?)`,
-        [weeklyId, monthly.name, String(qty), monthly.unit, monthly.store, monthly.price, monthly.category, monthlyId]
-      );
+      insertRow('shopping_items', {
+        id: weeklyId,
+        name: monthly.name,
+        amount: String(qty),
+        unit: monthly.unit,
+        list_type: 'weekly',
+        checked: 0,
+        store: monthly.store,
+        price: monthly.price,
+        category: monthly.category,
+        monthly_allocated: 0,
+        monthly_source_id: monthlyId,
+      });
       db.runSync(
         'UPDATE shopping_items SET monthly_allocated = monthly_allocated + ? WHERE id = ?',
         [qty, monthlyId]

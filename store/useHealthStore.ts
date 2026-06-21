@@ -5,7 +5,7 @@
  * append/remove log surfaced on the health screen, ordered newest-first.
  *
  * Connections:
- *   Imports → lib/db, lib/id
+ *   Imports → lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/health.tsx
  *   Data    → defines a Zustand store; owns SQLite table health_logs
  *
@@ -16,6 +16,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, loadAll, insertRow, readStr, readInt } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type HealthLog = {
@@ -33,38 +34,32 @@ type HealthStore = {
   remove: (id: string) => void;
 };
 
+function rowToHealthLog(row: Row): HealthLog {
+  return {
+    id: readStr(row, 'id'),
+    date: readStr(row, 'log_date'),
+    ailment: readStr(row, 'ailment'),
+    severity: readInt(row, 'severity', 3),
+    notes: readStr(row, 'notes'),
+  };
+}
+
 export const useHealthStore = create<HealthStore>((set) => ({
   logs: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<{
-        id: string;
-        log_date: string;
-        ailment: string;
-        severity: number;
-        notes: string;
-      }>('SELECT * FROM health_logs ORDER BY log_date DESC');
-      set({
-        logs: rows.map((r) => ({
-          id: r.id,
-          date: r.log_date,
-          ailment: r.ailment,
-          severity: r.severity,
-          notes: r.notes,
-        })),
-      });
-    } catch {
-      set({ logs: [] });
-    }
+    set({ logs: loadAll('health_logs', rowToHealthLog, { orderBy: 'log_date DESC' }) });
   },
 
   add(entry) {
     const id = generateId();
-    db.runSync(
-      'INSERT INTO health_logs (id, log_date, ailment, severity, notes) VALUES (?, ?, ?, ?, ?)',
-      [id, entry.date, entry.ailment, entry.severity, entry.notes]
-    );
+    insertRow('health_logs', {
+      id,
+      log_date: entry.date,
+      ailment: entry.ailment,
+      severity: entry.severity,
+      notes: entry.notes,
+    });
     set((s) => ({ logs: [{ ...entry, id }, ...s.logs] }));
   },
 

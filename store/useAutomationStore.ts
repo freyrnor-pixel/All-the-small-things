@@ -10,7 +10,7 @@
  * when its triggers fire.
  *
  * Connections:
- *   Imports → lib/db, lib/i18n, lib/id, store/useSettingsStore, store/useShoppingStore
+ *   Imports → lib/db, lib/dataAccess, lib/i18n, lib/id, store/useSettingsStore, store/useShoppingStore
  *   Used by → app/automations.tsx, app/shopping.tsx, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns SQLite table ifttt_rules
  *
@@ -26,6 +26,7 @@
 import { Alert } from 'react-native';
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, loadAll, insertRow, updateRow, readStr, readInt, readBool, readJson } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -52,16 +53,14 @@ type AutomationStore = {
   fireTrigger: (type: TriggerType) => void;
 };
 
-function rowToRule(row: Record<string, unknown>): AutomationRule {
+function rowToRule(row: Row): AutomationRule {
   return {
-    id: row.id as string,
-    triggerType: row.trigger_type as TriggerType,
-    actionType: row.action_type as ActionType,
-    actionParams: (() => {
-      try { return JSON.parse((row.action_params as string) || '{}'); } catch { return {}; }
-    })(),
-    active: row.active === 1,
-    createdAt: (row.created_at as number) || 0,
+    id: readStr(row, 'id'),
+    triggerType: readStr(row, 'trigger_type') as TriggerType,
+    actionType: readStr(row, 'action_type') as ActionType,
+    actionParams: readJson<Record<string, string>>(row, 'action_params', {}),
+    active: readBool(row, 'active'),
+    createdAt: readInt(row, 'created_at'),
   };
 }
 
@@ -90,24 +89,20 @@ export const useAutomationStore = create<AutomationStore>((set, get) => ({
   rules: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM ifttt_rules ORDER BY created_at'
-      );
-      set({ rules: rows.map(rowToRule) });
-    } catch {
-      set({ rules: [] });
-    }
+    set({ rules: loadAll('ifttt_rules', rowToRule, { orderBy: 'created_at' }) });
   },
 
   add(triggerType, actionType, actionParams) {
     const id = generateId();
     const createdAt = Date.now();
-    db.runSync(
-      `INSERT INTO ifttt_rules (id, trigger_type, action_type, action_params, active, created_at)
-       VALUES (?, ?, ?, ?, 1, ?)`,
-      [id, triggerType, actionType, JSON.stringify(actionParams), createdAt]
-    );
+    insertRow('ifttt_rules', {
+      id,
+      trigger_type: triggerType,
+      action_type: actionType,
+      action_params: JSON.stringify(actionParams),
+      active: 1,
+      created_at: createdAt,
+    });
     set((s) => ({
       rules: [...s.rules, { id, triggerType, actionType, actionParams, active: true, createdAt }],
     }));
@@ -117,7 +112,7 @@ export const useAutomationStore = create<AutomationStore>((set, get) => ({
     const rule = get().rules.find((r) => r.id === id);
     if (!rule) return;
     const active = !rule.active;
-    db.runSync('UPDATE ifttt_rules SET active = ? WHERE id = ?', [active ? 1 : 0, id]);
+    updateRow('ifttt_rules', { active: active ? 1 : 0 }, 'id = ?', [id]);
     set((s) => ({ rules: s.rules.map((r) => (r.id === id ? { ...r, active } : r)) }));
   },
 

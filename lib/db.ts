@@ -213,6 +213,11 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_purchase_log_date ON purchase_log(purchased_at);
     CREATE INDEX IF NOT EXISTS idx_feedback_notes_screen ON feedback_notes(screen);
     CREATE INDEX IF NOT EXISTS idx_receipts_month ON receipts(month);
+    -- Append-only tables are read/pruned ordered by created_at — index it.
+    CREATE INDEX IF NOT EXISTS idx_inbox_created ON inbox_items(created_at);
+    CREATE INDEX IF NOT EXISTS idx_feedback_notes_created ON feedback_notes(created_at);
+    CREATE INDEX IF NOT EXISTS idx_shared_tasks_created ON shared_tasks(created_at);
+    CREATE INDEX IF NOT EXISTS idx_shared_shopping_created ON shared_shopping_items(created_at);
   `);
 
   // Schema migrations — safe to run repeatedly (errors = column already exists)
@@ -285,18 +290,27 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN week_key TEXT DEFAULT NULL",
     "ALTER TABLE settings ADD COLUMN last_monthly_reset TEXT DEFAULT ''",
   ];
-  for (const sql of migrations) {
+  // Track applied migrations with PRAGMA user_version so we don't re-run the whole
+  // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
+  // append-only log — never reorder or remove entries, since user_version indexes
+  // into it. On the first launch after this change user_version is 0, so every
+  // migration runs once more (harmless — duplicate-column errors are swallowed),
+  // then the version is advanced and later launches skip the applied ones.
+  const appliedVersion = db.getFirstSync<{ user_version: number }>('PRAGMA user_version')?.user_version ?? 0;
+  for (let i = appliedVersion; i < migrations.length; i++) {
     try {
-      db.execSync(sql);
+      db.execSync(migrations[i]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      // Expected on every launch once a column exists — anything else means a
-      // migration silently failed and new columns/features may be missing.
+      // Expected once a column exists — anything else means a migration silently
+      // failed and new columns/features may be missing.
       if (!msg.includes('duplicate column')) {
-        console.error(`Migration failed: ${sql}`, e);
+        console.error(`Migration failed: ${migrations[i]}`, e);
       }
     }
   }
+  // PRAGMA can't be parameterised; migrations.length is a trusted integer.
+  db.execSync(`PRAGMA user_version = ${migrations.length}`);
 }
 
 /**

@@ -34,7 +34,7 @@ Every `.ts`/`.tsx` file starts with a JSDoc header block. **Read it before editi
 
 - **Use by → / Imports →** are a hand-maintained dependency map. To find every caller of a module, open the module and read its `Used by →` line (or grep `from '@/<path>'`). When you add/remove an import or change who consumes a file, **update the affected headers** (both ends) so the map stays true.
 - **Edit notes** capture the real traps for that file — honour them.
-- Two files are intentionally dead and labelled as such: `App.tsx` (leftover Expo template; real entry is `index.ts`) and `lib/seed.ts` (legacy catalog seeder; the live one is `lib/catalogSeed.ts`). Don't wire either back in.
+- The real entry point is `index.ts` → `expo-router/entry` (file-based routing under `app/`); there is no `App.tsx`. The live shopping-catalog seeder is `lib/catalogSeed.ts` (`CATALOG_SEED`), consumed by `useCatalogStore`.
 
 ## Key invariants — do NOT break these
 

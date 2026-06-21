@@ -7,7 +7,7 @@
  * its items via useCatalogStore.recordPurchases(purchases, receipt.id).
  *
  * Connections:
- *   Imports → lib/date, lib/db, lib/id
+ *   Imports → lib/date, lib/dataAccess, lib/id
  *   Used by → app/budget.tsx, app/scan.tsx
  *   Data    → defines a Zustand store; owns SQLite table receipts; purchase_log rows link back via the optional receipt_id passed into useCatalogStore.recordPurchases
  *
@@ -17,7 +17,7 @@
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  */
 import { create } from 'zustand';
-import db from '@/lib/db';
+import { Row, loadAll, insertRow, readStr, readReal } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { currentMonthStr } from '@/lib/date';
 
@@ -45,14 +45,14 @@ type ReceiptStore = {
   totalForMonth: (month: string) => number;
 };
 
-function rowToReceipt(row: Record<string, unknown>): Receipt {
+function rowToReceipt(row: Row): Receipt {
   return {
-    id: row.id as string,
-    date: row.receipt_date as string,
-    store: (row.store as string) || '',
-    total: (row.total as number) || 0,
-    category: (row.category as string) || 'other',
-    month: row.month as string,
+    id: readStr(row, 'id'),
+    date: readStr(row, 'receipt_date'),
+    store: readStr(row, 'store'),
+    total: readReal(row, 'total'),
+    category: readStr(row, 'category') || 'other',
+    month: readStr(row, 'month'),
   };
 }
 
@@ -60,24 +60,20 @@ export const useReceiptStore = create<ReceiptStore>((set, get) => ({
   receipts: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM receipts ORDER BY receipt_date DESC'
-      );
-      set({ receipts: rows.map(rowToReceipt) });
-    } catch {
-      set({ receipts: [] });
-    }
+    set({ receipts: loadAll('receipts', rowToReceipt, { orderBy: 'receipt_date DESC' }) });
   },
 
   addReceipt(input) {
     const id = generateId();
     const month = input.date.slice(0, 7) || currentMonthStr();
-    db.runSync(
-      `INSERT INTO receipts (id, receipt_date, store, total, category, month)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, input.date, input.store, input.total, input.category ?? 'other', month]
-    );
+    insertRow('receipts', {
+      id,
+      receipt_date: input.date,
+      store: input.store,
+      total: input.total,
+      category: input.category ?? 'other',
+      month,
+    });
     const receipt: Receipt = {
       id,
       date: input.date,

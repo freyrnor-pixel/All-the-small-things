@@ -7,7 +7,7 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Imports → components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
  *   Used by → Expo Router route "/automations", reached via a nav row in app/settings.tsx
  *   Data    → useAutomationStore (ifttt_rules table)
  *
@@ -24,6 +24,7 @@ import { useAutomationStore, AutomationRule, TriggerType, ActionType } from '@/s
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { useT } from '@/lib/i18n';
 import { warning, heavy } from '@/lib/haptics';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -196,18 +197,18 @@ export default function AutomationsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.automations.title}</Text>
-        <Pressable
-          style={[styles.addBtn, { backgroundColor: theme.orange }]}
-          onPress={() => setShowForm((v) => !v)}
-        >
-          <Text style={styles.addBtnText}>+</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={t.automations.title}
+        onBack={() => router.back()}
+        right={
+          <Pressable
+            style={[styles.addBtn, { backgroundColor: theme.orange }]}
+            onPress={() => setShowForm((v) => !v)}
+          >
+            <Text style={styles.addBtnText}>+</Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <HintCard text={t.hints.automations.text} example={t.hints.automations.example} />

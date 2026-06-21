@@ -6,7 +6,7 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/HintCard, components/PressableScale, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
+ *   Imports → components/ConfirmationBanner, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table); scaled fontSize via useScaledStyles()
  *
@@ -18,7 +18,7 @@
  *     PressableScale severity targets. SEVERITY_COLORS is a soft purple→blue family
  *     (NOT red/green — avoids alarm connotations); labels come from t.severityLabels.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -37,21 +37,11 @@ import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { useT } from '@/lib/i18n';
-import { todayStr, dateStr } from '@/lib/date';
+import { todayStr, getWeekDates } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useScaledStyles } from '@/lib/useAppTheme';
-
-function getWeekDates(today: string): string[] {
-  const d = new Date(today + 'T12:00:00');
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(mon);
-    day.setDate(mon.getDate() + i);
-    return dateStr(day);
-  });
-}
 
 // W-D: soft purple→blue severity family. Lighter (mild) → deeper (severe) without
 // any red/green alarm connotations. Static — these are intentionally fixed regardless
@@ -94,29 +84,33 @@ export default function HealthScreen() {
     setConfirm(t.taskSavedSimple);
   }
 
-  // Count occurrences of ailments in last 30 days
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const recent = logs.filter((l) => new Date(l.date) >= cutoff);
-  const counts: Record<string, number> = {};
-  recent.forEach((l) => {
-    counts[l.ailment] = (counts[l.ailment] ?? 0) + 1;
-  });
-  const topAilments = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  // Top ailments over the last 30 days + a per-(ailment,date) max-severity index,
+  // both derived in a single pass over the logs (was recomputed — and re-scanned
+  // per day×ailment cell — on every render).
+  const { topAilments, severityAt } = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const counts: Record<string, number> = {};
+    const sevByKey = new Map<string, number>(); // `${ailment}|${date}` -> max severity
+    for (const l of logs) {
+      if (new Date(l.date) >= cutoff) {
+        counts[l.ailment] = (counts[l.ailment] ?? 0) + 1;
+      }
+      const key = `${l.ailment}|${l.date}`;
+      const prev = sevByKey.get(key);
+      sevByKey.set(key, prev === undefined ? l.severity : Math.max(prev, l.severity));
+    }
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const severityAt = (ailment: string, d: string): number | null =>
+      sevByKey.get(`${ailment}|${d}`) ?? null;
+    return { topAilments: top, severityAt };
+  }, [logs]);
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.healthTitle}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={t.healthTitle} onBack={() => router.back()} />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
@@ -130,11 +124,7 @@ export default function HealthScreen() {
           <Surface style={styles.overviewCard}>
             <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.last30Days}</Text>
             {topAilments.map(([name, count]) => {
-              const weekSeverities = weekDates.map((d) => {
-                const dayLogs = logs.filter((l) => l.ailment === name && l.date === d);
-                if (dayLogs.length === 0) return null;
-                return Math.max(...dayLogs.map((l) => l.severity));
-              });
+              const weekSeverities = weekDates.map((d) => severityAt(name, d));
               return (
                 <View key={name} style={styles.overviewAilment}>
                   <View style={styles.overviewRow}>
