@@ -209,110 +209,149 @@ Right now there's no separate "Notes" page — quick thoughts live in the **Inbo
 
 ---
 
-## Every screen (quick walk-through)
+## Every screen — layout, buttons & what they do
 
-A one-line "what it's for" plus the parts on it. Add `Edit notes:` anywhere.
+For each screen: how it's laid out **top to bottom**, and every **button** with
+what it does. Add `Edit notes:` anywhere.
 
 ### Home
 Your daily landing page.
-- Greeting (name + time of day) — Edit notes:
-- Progress bar + points + streak — Edit notes:
-- Quick-notes inbox — Edit notes:
-- Incoming shared items — Edit notes:
-- Energy check-in — Edit notes:
-- Your next task — Edit notes:
-- Plans preview (opens full day) — Edit notes:
-- Backlog (things with no date) — Edit notes:
-- Shopping preview (tick things off) — Edit notes:
-- Settings + focus buttons — Edit notes:
-- Add button — Edit notes:
+- **Layout (top → bottom):** greeting (your name + a time-of-day emoji) → progress bar with points & streak → "restart" banner (only when an update is ready) → quick-notes inbox → incoming shared items → energy check-in → your next task → today's plans preview → backlog (undated things) → shopping preview.
+- **Buttons & what they do:**
+  - Settings (gear) → opens Settings — Edit notes:
+  - Focus mode → strips the screen down to one task at a time — Edit notes:
+  - Share → opens the share sheet for tasks — Edit notes:
+  - Plans "expand" → opens the full day — Edit notes:
+  - On an inbox note: "→ Task" turns it into a task / "Discard" deletes it — Edit notes:
+  - Shopping preview checkboxes → tick items straight from home — Edit notes:
+  - Energy batteries (low/med/high) → set today's energy — Edit notes:
+  - Floating "+" (bottom corner) → quick-add a task — Edit notes:
+- Overall layout — Edit notes:
 
 ### Quick capture
 Type a thought, save it instantly.
-- Text box + capture button + confirmation — Edit notes:
+- **Layout:** back arrow + title → big text box → confirmation banner after saving.
+- **Buttons:** Back → leaves · Capture → saves the note to your inbox — Edit notes:
 
 ### Habits
-See the Habits section above.
-- People switch · views · summary · build/break lists · habit cards · add button — Edit notes:
+See the Habits section above for the deep dive.
+- **Layout (top → bottom):** people chips (you + any children) → view tabs (Today / Week / Month) → hint box → daily summary → "Building" list → "Breaking" list. Month view adds ← → arrows.
+- **Buttons & what they do:**
+  - Person chips → switch whose habits you see; "+" adds a child, long-press a child to remove — Edit notes:
+  - View tabs → swap Today / Week / Month — Edit notes:
+  - "+" (top-right) → add a new habit — Edit notes:
+  - On a habit card: tap → expand, long-press → edit, − / + → adjust today's count, rest-day → mark a rest day — Edit notes:
+  - Empty "no habits yet" box → adds your first build/break habit — Edit notes:
+  - Month ← → → move between months — Edit notes:
 
 ### Health log
 Track ailments (date, how bad 1–5, notes).
-- Overview of recent ailments — Edit notes:
-- Add an entry — Edit notes:
-- The log list — Edit notes:
+- **Layout (top → bottom):** hint box → overview card (your top ailments, a frequency bar, a severity strip) → add form (date, ailment name, severity, notes) → confirmation → the log list, newest first.
+- **Buttons & what they do:**
+  - Date picker → choose the day — Edit notes:
+  - Severity 1–5 → how bad it was — Edit notes:
+  - Add/Save → logs the entry — Edit notes:
 
 ### Add / edit habit
-See Habits above.
-- Build/break · name · how often · who for · reminder · more options · delete — Edit notes:
+- **Layout (top → bottom):** Cancel / Save header → Build-or-Break toggle → name → how-often chips → who-it's-for chips → reminder switch (+ time wheel when on) → "More options" (icon picker, category chips, the four steps, daily-goal stepper) → Delete (only when editing).
+- **Buttons & what they do:**
+  - Cancel → discard · Save → keep — Edit notes:
+  - Build / Break → pick the kind — Edit notes:
+  - How-often chips (daily/weekly/monthly/once) — Edit notes:
+  - Reminder switch + time → set the alert (one time only today) — Edit notes:
+  - "More options" → reveal the extra fields — Edit notes:
+  - Daily-goal − / + → how many times a day — Edit notes:
+  - Delete → remove the habit & its history — Edit notes:
 
 ### Budget
 This month's grocery spend vs. your budget.
-- Spent-vs-budget bar — Edit notes:
-- List of receipts — Edit notes:
+- **Layout (top → bottom):** header with a link to budget settings → spent-vs-budget bar (amount + %) → hint → list of receipts.
+- **Buttons:** Budget-settings link → set your monthly budget — Edit notes:
+- Overall — Edit notes:
 
 ### Meals
 Your dishes, grouped by meal type.
-- Surprise-me / random dish — Edit notes:
-- Meal categories (breakfast/lunch/dinner/snack/kveldsmat) — Edit notes:
-- Dish cards + ingredients — Edit notes:
-- "Add to shopping" — Edit notes:
-- New dish (name, price, ingredients) — Edit notes:
+- **Layout (top → bottom):** header with a "surprise me" button → hint → meal-type tiles (breakfast/lunch/dinner/snack/kveldsmat) → dish cards you can open to see ingredients.
+- **Buttons & what they do:**
+  - Surprise me → picks a random dish — Edit notes:
+  - "+ New dish" → opens the new-dish pop-up (meal type, name, price, ingredients with suggestions) — Edit notes:
+  - On a dish: "Add to shopping" sends its ingredients to your list / delete removes the dish — Edit notes:
+  - On an ingredient: delete removes just that ingredient — Edit notes:
 
 ### Automations
 Simple "when this, then that" rules.
-- Your rules (on/off, delete) — Edit notes:
-- Make a new rule — Edit notes:
+- **Layout (top → bottom):** hint → your rule cards → "+ New automation" form (pick a trigger, pick an action, fill a detail). Empty state when you have none.
+- **Buttons & what they do:**
+  - On a rule: on/off toggle · delete — Edit notes:
+  - New automation → build a rule (trigger chips, action chips, save/cancel) — Edit notes:
 
 ### Scan
-Read a receipt or scan a shared code. (See Shopping → Scanning above.)
-- Photo · reads items · pick store · add in · scan a code — Edit notes:
+Read a receipt or scan a shared code.
+- **Layout (top → bottom):** header (budget link) → hint → "add manually" link → camera tip → store chips → action buttons → photo preview with a framing guide → (after reading) the list of found items to tick/edit → "add to list".
+- **Buttons & what they do:**
+  - Take photo / Choose from library → grab a receipt image — Edit notes:
+  - Pick store (REMA/Kiwi/Coop/…) → tags the receipt — Edit notes:
+  - Add manually → type an item without scanning — Edit notes:
+  - Scan QR → pull in a shared list from another phone — Edit notes:
+  - On each found item: checkbox to include, edit name/price — Edit notes:
+  - Add to list → puts items on your shopping list & into the budget — Edit notes:
 
 ### Shared items
 What you've sent and received.
-- Shopping / tasks tabs — Edit notes:
-- Active + done sections — Edit notes:
+- **Layout (top → bottom):** back header → Shopping / Tasks tabs → hint → "active" list → "done" list (empty state per tab).
+- **Buttons & what they do:**
+  - Tabs → switch shopping vs tasks — Edit notes:
+  - On a row: checkbox to mark done · remove — Edit notes:
 
 ### Settings
-Everything you can adjust.
-- Essentials mode (top) — Edit notes:
-- Your name — Edit notes:
-- Language (EN/NO) — Edit notes:
-- Look (colours, bubble finish, dark mode) — Edit notes:
-- Accessibility (less motion, text size, left-handed) — Edit notes:
-- Motivation (points, hints on/off) — Edit notes:
-- Companion pet (on, name, type, colour) — Edit notes:
-- Shopping (list type, reset days, budget) — Edit notes:
-- Reminders (on, time, task alerts, quiet hours, holidays) — Edit notes:
-- Work mode (on, auto, hours) — Edit notes:
-- Data (test data, resets) — Edit notes:
+Everything you can adjust. One long scroll of sections, top to bottom:
+- **Privacy card** (reassurance, top) — Edit notes:
+- **Essentials mode** big toggle — strips the app to the basics — Edit notes:
+- **Your name** text box — Edit notes:
+- **Language** EN / NO chips — Edit notes:
+- **Look:** colour-theme grid · bubble-finish grid · dark-mode choice — Edit notes:
+- **Accessibility:** less-motion toggle · text-size · left-handed toggle — Edit notes:
+- **Motivation:** show-points toggle · show-hints toggle — Edit notes:
+- **Companion pet:** on/off · name · type cards · colour swatches — Edit notes:
+- **Shopping:** weekly/monthly choice · reset-day chips · monthly reset date · monthly budget — Edit notes:
+- **Reminders:** on/off · reminder time · task alerts · always-on notification · quiet hours · holidays · link to automations — Edit notes:
+- **Work mode:** on/off · auto-activate · work hours — Edit notes:
+- **Data (bottom):** debug toggle · load test data · reset buttons (ask to confirm) — Edit notes:
 
 ### Share sheet
-Pick things, make a code to share. (See Sharing above.)
-- Pick items · share button · the code · done — Edit notes:
+Pick things, make a code another phone can scan.
+- **Layout (top → bottom):** back header → "select all / none" + a checklist of your items → Share button (shows the count) → the QR code → Done.
+- **Buttons & what they do:**
+  - Select all / none → quick pick — Edit notes:
+  - Item checkboxes → choose what to share — Edit notes:
+  - Share → makes the code (greyed out until you pick something) — Edit notes:
+  - Done → goes to your shared list — Edit notes:
 
 ### Plans (full day)
-The whole day's plan. (See Today's plans above.)
-- Add · share · the timeline — Edit notes:
+The whole day's plan as a timeline.
+- **Layout (top → bottom):** back header → hint → the day's timeline (untimed at top, then by time, with a "now" line). Empty state when nothing's planned.
+- **Buttons:** Add → new task · Share → share your tasks — Edit notes:
 
 ### Shopping
-See the Shopping list section above.
+See the Shopping list section above for the full breakdown (tabs, add sheet,
+categories, ticking off, monthly stages, scanning, history, reset).
 
 ### Add / edit task
-Make or change a task.
-- Title — Edit notes:
-- Date (week chips or calendar) — Edit notes:
-- Time (or "whenever") — Edit notes:
-- Type (start at a time / time-box) — Edit notes:
-- Length (for time-box) — Edit notes:
-- Importance — Edit notes:
-- Priority — Edit notes:
-- Repeat weekly (pick days) — Edit notes:
-- Delete — Edit notes:
+- **Layout (top → bottom):** Cancel / Save header → hint → title → date (week chips, or open a calendar) → time (or "whenever") → type (start-at vs time-box) → length (for time-box) → importance → priority → repeat-weekly (pick days) → Delete (when editing) → confirmation.
+- **Buttons & what they do:**
+  - Cancel → discard · Save → keep — Edit notes:
+  - Calendar toggle → jump to any date — Edit notes:
+  - "Whenever" → drop the exact time — Edit notes:
+  - Type / importance / priority toggles — Edit notes:
+  - Repeat-weekly + day chips → make it recurring — Edit notes:
+  - Delete → remove the task — Edit notes:
 
 ### Onboarding (first-time setup)
-Language → privacy → guided or explore → name → work mode → shopping days →
-reminders → colour → pet → done.
-- Each step — Edit notes:
+A guided sequence. Each step is the same shape: an icon, a heading, a short
+line, the choice for that step, progress dots, and Back / Next (some have Skip).
+- **The steps in order:** language → privacy (local-only/free) → guided-or-explore → your name → work mode → shopping reset days → reminders confirmation → colour theme + handedness → name your pet → done.
+- **Buttons:** Back / Next / Skip / Finish, plus the choice on each step — Edit notes:
+- Overall flow — Edit notes:
 
 ---
 
