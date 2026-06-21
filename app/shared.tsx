@@ -32,6 +32,7 @@ import { useT } from '@/lib/i18n';
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -87,13 +88,7 @@ export default function SharedScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.sharedTitle}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={t.sharedTitle} onBack={() => router.back()} />
 
       <View style={[styles.tabs, { backgroundColor: theme.grayLight }]}>
         {(['shopping', 'tasks'] as Tab[]).map((tabOpt) => (

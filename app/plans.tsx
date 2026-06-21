@@ -31,6 +31,7 @@ import DayTimeline from '@/components/DayTimeline';
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -54,27 +55,27 @@ export default function PlansScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.plansTitle}</Text>
-        <View style={styles.headerActions}>
-          <Pressable
-            style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
-            onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
-            accessibilityLabel={t.shareBtnLabel}
-          >
-            <Text style={styles.shareBtnIcon}>⤴</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.addBtn, { backgroundColor: theme.orange }]}
-            onPress={() => router.push('/task-form')}
-          >
-            <Text style={styles.addBtnText}>+</Text>
-          </Pressable>
-        </View>
-      </View>
+      <ScreenHeader
+        title={t.plansTitle}
+        onBack={() => router.back()}
+        right={
+          <View style={styles.headerActions}>
+            <Pressable
+              style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
+              onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
+              accessibilityLabel={t.shareBtnLabel}
+            >
+              <Text style={styles.shareBtnIcon}>⤴</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.addBtn, { backgroundColor: theme.orange }]}
+              onPress={() => router.push('/task-form')}
+            >
+              <Text style={styles.addBtnText}>+</Text>
+            </Pressable>
+          </View>
+        }
+      />
 
       <View style={styles.content}>
         <HintCard text={t.hints.plans.text} example={t.hints.plans.example} />

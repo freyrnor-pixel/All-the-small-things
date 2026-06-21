@@ -50,6 +50,7 @@ import HintCard from '@/components/HintCard';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { decodeSharePayload } from '@/lib/share';
 import { parseReceiptText, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -251,15 +252,16 @@ export default function ScanScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.scanReceipt}</Text>
-        <Pressable onPress={() => router.push('/budget')} hitSlop={6}>
-          <Text style={[styles.back, { color: theme.orange, textAlign: 'right' }]}>{t.budget.title}</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={t.scanReceipt}
+        onBack={() => router.back()}
+        bordered
+        right={
+          <Pressable onPress={() => router.push('/budget')} hitSlop={6}>
+            <Text style={[styles.back, { color: theme.orange, textAlign: 'right' }]}>{t.budget.title}</Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <HintCard text={t.hints.scan.text} example={t.hints.scan.example} />

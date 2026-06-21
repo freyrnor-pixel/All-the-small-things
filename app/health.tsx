@@ -37,6 +37,7 @@ import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { useT } from '@/lib/i18n';
 import { todayStr, getWeekDates } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
@@ -99,13 +100,7 @@ export default function HealthScreen() {
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.healthTitle}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={t.healthTitle} onBack={() => router.back()} />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView

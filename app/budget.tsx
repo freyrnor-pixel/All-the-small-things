@@ -26,6 +26,7 @@ import { useT } from '@/lib/i18n';
 import { currentMonthStr } from '@/lib/date';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -50,13 +51,7 @@ export default function BudgetScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.budget.title}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={t.budget.title} onBack={() => router.back()} bordered />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Surface style={styles.card}>

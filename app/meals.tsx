@@ -43,6 +43,7 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -174,17 +175,15 @@ export default function MealsScreen() {
       <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
 
-      <View style={styles.header}>
-        <Pressable onPress={activeCategory ? () => setActiveCategory(null) : () => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>
-          {activeCategory ? mealLabel(activeCategory) : t.mealsTitle}
-        </Text>
-        <Pressable style={[styles.randomBtn, { backgroundColor: theme.white, ...Shadow.card }]} onPress={() => pickRandom(activeCategory ?? undefined)}>
-          <Ionicons name="shuffle" size={18} color={theme.orange} />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={activeCategory ? mealLabel(activeCategory) : t.mealsTitle}
+        onBack={activeCategory ? () => setActiveCategory(null) : () => router.back()}
+        right={
+          <Pressable style={[styles.randomBtn, { backgroundColor: theme.white, ...Shadow.card }]} onPress={() => pickRandom(activeCategory ?? undefined)}>
+            <Ionicons name="shuffle" size={18} color={theme.orange} />
+          </Pressable>
+        }
+      />
 
       {/* Category tile view */}
       {!activeCategory && (

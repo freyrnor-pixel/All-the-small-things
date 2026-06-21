@@ -46,6 +46,7 @@ import HintCard from '@/components/HintCard';
 import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
@@ -571,21 +572,21 @@ export default function HabitsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.habitsTitle}</Text>
-        <Pressable
-          style={[styles.addBtn, { backgroundColor: theme.orange }]}
-          onPress={() => router.push({
-            pathname: '/habit-form',
-            params: selectedProfile ? { childName: selectedProfile } : {},
-          })}
-        >
-          <Text style={styles.addBtnText}>+</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={t.habitsTitle}
+        onBack={() => router.back()}
+        right={
+          <Pressable
+            style={[styles.addBtn, { backgroundColor: theme.orange }]}
+            onPress={() => router.push({
+              pathname: '/habit-form',
+              params: selectedProfile ? { childName: selectedProfile } : {},
+            })}
+          >
+            <Text style={styles.addBtnText}>+</Text>
+          </Pressable>
+        }
+      />
 
       {/* Profile selector */}
       {showProfiles && (

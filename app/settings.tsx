@@ -54,6 +54,7 @@ import { selection, warning, heavy } from '@/lib/haptics'; // W-E: haptic tick o
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
@@ -128,13 +129,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.settingsTitle}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={t.settingsTitle} onBack={() => router.back()} bordered />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" nestedScrollEnabled>

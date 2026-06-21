@@ -59,6 +59,7 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import ScreenHeader from '@/components/ScreenHeader';
 import { success, selection, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -352,23 +353,24 @@ export default function ShoppingScreen() {
       <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.shoppingTitle}</Text>
-        <View style={styles.headerActions}>
-          <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
-            <Ionicons name="link-outline" size={20} color={theme.textLight} />
-          </Pressable>
-          <Pressable
-            style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
-            onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
-          >
-            <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
-          </Pressable>
-        </View>
-      </View>
+      <ScreenHeader
+        title={t.shoppingTitle}
+        onBack={() => router.back()}
+        bordered
+        right={
+          <View style={styles.headerActions}>
+            <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
+              <Ionicons name="link-outline" size={20} color={theme.textLight} />
+            </Pressable>
+            <Pressable
+              style={[styles.shareHeaderBtn, { backgroundColor: theme.greenLight }]}
+              onPress={() => router.push({ pathname: '/share-modal', params: { kind: 's' } })}
+            >
+              <Text style={[styles.shareHeaderBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+            </Pressable>
+          </View>
+        }
+      />
 
       {/* Tabs — styled per tab */}
       <View style={[styles.tabsContainer, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
