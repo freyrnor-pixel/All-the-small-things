@@ -6,7 +6,7 @@
  * notification when added/updated and exposes syncAllHabitReminders for re-scheduling.
  *
  * Connections:
- *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useSettingsStore
+ *   Imports → lib/db, lib/dataAccess, lib/id, lib/notifications, lib/habitNotifications, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/settings.tsx
  *   Data    → defines a Zustand store; owns SQLite tables habits and habit_logs; schedules per-habit daily notifications
  *

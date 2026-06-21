@@ -10,7 +10,7 @@
  * when its triggers fire.
  *
  * Connections:
- *   Imports → lib/db, lib/i18n, lib/id, store/useSettingsStore, store/useShoppingStore
+ *   Imports → lib/db, lib/dataAccess, lib/i18n, lib/id, store/useSettingsStore, store/useShoppingStore
  *   Used by → app/automations.tsx, app/shopping.tsx, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns SQLite table ifttt_rules
  *

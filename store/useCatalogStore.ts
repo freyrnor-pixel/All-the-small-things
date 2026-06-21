@@ -6,7 +6,7 @@
  * suggest() typeahead and learns from recordPurchases() so suggestions improve.
  *
  * Connections:
- *   Imports → lib/catalogSeed, lib/db, lib/id
+ *   Imports → lib/catalogSeed, lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/scan.tsx, app/shopping.tsx
  *   Data    → defines a Zustand store; owns SQLite tables store_items (catalog) and purchase_log (append-only history, optionally linked to a receipts row via receipt_id)
  *

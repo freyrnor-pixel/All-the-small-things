@@ -13,7 +13,7 @@
  * is finished, so past weeks can be reviewed.
  *
  * Connections:
- *   Imports → lib/db, lib/id
+ *   Imports → lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/CarryOverPromptModal.tsx, components/MonthlyTableRow.tsx, components/ShoppingRow.tsx, store/useAutomationStore.ts (read-only, for the add_shopping_item action)
  *   Data    → defines a Zustand store; owns SQLite table shopping_items (both weekly and monthly rows, distinguished by list_type)
  *

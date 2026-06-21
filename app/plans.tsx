@@ -7,7 +7,7 @@
  * Share button that opens /share-modal for the day's plans.
  *
  * Connections:
- *   Imports → components/DayTimeline, components/HintCard, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/plans" (plain push from app/index.tsx's Plans widget title)
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *

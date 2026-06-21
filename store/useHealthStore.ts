@@ -5,7 +5,7 @@
  * append/remove log surfaced on the health screen, ordered newest-first.
  *
  * Connections:
- *   Imports → lib/db, lib/id
+ *   Imports → lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/health.tsx
  *   Data    → defines a Zustand store; owns SQLite table health_logs
  *

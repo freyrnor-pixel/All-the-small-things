@@ -7,15 +7,15 @@
  * setting change or on app start.
  *
  * Connections:
- *   Imports → lib/i18n, lib/notifications, store/useSettingsStore
+ *   Imports → lib/date, lib/time, lib/i18n, lib/notifications, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/onboarding/step6.tsx, app/settings.tsx
  *   Data    → reads settings store; schedules OS notifications
  *
  * Edit notes:
- *   - Weekday conversion: app stores 0=Mon..6=Sun, Expo wants 1=Sun..7=Sat
- *     (toExpoWeekday) — keep this mapping if you touch weekly scheduling.
- *   - parseHM falls back to 08:00 on malformed "HH:MM"; preserve that guard. The
- *     user's reminderTime always wins — the fallback only covers bad input.
+ *   - Weekday conversion: app stores 0=Mon..6=Sun, Expo wants 1=Sun..7=Sat —
+ *     use toExpoWeekday from lib/date (shared with task reminders).
+ *   - parseTimeOrDefault (lib/time) falls back to 08:00 on malformed "HH:MM";
+ *     the user's reminderTime always wins — the fallback only covers bad input.
  *   - Weekly + monthly share reminderTime, so the monthly reminder is staggered
  *     by MONTHLY_OFFSET_MIN minutes (clamped to the same day) to avoid two
  *     banners firing at the same instant when reset day and date coincide.

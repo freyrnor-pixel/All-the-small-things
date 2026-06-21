@@ -6,7 +6,7 @@
  * user to scan. Also records the selection as outbound shared items locally.
  *
  * Connections:
- *   Imports → components/QRCodeDisplay, components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/QRCodeDisplay, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/share-modal" (presented as a modal — see app/_layout.tsx)
  *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *

@@ -7,7 +7,7 @@
  * app/scan.tsx — not a BubbleMenu entry, per the AP-06B plan.
  *
  * Connections:
- *   Imports → components/ScreenBackground, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
+ *   Imports → components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
  *   Used by → Expo Router route "/budget"; app/scan.tsx (header link)
  *   Data    → reads useReceiptStore (receipts table, via receiptsForMonth/totalForMonth) and useSettingsStore.monthlyBudgetNok; writes nothing
  *

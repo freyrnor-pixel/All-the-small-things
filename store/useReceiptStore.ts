@@ -7,7 +7,7 @@
  * its items via useCatalogStore.recordPurchases(purchases, receipt.id).
  *
  * Connections:
- *   Imports → lib/date, lib/db, lib/id
+ *   Imports → lib/date, lib/dataAccess, lib/id
  *   Used by → app/budget.tsx, app/scan.tsx
  *   Data    → defines a Zustand store; owns SQLite table receipts; purchase_log rows link back via the optional receipt_id passed into useCatalogStore.recordPurchases
  *

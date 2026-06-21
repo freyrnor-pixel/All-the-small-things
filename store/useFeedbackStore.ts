@@ -7,7 +7,7 @@
  * that screen.
  *
  * Connections:
- *   Imports → lib/db, lib/id
+ *   Imports → lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, components/DebugOverlay.tsx
  *   Data    → defines a Zustand store; owns SQLite table feedback_notes
  *

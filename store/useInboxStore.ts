@@ -6,7 +6,7 @@
  * into a real task (via useTaskStore) or discarded.
  *
  * Connections:
- *   Imports → lib/db, lib/id, store/useTaskStore (add() only, for promoteToTask)
+ *   Imports → lib/db, lib/dataAccess, lib/id, store/useTaskStore (add() only, for promoteToTask)
  *   Used by → app/_layout.tsx, app/capture.tsx, components/InboxSection.tsx (via app/index.tsx)
  *   Data    → defines a Zustand store; owns SQLite table inbox_items
  *

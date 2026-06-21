@@ -6,7 +6,7 @@
  * `direction` and the sender's name. Backs the shared screen and share modal.
  *
  * Connections:
- *   Imports → lib/db, lib/id
+ *   Imports → lib/db, lib/dataAccess, lib/id
  *   Used by → app/_layout.tsx, app/scan.tsx, app/share-modal.tsx, app/shared.tsx, components/SharedRequestsSection.tsx
  *   Data    → defines a Zustand store; owns SQLite tables shared_tasks and shared_shopping_items
  *

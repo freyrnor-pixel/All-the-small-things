@@ -6,7 +6,7 @@
  * notification scheduling (start, and end reminders for time-box tasks).
  *
  * Connections:
- *   Imports → lib/db, lib/i18n, lib/id, lib/notifications, store/useAutomationStore, store/useSettingsStore
+ *   Imports → lib/db, lib/dataAccess, lib/id, lib/date, lib/time, lib/notifications, lib/taskNotifications, store/useAutomationStore, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/TaskItem.tsx, store/useInboxStore.ts (add() only, for promoteToTask)
  *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications; fires the 'task_completed' automation trigger
  *

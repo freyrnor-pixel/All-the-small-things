@@ -7,7 +7,7 @@
  * existing essentials/work-mode filtering — never as a replacement for it.
  *
  * Connections:
- *   Imports → lib/db
+ *   Imports → lib/db, lib/dataAccess, lib/date
  *   Used by → app/_layout.tsx, app/index.tsx, components/EnergyCheckIn.tsx
  *   Data    → defines a Zustand store; owns SQLite table energy_logs (one row per date)
  *
