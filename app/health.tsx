@@ -18,7 +18,7 @@
  *     PressableScale severity targets. SEVERITY_COLORS is a soft purple→blue family
  *     (NOT red/green — avoids alarm connotations); labels come from t.severityLabels.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -84,17 +84,27 @@ export default function HealthScreen() {
     setConfirm(t.taskSavedSimple);
   }
 
-  // Count occurrences of ailments in last 30 days
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const recent = logs.filter((l) => new Date(l.date) >= cutoff);
-  const counts: Record<string, number> = {};
-  recent.forEach((l) => {
-    counts[l.ailment] = (counts[l.ailment] ?? 0) + 1;
-  });
-  const topAilments = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+  // Top ailments over the last 30 days + a per-(ailment,date) max-severity index,
+  // both derived in a single pass over the logs (was recomputed — and re-scanned
+  // per day×ailment cell — on every render).
+  const { topAilments, severityAt } = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const counts: Record<string, number> = {};
+    const sevByKey = new Map<string, number>(); // `${ailment}|${date}` -> max severity
+    for (const l of logs) {
+      if (new Date(l.date) >= cutoff) {
+        counts[l.ailment] = (counts[l.ailment] ?? 0) + 1;
+      }
+      const key = `${l.ailment}|${l.date}`;
+      const prev = sevByKey.get(key);
+      sevByKey.set(key, prev === undefined ? l.severity : Math.max(prev, l.severity));
+    }
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const severityAt = (ailment: string, d: string): number | null =>
+      sevByKey.get(`${ailment}|${d}`) ?? null;
+    return { topAilments: top, severityAt };
+  }, [logs]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -114,11 +124,7 @@ export default function HealthScreen() {
           <Surface style={styles.overviewCard}>
             <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.last30Days}</Text>
             {topAilments.map(([name, count]) => {
-              const weekSeverities = weekDates.map((d) => {
-                const dayLogs = logs.filter((l) => l.ailment === name && l.date === d);
-                if (dayLogs.length === 0) return null;
-                return Math.max(...dayLogs.map((l) => l.severity));
-              });
+              const weekSeverities = weekDates.map((d) => severityAt(name, d));
               return (
                 <View key={name} style={styles.overviewAilment}>
                   <View style={styles.overviewRow}>

@@ -81,8 +81,12 @@ function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string
  */
 function computeStreak(habitId: string, goal: number, today: string, logs: HabitLog[]): number {
   if (goal <= 0) return 0;
+  // Index this habit's logs by date once, instead of re-scanning all logs for
+  // each of the (up to 35) days walked below.
+  const byDate = new Map<string, HabitLog>();
+  for (const l of logs) if (l.habitId === habitId) byDate.set(l.logDate, l);
   const metOn = (date: string) => {
-    const log = logs.find((l) => l.habitId === habitId && l.logDate === date);
+    const log = byDate.get(date);
     if (!log) return false;
     return log.restDay || log.count >= goal;
   };
