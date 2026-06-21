@@ -17,6 +17,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, SQLValue, loadAll, insertRow, updateRow, readStr, readReal } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'kveldsmat';
@@ -48,58 +49,49 @@ type MealStore = {
   randomDish: (mealType?: MealType) => Dish | undefined;
 };
 
+function rowToIngredient(row: Row): Ingredient {
+  return {
+    id: readStr(row, 'id'),
+    dishId: readStr(row, 'dish_id'),
+    name: readStr(row, 'name'),
+    amount: readStr(row, 'amount'),
+    unit: readStr(row, 'unit'),
+  };
+}
+
 function loadDishes(): Dish[] {
-  const dishRows = db.getAllSync<{
-    id: string;
-    name: string;
-    meal_type: string;
-    estimated_price_nok: number | null;
-  }>('SELECT * FROM dishes ORDER BY name');
+  const dishes = loadAll(
+    'dishes',
+    (d): Omit<Dish, 'ingredients'> => ({
+      id: readStr(d, 'id'),
+      name: readStr(d, 'name'),
+      mealType: readStr(d, 'meal_type') as MealType,
+      estimatedPriceNok: readReal(d, 'estimated_price_nok'),
+    }),
+    { orderBy: 'name' }
+  );
 
-  const ingredientRows = db.getAllSync<{
-    id: string;
-    dish_id: string;
-    name: string;
-    amount: string;
-    unit: string;
-  }>('SELECT * FROM ingredients ORDER BY name');
+  // Group ingredients onto their dish in a single pass (was an O(dishes×ingredients) filter).
+  const byDish = new Map<string, Ingredient[]>();
+  for (const ing of loadAll('ingredients', rowToIngredient, { orderBy: 'name' })) {
+    const list = byDish.get(ing.dishId);
+    if (list) list.push(ing);
+    else byDish.set(ing.dishId, [ing]);
+  }
 
-  return dishRows.map((d) => ({
-    id: d.id,
-    name: d.name,
-    mealType: d.meal_type as MealType,
-    estimatedPriceNok: d.estimated_price_nok ?? 0,
-    ingredients: ingredientRows
-      .filter((i) => i.dish_id === d.id)
-      .map((i) => ({
-        id: i.id,
-        dishId: i.dish_id,
-        name: i.name,
-        amount: i.amount,
-        unit: i.unit,
-      })),
-  }));
+  return dishes.map((d) => ({ ...d, ingredients: byDish.get(d.id) ?? [] }));
 }
 
 export const useMealStore = create<MealStore>((set, get) => ({
   dishes: [],
 
   load() {
-    try {
-      set({ dishes: loadDishes() });
-    } catch {
-      set({ dishes: [] });
-    }
+    set({ dishes: loadDishes() });
   },
 
   addDish({ name, mealType, estimatedPriceNok = 0 }) {
     const id = generateId();
-    db.runSync('INSERT INTO dishes (id, name, meal_type, estimated_price_nok) VALUES (?, ?, ?, ?)', [
-      id,
-      name,
-      mealType,
-      estimatedPriceNok,
-    ]);
+    insertRow('dishes', { id, name, meal_type: mealType, estimated_price_nok: estimatedPriceNok });
     const dish: Dish = { id, name, mealType, estimatedPriceNok, ingredients: [] };
     set((s) => ({ dishes: [...s.dishes, dish] }));
     return dish;
@@ -108,13 +100,11 @@ export const useMealStore = create<MealStore>((set, get) => ({
   updateDish(id, patch) {
     const dish = get().dishes.find((d) => d.id === id);
     if (!dish) return;
-    const next = { ...dish, ...patch };
-    db.runSync('UPDATE dishes SET name=?, meal_type=?, estimated_price_nok=? WHERE id=?', [
-      next.name,
-      next.mealType,
-      next.estimatedPriceNok,
-      id,
-    ]);
+    const values: Record<string, SQLValue> = {};
+    if (patch.name !== undefined) values.name = patch.name;
+    if (patch.mealType !== undefined) values.meal_type = patch.mealType;
+    if (patch.estimatedPriceNok !== undefined) values.estimated_price_nok = patch.estimatedPriceNok;
+    updateRow('dishes', values, 'id = ?', [id]);
     set((s) => ({
       dishes: s.dishes.map((d) => (d.id === id ? { ...d, ...patch } : d)),
     }));
@@ -127,10 +117,7 @@ export const useMealStore = create<MealStore>((set, get) => ({
 
   addIngredient(i) {
     const id = generateId();
-    db.runSync(
-      'INSERT INTO ingredients (id, dish_id, name, amount, unit) VALUES (?, ?, ?, ?, ?)',
-      [id, i.dishId, i.name, i.amount, i.unit]
-    );
+    insertRow('ingredients', { id, dish_id: i.dishId, name: i.name, amount: i.amount, unit: i.unit });
     const ingredient: Ingredient = { ...i, id };
     set((s) => ({
       dishes: s.dishes.map((d) =>

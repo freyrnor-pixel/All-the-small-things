@@ -21,6 +21,18 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import {
+  Row,
+  FieldMap,
+  loadAll,
+  insertRow,
+  updateRow,
+  rowValues,
+  readStr,
+  readInt,
+  readBool,
+  readJson,
+} from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -93,75 +105,81 @@ function syncHabitReminder(habit: Habit): void {
   });
 }
 
-function rowToHabit(row: Record<string, unknown>): Habit {
+function rowToHabit(row: Row): Habit {
   return {
-    id: row.id as string,
-    title: row.title as string,
-    icon: (row.icon as string) || '⭐',
-    kind: (row.kind as HabitKind) || 'build',
-    category: (row.category as HabitCategory) || 'other',
-    cue: (row.cue as string) || '',
-    craving: (row.craving as string) || '',
-    response: (row.response as string) || '',
-    reward: (row.reward as string) || '',
-    dailyGoal: (row.daily_goal as number) || 1,
-    recurrence: (row.recurrence as HabitRecurrence) || 'daily',
-    recurrenceDays: JSON.parse((row.recurrence_days as string) || '[]'),
-    notificationEnabled: row.notification_enabled === 1,
-    notificationTime: (row.notification_time as string) || '08:00',
-    routineOrder: (row.routine_order as number) || 0,
-    active: row.active !== 0,
-    createdAt: (row.created_at as string) || '',
-    childName: (row.child_name as string) || '',
+    id: readStr(row, 'id'),
+    title: readStr(row, 'title'),
+    icon: readStr(row, 'icon') || '⭐',
+    kind: (readStr(row, 'kind') || 'build') as HabitKind,
+    category: (readStr(row, 'category') || 'other') as HabitCategory,
+    cue: readStr(row, 'cue'),
+    craving: readStr(row, 'craving'),
+    response: readStr(row, 'response'),
+    reward: readStr(row, 'reward'),
+    dailyGoal: readInt(row, 'daily_goal') || 1,
+    recurrence: (readStr(row, 'recurrence') || 'daily') as HabitRecurrence,
+    recurrenceDays: readJson<number[]>(row, 'recurrence_days', []),
+    notificationEnabled: readBool(row, 'notification_enabled'),
+    notificationTime: readStr(row, 'notification_time') || '08:00',
+    routineOrder: readInt(row, 'routine_order'),
+    active: readInt(row, 'active', 1) !== 0,
+    createdAt: readStr(row, 'created_at'),
+    childName: readStr(row, 'child_name'),
   };
 }
 
-function rowToLog(row: Record<string, unknown>): HabitLog {
+function rowToLog(row: Row): HabitLog {
   return {
-    id: row.id as string,
-    habitId: row.habit_id as string,
-    logDate: row.log_date as string,
-    count: (row.count as number) || 0,
-    restDay: row.rest_day === 1,
+    id: readStr(row, 'id'),
+    habitId: readStr(row, 'habit_id'),
+    logDate: readStr(row, 'log_date'),
+    count: readInt(row, 'count'),
+    restDay: readBool(row, 'rest_day'),
   };
 }
+
+/** Field → column mapping for habits (serialisers preserve the old INSERT/UPDATE defaults). */
+const HABIT_COLUMNS: FieldMap<Habit> = {
+  id: { col: 'id' },
+  title: { col: 'title' },
+  icon: { col: 'icon' },
+  kind: { col: 'kind' },
+  category: { col: 'category' },
+  cue: { col: 'cue' },
+  craving: { col: 'craving' },
+  response: { col: 'response' },
+  reward: { col: 'reward' },
+  dailyGoal: { col: 'daily_goal' },
+  recurrence: { col: 'recurrence' },
+  recurrenceDays: { col: 'recurrence_days', to: (v) => JSON.stringify(v ?? []) },
+  notificationEnabled: { col: 'notification_enabled', to: (v) => (v ? 1 : 0) },
+  notificationTime: { col: 'notification_time' },
+  routineOrder: { col: 'routine_order' },
+  active: { col: 'active', to: (v) => (v ? 1 : 0) },
+  createdAt: { col: 'created_at' },
+  childName: { col: 'child_name', to: (v) => v || '' },
+};
 
 export const useHabitStore = create<HabitStore>((set, get) => ({
   habits: [],
   logs: [],
 
   load() {
-    try {
-      const habitRows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM habits WHERE active = 1 ORDER BY routine_order, created_at'
-      );
-      const since = new Date();
-      since.setDate(since.getDate() - 35);
-      const sinceStr = since.toISOString().slice(0, 10);
-      const logRows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM habit_logs WHERE log_date >= ?',
-        [sinceStr]
-      );
-      set({ habits: habitRows.map(rowToHabit), logs: logRows.map(rowToLog) });
-    } catch {
-      set({ habits: [], logs: [] });
-    }
+    const since = new Date();
+    since.setDate(since.getDate() - 35);
+    const sinceStr = since.toISOString().slice(0, 10);
+    set({
+      habits: loadAll('habits', rowToHabit, { where: 'active = 1', orderBy: 'routine_order, created_at' }),
+      logs: loadAll('habit_logs', rowToLog, { where: 'log_date >= ?', params: [sinceStr] }),
+    });
   },
 
   add(h) {
     const id = generateId();
     const now = new Date().toISOString();
     const routineOrder = h.routineOrder || Date.now();
-    db.runSync(
-      `INSERT INTO habits (id, title, icon, kind, category, cue, craving, response, reward,
-       daily_goal, recurrence, recurrence_days, notification_enabled, notification_time,
-       routine_order, active, created_at, child_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-      [id, h.title, h.icon, h.kind, h.category, h.cue, h.craving, h.response, h.reward,
-       h.dailyGoal, h.recurrence, JSON.stringify(h.recurrenceDays),
-       h.notificationEnabled ? 1 : 0, h.notificationTime, routineOrder, now, h.childName || '']
-    );
     const habit: Habit = { ...h, id, routineOrder, active: true, createdAt: now };
+    insertRow('habits', rowValues(habit, HABIT_COLUMNS));
     set((s) => ({ habits: [...s.habits, habit].sort((a, b) => a.routineOrder - b.routineOrder) }));
     syncHabitReminder(habit);
   },
@@ -170,15 +188,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const habit = get().habits.find((h) => h.id === id);
     if (!habit) return;
     const next = { ...habit, ...patch };
-    db.runSync(
-      `UPDATE habits SET title=?, icon=?, kind=?, category=?, cue=?, craving=?, response=?, reward=?,
-       daily_goal=?, recurrence=?, recurrence_days=?, notification_enabled=?, notification_time=?,
-       routine_order=?, active=?, child_name=?
-       WHERE id=?`,
-      [next.title, next.icon, next.kind, next.category, next.cue, next.craving, next.response, next.reward,
-       next.dailyGoal, next.recurrence, JSON.stringify(next.recurrenceDays),
-       next.notificationEnabled ? 1 : 0, next.notificationTime, next.routineOrder, next.active ? 1 : 0, next.childName || '', id]
-    );
+    updateRow('habits', rowValues(patch, HABIT_COLUMNS), 'id = ?', [id]);
     set((s) => ({
       habits: s.habits.map((h) => (h.id === id ? next : h)).sort((a, b) => a.routineOrder - b.routineOrder),
     }));
@@ -206,8 +216,8 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const b = sorted[swapIdx];
     const aOrder = a.routineOrder;
     const bOrder = b.routineOrder;
-    db.runSync('UPDATE habits SET routine_order = ? WHERE id = ?', [bOrder, a.id]);
-    db.runSync('UPDATE habits SET routine_order = ? WHERE id = ?', [aOrder, b.id]);
+    updateRow('habits', { routine_order: bOrder }, 'id = ?', [a.id]);
+    updateRow('habits', { routine_order: aOrder }, 'id = ?', [b.id]);
     set((s) => ({
       habits: s.habits.map((h) => {
         if (h.id === a.id) return { ...h, routineOrder: bOrder };
@@ -222,16 +232,13 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const existing = logs.find((l) => l.habitId === habitId && l.logDate === date);
     if (existing) {
       const newCount = existing.count + 1;
-      db.runSync('UPDATE habit_logs SET count = ? WHERE id = ?', [newCount, existing.id]);
+      updateRow('habit_logs', { count: newCount }, 'id = ?', [existing.id]);
       set((s) => ({
         logs: s.logs.map((l) => (l.id === existing.id ? { ...l, count: newCount } : l)),
       }));
     } else {
       const id = generateId();
-      db.runSync(
-        'INSERT INTO habit_logs (id, habit_id, log_date, count) VALUES (?, ?, ?, 1)',
-        [id, habitId, date]
-      );
+      insertRow('habit_logs', { id, habit_id: habitId, log_date: date, count: 1 });
       set((s) => ({ logs: [...s.logs, { id, habitId, logDate: date, count: 1, restDay: false }] }));
     }
   },
@@ -241,7 +248,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const existing = logs.find((l) => l.habitId === habitId && l.logDate === date);
     if (!existing || existing.count <= 0) return;
     const newCount = existing.count - 1;
-    db.runSync('UPDATE habit_logs SET count = ? WHERE id = ?', [newCount, existing.id]);
+    updateRow('habit_logs', { count: newCount }, 'id = ?', [existing.id]);
     set((s) => ({
       logs: s.logs.map((l) => (l.id === existing.id ? { ...l, count: newCount } : l)),
     }));
@@ -252,16 +259,13 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     const existing = logs.find((l) => l.habitId === habitId && l.logDate === date);
     if (existing) {
       const restDay = !existing.restDay;
-      db.runSync('UPDATE habit_logs SET rest_day = ? WHERE id = ?', [restDay ? 1 : 0, existing.id]);
+      updateRow('habit_logs', { rest_day: restDay ? 1 : 0 }, 'id = ?', [existing.id]);
       set((s) => ({
         logs: s.logs.map((l) => (l.id === existing.id ? { ...l, restDay } : l)),
       }));
     } else {
       const id = generateId();
-      db.runSync(
-        'INSERT INTO habit_logs (id, habit_id, log_date, count, rest_day) VALUES (?, ?, ?, 0, 1)',
-        [id, habitId, date]
-      );
+      insertRow('habit_logs', { id, habit_id: habitId, log_date: date, count: 0, rest_day: 1 });
       set((s) => ({ logs: [...s.logs, { id, habitId, logDate: date, count: 0, restDay: true }] }));
     }
   },

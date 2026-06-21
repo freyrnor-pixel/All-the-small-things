@@ -17,6 +17,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, loadAll, insertRow, updateRow, readStr, readBool } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type SharedDirection = 'in' | 'out';
@@ -56,30 +57,30 @@ type SharedStore = {
   removeShopping: (id: string) => void;
 };
 
-function rowToTask(row: Record<string, unknown>): SharedTask {
+function rowToTask(row: Row): SharedTask {
   return {
-    id: row.id as string,
-    sourceTaskId: (row.source_task_id as string) || null,
-    title: row.title as string,
-    date: row.date as string,
-    done: row.done === 1,
-    direction: row.direction as SharedDirection,
-    sharedBy: (row.shared_by as string) || '',
-    createdAt: (row.created_at as string) || '',
+    id: readStr(row, 'id'),
+    sourceTaskId: readStr(row, 'source_task_id') || null,
+    title: readStr(row, 'title'),
+    date: readStr(row, 'date'),
+    done: readBool(row, 'done'),
+    direction: readStr(row, 'direction') as SharedDirection,
+    sharedBy: readStr(row, 'shared_by'),
+    createdAt: readStr(row, 'created_at'),
   };
 }
 
-function rowToShopping(row: Record<string, unknown>): SharedShoppingItem {
+function rowToShopping(row: Row): SharedShoppingItem {
   return {
-    id: row.id as string,
-    sourceItemId: (row.source_item_id as string) || null,
-    name: row.name as string,
-    amount: (row.amount as string) || '1',
-    unit: (row.unit as string) || '',
-    done: row.done === 1,
-    direction: row.direction as SharedDirection,
-    sharedBy: (row.shared_by as string) || '',
-    createdAt: (row.created_at as string) || '',
+    id: readStr(row, 'id'),
+    sourceItemId: readStr(row, 'source_item_id') || null,
+    name: readStr(row, 'name'),
+    amount: readStr(row, 'amount') || '1',
+    unit: readStr(row, 'unit'),
+    done: readBool(row, 'done'),
+    direction: readStr(row, 'direction') as SharedDirection,
+    sharedBy: readStr(row, 'shared_by'),
+    createdAt: readStr(row, 'created_at'),
   };
 }
 
@@ -88,17 +89,10 @@ export const useSharedStore = create<SharedStore>((set, get) => ({
   shoppingItems: [],
 
   load() {
-    try {
-      const taskRows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM shared_tasks ORDER BY created_at DESC'
-      );
-      const shoppingRows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM shared_shopping_items ORDER BY created_at DESC'
-      );
-      set({ tasks: taskRows.map(rowToTask), shoppingItems: shoppingRows.map(rowToShopping) });
-    } catch {
-      set({ tasks: [], shoppingItems: [] });
-    }
+    set({
+      tasks: loadAll('shared_tasks', rowToTask, { orderBy: 'created_at DESC' }),
+      shoppingItems: loadAll('shared_shopping_items', rowToShopping, { orderBy: 'created_at DESC' }),
+    });
   },
 
   addSharedTasks(items) {
@@ -107,11 +101,16 @@ export const useSharedStore = create<SharedStore>((set, get) => ({
     for (const item of items) {
       const id = generateId();
       try {
-        db.runSync(
-          `INSERT INTO shared_tasks (id, source_task_id, title, date, done, direction, shared_by, created_at)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?)`,
-          [id, item.sourceTaskId ?? null, item.title, item.date, item.direction, item.sharedBy, now]
-        );
+        insertRow('shared_tasks', {
+          id,
+          source_task_id: item.sourceTaskId ?? null,
+          title: item.title,
+          date: item.date,
+          done: 0,
+          direction: item.direction,
+          shared_by: item.sharedBy,
+          created_at: now,
+        });
         newItems.push({ ...item, id, done: false, createdAt: now });
       } catch { /* skip duplicate */ }
     }
@@ -124,11 +123,17 @@ export const useSharedStore = create<SharedStore>((set, get) => ({
     for (const item of items) {
       const id = generateId();
       try {
-        db.runSync(
-          `INSERT INTO shared_shopping_items (id, source_item_id, name, amount, unit, done, direction, shared_by, created_at)
-           VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-          [id, item.sourceItemId ?? null, item.name, item.amount, item.unit, item.direction, item.sharedBy, now]
-        );
+        insertRow('shared_shopping_items', {
+          id,
+          source_item_id: item.sourceItemId ?? null,
+          name: item.name,
+          amount: item.amount,
+          unit: item.unit,
+          done: 0,
+          direction: item.direction,
+          shared_by: item.sharedBy,
+          created_at: now,
+        });
         newItems.push({ ...item, id, done: false, createdAt: now });
       } catch { /* skip duplicate */ }
     }
@@ -139,7 +144,7 @@ export const useSharedStore = create<SharedStore>((set, get) => ({
     const item = get().tasks.find((t) => t.id === id);
     if (!item) return;
     const done = !item.done;
-    db.runSync('UPDATE shared_tasks SET done = ? WHERE id = ?', [done ? 1 : 0, id]);
+    updateRow('shared_tasks', { done: done ? 1 : 0 }, 'id = ?', [id]);
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, done } : t)) }));
   },
 
@@ -147,7 +152,7 @@ export const useSharedStore = create<SharedStore>((set, get) => ({
     const item = get().shoppingItems.find((i) => i.id === id);
     if (!item) return;
     const done = !item.done;
-    db.runSync('UPDATE shared_shopping_items SET done = ? WHERE id = ?', [done ? 1 : 0, id]);
+    updateRow('shared_shopping_items', { done: done ? 1 : 0 }, 'id = ?', [id]);
     set((s) => ({ shoppingItems: s.shoppingItems.map((i) => (i.id === id ? { ...i, done } : i)) }));
   },
 

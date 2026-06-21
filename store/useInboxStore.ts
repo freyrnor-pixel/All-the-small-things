@@ -17,6 +17,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, loadAll, loadFirst, insertRow, readStr } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { useTaskStore, Task } from '@/store/useTaskStore';
 
@@ -34,11 +35,11 @@ type InboxStore = {
   promoteToTask: (id: string, taskFields: Omit<Task, 'id'>) => void;
 };
 
-function rowToItem(row: Record<string, unknown>): InboxItem {
+function rowToItem(row: Row): InboxItem {
   return {
-    id: row.id as string,
-    text: row.text as string,
-    createdAt: row.created_at as string,
+    id: readStr(row, 'id'),
+    text: readStr(row, 'text'),
+    createdAt: readStr(row, 'created_at'),
   };
 }
 
@@ -46,21 +47,15 @@ export const useInboxStore = create<InboxStore>((set, get) => ({
   items: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM inbox_items ORDER BY created_at DESC'
-      );
-      set({ items: rows.map(rowToItem) });
-    } catch {
-      set({ items: [] });
-    }
+    set({ items: loadAll('inbox_items', rowToItem, { orderBy: 'created_at DESC' }) });
   },
 
   add(text) {
     const id = generateId();
-    db.runSync('INSERT INTO inbox_items (id, text) VALUES (?, ?)', [id, text]);
-    const row = db.getFirstSync<Record<string, unknown>>('SELECT * FROM inbox_items WHERE id = ?', [id]);
-    const created = row ? rowToItem(row) : { id, text, createdAt: new Date().toISOString() };
+    insertRow('inbox_items', { id, text });
+    const created =
+      loadFirst('inbox_items', rowToItem, { where: 'id = ?', params: [id] }) ??
+      { id, text, createdAt: new Date().toISOString() };
     set((s) => ({ items: [created, ...s.items] }));
     return created;
   },

@@ -18,6 +18,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import { Row, loadAll, loadFirst, insertRow, updateRow, readStr, readReal } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type FeedbackNote = {
@@ -38,14 +39,14 @@ type FeedbackStore = {
   clearAll: () => void;
 };
 
-function rowToNote(row: Record<string, unknown>): FeedbackNote {
+function rowToNote(row: Row): FeedbackNote {
   return {
-    id: row.id as string,
-    screen: row.screen as string,
-    x: row.x as number,
-    y: row.y as number,
-    note: row.note as string,
-    createdAt: row.created_at as string,
+    id: readStr(row, 'id'),
+    screen: readStr(row, 'screen'),
+    x: readReal(row, 'x'),
+    y: readReal(row, 'y'),
+    note: readStr(row, 'note'),
+    createdAt: readStr(row, 'created_at'),
   };
 }
 
@@ -53,33 +54,21 @@ export const useFeedbackStore = create<FeedbackStore>((set, get) => ({
   notes: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM feedback_notes ORDER BY created_at'
-      );
-      set({ notes: rows.map(rowToNote) });
-    } catch {
-      set({ notes: [] });
-    }
+    set({ notes: loadAll('feedback_notes', rowToNote, { orderBy: 'created_at' }) });
   },
 
   add(screen, x, y, note) {
     const id = generateId();
-    db.runSync(
-      'INSERT INTO feedback_notes (id, screen, x, y, note) VALUES (?, ?, ?, ?, ?)',
-      [id, screen, x, y, note]
-    );
-    const row = db.getFirstSync<Record<string, unknown>>(
-      'SELECT * FROM feedback_notes WHERE id = ?',
-      [id]
-    );
-    const created = row ? rowToNote(row) : { id, screen, x, y, note, createdAt: new Date().toISOString() };
+    insertRow('feedback_notes', { id, screen, x, y, note });
+    const created =
+      loadFirst('feedback_notes', rowToNote, { where: 'id = ?', params: [id] }) ??
+      { id, screen, x, y, note, createdAt: new Date().toISOString() };
     set((s) => ({ notes: [...s.notes, created] }));
     return created;
   },
 
   update(id, note) {
-    db.runSync('UPDATE feedback_notes SET note = ? WHERE id = ?', [note, id]);
+    updateRow('feedback_notes', { note }, 'id = ?', [id]);
     set((s) => ({ notes: s.notes.map((n) => (n.id === id ? { ...n, note } : n)) }));
   },
 

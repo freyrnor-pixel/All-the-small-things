@@ -21,6 +21,18 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
+import {
+  Row,
+  FieldMap,
+  loadAll,
+  insertRow,
+  updateRow,
+  rowValues,
+  readStr,
+  readInt,
+  readBool,
+  readJson,
+} from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -198,56 +210,48 @@ function syncTaskNotification(task: Task): void {
   }
 }
 
-function rowToTask(row: Record<string, unknown>): Task {
+function rowToTask(row: Row): Task {
   return {
-    id: row.id as string,
-    title: row.title as string,
-    date: row.task_date as string,
-    time: (row.task_time as string) || undefined,
-    taskType: (row.task_type as TaskType) ?? 'start-at',
-    durationMinutes: (row.duration_minutes as number) || undefined,
-    done: row.done === 1,
-    recurring: (row.recurring as Recurring) ?? 'none',
-    recurringDays: JSON.parse((row.recurring_days as string) || '[]'),
-    importance: (row.importance as Importance) ?? 'regular',
-    priority: (row.priority as Priority) ?? 'medium',
+    id: readStr(row, 'id'),
+    title: readStr(row, 'title'),
+    date: readStr(row, 'task_date'),
+    time: readStr(row, 'task_time') || undefined,
+    taskType: readStr(row, 'task_type', 'start-at') as TaskType,
+    durationMinutes: readInt(row, 'duration_minutes') || undefined,
+    done: readBool(row, 'done'),
+    recurring: readStr(row, 'recurring', 'none') as Recurring,
+    recurringDays: readJson<number[]>(row, 'recurring_days', []),
+    importance: readStr(row, 'importance', 'regular') as Importance,
+    priority: readStr(row, 'priority', 'medium') as Priority,
   };
 }
+
+/** Field → column mapping for tasks (serialisers preserve the old INSERT/UPDATE defaults). */
+const TASK_COLUMNS: FieldMap<Task> = {
+  id: { col: 'id' },
+  title: { col: 'title' },
+  date: { col: 'task_date' },
+  time: { col: 'task_time', to: (v) => v ?? null },
+  taskType: { col: 'task_type' },
+  durationMinutes: { col: 'duration_minutes', to: (v) => v ?? null },
+  done: { col: 'done', to: (v) => (v ? 1 : 0) },
+  recurring: { col: 'recurring' },
+  recurringDays: { col: 'recurring_days', to: (v) => JSON.stringify(v ?? []) },
+  importance: { col: 'importance', to: (v) => v ?? 'regular' },
+  priority: { col: 'priority', to: (v) => v ?? 'medium' },
+};
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
 
   load() {
-    try {
-      const rows = db.getAllSync<Record<string, unknown>>(
-        'SELECT * FROM tasks ORDER BY task_date, task_time'
-      );
-      set({ tasks: rows.map(rowToTask) });
-    } catch {
-      set({ tasks: [] });
-    }
+    set({ tasks: loadAll('tasks', rowToTask, { orderBy: 'task_date, task_time' }) });
   },
 
   add(t) {
     const id = generateId();
-    db.runSync(
-      `INSERT INTO tasks (id, title, task_date, task_time, task_type, duration_minutes, done, recurring, recurring_days, importance, priority)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        t.title,
-        t.date,
-        t.time ?? null,
-        t.taskType,
-        t.durationMinutes ?? null,
-        0,
-        t.recurring,
-        JSON.stringify(t.recurringDays),
-        t.importance ?? 'regular',
-        t.priority ?? 'medium',
-      ]
-    );
     const task: Task = { ...t, id, done: false };
+    insertRow('tasks', rowValues(task, TASK_COLUMNS));
     set((s) => ({ tasks: [...s.tasks, task] }));
     syncTaskNotification(task);
     return task;
@@ -257,23 +261,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const task = get().tasks.find((t) => t.id === id);
     if (!task) return;
     const next = { ...task, ...patch };
-    db.runSync(
-      `UPDATE tasks SET title=?, task_date=?, task_time=?, task_type=?, duration_minutes=?,
-       done=?, recurring=?, recurring_days=?, importance=?, priority=? WHERE id=?`,
-      [
-        next.title,
-        next.date,
-        next.time ?? null,
-        next.taskType,
-        next.durationMinutes ?? null,
-        next.done ? 1 : 0,
-        next.recurring,
-        JSON.stringify(next.recurringDays),
-        next.importance ?? 'regular',
-        next.priority ?? 'medium',
-        id,
-      ]
-    );
+    updateRow('tasks', rowValues(patch, TASK_COLUMNS), 'id = ?', [id]);
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? next : t)) }));
     syncTaskNotification(next);
   },
