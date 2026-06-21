@@ -1,10 +1,9 @@
 /**
- * useFeedbackStore.ts — free-floating UI feedback pins for the debug overlay
+ * useFeedbackStore.ts — quick header + freetext debug notes for the debug overlay
  *
- * Zustand store for user-authored feedback notes dropped on screen while
- * "Annotate mode" is active in the debug overlay (components/DebugOverlay.tsx).
- * Each note is tied to a screen route and a normalized (0..1) x/y position on
- * that screen.
+ * Zustand store for short notes a developer/tester jots down via the debug
+ * overlay's note composer (components/DebugOverlay.tsx). Each note is just a
+ * header and a freetext body — not tied to any screen or on-screen position.
  *
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/id
@@ -12,20 +11,20 @@
  *   Data    → defines a Zustand store; owns SQLite table feedback_notes
  *
  * Edit notes:
- *   - These are deliberate documentation notes, not auto-generated history —
- *     feedback_notes is NOT pruned by lib/db.ts's pruneOldData().
- *   - load() fetches all notes across all screens; filter by `screen` in the UI.
+ *   - feedback_notes is NOT pruned by lib/db.ts's pruneOldData() — notes persist
+ *     until explicitly cleared via clearAll() (the panel's "Reset" button).
+ *   - The table still has legacy `screen`/`x`/`y` NOT NULL columns from the old
+ *     tap-to-pin annotation feature; add() writes empty/zero placeholders since
+ *     those columns are no longer surfaced anywhere in the UI.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
-import { Row, loadAll, loadFirst, insertRow, updateRow, readStr, readReal } from '@/lib/dataAccess';
+import { Row, loadAll, loadFirst, insertRow, readStr } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type FeedbackNote = {
   id: string;
-  screen: string;
-  x: number;
-  y: number;
+  title: string;
   note: string;
   createdAt: string;
 };
@@ -33,48 +32,34 @@ export type FeedbackNote = {
 type FeedbackStore = {
   notes: FeedbackNote[];
   load: () => void;
-  add: (screen: string, x: number, y: number, note: string) => FeedbackNote;
-  update: (id: string, note: string) => void;
-  remove: (id: string) => void;
+  add: (title: string, note: string) => FeedbackNote;
   clearAll: () => void;
 };
 
 function rowToNote(row: Row): FeedbackNote {
   return {
     id: readStr(row, 'id'),
-    screen: readStr(row, 'screen'),
-    x: readReal(row, 'x'),
-    y: readReal(row, 'y'),
+    title: readStr(row, 'title'),
     note: readStr(row, 'note'),
     createdAt: readStr(row, 'created_at'),
   };
 }
 
-export const useFeedbackStore = create<FeedbackStore>((set, get) => ({
+export const useFeedbackStore = create<FeedbackStore>((set) => ({
   notes: [],
 
   load() {
     set({ notes: loadAll('feedback_notes', rowToNote, { orderBy: 'created_at' }) });
   },
 
-  add(screen, x, y, note) {
+  add(title, note) {
     const id = generateId();
-    insertRow('feedback_notes', { id, screen, x, y, note });
+    insertRow('feedback_notes', { id, screen: '', x: 0, y: 0, title, note });
     const created =
       loadFirst('feedback_notes', rowToNote, { where: 'id = ?', params: [id] }) ??
-      { id, screen, x, y, note, createdAt: new Date().toISOString() };
+      { id, title, note, createdAt: new Date().toISOString() };
     set((s) => ({ notes: [...s.notes, created] }));
     return created;
-  },
-
-  update(id, note) {
-    updateRow('feedback_notes', { note }, 'id = ?', [id]);
-    set((s) => ({ notes: s.notes.map((n) => (n.id === id ? { ...n, note } : n)) }));
-  },
-
-  remove(id) {
-    db.runSync('DELETE FROM feedback_notes WHERE id = ?', [id]);
-    set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
   },
 
   clearAll() {

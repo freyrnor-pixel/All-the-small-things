@@ -289,6 +289,8 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN purchased_at TEXT DEFAULT NULL",
     "ALTER TABLE shopping_items ADD COLUMN week_key TEXT DEFAULT NULL",
     "ALTER TABLE settings ADD COLUMN last_monthly_reset TEXT DEFAULT ''",
+    // Debug overlay notes — replaced the old tap-to-pin annotations with header + freetext notes
+    "ALTER TABLE feedback_notes ADD COLUMN title TEXT DEFAULT ''",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
