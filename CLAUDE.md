@@ -11,3 +11,8 @@
 ## Current deployment state
 
 - App version used at this time is Runtime 1.0.0, In Preview.
+
+## Testing policy
+
+- No testing needed until further notice (no Jest runs, no live-app/browser verification).
+- Still always do regular checking: TypeScript typecheck (`npx tsc --noEmit`) and a quick read-through for bugs/dead code.
