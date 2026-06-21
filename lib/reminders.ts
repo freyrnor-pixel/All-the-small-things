@@ -21,6 +21,8 @@
  *     banners firing at the same instant when reset day and date coincide.
  */
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { toExpoWeekday } from '@/lib/date';
+import { parseTimeOrDefault } from '@/lib/time';
 import { getTranslations } from '@/lib/i18n';
 import {
   scheduleWeeklyReminder,
@@ -28,19 +30,6 @@ import {
   scheduleMonthlyReminder,
   cancelMonthlyReminder,
 } from '@/lib/notifications';
-
-/** Parse "HH:MM" into [hour, minute], falling back to 08:00 on bad input. */
-function parseHM(time: string): [number, number] {
-  const [h, m] = (time || '').split(':').map((n) => parseInt(n, 10));
-  const hour = Number.isFinite(h) ? Math.min(Math.max(h, 0), 23) : 8;
-  const minute = Number.isFinite(m) ? Math.min(Math.max(m, 0), 59) : 0;
-  return [hour, minute];
-}
-
-/** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
-function toExpoWeekday(mon0: number): number {
-  return ((mon0 + 1) % 7) + 1;
-}
 
 /**
  * Weekly + monthly reminders share the user's reminderTime, so when a reset day
@@ -72,7 +61,7 @@ export async function syncReminders() {
     return;
   }
 
-  const [hour, minute] = parseHM(s.reminderTime);
+  const [hour, minute] = parseTimeOrDefault(s.reminderTime);
   await scheduleWeeklyReminder(toExpoWeekday(s.weeklyResetDay), hour, minute, {
     title: t.notif.weeklyTitle,
     body: t.notif.weeklyBody,

@@ -38,20 +38,9 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useT } from '@/lib/i18n';
-import { todayStr, dateStr } from '@/lib/date';
+import { todayStr, getWeekDates } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useScaledStyles } from '@/lib/useAppTheme';
-
-function getWeekDates(today: string): string[] {
-  const d = new Date(today + 'T12:00:00');
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(mon);
-    day.setDate(mon.getDate() + i);
-    return dateStr(day);
-  });
-}
 
 // W-D: soft purple→blue severity family. Lighter (mild) → deeper (severe) without
 // any red/green alarm connotations. Static — these are intentionally fixed regardless

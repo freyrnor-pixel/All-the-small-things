@@ -48,30 +48,12 @@ import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
-import { todayStr, dateStr } from '@/lib/date';
+import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
 import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getWeekDates(today: string): string[] {
-  const d = new Date(today + 'T12:00:00');
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(mon);
-    day.setDate(mon.getDate() + i);
-    return dateStr(day);
-  });
-}
-
-function getMonthDates(year: number, month: number): string[] {
-  const days = new Date(year, month, 0).getDate();
-  return Array.from({ length: days }, (_, i) => {
-    const d = i + 1;
-    return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  });
-}
+// Week/month date helpers live in lib/date (getWeekDates, getMonthDates).
 
 // W-D: build = warm/green, break = cool/blue. NEVER red — breaking a habit is not failure.
 // Break uses a calm blue so it reads as a different (cool) family from build's green.

@@ -34,6 +34,8 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
+import { toExpoWeekday } from '@/lib/date';
+import { parseTimeStrict } from '@/lib/time';
 import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
@@ -81,20 +83,6 @@ type TaskStore = {
   syncAllTaskNotifications: () => void;
 };
 
-/** Parse "HH:MM" into [hour, minute], or null if it isn't a valid time. */
-function parseTime(time: string): [number, number] | null {
-  const [h, m] = time.split(':').map((n) => parseInt(n, 10));
-  if (!Number.isFinite(h) || !Number.isFinite(m) || h < 0 || h > 23 || m < 0 || m > 59) {
-    return null;
-  }
-  return [h, m];
-}
-
-/** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
-function toExpoWeekday(mon0: number): number {
-  return ((mon0 + 1) % 7) + 1;
-}
-
 type QuietHours = { quietHoursEnabled: boolean; quietHoursStart: string; quietHoursEnd: string };
 
 /** Pushes a notification's fire time past quiet hours, if enabled — the task itself keeps its real time, only the reminder is deferred. */
@@ -133,7 +121,7 @@ function syncTaskNotification(task: Task): void {
     void cancelTaskNotification(task.id);
     return;
   }
-  const parsed = parseTime(task.time);
+  const parsed = parseTimeStrict(task.time);
   if (!parsed) {
     void cancelTaskNotification(task.id);
     return;

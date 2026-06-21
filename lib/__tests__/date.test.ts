@@ -1,4 +1,11 @@
-import { dateStr, todayStr, currentMonthStr } from '@/lib/date';
+import {
+  dateStr,
+  todayStr,
+  currentMonthStr,
+  toExpoWeekday,
+  getWeekDates,
+  getMonthDates,
+} from '@/lib/date';
 
 describe('lib/date', () => {
   it('formats a Date as local YYYY-MM-DD', () => {
@@ -23,5 +30,28 @@ describe('lib/date', () => {
   it('currentMonthStr is the YYYY-MM prefix of today', () => {
     expect(currentMonthStr()).toBe(todayStr().slice(0, 7));
     expect(currentMonthStr()).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it('toExpoWeekday maps app weekdays (0=Mon..6=Sun) to Expo (1=Sun..7=Sat)', () => {
+    expect(toExpoWeekday(0)).toBe(2); // Mon
+    expect(toExpoWeekday(5)).toBe(7); // Sat
+    expect(toExpoWeekday(6)).toBe(1); // Sun
+  });
+
+  it('getWeekDates returns the Mon–Sun week containing the date', () => {
+    const week = getWeekDates('2026-06-21'); // a Sunday
+    expect(week).toHaveLength(7);
+    expect(week[0]).toBe('2026-06-15'); // Monday
+    expect(week[6]).toBe('2026-06-21'); // Sunday
+    // Any day in that week yields the same span.
+    expect(getWeekDates('2026-06-17')).toEqual(week);
+  });
+
+  it('getMonthDates lists every day of a (1-based) month', () => {
+    const feb = getMonthDates(2026, 2);
+    expect(feb).toHaveLength(28); // 2026 is not a leap year
+    expect(feb[0]).toBe('2026-02-01');
+    expect(feb[27]).toBe('2026-02-28');
+    expect(getMonthDates(2026, 12)).toHaveLength(31);
   });
 });
