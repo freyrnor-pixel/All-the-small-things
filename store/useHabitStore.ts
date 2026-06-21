@@ -34,9 +34,9 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
-import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { scheduleDailyReminder, cancelDailyReminder } from '@/lib/notifications';
+import { cancelDailyReminder } from '@/lib/notifications';
+import { syncHabitReminder as scheduleHabitReminder } from '@/lib/habitNotifications';
 
 export type HabitKind = 'build' | 'break' | 'neutral';
 export type HabitRecurrence = 'daily' | 'weekly' | 'monthly' | 'one-time';
@@ -89,20 +89,9 @@ type HabitStore = {
   syncAllHabitReminders: () => void;
 };
 
-/** Schedule (or cancel) a habit's daily reminder, honouring the user's language. */
+/** Schedule (or cancel) a habit's daily reminder using the current language. */
 function syncHabitReminder(habit: Habit): void {
-  if (!habit.notificationEnabled || !habit.active) {
-    void cancelDailyReminder(`habit-${habit.id}`);
-    return;
-  }
-  const [h, m] = (habit.notificationTime || '08:00').split(':').map((n) => parseInt(n, 10));
-  const hour = Number.isFinite(h) ? h : 8;
-  const minute = Number.isFinite(m) ? m : 0;
-  const t = getTranslations(useSettingsStore.getState().language);
-  void scheduleDailyReminder(`habit-${habit.id}`, hour, minute, {
-    title: t.notif.habitReminderTitle(habit.title),
-    body: t.notif.habitReminderBody,
-  });
+  scheduleHabitReminder(habit, useSettingsStore.getState().language);
 }
 
 function rowToHabit(row: Row): Habit {

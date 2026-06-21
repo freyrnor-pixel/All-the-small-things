@@ -34,18 +34,10 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
-import { toExpoWeekday } from '@/lib/date';
-import { parseTimeStrict } from '@/lib/time';
-import { getTranslations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
-import {
-  scheduleTaskNotification,
-  scheduleWeeklyTaskNotifications,
-  cancelTaskNotification,
-  pushPastQuietHours,
-  WeeklyTaskOccurrence,
-} from '@/lib/notifications';
+import { cancelTaskNotification } from '@/lib/notifications';
+import { syncTaskNotification as scheduleTaskReminder } from '@/lib/taskNotifications';
 
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
@@ -83,119 +75,9 @@ type TaskStore = {
   syncAllTaskNotifications: () => void;
 };
 
-type QuietHours = { quietHoursEnabled: boolean; quietHoursStart: string; quietHoursEnd: string };
-
-/** Pushes a notification's fire time past quiet hours, if enabled — the task itself keeps its real time, only the reminder is deferred. */
-function deferPastQuietHours(date: Date, s: QuietHours): Date {
-  if (!s.quietHoursEnabled) return date;
-  const pushed = pushPastQuietHours(date.getHours(), date.getMinutes(), s.quietHoursStart, s.quietHoursEnd);
-  const out = new Date(date);
-  out.setHours(pushed.hour, pushed.minute, 0, 0);
-  if (pushed.rolledOver) out.setDate(out.getDate() + 1);
-  return out;
-}
-
-/** Same idea as deferPastQuietHours but for a weekly occurrence's hour/minute/weekday (no absolute Date to work with). */
-function deferOccurrencePastQuietHours(o: WeeklyTaskOccurrence, s: QuietHours): WeeklyTaskOccurrence {
-  if (!s.quietHoursEnabled) return o;
-  const pushed = pushPastQuietHours(o.hour, o.minute, s.quietHoursStart, s.quietHoursEnd);
-  if (!pushed.rolledOver && pushed.hour === o.hour && pushed.minute === o.minute) return o;
-  return {
-    ...o,
-    hour: pushed.hour,
-    minute: pushed.minute,
-    weekday: pushed.rolledOver ? (o.weekday === 7 ? 1 : o.weekday + 1) : o.weekday,
-  };
-}
-
-/**
- * Schedule (or cancel) the reminder(s) for a single task, honouring the current
- * notification setting and language. Both task kinds are covered:
- *   - one-off tasks fire once at their date/time (skipped if done or in the past)
- *   - weekly-recurring tasks fire on every selected weekday at their time
- * Time-box tasks additionally get an "end" reminder after their duration.
- */
+/** Schedule (or cancel) a single task's reminder using the current settings. */
 function syncTaskNotification(task: Task): void {
-  const s = useSettingsStore.getState();
-  if (!s.taskNotificationsEnabled || !task.time) {
-    void cancelTaskNotification(task.id);
-    return;
-  }
-  const parsed = parseTimeStrict(task.time);
-  if (!parsed) {
-    void cancelTaskNotification(task.id);
-    return;
-  }
-  const [hour, minute] = parsed;
-  const t = getTranslations(s.language);
-  const dur = task.durationMinutes ?? 30;
-
-  if (task.recurring === 'weekly') {
-    if (task.recurringDays.length === 0) {
-      void cancelTaskNotification(task.id);
-      return;
-    }
-    const occurrences: WeeklyTaskOccurrence[] = [];
-    for (const day of task.recurringDays) {
-      if (task.taskType === 'time-box') {
-        occurrences.push({
-          suffix: `s${day}`,
-          weekday: toExpoWeekday(day),
-          hour,
-          minute,
-          content: { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
-        });
-        // The end reminder may land later the same day or roll into the next.
-        const endTotal = hour * 60 + minute + dur;
-        const endDay = (day + Math.floor(endTotal / 1440)) % 7;
-        occurrences.push({
-          suffix: `e${day}`,
-          weekday: toExpoWeekday(endDay),
-          hour: Math.floor((endTotal % 1440) / 60),
-          minute: endTotal % 60,
-          content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) },
-        });
-      } else {
-        occurrences.push({
-          suffix: `s${day}`,
-          weekday: toExpoWeekday(day),
-          hour,
-          minute,
-          content: { title: t.notif.taskStartTitle(task.title), body: t.notif.taskStartBody },
-        });
-      }
-    }
-    void scheduleWeeklyTaskNotifications(
-      task.id,
-      occurrences.map((o) => deferOccurrencePastQuietHours(o, s))
-    );
-    return;
-  }
-
-  // One-off task: only schedule if not done and still in the future.
-  if (task.done) {
-    void cancelTaskNotification(task.id);
-    return;
-  }
-  const start = new Date(`${task.date}T${task.time}:00`);
-  if (isNaN(start.getTime()) || start.getTime() <= Date.now()) {
-    void cancelTaskNotification(task.id);
-    return;
-  }
-  if (task.taskType === 'time-box') {
-    const end = new Date(start.getTime() + dur * 60 * 1000);
-    void scheduleTaskNotification(
-      task.id,
-      deferPastQuietHours(start, s),
-      { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
-      { date: deferPastQuietHours(end, s), content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
-    );
-  } else {
-    void scheduleTaskNotification(task.id, deferPastQuietHours(start, s), {
-      title: t.notif.taskStartTitle(task.title),
-      body: t.notif.taskStartBody,
-    });
-  }
+  scheduleTaskReminder(task, useSettingsStore.getState());
 }
 
 function rowToTask(row: Row): Task {
