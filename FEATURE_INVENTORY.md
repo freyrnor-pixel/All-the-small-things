@@ -1,523 +1,326 @@
-# UnFocus — Feature Inventory & Edit Notes (2026-06-21)
+# UnFocus — What's in the app (for your Edit notes)
 
-A function-by-function map of the whole app, built so you can write **Edit notes**
-against each part. Every discrete function/UI element has its own `Edit notes:`
-slot — fill them in, and we turn them into work.
+A plain-language list of everything you can see and do in the app, screen by
+screen. No technical stuff — just the practical bits, so you can think about
+what works, what feels off, and what to change.
 
-## How to use this file
-
-- **Section 0 (Connections map + Recurring patterns)** is the "how it all wires
-  together" view — read it first to see the links between features (e.g. how
-  Meals feeds Shopping feeds the Catalog feeds the Budget), and where the same
-  logic repeats so we can keep it consistent everywhere.
-- **Section 1 (Cross-cutting features)** covers the 7 areas from your notes,
-  each with a `Connects to →` line showing its reach across the app. Your
-  existing notes are pre-seeded here.
-- **Sections 2–4** are the exhaustive lists: every screen, every store, every
-  shared component/helper.
-- Anywhere you see `Edit notes:` with nothing after it, that's yours to fill.
-  Lines already filled in are your 2026-06-21 notes (lightly spell-cleaned).
+**How to use it:** under each thing there's an empty `Edit notes:` line. Write
+whatever you're thinking. Lines that already have text are your notes from
+2026-06-21. When you're done, send it back and we turn it into changes.
 
 ---
 
-## 0. Connections map — how the app wires together
+## How things connect (in plain words)
 
-The repo already documents links in each file header under `Connections:`
-(Imports → / Used by → / Data →). This is the bird's-eye version of that.
+The app is big, so here's the picture of how the parts feed into each other —
+no jargon:
 
-### Major data flows
+- **Meals → Shopping.** When you add a dish, its ingredients can be sent
+  straight to your shopping list.
+- **Shopping remembers.** As you add and buy things, the app learns the items
+  and their prices, so next time it suggests them and fills in the price.
+- **Scan a receipt → Shopping + Budget.** Snapping a receipt adds the items,
+  updates those learned prices, and counts toward your monthly grocery budget.
+- **Monthly list ↔ Weekly list.** Your monthly "staples" can drop into the
+  weekly list as you need them, and what you buy moves through a few stages
+  (to buy → in the cart → bought).
+- **Sharing.** A "Share" button shows up in several places (shopping, tasks,
+  plans). It makes a code another phone can scan. (Real live sync between
+  phones and messaging come in a later build.)
+- **Energy.** On a low-energy day, the home screen quietly hides all but the
+  most important tasks. (Right now medium and high days look the same.)
+- **Quick notes (Inbox) → Tasks.** A thought you jot down can become a task
+  with one tap.
+- **Habits → Pet.** Finishing a habit makes your companion pet react happily.
+- **Settings touch everything.** Colours, language, reminders, work mode,
+  text size, the pet — all set in one place and felt across the app.
 
-```
-Meals ──(add dish ingredients)──▶ Shopping list ──▶ Catalog (autocomplete + learned prices)
-  │                                     │                    │
-  │                                     │                    ├─▶ Purchase log (history)
-  │                                     │                    └─▶ Budget / Receipts (monthly spend)
-  │                                     │
-Scan (OCR receipt / QR) ──────────────┘ (adds items, learns prices, logs receipt)
-
-Shopping monthly ↔ weekly:  list → staged → in_cart → purchased   (status pipeline)
-                            monthly staple ──(allocate N)──▶ N weekly child items
-                            + inventory qty tracking, payday carry-over prompt
-
-Share:  lib/share.ts + useSharedStore  ◀──▶  Shopping · Tasks/Home · Plans
-        (QR encode/decode)                    · share-modal · scan (QR import)
-                                               · shared history · SharedRequestsSection
-
-Energy check-in ──(low day)──▶ Home narrows today-tasks to priority=high only
-Inbox (quick capture) ──(promote)──▶ Tasks
-Automations (IFTTT) ──(trigger)──▶ Tasks done / Shopping opened → show message / add item
-Habits ──(completion)──▶ Pet reacts (happy/excited)
-Settings ──▶ theme · language · notifications · work/essentials filtering  (everywhere)
-
-Notifications fan-out:
-  lib/notifications.ts (primitives)
-     ▲        ▲          ▲
-     │        │          └── lib/reminders.ts        (weekly planning + monthly reset)
-     │        └───────────── lib/habitNotifications   (per-habit daily reminder)
-     └────────────────────── lib/taskNotifications    (per-task one-off + weekly + time-box end)
-                  ▲ all read settings (quiet hours, language) + their store
-```
-
-### Per-feature reach (quick index)
-
-- **Energy** → Home task filtering only.
-- **Tasks/Plans** → Home, Plans screen, QuickAddSheet, DayTimeline, NextTaskCard, task reminders, Automations trigger, Share (tasks), Inbox promotion target.
-- **Shopping** → Meals (ingredients in), Catalog (autocomplete), Scan (items in), Receipts/Budget, Share (shopping), SharedRequests, Pet (food reactions via item names), Automations (add item action).
-- **Habits** → Habit form, daily reminder, Pet reactions, child profiles (Settings).
-- **Share** → see the dedicated touchpoint list in §1.4.
-- **Settings** → read by virtually every screen (theme, language, notifications, work mode, essentials mode, accessibility, pet, bubble tuning, reset cadence, budget).
-
-### Recurring patterns / consistency callout
-
-These patterns repeat across the app. To keep "the same logic throughout,"
-changing one should mean reviewing the others:
-
-| Pattern | Where it appears | Notes |
-|---|---|---|
-| **Check-off / status pipeline** | Shopping (weekly check, monthly list→staged→in_cart→purchased), Habits (count→goal), Tasks (done), Shared items (done) | Weekly shopping is a simple boolean; monthly is a 4-stage pipeline — these two are *not* consistent with each other today. |
-| **List grouping** | Shopping (by category / by dish), Habits (build vs break), Meals (by meal type), Plans (anytime vs timed) | Category order is centralized in Shopping; meal types fixed in store. |
-| **Add via bottom sheet** | QuickAddSheet (tasks), Shopping add sheet, Meals new-dish modal, scan manual-add | Swipe-to-close gesture + ConfirmationBanner are the shared idiom. |
-| **Reminder scheduling** | Tasks, Habits, weekly/monthly reminders | All route through `lib/notifications.ts`, all defer past quiet hours, all use stable ids so re-scheduling replaces. Habits currently allow only ONE time/day (see §1.6). |
-| **Hint card at top of scroll** | Nearly every screen | `components/HintCard.tsx`, gated by `showHints` setting. |
-| **Confirmation banner** | Task save, capture, shopping actions | `components/ConfirmationBanner.tsx` slide-in + auto-dismiss. |
-| **Pressable feedback** | All buttons/bubbles | `components/PressableScale.tsx` (scale + haptic), respects reducedMotion. |
-| **Theme + material finish** | Every surface | `useAppTheme` + `getMaterialStyle` (glass/metal/rock/paper/plain), independent of colour theme. |
+**Things that repeat (worth keeping consistent):**
+- Ticking things off — but shopping does it two different ways (a simple tick on
+  the weekly list, a multi-step "to buy → in cart → bought" on the monthly list).
+- Lists grouped by category (shopping, habits, meals).
+- A pop-up "add" sheet that slides up from the bottom (tasks, shopping, meals).
+- Reminders (tasks and habits both use the same quiet-hours rules).
+- The little hint boxes at the top of most screens.
 
 ---
 
-## 1. Cross-cutting features (your flagged areas)
+## Your flagged areas
 
-### 1.1 Energy level
-`components/EnergyCheckIn.tsx` · `store/useEnergyStore.ts` (SQLite `energy_logs`)
-**Connects to →** Home only: on a `low` day, `app/index.tsx` narrows today's
-visible tasks to `priority === 'high'`, layered on top of essentials/work-mode
-filtering (never replacing it). Medium/high do **not** currently change anything.
+### Energy level
+A once-a-day check of how you're feeling (low / medium / high).
 
-- **Three-tile picker (low / medium / high)** — once-a-day energy self-report with battery emojis (🔋 / 🔋🔋 / 🔋🔋🔋).
+- **Pick your energy (low / medium / high)** — tap a battery.
   - Edit notes: No difference between medium and high.
-- **Re-select behaviour** — tapping a tile re-sets the day's level (upsert, one row per date); no lock after first pick.
-  - Edit notes:
-- **Effect on home task list** — `low` filters today-tasks to high-priority only.
+- **What it changes** — a low day hides everything except your most important tasks.
   - Edit notes:
 
-### 1.2 Today's plans
-`app/plans.tsx` · `components/DayTimeline.tsx` · `components/QuickAddSheet.tsx` · `store/useTaskStore.ts` (SQLite `tasks`)
-**Connects to →** Home (3-item preview widget + full screen), task reminders
-(`lib/taskNotifications`), Share (tasks), Inbox (promotion target), Automations
-(`task_completed` trigger).
+### Today's plans
+Your day laid out by time, with anything untimed at the top.
 
-- **DayTimeline agenda** — anytime tasks first, then timed tasks on a vertical timeline.
+- **The day view** — see what's now and what's left today.
   - Edit notes: Need a better/easier way to view "time now + rest of day." Visual improvements.
-- **Live "now" marker** — re-rendered ~every 60s, inserted at the correct position in the timeline.
+- **A "now" line** — shows where you are in the day.
   - Edit notes:
-- **Time-box vs start-at display** — time-box shows a span (e.g. `08:00–09:30`); start-at shows a single time.
+- **Timed vs. all-day items** — timed tasks show their time (or a span); untimed ones sit at the top.
   - Edit notes:
-- **Essential star + done dimming** — essential tasks flagged; done tasks dimmed, not hidden.
+- **Important tasks marked, done ones dimmed** — finished tasks stay visible but greyed.
   - Edit notes:
-- **Home Plans widget (preview + expand)** — collapsible 3-item preview that links to the full Plans screen.
-  - Edit notes:
-- **Add / Share buttons (header)** — open task-form / share-modal for tasks.
+- **Home preview** — a short version on the home screen that opens the full day.
   - Edit notes:
 
-### 1.3 FAB bubble menu
-`components/BubbleMenu.tsx` · bubble tuning in `store/useSettingsStore.ts`
-**Connects to →** Navigation entry point for all major screens; reads
-`bubbleMaterial`, `leftHanded`, and debug tuning (`bubbleSize`, `bubbleSpacing`,
-`bubbleSpringIntensity`, `bubbleAnimSpeed`) from settings; haptics via `lib/haptics`.
+### The bubble menu (the round button)
+The spinning wheel of bubbles you use to move around the app.
 
-- **Radial spinning wheel** — 3 full + 2 half-visible bubbles, drag-to-rotate with spring snap.
+- **The spinning wheel** — drag to turn it, tap a bubble to go somewhere.
   - Edit notes:
-- **Bubble appearance (colour + letters)** — current per-bubble look.
-  - Edit notes: Gradient coloring instead of today's look. Letters must be the same color and easily readable.
-- **Bubble sizing** — size currently scales with label length.
-  - Edit notes: All satellite bubbles same size. Size must be big enough to fit the longest word (for any bubble/function).
-- **Material finish** — glass/metal/rock/paper finish from settings, independent of colour theme.
+- **How the bubbles look** — colours and letters today.
+  - Edit notes: Gradient colouring instead of today's look. Letters must be the same colour and easy to read.
+- **Bubble sizes** — they currently change size with the word length.
+  - Edit notes: All bubbles the same size. Big enough to fit the longest word.
+- **Finish/texture** — glass, metal, rock or paper look.
   - Edit notes:
-- **Left-handed flip** — moves FAB to bottom-left when `leftHanded` is on.
-  - Edit notes:
-- **Tap-to-navigate + tree-logo press flash** — taps route to home/tasks/shopping/habits/settings/scan/automations; labels localised via `t.nav`.
+- **Left-handed mode** — moves the button to the other side.
   - Edit notes:
 
-### 1.4 Share function
-`lib/share.ts` (QR encode/decode) · `store/useSharedStore.ts` (SQLite `shared_tasks`, `shared_shopping_items`) · `components/QRCodeDisplay.tsx` · `components/SharedRequestsSection.tsx`
-**Connects to →** every per-screen Share touchpoint below. Wire format is a
-versioned compact JSON (`UNFOCUS:` v1, kind `s`=shopping / `t`=task).
+### Sharing
+A "Share" button that makes a code another phone can scan.
 
-Per-screen Share touchpoints (the "Share per site" view you asked for):
-- **Shopping screen** — header Share button → `share-modal?kind=s`; link icon → `shared` history.
-  - Edit notes: Short explanation of what sharing the shopping list does (e.g. "synchronises the list" — wording TBD). Note: cross-device sync / messaging comes in a later build.
-- **Home / Tasks** — `SharedRequestsSection(kind='task')` shows incoming shared tasks (accept/dismiss).
+- **Where you can share** — from your shopping list, your tasks, and your plans.
   - Edit notes:
-- **Plans screen** — header Share button → `share-modal` for tasks.
+- **What it actually does** — needs a short, clear explanation on each spot.
+  - Edit notes: Add a short explanation of what sharing does there (e.g. shopping list "synchronises" — wording TBD). Note: real sync between phones and messaging come in a later build.
+- **Receiving** — shared things show up for you to accept or dismiss.
   - Edit notes:
-- **share-modal** — pick items/tasks, encode to QR, record as outbound shared items.
-  - Edit notes:
-- **Scan screen** — QR scanner imports a shared payload (decode → add locally).
-  - Edit notes:
-- **Shared history (`app/shared.tsx`)** — tabbed in/out list with check-off and remove.
-  - Edit notes:
-- **SharedRequestsSection (shopping)** — incoming shared shopping items inline above the list.
+- **History** — a list of what you've sent and received.
   - Edit notes:
 
-General Share notes:
-- **What "sharing" means per function** — needs a short, plain explanation on each surface.
-  - Edit notes: Each share point should explain exactly what it does. Real sync between devices / sending messages is a later build.
+### Shopping list
+> Overall: **Edit notes:** Needs a big overhaul. Looks crowded and hard to read because of the layout. I need input to make decisions on the redesign.
 
-### 1.5 Shopping list
-`app/shopping.tsx` · `store/useShoppingStore.ts` (SQLite `shopping_items`) · `store/useCatalogStore.ts` (`store_items`, `purchase_log`) · `lib/catalogSeed.ts` · `app/scan.tsx` · `components/ShoppingRow.tsx` · `components/MonthlyTableRow.tsx` · `components/CarryOverPromptModal.tsx`
-**Connects to →** Meals (ingredients in), Catalog (autocomplete + learned prices),
-Scan (OCR/QR items in), Receipts/Budget, Share (shopping), Pet (food reactions),
-Automations (`add_shopping_item`).
+**Getting around**
+- **Weekly / Monthly tabs** — two separate lists.
+  - Edit notes:
+- **The order of things on screen** — hints, then incoming shares, then a summary, then your items, then bought history, then reset.
+  - Edit notes: Feels crowded — prime candidate for the redesign.
 
-> Overall: **Edit notes:** Needs a big overhaul. Looks crowded and hard to read because of layout. I need input to make decisions on the redesign.
-
-**Tabs & layout**
-- **Weekly / Monthly tabs** — separate lists with badge counts and accent colour (green / orange).
+**Adding things**
+- **The add button + pop-up** — type an item, or pull one from your monthly staples.
   - Edit notes:
-- **Section order** — hint → shared requests → summary row → (monthly action row) → "from meals" group → items → in-cart → clear/finish → purchased history → reset.
-  - Edit notes: Layout feels crowded — this ordering is a prime candidate for the overhaul.
-
-**Adding items**
-- **FAB + add sheet (two tabs: Freely / From Monthly)** — manual entry or allocate from monthly staples.
+- **What you can set** — name, amount, unit, category, price, and a "just this once" flag.
   - Edit notes:
-- **Manual fields (name, amount, unit, category, price, temporary flag)** — full entry form.
-  - Edit notes:
-- **Autocomplete suggestions** — chips from catalog, showing last-paid price; popular items when empty; excludes items already on the list.
-  - Edit notes:
-- **Swipe-to-close add sheet** — pan gesture on the handle, spring-back or close.
+- **Suggestions as you type** — it offers items you've bought before with their last price.
   - Edit notes:
 
-**Categories & grouping**
-- **13 fixed categories** — produce, dairy, meat, fish, bread, frozen, canned, dry, snacks, drinks, cleaning, personal, other.
+**Sorting**
+- **13 categories** — produce, dairy, meat, fish, bread, frozen, tinned, dry, snacks, drinks, cleaning, personal, other.
   - Edit notes:
-- **Canonical category order** — groceries → consumables → household → other.
+- **Grouped by meal** — ingredients you added from a dish sit together under that dish.
   - Edit notes:
-- **Group by dish** — items pushed from Meals are grouped under the dish name with icon + ingredient count + est. price.
-  - Edit notes:
-- **Sort unchecked alphabetically** — within/after dish groups.
+- **Sorted A–Z** — the rest of the list.
   - Edit notes:
 
-**Quantities & check-off**
-- **Inline amount stepper (−/value/+)** — for numeric unchecked items.
+**Amounts & ticking off**
+- **Plus/minus on amounts** — bump quantities up or down.
   - Edit notes:
-- **Weekly check-off (+ → in cart, − → back)** — simple boolean per item; "Clear checked items" removes them.
+- **Weekly: tick to cart, untick to go back** — plus a "clear ticked items" button.
   - Edit notes:
-- **Monthly status pipeline (list → staged → in_cart → purchased)** — circle tap stages; "Save/Add to shopping list" commits staged → in_cart; "Finish shopping" → purchased.
+- **Monthly: to buy → in cart → bought** — a few stages instead of a simple tick.
   - Edit notes:
-- **Excel-style monthly table** — columns check / name / price / total / amount, with grand total row.
+- **Monthly table view** — a spreadsheet-style layout with price, total and amount.
   - Edit notes:
 
-**Monthly-specific**
-- **Monthly → weekly allocation** — a monthly staple of N spawns N weekly child items; removing children decrements the allocation.
+**Monthly extras**
+- **Staples that refill the weekly list** — a monthly item can feed several weekly ones.
   - Edit notes:
-- **Temporary items + payday carry-over** — `CarryOverPromptModal` on monthly reset asks keep/drop per temporary item (or all-carry / all-drop).
+- **"Just this once" items + payday clear-out** — when the month resets, it asks which one-off items to keep or drop.
   - Edit notes:
-- **Inventory qty / "Update inventory"** — manual stock tracking entry point.
+- **Track what you have at home** — a simple stock count.
   - Edit notes:
 
 **History & reset**
-- **Purchased history** — weekly grouped by week key; monthly a flat list; read-only checkmarks.
+- **Bought history** — what you've already bought, grouped by week/period.
   - Edit notes:
-- **Reset weekly / reset monthly** — destructive resets; monthly triggers carry-over prompt.
-  - Edit notes:
-
-**Scan / OCR (`app/scan.tsx`)**
-- **Capture or pick receipt photo** — camera or library.
-  - Edit notes:
-- **ML Kit OCR → parsed priced items** — `parseReceiptText` in `lib/receipt.ts`, skip totals/dates, match `NAME PRICE`.
-  - Edit notes:
-- **Review checklist + store picker** — deselect/edit rows; pick store (REMA 1000, Kiwi, Coop Extra/Mega, Meny, Spar, Bunnpris, Joker, Prix).
-  - Edit notes:
-- **Add to list → records purchases + receipt** — updates shopping list, catalog (`recordPurchases`), and receipts/budget.
-  - Edit notes:
-- **QR scanner** — imports shared payloads.
+- **Reset the week / month** — clears the list for the next round.
   - Edit notes:
 
-**Sharing (see §1.4)**
-- **Share button + shared requests** — outbound share + inline incoming items.
+**Scanning a receipt**
+- **Take or pick a photo** — of the receipt.
+  - Edit notes:
+- **It reads the items and prices** — and lets you uncheck or fix any line.
+  - Edit notes:
+- **Pick the store** — from the common Norwegian chains.
+  - Edit notes:
+- **Add them in** — items go to your list and count toward your budget.
+  - Edit notes:
+- **Scan a shared code** — to pull in someone else's list.
   - Edit notes:
 
-### 1.6 Habits
-`app/habits.tsx` · `app/habit-form.tsx` · `store/useHabitStore.ts` (SQLite `habits`, `habit_logs`) · `lib/habitNotifications.ts` · `components/HabitIcon.tsx`
-**Connects to →** habit reminders (`lib/habitNotifications` → `lib/notifications`),
-Pet reactions on completion, child profiles (Settings).
+### Habits
+> Overall: **Edit notes:** I needed this full list to write detailed notes — here it is.
 
-> Overall: **Edit notes:** I need this full function list to write detailed Edit notes (this section is the list).
-
-**Create / edit (`app/habit-form.tsx`)**
-- **Kind toggle (build ↑ green / break ↓ danger)** — habit type.
+**Making / changing a habit**
+- **Build or break** — the two kinds.
   - Edit notes:
-- **Title input** — required, autofocus on create.
+- **Name it** — the habit title.
   - Edit notes:
-- **Recurrence chips (daily / weekly / monthly / once)** — stored in `recurrence`; `recurrenceDays` is saved but **not exposed in UI**.
+- **How often** — daily, weekly, monthly, or once.
   - Edit notes:
-- **Profile assignment (Me / child names)** — conditional on existing child profiles.
+- **Who it's for** — you or a child profile.
   - Edit notes:
-- **Notification toggle + single time picker** — ONE `notificationTime` (HH:MM, default 08:00); schedules one DAILY reminder via `syncHabitReminder`.
-  - Edit notes: Add option to get a reminder several times a day. User chooses the number of times, OR the interval between reminders, plus when it should start and end. (Today only ONE fixed time is possible — needs schema + form + scheduling changes.)
-- **"More options" disclosure** — reveals icon, category, 4 steps, daily goal.
+- **A reminder** — turn on a reminder and pick a time.
+  - Edit notes: Add the option for several reminders a day. Let me choose how many times, OR the gap between them, plus when they start and stop. (Today only ONE fixed time is possible.)
+- **More options** — an icon, a category, the cue/craving/response/reward steps, and a daily goal.
   - Edit notes:
-- **Icon picker (30+)** — default `star-outline`.
-  - Edit notes:
-- **Category chips (8)** — physical, mental, health, nutrition, sleep, work, wellbeing, other.
-  - Edit notes:
-- **Four steps (cue / craving / response / reward)** — BJ Fogg model fields, optional.
-  - Edit notes:
-- **Daily goal stepper (1–20)** — completions needed per day.
-  - Edit notes:
-- **Delete (edit mode)** — confirm → removes habit + all logs + cancels reminder.
+- **Delete** — remove the habit and its history.
   - Edit notes:
 
-**Tracking & views (`app/habits.tsx`)**
-- **Profile selector chips** — Me + child names; add child inline; long-press to remove.
+**Doing & viewing habits**
+- **Switch between people** — you and any child profiles.
   - Edit notes:
-- **Today / Week / Month view tabs** — three layouts.
+- **Today / Week / Month views** — three ways to look.
   - Edit notes:
-- **Summary chip** — "X / Y completed" for the day.
+- **A daily summary** — how many you've done.
   - Edit notes:
-- **Building / Breaking sections** — grouped lists with empty-state CTAs.
+- **Build list / break list** — grouped on screen.
   - Edit notes:
-- **HabitCard (collapsible)** — header (icon, title, streak badge, progress dots, −/+); expanded (4 steps, week strip, rest-day toggle).
+- **Each habit card** — tap to open; shows streak, progress dots, and a plus/minus.
   - Edit notes:
-- **Streak badge + dots** — consecutive met days (count ≥ goal OR rest day), 35-day window.
+- **Streaks** — your run of good days (a rest day still counts).
   - Edit notes:
-- **Progress dots** — filled to count/goal ratio; partial = orange, met = green/blue, never red.
+- **Progress dots** — fill up toward your daily goal; never red.
   - Edit notes:
-- **Increment / decrement (−/+)** — adjust today's count; completion fires success haptic + glow + pet reaction.
+- **Mark a rest day** — no shame, doesn't break your streak.
   - Edit notes:
-- **Rest day toggle ("no-shame")** — marks today as rest; treated as "met" for streaks.
-  - Edit notes:
-- **Week grid** — 7 dots per habit, today's dot highlighted.
-  - Edit notes:
-- **Month grid + ← → navigation** — scrollable dates, forward disabled past current month.
+- **Week grid / Month grid** — dots across the days, today highlighted.
   - Edit notes:
 
-### 1.7 Notes / Inbox
-`store/useInboxStore.ts` (SQLite `inbox_items`) · `components/InboxSection.tsx` · `app/capture.tsx`
-**Connects to →** Home (inbox display), Tasks (promote target).
-> Note: there is no dedicated free-form "Notes" screen — quick thoughts live in
-> the **Inbox** (capture → home list → promote/discard). The only other "notes"
-> surface is the debug-overlay feedback notes (`useFeedbackStore`).
+### Notes (quick capture)
+Right now there's no separate "Notes" page — quick thoughts live in the **Inbox**.
 
-- **Quick capture (`app/capture.tsx`)** — multiline input → adds a one-liner to the inbox; confirmation banner.
+- **Jot a quick thought** — type and capture it instantly.
   - Edit notes:
-- **Inbox list on home** — shows captured thoughts.
+- **It shows up on home** — in a little list.
   - Edit notes: Lacks a way of fixing/editing existing (previous) notes.
-- **Promote to task** — one-tap, sensible defaults (today, start-at, regular, medium).
+- **Turn it into a task** — one tap.
   - Edit notes:
-- **Discard** — dismiss an inbox item.
-  - Edit notes:
-- **Edit existing item** — *(does not exist today)*.
-  - Edit notes: This is the gap — add the ability to open and edit a previously captured note.
+- **Edit an old note** — *doesn't exist yet.*
+  - Edit notes: This is the gap — add a way to open and change a note you saved earlier.
 
 ---
 
-## 2. All screens (route-by-route)
+## Every screen (quick walk-through)
 
-Each screen: one-line purpose + discrete UI parts. Add `Edit notes:` inline as needed.
+A one-line "what it's for" plus the parts on it. Add `Edit notes:` anywhere.
 
-### 2.1 `/index.tsx` — Home
-Daily landing: greeting, plans widget, shopping preview, points, quick actions.
-- Greeting header (name + time-of-day emoji) — Edit notes:
-- Progress bar + completed-count + streak — Edit notes:
-- Daily overview + hint card — Edit notes:
-- Inbox section (captured thoughts) — Edit notes:
-- Shared requests (incoming) — Edit notes:
+### Home
+Your daily landing page.
+- Greeting (name + time of day) — Edit notes:
+- Progress bar + points + streak — Edit notes:
+- Quick-notes inbox — Edit notes:
+- Incoming shared items — Edit notes:
 - Energy check-in — Edit notes:
-- Next task card — Edit notes:
-- Plans widget (expand/collapse) — Edit notes:
-- Backlog section (undated tasks) — Edit notes:
-- Shopping preview (weekly, inline checkboxes) — Edit notes:
-- Points display — Edit notes:
-- Settings + focus-mode buttons — Edit notes:
-- Share button (tasks) — Edit notes:
-- Floating add button (QuickAddSheet) — Edit notes:
-- OTA "Restart" banner (when update ready) — Edit notes:
+- Your next task — Edit notes:
+- Plans preview (opens full day) — Edit notes:
+- Backlog (things with no date) — Edit notes:
+- Shopping preview (tick things off) — Edit notes:
+- Settings + focus buttons — Edit notes:
+- Add button — Edit notes:
 
-### 2.2 `/capture.tsx` — Quick Capture Inbox
-Type a thought, capture to inbox instantly, no categorization.
-- Back + title header — Edit notes:
-- Multiline input — Edit notes:
-- Capture button — Edit notes:
-- Confirmation banner — Edit notes:
+### Quick capture
+Type a thought, save it instantly.
+- Text box + capture button + confirmation — Edit notes:
 
-### 2.3 `/habits.tsx` — Habit Tracker
-See §1.6 for full breakdown.
-- Profile chips · view tabs · hint · summary · building/breaking lists · week grid · month grid · habit cards · add FAB — Edit notes:
+### Habits
+See the Habits section above.
+- People switch · views · summary · build/break lists · habit cards · add button — Edit notes:
 
-### 2.4 `/health.tsx` — Health / Symptom Log
-Log ailments (date, 1–5 severity, notes); 30-day overview.
-- Hint card — Edit notes:
-- Overview card (top ailments, frequency bar, severity strip) — Edit notes:
-- Add form (date, ailment, severity picker, notes) — Edit notes:
-- Confirmation banner — Edit notes:
-- Log list (chronological) — Edit notes:
+### Health log
+Track ailments (date, how bad 1–5, notes).
+- Overview of recent ailments — Edit notes:
+- Add an entry — Edit notes:
+- The log list — Edit notes:
 
-### 2.5 `/habit-form.tsx` — Add/Edit Habit
-See §1.6.
-- Kind toggle · title · recurrence · profile · notification + time · more-options (icon, category, 4 steps, goal) · delete — Edit notes:
+### Add / edit habit
+See Habits above.
+- Build/break · name · how often · who for · reminder · more options · delete — Edit notes:
 
-### 2.6 `/budget.tsx` — Monthly Grocery Budget
-Month's receipt total vs optional budget.
-- Header link to budget settings — Edit notes:
-- Progress bar (spent vs budget) — Edit notes:
-- Hint text — Edit notes:
-- Receipts list — Edit notes:
+### Budget
+This month's grocery spend vs. your budget.
+- Spent-vs-budget bar — Edit notes:
+- List of receipts — Edit notes:
 
-### 2.7 `/meals.tsx` — Dish Library
-Dishes grouped by meal type; create with ingredient autocomplete.
-- Random/surprise button — Edit notes:
-- Hint card — Edit notes:
-- Category tiles (breakfast/lunch/dinner/snack/kveldsmat) — Edit notes:
-- Category dish lists (expandable) — Edit notes:
-- Ingredient rows (delete per row) — Edit notes:
-- "Add to shopping" (sends ingredients to list) — Edit notes:
-- Delete dish — Edit notes:
-- New-dish modal (meal pills, name, price, ingredients, autocomplete) — Edit notes:
+### Meals
+Your dishes, grouped by meal type.
+- Surprise-me / random dish — Edit notes:
+- Meal categories (breakfast/lunch/dinner/snack/kveldsmat) — Edit notes:
+- Dish cards + ingredients — Edit notes:
+- "Add to shopping" — Edit notes:
+- New dish (name, price, ingredients) — Edit notes:
 
-### 2.8 `/automations.tsx` — IFTTT Rule Builder
-When X → Then Y rules (trigger/action), toggle + delete.
-- Hint card — Edit notes:
-- Rule cards (summary, active toggle, delete) — Edit notes:
-- New-rule form (trigger chips, action chips, param input) — Edit notes:
-- Empty state — Edit notes:
+### Automations
+Simple "when this, then that" rules.
+- Your rules (on/off, delete) — Edit notes:
+- Make a new rule — Edit notes:
 
-### 2.9 `/scan.tsx` — Receipt OCR + QR Import
-See §1.5 (Scan/OCR).
-- Header budget link · hint · manual-entry link · camera hint · store chips · action buttons · preview + guide · loading · OCR empty state · parsed checklist · add-to-list · QR modal · manual-add sheet — Edit notes:
+### Scan
+Read a receipt or scan a shared code. (See Shopping → Scanning above.)
+- Photo · reads items · pick store · add in · scan a code — Edit notes:
 
-### 2.10 `/shared.tsx` — Shared Items History
-Tabbed (shopping/tasks) in/out items, check-off + remove.
-- Back header — Edit notes:
-- Tabs (shopping/tasks) — Edit notes:
-- Hint card — Edit notes:
-- Active + Done sections — Edit notes:
-- Empty states — Edit notes:
-- Shared rows (checkbox, meta, remove) — Edit notes:
+### Shared items
+What you've sent and received.
+- Shopping / tasks tabs — Edit notes:
+- Active + done sections — Edit notes:
 
-### 2.11 `/settings.tsx` — App Settings
-Central config; Essentials Mode pinned at top.
-- Privacy card — Edit notes:
-- Essentials Mode hero toggle — Edit notes:
-- Profile (name) — Edit notes:
-- Language chips (EN/NO) — Edit notes:
-- Appearance (colour theme grid, bubble material grid, dark mode) — Edit notes:
-- Accessibility (reduced motion, font size, left-handed) — Edit notes:
-- Motivation (show points, show hints) — Edit notes:
-- Companion pet (enabled, name, type, colour) — Edit notes:
-- Shopping (list mode, weekly reset day, monthly reset date, monthly budget) — Edit notes:
-- Notifications (reminders, reminder time, task notifs, persistent notif, quiet hours, holidays, automations link) — Edit notes:
-- Work Mode (active, auto-activate, work hours) — Edit notes:
-- Data (debug mode, test data, destructive resets) — Edit notes:
+### Settings
+Everything you can adjust.
+- Essentials mode (top) — Edit notes:
+- Your name — Edit notes:
+- Language (EN/NO) — Edit notes:
+- Look (colours, bubble finish, dark mode) — Edit notes:
+- Accessibility (less motion, text size, left-handed) — Edit notes:
+- Motivation (points, hints on/off) — Edit notes:
+- Companion pet (on, name, type, colour) — Edit notes:
+- Shopping (list type, reset days, budget) — Edit notes:
+- Reminders (on, time, task alerts, quiet hours, holidays) — Edit notes:
+- Work mode (on, auto, hours) — Edit notes:
+- Data (test data, resets) — Edit notes:
 
-### 2.12 `/share-modal.tsx` — QR Share Sheet
-Pick items/tasks, encode to QR, record outbound. See §1.4.
-- Back header · select-all toggle + checkbox list · empty state · share button (count) · QR card · done button — Edit notes:
+### Share sheet
+Pick things, make a code to share. (See Sharing above.)
+- Pick items · share button · the code · done — Edit notes:
 
-### 2.13 `/plans.tsx` — Full-Day Plans
-Expanded DayTimeline for today. See §1.2.
-- Back header · add button · share button · hint · empty state · DayTimeline — Edit notes:
+### Plans (full day)
+The whole day's plan. (See Today's plans above.)
+- Add · share · the timeline — Edit notes:
 
-### 2.14 `/shopping.tsx` — Weekly & Monthly Shopping
-See §1.5 for full breakdown.
-- Tabs · shared requests · summary · monthly actions · dish groups · item lists · in-cart · clear/finish · purchased history · reset · add sheet · carry-over modal · FAB — Edit notes:
+### Shopping
+See the Shopping list section above.
 
-### 2.15 `/task-form.tsx` — Add/Edit Task
-Title, date, time (or "Whenever"), type, duration, importance, priority, weekly recurrence.
-- Cancel/save header — Edit notes:
-- Hint card — Edit notes:
-- Title input — Edit notes:
-- Date week chips + calendar toggle — Edit notes:
-- Time toggle (set time / whenever) + picker — Edit notes:
-- Type toggle (start-at / time-box) — Edit notes:
-- Duration chips (time-box) — Edit notes:
-- Importance toggle — Edit notes:
-- Priority toggle — Edit notes:
-- Recurring toggle + day chips — Edit notes:
-- Delete (edit mode) — Edit notes:
-- Confirmation banner — Edit notes:
+### Add / edit task
+Make or change a task.
+- Title — Edit notes:
+- Date (week chips or calendar) — Edit notes:
+- Time (or "whenever") — Edit notes:
+- Type (start at a time / time-box) — Edit notes:
+- Length (for time-box) — Edit notes:
+- Importance — Edit notes:
+- Priority — Edit notes:
+- Repeat weekly (pick days) — Edit notes:
+- Delete — Edit notes:
 
-### 2.16 Onboarding (`/onboarding/*`)
-Flow: language → privacy → guided/explore → name → work mode → shopping days → notifications → theme → pet → home.
-- `language.tsx` — EN/NO picker — Edit notes:
-- `privacy.tsx` — local-only/free-forever trust screen — Edit notes:
-- `guided.tsx` — Guided vs Explore branch — Edit notes:
-- `index.tsx` (step 1) — welcome + name capture + feature list — Edit notes:
-- `step2.tsx` — work mode + hours — Edit notes:
-- `step3.tsx` — weekly/monthly reset days — Edit notes:
-- `step4.tsx` — notification confirmation — Edit notes:
-- `step5.tsx` — colour theme + handedness — Edit notes:
-- `step6.tsx` — companion pet naming + finish (requests notifs, schedules reminders) — Edit notes:
+### Onboarding (first-time setup)
+Language → privacy → guided or explore → name → work mode → shopping days →
+reminders → colour → pet → done.
+- Each step — Edit notes:
 
 ---
 
-## 3. Stores (Zustand + SQLite)
-
-Each: purpose · table(s) · what it backs. Add `Edit notes:` as needed.
-
-- **useEnergyStore** — daily energy level · `energy_logs` · home task filtering. Edit notes:
-- **useTaskStore** — one-off + weekly tasks, per-task notifications · `tasks` · Plans, Home, backlog, focus, Automations trigger. Edit notes:
-- **useHabitStore** — build/break habits + daily logs + reminders · `habits`, `habit_logs` (35-day load) · Habits screens. Edit notes:
-- **useShoppingStore** — weekly/monthly lists, status pipeline, allocation, carry-over · `shopping_items` · Shopping. Edit notes:
-- **useCatalogStore** — grocery catalog + purchase history, typeahead, price learning · `store_items`, `purchase_log` · Shopping/Scan autocomplete, Budget. Edit notes:
-- **useSettingsStore** — single-row app config (profile, theme, notifications, modes, pet, bubble tuning, budget) · `settings` · everything. Edit notes:
-- **useInboxStore** — quick-capture one-liners · `inbox_items` · Home inbox, promote-to-task. Edit notes:
-- **useAutomationStore** — IFTTT rules · `ifttt_rules` · Automations. Edit notes:
-- **useHealthStore** — symptom/ailment log · `health_logs` · Health. Edit notes:
-- **useFeedbackStore** — debug overlay notes · `feedback_notes` · DebugOverlay. Edit notes:
-- **useMealStore** — dishes + ingredients, random picker · `dishes`, `ingredients` · Meals, shopping population. Edit notes:
-- **useReceiptStore** — receipts for budget · `receipts` · Budget, scan. Edit notes:
-- **useUpdateStore** — in-memory OTA-ready flag · (no SQLite) · Home restart banner. Edit notes:
-- **useSharedStore** — shared tasks/shopping in/out · `shared_tasks`, `shared_shopping_items` · Share/QR, shared history, SharedRequestsSection. Edit notes:
-
----
-
-## 4. Shared components & lib helpers
-
-### Components
-- **BubbleMenu** — radial FAB nav (see §1.3). Edit notes:
-- **EnergyCheckIn** — 3-tile energy picker (§1.1). Edit notes:
-- **QuickAddSheet** — bottom-sheet quick task add. Edit notes:
-- **DayTimeline** — plans agenda with "now" marker (§1.2). Edit notes:
-- **InboxSection** — home inbox list + promote (§1.7). Edit notes:
-- **SharedRequestsSection** — inline incoming shared items. Edit notes:
-- **ShoppingRow** — shopping item row. Edit notes:
-- **MonthlyTableRow** — monthly status-pipeline row. Edit notes:
-- **CarryOverPromptModal** — payday keep/drop modal. Edit notes:
-- **DatePickerCalendar** — month/date picker. Edit notes:
-- **TaskItem** — task row (checkbox, time, priority, star). Edit notes:
-- **TimePickerWheel** — scrolling hour/minute wheel. Edit notes:
-- **HabitIcon** — habit completion circle / streak visual. Edit notes:
-- **Pet** — companion pet (types, states, habitat, food reactions). Edit notes:
-- **NextTaskCard** — focus-view single task. Edit notes:
-- **Surface / ScreenBackground / ScreenHeader** — themed card / backdrop / header. Edit notes:
-- **ConfirmationBanner** — transient feedback banner. Edit notes:
-- **ExpandableCard** — collapsible card. Edit notes:
-- **HintCard** — explanation/hint box (gated by `showHints`). Edit notes:
-- **QRCodeDisplay** — QR renderer for sharing. Edit notes:
-- **CompletionGlow** — completion glow animation. Edit notes:
-- **PressableScale** — press scale + haptic wrapper. Edit notes:
-- **DebugOverlay** — dev panel (feedback notes, perf, bubble tuning). Edit notes:
-- **Cover screen set** (CoverScreen/CoverHeader/CoverTasksSection/CoverHabitsSection) — lock-screen widget content. Edit notes:
-
-### Lib helpers
-- **share.ts** — QR payload encode/decode (§1.4). Edit notes:
-- **notifications.ts** — low-level scheduling primitives, quiet-hours math, snooze, interactive actions. Edit notes:
-- **taskNotifications.ts** — per-task reminders (one-off + weekly + time-box end). Edit notes:
-- **habitNotifications.ts** — per-habit daily reminder (single time today). Edit notes:
-- **reminders.ts** — weekly planning + monthly reset reminders from settings. Edit notes:
-- **date.ts** — `todayStr` / `dateStr` / week & month helpers (YYYY-MM-DD, local). Edit notes:
-- **time.ts** — HH:MM parse/format/next-hour. Edit notes:
-- **haptics.ts** — crash-safe intent-named haptics (tap/success/selection/warning/tug/confirm/heavy). Edit notes:
-- **i18n.ts** — EN/NO dictionaries + `useT` / `getTranslations`. Edit notes:
-- **catalogSeed.ts** — ~230 Norwegian groceries seeded into `store_items`. Edit notes:
-- **useAppTheme.ts** — resolve palette, dark mode, soft theme, accessibility scaling. Edit notes:
-- **receipt.ts** — `parseReceiptText` OCR parsing. Edit notes:
-- **db.ts / dataAccess.ts** — SQLite init, migrations, pruning, row marshalling. Edit notes:
-- **id.ts** — short time-ordered IDs. Edit notes:
-- **seedTestData.ts** — sample data loader. Edit notes:
-- **holidays.ts / taskOrder.ts / taskSuggestion.ts / taskVisual.ts** — holiday detection, task sorting, suggestions, visual attributes. Edit notes:
-
-### Constants
-- **theme.ts** — design tokens, 5 themes + dark, materials, spacing/radius/type, `getTheme`/`getSoftTheme`/`getMaterialStyle`/`tintToTheme`. Edit notes:
-- **petData.ts** — pet emojis, habitats, food keyword/category reactions. Edit notes:
+## Other touches you'll notice
+- **Companion pet** — reacts when you finish habits; eats "food" from your shopping items.
+- **Hint boxes** — short tips at the top of most screens (can be turned off).
+- **Confirmation pop-ups** — quick "saved!" banners after you do something.
+- **Press feedback** — buttons gently shrink and buzz when tapped.
+- **Themes & finishes** — colour themes plus a surface finish (glass/metal/rock/paper).
+- **Lock-screen widget** — your next task and habit streaks on the lock screen.
+  - Edit notes:
