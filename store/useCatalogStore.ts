@@ -19,7 +19,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
-import { Row, loadAll, insertRow, readStr, readReal } from '@/lib/dataAccess';
+import { Row, loadAll, insertRow, readStr, readReal, tx } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { CATALOG_SEED } from '@/lib/catalogSeed';
 
@@ -108,6 +108,10 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
     const now = new Date().toISOString();
     const next = [...get().items];
 
+    // One transaction for all per-item writes (was up to 2 autocommits per item);
+    // per-item try/catch still keeps logging best-effort. set() runs after, so a
+    // rollback can't leave in-memory state ahead of the DB.
+    tx(() => {
     for (const p of purchases) {
       const name = p.name.trim();
       if (!name) continue;
@@ -157,6 +161,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
         } catch { /* ignore */ }
       }
     }
+    });
 
     next.sort((a, b) => a.name.localeCompare(b.name, 'no'));
     set({ items: next });
