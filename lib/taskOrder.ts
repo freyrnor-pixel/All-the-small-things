@@ -16,7 +16,7 @@
  *   - If this ranking changes, the home screen and the persistent notification
  *     both pick it up automatically — no separate update needed.
  */
-import { Task } from '@/store/useTaskStore';
+import type { Task } from '@/store/useTaskStore';
 
 export function rankTodayTasks(list: Task[]): Task[] {
   const rank = (task: Task) => {
