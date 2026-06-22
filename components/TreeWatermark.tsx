@@ -13,24 +13,25 @@
  *   - Always pointerEvents="none" — purely decorative, must never block taps.
  */
 import React from 'react';
-import { Image, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { Image, View, StyleSheet, ImageStyle, StyleProp } from 'react-native';
 
 type Props = {
   size: number;
   opacity: number;
   /** Absolutely-positioned and centered (home watermark) vs inline (divider). Default true. */
   absolute?: boolean;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ImageStyle>;
 };
 
 export default function TreeWatermark({ size, opacity, absolute = true, style }: Props) {
   return (
-    <Image
-      pointerEvents="none"
-      source={require('@/assets/android-icon-monochrome.png')}
-      style={[{ width: size, height: size, opacity }, absolute && styles.absolute, style]}
-      resizeMode="contain"
-    />
+    <View pointerEvents="none" style={absolute && styles.absolute}>
+      <Image
+        source={require('@/assets/android-icon-monochrome.png')}
+        style={[{ width: size, height: size, opacity }, style]}
+        resizeMode="contain"
+      />
+    </View>
   );
 }
 

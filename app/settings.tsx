@@ -41,7 +41,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore, Settings, FontSizePref, PetType } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
@@ -58,9 +57,11 @@ import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import SectionDivider from '@/components/SectionDivider';
-import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_ICONS, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, MATERIAL_META, MaterialName, getMaterialStyle, hueToCustomColors, hslToHex } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 import SwatchPicker from '@/components/SwatchPicker';
+import { RadialSwatch, ConicSwatch } from '@/components/GradientSwatch';
+import HuePicker from '@/components/HuePicker';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
 const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
@@ -230,47 +231,30 @@ export default function SettingsScreen() {
               }}
               renderSwatch={(key) => {
                 const th = THEMES[key as ThemeName];
-                const fill = key === 'custom' ? settings.customPrimaryColor : th.orange;
+                if (key === 'custom') {
+                  const wheelColors = Array.from({ length: 24 }, (_, i) => hslToHex((i / 24), 0.65, 0.55));
+                  return (
+                    <ConicSwatch size={54} colors={wheelColors} />
+                  );
+                }
                 return (
-                  <View style={[styles.swatchFill, { backgroundColor: fill }]}>
-                    <Ionicons name={THEME_ICONS[key as ThemeName] as any} size={24} color={th.white} />
-                  </View>
+                  <RadialSwatch color={th.orange} size={54} />
                 );
               }}
             />
 
-            {/* Custom theme color pickers */}
+            {/* Custom theme hue picker — saturation/lightness are fixed by hueToCustomColors() */}
             {settings.colorTheme === 'custom' && (
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
-                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.customThemePrimary}</Text>
-                <View style={styles.colorGrid}>
-                  {CUSTOM_COLOR_PRESETS.map((color) => (
-                    <Pressable
-                      key={color + 'p'}
-                      style={[
-                        styles.colorSwatch,
-                        { backgroundColor: color },
-                        settings.customPrimaryColor === color && styles.colorSwatchActive,
-                      ]}
-                      onPress={() => settings.update({ customPrimaryColor: color })}
-                    />
-                  ))}
-                </View>
-                <Text style={[styles.fieldLabel, { color: theme.textLight, marginTop: Spacing.md }]}>{t.customThemeSecondary}</Text>
-                <View style={styles.colorGrid}>
-                  {CUSTOM_COLOR_PRESETS.map((color) => (
-                    <Pressable
-                      key={color + 's'}
-                      style={[
-                        styles.colorSwatch,
-                        { backgroundColor: color },
-                        settings.customSecondaryColor === color && styles.colorSwatchActive,
-                      ]}
-                      onPress={() => settings.update({ customSecondaryColor: color })}
-                    />
-                  ))}
-                </View>
+                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.customThemeHue}</Text>
+                <HuePicker
+                  value={settings.customHue}
+                  onChange={(hue) => {
+                    const { primary, secondary } = hueToCustomColors(hue);
+                    settings.update({ customHue: hue, customPrimaryColor: primary, customSecondaryColor: secondary });
+                  }}
+                />
               </>
             )}
 
@@ -929,12 +913,8 @@ const baseStyles = StyleSheet.create({
   navRowArrow: { fontSize: FontSize.xl, fontWeight: '700' },
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
-  swatchFill: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
   materialSwatch: { width: '100%', height: '100%', borderRadius: Radius.full, overflow: 'hidden' },
   materialSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderRadius: Radius.full },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
-  colorSwatch: { width: 32, height: 32, borderRadius: Radius.sm, borderWidth: 2, borderColor: 'transparent' },
-  colorSwatchActive: { borderColor: '#333', borderWidth: 3 },
   langRow: { flexDirection: 'row', gap: Spacing.md },
   langChip: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,

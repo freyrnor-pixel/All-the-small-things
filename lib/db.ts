@@ -293,6 +293,8 @@ export function initDb() {
     "ALTER TABLE feedback_notes ADD COLUMN title TEXT DEFAULT ''",
     // Multiple daily reminders per habit — JSON array of HH:MM times (empty = fall back to notification_time)
     "ALTER TABLE habits ADD COLUMN notification_times TEXT DEFAULT '[]'",
+    // Hue-only custom theme picker (handoff 1D) — primary/secondary colors above are derived from this
+    "ALTER TABLE settings ADD COLUMN custom_hue INTEGER DEFAULT 217",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

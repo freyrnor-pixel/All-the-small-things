@@ -734,7 +734,7 @@ export default function ShoppingScreen() {
                         {suggestions.map((s) => (
                           <PressableScale
                             key={s.id}
-                            style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
+                            style={[styles.suggestChip, { backgroundColor: theme.orangeLight }]}
                             onPress={() => pickSuggestion(s.name, s.category, s.price)}
                           >
                             <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
