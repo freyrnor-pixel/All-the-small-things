@@ -41,6 +41,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore, Settings, FontSizePref, PetType } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useTaskStore } from '@/store/useTaskStore';
@@ -56,8 +57,9 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import TimePickerWheel from '@/components/TimePickerWheel';
-import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_ICONS, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
+import SwatchPicker from '@/components/SwatchPicker';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
 const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
@@ -218,41 +220,23 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionColorTheme}</Text>
           <Surface style={styles.card}>
-            <View style={styles.themeGrid}>
-              {(Object.keys(THEMES) as ThemeName[]).map((key) => {
-                const th = THEMES[key];
-                const isActive = settings.colorTheme === key;
-                const primaryColor = key === 'custom' ? settings.customPrimaryColor : th.orange;
-                const secondaryColor = key === 'custom' ? settings.customSecondaryColor : th.green;
+            <SwatchPicker
+              items={(Object.keys(THEMES) as ThemeName[]).map((key) => ({ key, label: t.themeNames[key] }))}
+              value={settings.colorTheme}
+              onChange={(key) => {
+                settings.update({ colorTheme: key as ThemeName });
+                if (key === 'gothic') settings.update({ darkMode: 'on' });
+              }}
+              renderSwatch={(key) => {
+                const th = THEMES[key as ThemeName];
+                const fill = key === 'custom' ? settings.customPrimaryColor : th.orange;
                 return (
-                  <Pressable
-                    key={key}
-                    style={[
-                      styles.themeOption,
-                      { backgroundColor: theme.offWhite, borderColor: isActive ? primaryColor : theme.grayLight },
-                      isActive && Shadow.cardHeavy,
-                    ]}
-                    onPress={() => {
-                      settings.update({ colorTheme: key });
-                      if (key === 'gothic') settings.update({ darkMode: 'on' });
-                    }}
-                  >
-                    <View style={[styles.themeSwatches, { marginBottom: 8 }]}>
-                      <View style={[styles.swatch, styles.swatchLarge, { backgroundColor: th.cream }]} />
-                      <View style={[styles.swatch, styles.swatchLarge, { backgroundColor: primaryColor }]} />
-                      <View style={[styles.swatch, styles.swatchLarge, { backgroundColor: secondaryColor }]} />
-                    </View>
-                    <Text style={[
-                      styles.themeLabel,
-                      { color: theme.textLight },
-                      isActive && { color: primaryColor, fontWeight: '700' },
-                    ]}>
-                      {t.themeNames[key]}
-                    </Text>
-                  </Pressable>
+                  <View style={[styles.swatchFill, { backgroundColor: fill }]}>
+                    <Ionicons name={THEME_ICONS[key as ThemeName] as any} size={24} color={th.white} />
+                  </View>
                 );
-              })}
-            </View>
+              }}
+            />
 
             {/* Custom theme color pickers */}
             {settings.colorTheme === 'custom' && (
@@ -297,55 +281,33 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionBubbleMaterial}</Text>
           <Surface style={styles.card}>
-            <View style={styles.themeGrid}>
-              {(Object.keys(MATERIAL_META) as MaterialName[]).map((key) => {
-                const isActive = settings.bubbleMaterial === key;
-                const preview = getMaterialStyle(theme.orange, key);
+            <SwatchPicker
+              items={(Object.keys(MATERIAL_META) as MaterialName[]).map((key) => ({ key, label: t.materialNames[key] }))}
+              value={settings.bubbleMaterial}
+              onChange={(key) => settings.update({ bubbleMaterial: key as MaterialName })}
+              renderSwatch={(key) => {
+                const preview = getMaterialStyle(theme.orange, key as MaterialName);
                 return (
-                  <Pressable
-                    key={key}
+                  <View
                     style={[
-                      styles.themeOption,
-                      { backgroundColor: theme.offWhite, borderColor: isActive ? theme.orange : theme.grayLight },
-                      isActive && Shadow.cardHeavy,
+                      styles.materialSwatch,
+                      {
+                        backgroundColor: preview.backgroundColor,
+                        borderWidth: preview.borderWidth,
+                        borderColor: preview.borderColor,
+                        borderTopColor: preview.borderTopColor,
+                        borderBottomColor: preview.borderBottomColor,
+                        shadowOpacity: preview.shadowOpacity,
+                        shadowRadius: preview.shadowRadius,
+                        elevation: preview.elevation,
+                      },
                     ]}
-                    onPress={() => settings.update({ bubbleMaterial: key })}
                   >
-                    <View style={styles.materialPreviewOuter}>
-                      <View
-                        style={[
-                          styles.materialSwatch,
-                          {
-                            backgroundColor: preview.backgroundColor,
-                            borderWidth: preview.borderWidth,
-                            borderColor: preview.borderColor,
-                            borderTopColor: preview.borderTopColor,
-                            borderBottomColor: preview.borderBottomColor,
-                            shadowOpacity: preview.shadowOpacity,
-                            shadowRadius: preview.shadowRadius,
-                            elevation: preview.elevation,
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.materialSheen,
-                            { backgroundColor: preview.sheenColor },
-                          ]}
-                        />
-                      </View>
-                    </View>
-                    <Text style={[
-                      styles.themeLabel,
-                      { color: theme.textLight },
-                      isActive && { color: theme.orange, fontWeight: '700' },
-                    ]}>
-                      {t.materialNames[key]}
-                    </Text>
-                  </Pressable>
+                    <View style={[styles.materialSheen, { backgroundColor: preview.sheenColor }]} />
+                  </View>
                 );
-              })}
-            </View>
+              }}
+            />
             <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.material}</Text>
           </Surface>
         </View>
@@ -942,17 +904,8 @@ const baseStyles = StyleSheet.create({
   navRowArrow: { fontSize: FontSize.xl, fontWeight: '700' },
   dangerBtn: { paddingVertical: Spacing.sm },
   dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
-  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  // borderWidth is constant (active state varies only borderColor + shadow) so selecting
-  // a theme/material never grows the card — a varying borderWidth would change a
-  // content-sized box's height when active, making cards visibly jump size on selection.
-  themeOption: { width: '30%', flexGrow: 1, borderWidth: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', justifyContent: 'center' },
-  themeSwatches: { flexDirection: 'row', gap: 3, justifyContent: 'center' },
-  swatch: { width: 14, height: 14, borderRadius: Radius.full },
-  swatchLarge: { width: 18, height: 18 },
-  themeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
-  materialPreviewOuter: { alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm },
-  materialSwatch: { width: 48, height: 48, borderRadius: Radius.full, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 } },
+  swatchFill: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  materialSwatch: { width: '100%', height: '100%', borderRadius: Radius.full, overflow: 'hidden' },
   materialSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderRadius: Radius.full },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.xs },
   colorSwatch: { width: 32, height: 32, borderRadius: Radius.sm, borderWidth: 2, borderColor: 'transparent' },
