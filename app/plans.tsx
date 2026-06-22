@@ -61,11 +61,11 @@ export default function PlansScreen() {
         right={
           <View style={styles.headerActions}>
             <Pressable
-              style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
+              style={styles.shareBtn}
               onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
               accessibilityLabel={t.shareBtnLabel}
             >
-              <Text style={styles.shareBtnIcon}>⤴</Text>
+              <Text style={[styles.shareBtnIcon, { color: theme.orange }]}>⤴</Text>
             </Pressable>
             <Pressable
               style={[styles.addBtn, { backgroundColor: theme.orange }]}

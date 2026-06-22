@@ -776,6 +776,37 @@ export default function SettingsScreen() {
                 />
               </>
             )}
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workDaysLabel}</Text>
+            <View style={styles.dayRow}>
+              {DAY_LABELS.map((label, i) => {
+                const active = settings.workDays.includes(i);
+                return (
+                  <Pressable
+                    key={i}
+                    style={[
+                      styles.dayChip,
+                      { backgroundColor: theme.grayLight },
+                      active && { backgroundColor: theme.orange },
+                    ]}
+                    onPress={() => {
+                      const next = active
+                        ? settings.workDays.filter((d) => d !== i)
+                        : [...settings.workDays, i].sort();
+                      settings.update({ workDays: next });
+                    }}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      { color: theme.text },
+                      active && { color: '#FFFFFF' },
+                    ]}>
+                      {label.slice(0, 3)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </Surface>
         </View>
 
