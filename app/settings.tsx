@@ -57,6 +57,7 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import TimePickerWheel from '@/components/TimePickerWheel';
+import SectionDivider from '@/components/SectionDivider';
 import { FontSize, Radius, Shadow, Spacing, THEMES, THEME_ICONS, ThemeName, CUSTOM_COLOR_PRESETS, MATERIAL_META, MaterialName, getMaterialStyle } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 import SwatchPicker from '@/components/SwatchPicker';
@@ -609,6 +610,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* ===== NOTIFICATIONS ===== */}
+        <SectionDivider />
         <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.notifications}</Text>
 
         {/* Reminders */}
@@ -719,6 +721,7 @@ export default function SettingsScreen() {
         {/* Automations — hidden for now, not a near-term feature (see design handoff Q1) */}
 
         {/* ===== WORK MODE ===== */}
+        <SectionDivider />
         <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.workMode}</Text>
 
         {/* Work mode */}
@@ -801,6 +804,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* ===== DATA (destructive resets — separated, danger-tinted) ===== */}
+        <SectionDivider />
         <Text style={[styles.groupHeader, { color: theme.danger }]}>{t.config.sections.data}</Text>
 
         {/* Debug mode — feedback pins + bubble-wheel tuning overlay (components/DebugOverlay.tsx) */}
