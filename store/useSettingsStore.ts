@@ -34,7 +34,7 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 
-export type ColorTheme = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
+export type ColorTheme = 'default' | 'tech' | 'gothic' | 'nature' | 'fluffy' | 'custom';
 export type Language = 'en' | 'no';
 export type DarkMode = 'system' | 'on' | 'off';
 export type FontSizePref = 'small' | 'default' | 'large';
@@ -113,7 +113,7 @@ function migrateThemeName(name: string | null): ColorTheme {
     warm: 'default', cool: 'tech', forest: 'nature', rose: 'nature', highcontrast: 'default',
   };
   if (name in map) return map[name];
-  const valid: ColorTheme[] = ['default', 'tech', 'gothic', 'nature', 'custom'];
+  const valid: ColorTheme[] = ['default', 'tech', 'gothic', 'nature', 'fluffy', 'custom'];
   return valid.includes(name as ColorTheme) ? (name as ColorTheme) : 'default';
 }
 

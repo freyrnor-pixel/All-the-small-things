@@ -24,8 +24,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, ThemeName } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing, THEMES, THEME_ICONS, ThemeName } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
+import SwatchPicker from '@/components/SwatchPicker';
 
 export default function OnboardingStep5() {
   const router = useRouter();
@@ -44,35 +45,21 @@ export default function OnboardingStep5() {
           <Text style={styles.sub}>{t.themeSub}</Text>
         </View>
 
-        <View style={styles.themeGrid}>
-          {(Object.keys(THEMES) as ThemeName[]).map((key) => {
-            const th = THEMES[key];
-            const isActive = settings.colorTheme === key;
+        <SwatchPicker
+          items={(Object.keys(THEMES) as ThemeName[])
+            .filter((key) => key !== 'custom')
+            .map((key) => ({ key, label: t.themeNames[key] }))}
+          value={settings.colorTheme}
+          onChange={(key) => settings.update({ colorTheme: key as ThemeName })}
+          renderSwatch={(key) => {
+            const th = THEMES[key as ThemeName];
             return (
-              <Pressable
-                key={key}
-                style={[
-                  styles.themeCard,
-                  { backgroundColor: th.cream, borderColor: isActive ? th.orange : th.grayLight },
-                  isActive && styles.themeCardActive,
-                ]}
-                onPress={() => settings.update({ colorTheme: key })}
-              >
-                <View style={styles.swatchRow}>
-                  <View style={[styles.swatch, { backgroundColor: th.orange }]} />
-                  <View style={[styles.swatch, { backgroundColor: th.green }]} />
-                  <View style={[styles.swatch, { backgroundColor: th.brown }]} />
-                </View>
-                <Text style={[styles.themeLabel, { color: th.text }]}>{t.themeNames[key]}</Text>
-                {isActive && (
-                  <View style={[styles.checkmark, { backgroundColor: th.orange }]}>
-                    <Ionicons name="checkmark" size={12} color={Colors.white} />
-                  </View>
-                )}
-              </Pressable>
+              <View style={[styles.swatchFill, { backgroundColor: th.orange }]}>
+                <Ionicons name={THEME_ICONS[key as ThemeName] as any} size={24} color={th.white} />
+              </View>
             );
-          })}
-        </View>
+          }}
+        />
 
         <View style={styles.handednessCard}>
           <View style={styles.switchRow}>
@@ -121,29 +108,7 @@ const baseStyles = StyleSheet.create({
   },
   heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
-  themeCard: {
-    width: '47%',
-    borderRadius: Radius.md,
-    borderWidth: 2,
-    padding: Spacing.md,
-    alignItems: 'center',
-    gap: Spacing.sm,
-    ...Shadow.card,
-    position: 'relative',
-  },
-  themeCardActive: { borderWidth: 2 },
-  swatchRow: { flexDirection: 'row', gap: Spacing.sm },
-  swatch: { width: 20, height: 20, borderRadius: Radius.full },
-  themeLabel: { fontSize: FontSize.md, fontWeight: '600' },
-  checkmark: {
-    position: 'absolute',
-    top: 8, right: 8,
-    width: 22, height: 22,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  swatchFill: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
   handednessCard: {
     backgroundColor: Colors.white,
     borderRadius: Radius.md,

@@ -38,7 +38,7 @@
  *     0.16) at higher alpha) so every theme/feature colour keeps its own identity instead
  *     of washing toward a flat icy grey-blue.
  */
-export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
+export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'fluffy' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
 
 export interface AppColors {
@@ -279,6 +279,30 @@ export const THEMES: Record<ThemeName, AppColors> = {
     hintBorder: lighten('#16A34A', 0.65),
     hintAccent: '#16A34A',
   },
+  // Cheerful pastel pink/magenta — playful, soft.
+  fluffy: {
+    cream: '#FFF0F6',
+    orange: '#EC4899',
+    orangeLight: '#FBCFE8',
+    green: '#F472B6',
+    greenLight: '#FCE7F3',
+    brown: '#9D174D',
+    brownLight: '#F9A8D4',
+    white: lighten('#EC4899', 0.985),
+    offWhite: '#FCE7F3',
+    gray: '#C2839F',
+    grayLight: '#F8DCE8',
+    text: '#4A0E2E',
+    textLight: '#9D5B7D',
+    danger: '#DC2626',
+    dangerLight: '#FEE2E2',
+    shadow: 'rgba(74,14,46,0.12)',
+    border: '#FBCFE8',
+    neutral: '#E0A8C2',
+    hintBg: lighten('#EC4899', 0.9),
+    hintBorder: lighten('#EC4899', 0.65),
+    hintAccent: '#EC4899',
+  },
   // Placeholder — replaced at runtime by buildCustomTheme() using user's chosen colors.
   custom: {
     cream: '#F8F8F8',
@@ -310,6 +334,7 @@ export const THEME_META: Record<ThemeName, { label: string }> = {
   tech: { label: 'Tech' },
   gothic: { label: 'Gothic' },
   nature: { label: 'Nature' },
+  fluffy: { label: 'Fluffy pink' },
   custom: { label: 'Custom' },
 };
 
@@ -415,6 +440,30 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     hintBorder: darken('#22C55E', 0.5),
     hintAccent: lighten('#22C55E', 0.15),
   },
+  // Deep plum/maroon with vivid pink accents — fluffy's true-dark counterpart.
+  fluffy: {
+    cream: '#1A0612',
+    orange: '#F472B6',
+    orangeLight: '#3A1228',
+    green: '#F9A8D4',
+    greenLight: '#2A0E1C',
+    brown: '#FBCFE8',
+    brownLight: '#4A1830',
+    white: '#3A2A32',
+    offWhite: '#241620',
+    gray: '#9D5B7D',
+    grayLight: '#4F4248',
+    text: '#FCE7F3',
+    textLight: '#E0A0C0',
+    danger: '#FB7185',
+    dangerLight: '#2A0810',
+    shadow: 'rgba(0,0,0,0.6)',
+    border: '#F472B6',
+    neutral: '#8A4868',
+    hintBg: darken('#F472B6', 0.75),
+    hintBorder: darken('#F472B6', 0.5),
+    hintAccent: lighten('#F472B6', 0.15),
+  },
   // Placeholder — replaced at runtime by buildCustomTheme().
   custom: {
     cream: '#0C0C14',
@@ -467,6 +516,16 @@ export function getSoftTheme(c: AppColors): AppColors {
 }
 
 export const Colors = THEMES.default;
+
+/** Ionicons glyph name shown inside each theme's swatch circle (SwatchPicker). */
+export const THEME_ICONS: Record<ThemeName, string> = {
+  default: 'water-outline',
+  tech: 'flash-outline',
+  gothic: 'moon-outline',
+  nature: 'leaf-outline',
+  fluffy: 'flower-outline',
+  custom: 'color-palette-outline',
+};
 
 /**
  * Bubble/FAB accent colors for BubbleMenu + the task-type accents in task-form/TaskItem.
