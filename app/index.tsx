@@ -335,11 +335,11 @@ export default function HomeScreen() {
                 <Ionicons name="link-outline" size={16} color={theme.textLight} />
               </Pressable>
               <Pressable
-                style={[styles.shareBtn, { backgroundColor: theme.greenLight }]}
+                style={styles.shareBtn}
                 onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
                 accessibilityLabel={t.shareBtnLabel}
               >
-                <Ionicons name="share-outline" size={14} color={theme.green} />
+                <Ionicons name="share-outline" size={14} color={theme.orange} />
               </Pressable>
               <Pressable
                 style={[styles.addBtn, { backgroundColor: theme.orange }]}

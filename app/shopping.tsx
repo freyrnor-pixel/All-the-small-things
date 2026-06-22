@@ -439,8 +439,8 @@ export default function ShoppingScreen() {
           {/* Monthly tab: action row — update inventory + commit staged items to cart */}
           {tab === 'monthly' && (
             <View style={styles.actionRow}>
-              <Pressable style={[styles.actionBtn, { backgroundColor: theme.orangeLight }]} onPress={openUpdateInventory}>
-                <Text style={[styles.actionBtnText, { color: theme.orange }]}>{t.updateInventoryBtn}</Text>
+              <Pressable style={[styles.actionBtn, { backgroundColor: theme.orange }]} onPress={openUpdateInventory}>
+                <Text style={[styles.actionBtnText, { color: '#fff' }]}>{t.updateInventoryBtn}</Text>
               </Pressable>
               {stagedCount > 0 && (
                 <Pressable style={[styles.actionBtn, { backgroundColor: theme.orange }]} onPress={handleSaveToCart}>
