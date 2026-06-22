@@ -8,7 +8,7 @@
  * nothing pending — mirrors components/InboxSection.tsx's pattern.
  *
  * Connections:
- *   Imports → components/PressableScale, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/HintCard, components/PressableScale, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → app/shopping.tsx (kind='shopping'), app/index.tsx (kind='task')
  *   Data    → reads/removes useSharedStore rows; writes useShoppingStore/useTaskStore on accept
  *
@@ -26,6 +26,7 @@ import { success } from '@/lib/haptics';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
+import HintCard from '@/components/HintCard';
 import { FontSize, Radius, Spacing } from '@/constants/theme';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -79,6 +80,7 @@ export default function SharedRequestsSection({ kind }: Props) {
   return (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sharedRequests.sectionTitle}</Text>
+      <HintCard text={kind === 'shopping' ? t.sharedRequestExplainShopping : t.sharedRequestExplainTask} />
       <Surface tint={theme.offWhite} style={styles.card}>
         {kind === 'shopping'
           ? sharedShoppingItems

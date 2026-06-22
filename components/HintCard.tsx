@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → constants/theme, store/useSettingsStore
- *   Used by → app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx
+ *   Used by → app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/SharedRequestsSection.tsx
  *   Data    → reads showHints + colorTheme from useSettingsStore (no writes); scaled fontSize via useScaledStyles()
  *
  * Edit notes:

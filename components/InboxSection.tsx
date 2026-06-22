@@ -8,9 +8,9 @@
  * section (incidental leftover data, not a permanent fixture like Plans/Shopping).
  *
  * Connections:
- *   Imports → components/PressableScale, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useInboxStore
+ *   Imports → components/PressableScale, components/Surface, constants/theme, expo-router, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useInboxStore
  *   Used by → app/index.tsx
- *   Data    → reads/writes useInboxStore (inbox_items); promoteToTask() also writes useTaskStore
+ *   Data    → reads/writes useInboxStore (inbox_items); promoteToTask() also writes useTaskStore; Edit routes to /capture?id= to edit a row
  *
  * Edit notes:
  *   - Promotion defaults: today's date, start-at type, no recurrence, regular
@@ -22,6 +22,7 @@
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useT } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import { success } from '@/lib/haptics';
@@ -33,6 +34,7 @@ import { useInboxStore } from '@/store/useInboxStore';
 
 export default function InboxSection() {
   const t = useT();
+  const router = useRouter();
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
   const items = useInboxStore((s) => s.items);
@@ -71,6 +73,12 @@ export default function InboxSection() {
                 haptic={false}
               >
                 <Text style={[styles.actionBtnText, { color: theme.orange }]}>{t.inbox.promote}</Text>
+              </PressableScale>
+              <PressableScale
+                style={[styles.actionBtn, { backgroundColor: theme.grayLight }]}
+                onPress={() => router.push({ pathname: '/capture', params: { id: item.id } })}
+              >
+                <Text style={[styles.actionBtnText, { color: theme.textLight }]}>{t.inbox.edit}</Text>
               </PressableScale>
               <PressableScale
                 style={[styles.actionBtn, { backgroundColor: theme.grayLight }]}

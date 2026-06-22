@@ -68,7 +68,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Radius, Shadow, FeatureColors, contrastOn, getMaterialStyle, tintToTheme, MaterialStyle } from '@/constants/theme';
+import { Radius, Shadow, FeatureColors, contrastOn, contrastOnAll, getMaterialStyle, tintToTheme, MaterialStyle } from '@/constants/theme';
 import { useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useT, Translations } from '@/lib/i18n';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -191,12 +191,13 @@ type BubbleItemViewProps = {
   pointerEvents: 'auto' | 'none';
   radius: number;
   bubbleSize: number;
+  labelColor: string;
   pressDuration: number;
 };
 
 function BubbleItemView({
   item, material, baseAngle, wheelAngle, openProgress, windowStart, windowEnd, onPress, pointerEvents,
-  radius, bubbleSize, pressDuration,
+  radius, bubbleSize, labelColor, pressDuration,
 }: BubbleItemViewProps) {
   const pressAnim = useSharedValue(1);
   const { reducedMotion } = useAccessibility();
@@ -233,14 +234,17 @@ function BubbleItemView({
       pointerEvents={pointerEvents}
     >
       <View style={[styles.bubbleMask, { backgroundColor: material.backgroundColor }]}>
-        {/* Stacked, decreasing-opacity layers fake a smooth highlight falloff instead of one
-            flat-edged sheen rectangle — stays OTA-safe (no native gradient module). */}
+        {/* Top→bottom fake gradient (OTA-safe, no native gradient module): white sheen layers
+            lighten the top, dark shade layers deepen the bottom, with the flat fill in between —
+            stacked decreasing-opacity Views so the falloff reads smooth, not flat-edged. */}
+        <View pointerEvents="none" style={[styles.bubbleShadeOuter, { height: bubbleSize * 0.55, borderBottomLeftRadius: bubbleSize / 2, borderBottomRightRadius: bubbleSize / 2, backgroundColor: material.shadeColor, opacity: 0.35 }]} />
+        <View pointerEvents="none" style={[styles.bubbleShadeMid, { height: bubbleSize * 0.34, borderBottomLeftRadius: bubbleSize / 2, borderBottomRightRadius: bubbleSize / 2, backgroundColor: material.shadeColor, opacity: 0.65 }]} />
         <View pointerEvents="none" style={[styles.bubbleSheenOuter, { height: bubbleSize * 0.55, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 0.35 }]} />
         <View pointerEvents="none" style={[styles.bubbleSheenMid, { height: bubbleSize * 0.38, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 0.55 }]} />
         <View pointerEvents="none" style={[styles.bubbleSheenInner, { height: bubbleSize * 0.2, borderTopLeftRadius: bubbleSize / 2, borderTopRightRadius: bubbleSize / 2, backgroundColor: material.sheenColor, opacity: 1 }]} />
         <Pressable style={styles.bubbleInner} onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-          <Ionicons name={item.icon} size={22} color={contrastOn(material.contrastBase)} />
-          <Text style={[styles.bubbleLabel, { color: contrastOn(material.contrastBase) }]}>{item.label}</Text>
+          <Ionicons name={item.icon} size={22} color={labelColor} />
+          <Text style={[styles.bubbleLabel, { color: labelColor }]}>{item.label}</Text>
         </Pressable>
       </View>
     </Animated.View>
@@ -314,14 +318,21 @@ export default function BubbleMenu({ onNewTask }: Props) {
     [onNewTask, t, theme.orange]
   );
 
-  // Longer labels (e.g. "New task" vs "Scan") get a touch more room so the text doesn't
-  // crowd the bubble edge — scaled relative to the shortest label, capped at maxItemSize
-  // (computed above, alongside wheelSize).
+  // All satellite bubbles share ONE size — big enough for the LONGEST label — so the wheel
+  // reads as uniform instead of ragged (was per-label sized, which made bubbles different
+  // sizes). Grown from the base by the longest label's extra characters, capped at
+  // maxItemSize (the geometric no-overlap limit computed above alongside wheelSize).
+  const longestLabelLen = Math.max(...items.map((item) => item.label.length));
   const shortestLabelLen = Math.min(...items.map((item) => item.label.length));
-  function bubbleSizeFor(label: string): number {
-    const extra = Math.max(0, label.length - shortestLabelLen);
-    return clamp(bSize + extra * 1.6, bSize, maxItemSize);
-  }
+  const uniformBubbleSize = clamp(bSize + (longestLabelLen - shortestLabelLen) * 1.6, bSize, maxItemSize);
+
+  // One label colour for every bubble — the colour that stays readable on the hardest
+  // bubble hue — so letters don't flip dark/white from bubble to bubble (was per-bubble
+  // contrastOn(), which is what made the text colour inconsistent).
+  const bubbleLabelColor = useMemo(
+    () => contrastOnAll(items.map((item) => getMaterialStyle(item.color, bubbleMaterial).contrastBase)),
+    [items, bubbleMaterial]
+  );
 
   // ζ≈0.41 at the default springScale=1 — "sprettball" (bouncing-ball) feel: a visible
   // springy overshoot before it settles, rather than a calm critically-damped-ish glide.
@@ -463,7 +474,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
               onPress={() => selectBubble(item)}
               pointerEvents={open ? 'auto' : 'none'}
               radius={radius}
-              bubbleSize={bubbleSizeFor(item.label)}
+              bubbleSize={uniformBubbleSize}
+              labelColor={bubbleLabelColor}
               pressDuration={pressDuration}
             />
           ))}
@@ -490,6 +502,8 @@ export default function BubbleMenu({ onNewTask }: Props) {
         accessibilityState={{ expanded: open }}
       >
         <View style={[styles.fabMask, { backgroundColor: fabMaterial.backgroundColor }]}>
+          <View pointerEvents="none" style={[styles.fabShadeOuter, { backgroundColor: fabMaterial.shadeColor, opacity: 0.35 }]} />
+          <View pointerEvents="none" style={[styles.fabShadeMid, { backgroundColor: fabMaterial.shadeColor, opacity: 0.65 }]} />
           <View pointerEvents="none" style={[styles.fabSheenOuter, { backgroundColor: fabMaterial.sheenColor, opacity: 0.35 }]} />
           <View pointerEvents="none" style={[styles.fabSheenMid, { backgroundColor: fabMaterial.sheenColor, opacity: 0.55 }]} />
           <View pointerEvents="none" style={[styles.fabSheenInner, { backgroundColor: fabMaterial.sheenColor, opacity: 1 }]} />
@@ -569,6 +583,24 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: FAB_SIZE / 2,
     borderTopRightRadius: FAB_SIZE / 2,
   },
+  fabShadeOuter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: FAB_SIZE * 0.55,
+    borderBottomLeftRadius: FAB_SIZE / 2,
+    borderBottomRightRadius: FAB_SIZE / 2,
+  },
+  fabShadeMid: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: FAB_SIZE * 0.34,
+    borderBottomLeftRadius: FAB_SIZE / 2,
+    borderBottomRightRadius: FAB_SIZE / 2,
+  },
   fabLogo: {
     width: 46,
     height: 46,
@@ -611,6 +643,20 @@ const styles = StyleSheet.create({
   bubbleSheenInner: {
     position: 'absolute',
     top: 0,
+    left: 0,
+    right: 0,
+  },
+  // Bottom-anchored shade layers — the lower half of the fake gradient (paired with the
+  // top sheen layers above). height/borderBottom*Radius set inline (depend on bubbleSize).
+  bubbleShadeOuter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bubbleShadeMid: {
+    position: 'absolute',
+    bottom: 0,
     left: 0,
     right: 0,
   },

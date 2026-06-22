@@ -17,7 +17,7 @@
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
-import { Row, loadAll, loadFirst, insertRow, readStr } from '@/lib/dataAccess';
+import { Row, loadAll, loadFirst, insertRow, updateRow, readStr } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { useTaskStore, Task } from '@/store/useTaskStore';
 
@@ -31,6 +31,7 @@ type InboxStore = {
   items: InboxItem[];
   load: () => void;
   add: (text: string) => InboxItem;
+  update: (id: string, text: string) => void;
   remove: (id: string) => void;
   promoteToTask: (id: string, taskFields: Omit<Task, 'id'>) => void;
 };
@@ -58,6 +59,11 @@ export const useInboxStore = create<InboxStore>((set, get) => ({
       { id, text, createdAt: new Date().toISOString() };
     set((s) => ({ items: [created, ...s.items] }));
     return created;
+  },
+
+  update(id, text) {
+    updateRow('inbox_items', { text }, 'id = ?', [id]);
+    set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, text } : i)) }));
   },
 
   remove(id) {

@@ -6,12 +6,12 @@
  * notification when added/updated and exposes syncAllHabitReminders for re-scheduling.
  *
  * Connections:
- *   Imports → lib/db, lib/dataAccess, lib/id, lib/notifications, lib/habitNotifications, store/useSettingsStore
+ *   Imports → lib/db, lib/dataAccess, lib/id, lib/habitNotifications, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/settings.tsx
  *   Data    → defines a Zustand store; owns SQLite tables habits and habit_logs; schedules per-habit daily notifications
  *
  * Edit notes:
- *   - Per-habit daily reminders are scheduled here via syncHabitReminder() (id `habit-<id>`); call syncAllHabitReminders() after a language change since strings are baked in.
+ *   - Per-habit daily reminders are scheduled here via syncHabitReminder() (ids `habit-<id>-<i>`, one per time in notificationTimes); call syncAllHabitReminders() after a language change since strings are baked in.
  *   - load() only fetches active habits and the last 35 days of logs (streak window) — not full history.
  *   - User-facing notification strings go through getTranslations(useSettingsStore.getState().language), NOT useT.
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
@@ -35,8 +35,7 @@ import {
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { cancelDailyReminder } from '@/lib/notifications';
-import { syncHabitReminder as scheduleHabitReminder } from '@/lib/habitNotifications';
+import { syncHabitReminder as scheduleHabitReminder, cancelHabitReminders } from '@/lib/habitNotifications';
 
 export type HabitKind = 'build' | 'break' | 'neutral';
 export type HabitRecurrence = 'daily' | 'weekly' | 'monthly' | 'one-time';
@@ -58,7 +57,10 @@ export type Habit = {
   recurrence: HabitRecurrence;
   recurrenceDays: number[];
   notificationEnabled: boolean;
+  /** First/legacy reminder time (HH:MM). Kept in sync with notificationTimes[0] for back-compat. */
   notificationTime: string;
+  /** All daily reminder times (HH:MM). One entry = single reminder; several = multiple per day. */
+  notificationTimes: string[];
   routineOrder: number;
   active: boolean;
   createdAt: string;
@@ -110,6 +112,14 @@ function rowToHabit(row: Row): Habit {
     recurrenceDays: readJson<number[]>(row, 'recurrence_days', []),
     notificationEnabled: readBool(row, 'notification_enabled'),
     notificationTime: readStr(row, 'notification_time') || '08:00',
+    // Old habits (saved before multi-reminder support) have no notification_times — fall
+    // back to the single notification_time so their reminder keeps working unchanged.
+    notificationTimes: (() => {
+      const arr = readJson<string[]>(row, 'notification_times', []);
+      if (arr.length) return arr;
+      const single = readStr(row, 'notification_time');
+      return single ? [single] : [];
+    })(),
     routineOrder: readInt(row, 'routine_order'),
     active: readInt(row, 'active', 1) !== 0,
     createdAt: readStr(row, 'created_at'),
@@ -143,6 +153,7 @@ const HABIT_COLUMNS: FieldMap<Habit> = {
   recurrenceDays: { col: 'recurrence_days', to: (v) => JSON.stringify(v ?? []) },
   notificationEnabled: { col: 'notification_enabled', to: (v) => (v ? 1 : 0) },
   notificationTime: { col: 'notification_time' },
+  notificationTimes: { col: 'notification_times', to: (v) => JSON.stringify(v ?? []) },
   routineOrder: { col: 'routine_order' },
   active: { col: 'active', to: (v) => (v ? 1 : 0) },
   createdAt: { col: 'created_at' },
@@ -187,7 +198,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   remove(id) {
     db.runSync('DELETE FROM habits WHERE id = ?', [id]);
     db.runSync('DELETE FROM habit_logs WHERE habit_id = ?', [id]);
-    void cancelDailyReminder(`habit-${id}`);
+    void cancelHabitReminders(id);
     set((s) => ({
       habits: s.habits.filter((h) => h.id !== id),
       logs: s.logs.filter((l) => l.habitId !== id),
