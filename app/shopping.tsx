@@ -60,6 +60,7 @@ import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import EmptyState from '@/components/EmptyState';
 import { success, selection, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -448,6 +449,10 @@ export default function ShoppingScreen() {
                 </Pressable>
               )}
             </View>
+          )}
+
+          {dishGroups.length === 0 && ungroupedUnchecked.length === 0 && checked.length === 0 && (
+            <EmptyState text={tab === 'weekly' ? t.emptyWeeklyList : t.emptyMonthlyList} />
           )}
 
           {/* Items pushed from a dish (app/meals.tsx), grouped under that dish's name */}
