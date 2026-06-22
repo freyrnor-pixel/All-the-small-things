@@ -53,17 +53,13 @@ export default function Button({
 
   const fill =
     variant === 'primary' ? theme.orange :
-    variant === 'secondary' ? theme.offWhite :
     variant === 'danger' ? theme.danger :
     'transparent';
 
   const textColor =
     variant === 'primary' ? theme.white :
-    variant === 'secondary' ? theme.text :
     variant === 'danger' ? theme.white :
     theme.orange;
-
-  const borderColor = variant === 'secondary' || variant === 'ghost' ? theme.border : fill;
 
   return (
     <PressableScale
@@ -74,9 +70,9 @@ export default function Button({
         {
           height: SIZE_HEIGHT[size],
           backgroundColor: fill,
-          borderColor,
-          borderWidth: variant === 'secondary' || variant === 'ghost' ? 1 : 0,
-          opacity: disabled ? 0.5 : 1,
+          borderColor: theme.orange,
+          borderWidth: variant === 'secondary' ? 2 : 0,
+          opacity: disabled ? 0.4 : 1,
         },
         style,
       ]}

@@ -716,17 +716,7 @@ export default function SettingsScreen() {
           </Surface>
         </View>
 
-        {/* Automations */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.automations.navLabel}</Text>
-          <Pressable
-            style={[styles.card, styles.navRow, { backgroundColor: theme.white }]}
-            onPress={() => router.push('/automations')}
-          >
-            <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.automations.navHint}</Text>
-            <Text style={[styles.navRowArrow, { color: theme.orange }]}>›</Text>
-          </Pressable>
-        </View>
+        {/* Automations — hidden for now, not a near-term feature (see design handoff Q1) */}
 
         {/* ===== WORK MODE ===== */}
         <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.workMode}</Text>

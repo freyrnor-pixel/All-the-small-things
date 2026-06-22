@@ -803,6 +803,16 @@ export default function ShoppingScreen() {
                       </View>
                     </ScrollView>
                   )}
+                  {tab === 'monthly' && (
+                    <Pressable
+                      style={[styles.temporaryToggle, { borderColor: theme.orange }, addAsTemporary && { backgroundColor: theme.orange }]}
+                      onPress={() => setAddAsTemporary((v) => !v)}
+                    >
+                      <Text style={[styles.temporaryToggleText, { color: addAsTemporary ? '#fff' : theme.orange }]}>
+                        {t.temporaryItemTag}
+                      </Text>
+                    </Pressable>
+                  )}
                   <View style={styles.addActions}>
                     <Pressable style={styles.cancelBtn} onPress={() => setShowAddSheet(false)}>
                       <Text style={[styles.cancelBtnText, { color: theme.textLight }]}>{t.cancel}</Text>
@@ -981,13 +991,22 @@ const baseStyles = StyleSheet.create({
   },
   categoryToggleText: { fontSize: FontSize.xs, fontWeight: '600' },
   categoryToggleChevron: { fontSize: FontSize.xs, fontWeight: '700' },
+  temporaryToggle: {
+    alignSelf: 'flex-start',
+    borderWidth: 2,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    marginTop: Spacing.xs,
+  },
+  temporaryToggleText: { fontSize: FontSize.xs, fontWeight: '700' },
   categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
   categoryChip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
   categoryChipText: { fontSize: FontSize.xs, fontWeight: '600' },
   addActions: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
   cancelBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   cancelBtnText: { fontSize: FontSize.md },
-  confirmBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  confirmBtn: { borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   confirmBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },

@@ -573,7 +573,7 @@ const baseStyles = StyleSheet.create({
   },
   cancel: { fontSize: FontSize.md, fontWeight: '600' },
   title: { fontSize: FontSize.lg, fontWeight: '700' },
-  saveBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
+  saveBtn: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   saveBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
   content: { padding: Spacing.md, gap: Spacing.md },
   kindToggle: {

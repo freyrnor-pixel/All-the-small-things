@@ -223,14 +223,14 @@ export default function HealthScreen() {
               <Pressable onPress={() => setAdding(false)}>
                 <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
               </Pressable>
-              <Pressable style={[styles.saveBtn, { backgroundColor: theme.green }]} onPress={save}>
+              <Pressable style={[styles.saveBtn, { backgroundColor: theme.orange }]} onPress={save}>
                 <Text style={styles.saveBtnText}>{t.save}</Text>
               </Pressable>
             </View>
           </Surface>
         ) : (
-          <Pressable style={[styles.addTrigger, { borderColor: theme.green }]} onPress={() => setAdding(true)}>
-            <Text style={[styles.addTriggerText, { color: theme.green }]}>{t.logSymptomTrigger}</Text>
+          <Pressable style={styles.addTrigger} onPress={() => setAdding(true)}>
+            <Text style={[styles.addTriggerText, { color: theme.orange }]}>{t.logSymptomTrigger}</Text>
           </Pressable>
         )}
 
@@ -314,14 +314,10 @@ const baseStyles = StyleSheet.create({
   overviewFill: { height: 8, borderRadius: Radius.full },
   overviewCount: { fontSize: FontSize.xs, color: Colors.textLight, width: 28, textAlign: 'right' },
   addTrigger: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: Colors.green,
-    borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
   },
-  addTriggerText: { fontSize: FontSize.md, color: Colors.green, fontWeight: '600' },
+  addTriggerText: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
   addCard: {
     backgroundColor: Colors.white,
     borderRadius: Radius.md,
@@ -375,8 +371,8 @@ const baseStyles = StyleSheet.create({
   },
   cancelText: { fontSize: FontSize.md, color: Colors.textLight },
   saveBtn: {
-    backgroundColor: Colors.green,
-    borderRadius: Radius.full,
+    backgroundColor: Colors.orange,
+    borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
   },
