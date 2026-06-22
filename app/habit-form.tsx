@@ -15,6 +15,9 @@
  *   - All visible strings go through useT(); colour theme comes from useSettingsStore.
  *   - recurrenceDays is always saved as [] here (weekday selection not exposed in this form).
  *   - notificationTime uses the TimePickerWheel component (same as task-form).
+ *   - Reminders: "Once" keeps the single notificationTime; "Several times"/"Every…" build a
+ *     list via computeReminderTimes() saved into notificationTimes (first time also stored as
+ *     notificationTime for back-compat). The store schedules one daily notification per time.
  *   - Essentials shown by default (W-D): Title → Frequency → Reminder. Icon, category,
  *     the four cue→craving→response→reward steps and daily goal live behind a
  *     "more options" disclosure; data wiring is unchanged.
@@ -49,6 +52,52 @@ import ScreenBackground from '@/components/ScreenBackground';
 
 const HABIT_ICONS = HABIT_ICON_NAMES;
 
+type ReminderMode = 'single' | 'count' | 'interval';
+
+// Interval options (minutes) offered when "Every…" mode is chosen.
+const INTERVAL_OPTIONS = [30, 60, 90, 120, 180, 240];
+
+function hhmmToMin(s: string): number {
+  const [h, m] = s.split(':').map((n) => parseInt(n, 10));
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+function minToHhmm(min: number): string {
+  const v = ((Math.round(min) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Turn the reminder inputs into the concrete list of HH:MM times we store.
+ *   single   → just the picked time
+ *   count    → N times evenly spaced across [start, end] (inclusive)
+ *   interval → one every `intervalMin` from start up to end
+ * An inverted window (end before start) collapses to a single reminder at start.
+ */
+function computeReminderTimes(
+  mode: ReminderMode,
+  single: string,
+  count: number,
+  intervalMin: number,
+  start: string,
+  end: string
+): string[] {
+  if (mode === 'single') return [single];
+  const s = hhmmToMin(start);
+  const e = hhmmToMin(end);
+  if (e <= s) return [minToHhmm(s)];
+  if (mode === 'count') {
+    const n = Math.max(1, count);
+    if (n === 1) return [minToHhmm(s)];
+    const step = (e - s) / (n - 1);
+    return Array.from({ length: n }, (_, i) => minToHhmm(s + step * i));
+  }
+  const step = Math.max(15, intervalMin);
+  const times: string[] = [];
+  for (let t = s; t <= e && times.length < 24; t += step) times.push(minToHhmm(t));
+  return times.length ? times : [minToHhmm(s)];
+}
+
 type FormState = {
   title: string;
   icon: string;
@@ -62,6 +111,11 @@ type FormState = {
   recurrence: HabitRecurrence;
   notificationEnabled: boolean;
   notificationTime: string;
+  reminderMode: ReminderMode;
+  reminderCount: number;
+  reminderIntervalMin: number;
+  reminderStart: string;
+  reminderEnd: string;
   childName: string;
 };
 
@@ -94,9 +148,28 @@ export default function HabitForm() {
     dailyGoal: existing?.dailyGoal ?? 1,
     recurrence: existing?.recurrence ?? 'daily',
     notificationEnabled: existing?.notificationEnabled ?? false,
-    notificationTime: existing?.notificationTime ?? '08:00',
+    notificationTime: existing?.notificationTimes?.[0] ?? existing?.notificationTime ?? '08:00',
+    // A saved habit with several times round-trips into "Several times" mode using its
+    // first/last as the window; one (or none) stays in the simple single-time mode.
+    reminderMode: (existing?.notificationTimes?.length ?? 0) > 1 ? 'count' : 'single',
+    reminderCount: Math.min(12, Math.max(2, existing?.notificationTimes?.length ?? 3)),
+    reminderIntervalMin: 120,
+    reminderStart: existing?.notificationTimes?.[0] ?? existing?.notificationTime ?? '08:00',
+    reminderEnd:
+      (existing?.notificationTimes?.length ?? 0) > 1
+        ? existing!.notificationTimes[existing!.notificationTimes.length - 1]
+        : '20:00',
     childName: existing?.childName ?? (params.childName ?? ''),
   });
+
+  const reminderTimes = computeReminderTimes(
+    form.reminderMode,
+    form.notificationTime,
+    form.reminderCount,
+    form.reminderIntervalMin,
+    form.reminderStart,
+    form.reminderEnd
+  );
 
   // Advanced fields (icon, category, cue→craving→response→reward, daily goal) start
   // collapsed so the default view is just the essentials: Title → Frequency → Reminder.
@@ -111,12 +184,22 @@ export default function HabitForm() {
 
   function save() {
     if (!form.title.trim()) return;
+    // Strip the form-only reminder inputs; persist the resolved time list plus the
+    // first time as notificationTime (kept for back-compat with anything reading it).
+    const { reminderMode, reminderCount, reminderIntervalMin, reminderStart, reminderEnd, ...habitFields } = form;
+    const notificationTimes = form.notificationEnabled ? reminderTimes : [];
+    const payload = {
+      ...habitFields,
+      notificationTime: notificationTimes[0] ?? form.notificationTime,
+      notificationTimes,
+      recurrenceDays: [],
+    };
     if (isEdit && params.id) {
-      update(params.id, { ...form, recurrenceDays: [] });
+      update(params.id, payload);
     } else {
       // routineOrder satisfies Omit<Habit,'id'|'createdAt'|'active'>; the store
       // replaces a falsy 0 with Date.now() so new habits append to the end.
-      add({ ...form, recurrenceDays: [], routineOrder: 0 });
+      add({ ...payload, routineOrder: 0 });
     }
     router.back();
   }
@@ -265,11 +348,102 @@ export default function HabitForm() {
             />
           </Surface>
           {form.notificationEnabled && (
-            <TimePickerWheel
-              value={form.notificationTime}
-              onChange={(v) => patch('notificationTime', v)}
-              theme={theme}
-            />
+            <View style={styles.field}>
+              {/* Mode: once a day, several evenly-spaced times, or every N hours/min */}
+              <View style={styles.chipRow}>
+                {([
+                  { key: 'single', label: t.habitReminderModeSingle },
+                  { key: 'count', label: t.habitReminderModeCount },
+                  { key: 'interval', label: t.habitReminderModeInterval },
+                ] as { key: ReminderMode; label: string }[]).map(({ key, label }) => (
+                  <Pressable
+                    key={key}
+                    style={[
+                      styles.chip,
+                      { backgroundColor: theme.grayLight },
+                      form.reminderMode === key && { backgroundColor: theme.orange },
+                    ]}
+                    onPress={() => patch('reminderMode', key)}
+                  >
+                    <Text style={[styles.chipText, form.reminderMode === key && { color: Colors.white }]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {form.reminderMode === 'single' && (
+                <TimePickerWheel
+                  value={form.notificationTime}
+                  onChange={(v) => patch('notificationTime', v)}
+                  theme={theme}
+                />
+              )}
+
+              {form.reminderMode === 'count' && (
+                <>
+                  <Text style={[styles.label, { color: theme.textLight }]}>{t.habitReminderCountLabel}</Text>
+                  <View style={styles.stepper}>
+                    <Pressable
+                      style={[styles.stepperBtn, { backgroundColor: theme.grayLight }]}
+                      onPress={() => patch('reminderCount', Math.max(2, form.reminderCount - 1))}
+                    >
+                      <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
+                    </Pressable>
+                    <Text style={[styles.stepperValue, { color: theme.text }]}>{form.reminderCount}</Text>
+                    <Pressable
+                      style={[styles.stepperBtn, { backgroundColor: theme.orange }]}
+                      onPress={() => patch('reminderCount', Math.min(12, form.reminderCount + 1))}
+                    >
+                      <Text style={[styles.stepperBtnText, { color: Colors.white }]}>+</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+
+              {form.reminderMode === 'interval' && (
+                <>
+                  <Text style={[styles.label, { color: theme.textLight }]}>{t.habitReminderIntervalLabel}</Text>
+                  <View style={styles.chipRow}>
+                    {INTERVAL_OPTIONS.map((min) => (
+                      <Pressable
+                        key={min}
+                        style={[
+                          styles.chip,
+                          { backgroundColor: theme.grayLight },
+                          form.reminderIntervalMin === min && { backgroundColor: theme.orange },
+                        ]}
+                        onPress={() => patch('reminderIntervalMin', min)}
+                      >
+                        <Text style={[styles.chipText, form.reminderIntervalMin === min && { color: Colors.white }]}>
+                          {min % 60 === 0 ? t.habitReminderEveryHours(min / 60) : t.habitReminderEveryMinutes(min)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {form.reminderMode !== 'single' && (
+                <>
+                  <Text style={[styles.label, { color: theme.textLight }]}>{t.habitReminderStartLabel}</Text>
+                  <TimePickerWheel
+                    value={form.reminderStart}
+                    onChange={(v) => patch('reminderStart', v)}
+                    theme={theme}
+                  />
+                  <Text style={[styles.label, { color: theme.textLight }]}>{t.habitReminderEndLabel}</Text>
+                  <TimePickerWheel
+                    value={form.reminderEnd}
+                    onChange={(v) => patch('reminderEnd', v)}
+                    theme={theme}
+                  />
+                  <Text style={[styles.reminderPreview, { color: theme.textLight }]}>
+                    {t.habitReminderTimesPreview(reminderTimes.length)} · {reminderTimes.join(' · ')}
+                  </Text>
+                </>
+              )}
+            </View>
           )}
 
           {/* W-D: advanced fields collapsed behind a disclosure so the default
@@ -436,6 +610,7 @@ const baseStyles = StyleSheet.create({
     borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card,
   },
   notifLabel: { fontSize: FontSize.md, fontWeight: '600' },
+  reminderPreview: { fontSize: FontSize.xs, fontStyle: 'italic', marginTop: Spacing.xs },
   // W-D: "more options" disclosure toggle for advanced habit fields.
   disclosure: {
     borderWidth: 1.5,

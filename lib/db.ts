@@ -291,6 +291,8 @@ export function initDb() {
     "ALTER TABLE settings ADD COLUMN last_monthly_reset TEXT DEFAULT ''",
     // Debug overlay notes — replaced the old tap-to-pin annotations with header + freetext notes
     "ALTER TABLE feedback_notes ADD COLUMN title TEXT DEFAULT ''",
+    // Multiple daily reminders per habit — JSON array of HH:MM times (empty = fall back to notification_time)
+    "ALTER TABLE habits ADD COLUMN notification_times TEXT DEFAULT '[]'",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

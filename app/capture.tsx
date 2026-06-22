@@ -8,18 +8,21 @@
  *
  * Connections:
  *   Imports → components/ConfirmationBanner, components/PressableScale, components/ScreenBackground, constants/theme, lib/i18n, lib/useAppTheme, store/useInboxStore
- *   Used by → Expo Router route "/capture" (presented as a modal — see app/_layout.tsx), components/BubbleMenu.tsx (capture bubble)
- *   Data    → useInboxStore.add() inserts into inbox_items
+ *   Used by → Expo Router route "/capture" (presented as a modal — see app/_layout.tsx), components/BubbleMenu.tsx (capture bubble), components/InboxSection.tsx (edit affordance, passes ?id=)
+ *   Data    → useInboxStore.add() inserts into inbox_items; useInboxStore.update() edits an existing row
  *
  * Edit notes:
  *   - All visible strings go through useT() (t.inbox.*).
  *   - Deliberately no task-form-style fields here (date/time/priority) — those
  *     decisions happen later when promoting an item via components/InboxSection.tsx.
+ *   - Dual-purpose: with no params it's add-mode (stays open after each capture);
+ *     with ?id=<inbox id> it's edit-mode (pre-fills the row, saves via update(),
+ *     then closes) — mirrors the id-param pattern in app/task-form.tsx / habit-form.tsx.
  */
 import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import PressableScale from '@/components/PressableScale';
@@ -34,14 +37,23 @@ export default function CaptureScreen() {
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
   const addItem = useInboxStore((s) => s.add);
+  const updateItem = useInboxStore((s) => s.update);
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existing = useInboxStore((s) => (id ? s.items.find((i) => i.id === id) : undefined));
+  const isEditing = !!id;
 
-  const [text, setText] = useState('');
+  const [text, setText] = useState(existing?.text ?? '');
   const [confirm, setConfirm] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   function capture() {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (isEditing && id) {
+      updateItem(id, trimmed);
+      router.back();
+      return;
+    }
     addItem(trimmed);
     setText('');
     setConfirm(t.inbox.captured);
@@ -55,7 +67,7 @@ export default function CaptureScreen() {
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>
         </Pressable>
-        <Text style={[styles.title, { color: theme.text }]}>{t.inbox.title}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{isEditing ? t.inbox.editTitle : t.inbox.title}</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -81,7 +93,7 @@ export default function CaptureScreen() {
             onPress={capture}
             disabled={!text.trim()}
           >
-            <Text style={styles.captureBtnText}>{t.inbox.captureButton}</Text>
+            <Text style={styles.captureBtnText}>{isEditing ? t.inbox.saveButton : t.inbox.captureButton}</Text>
           </PressableScale>
         </View>
       </KeyboardAvoidingView>

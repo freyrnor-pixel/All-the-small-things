@@ -6,7 +6,7 @@
  * user to scan. Also records the selection as outbound shared items locally.
  *
  * Connections:
- *   Imports → components/QRCodeDisplay, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/HintCard, components/QRCodeDisplay, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/share, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/share-modal" (presented as a modal — see app/_layout.tsx)
  *   Data    → reads useShoppingStore (shopping_items) / useTaskStore (tasks); writes outbound rows to useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -34,6 +34,7 @@ import QRCodeDisplay from '@/components/QRCodeDisplay';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import HintCard from '@/components/HintCard';
 import { todayStr } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -144,6 +145,10 @@ export default function ShareModal() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {!shared ? (
           <>
+            <HintCard
+              text={kind === 's' ? t.shareExplainShopping : t.shareExplainTasks}
+              example={t.shareExplainLaterBuild}
+            />
             <Surface style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={[styles.cardTitle, { color: theme.text }]}>{title}</Text>

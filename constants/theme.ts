@@ -125,6 +125,25 @@ export function contrastOn(hexBg: string): string {
   return contrastWithDark >= contrastWithWhite ? DARK_TEXT : '#FFFFFF';
 }
 
+/**
+ * Like contrastOn(), but picks ONE text colour (DARK_TEXT or white) for a whole
+ * set of backgrounds — the one whose *worst-case* (minimum) contrast across all
+ * of them is highest. Used by the bubble wheel so every label is the same colour
+ * (not flipped per-hue) while still staying readable on the hardest bubble.
+ */
+export function contrastOnAll(hexBgs: string[]): string {
+  if (hexBgs.length === 0) return DARK_TEXT;
+  const darkLum = relLuminance(DARK_TEXT);
+  let minWhite = Infinity;
+  let minDark = Infinity;
+  for (const bg of hexBgs) {
+    const bgLum = relLuminance(bg);
+    minWhite = Math.min(minWhite, (Math.max(bgLum, 1) + 0.05) / (Math.min(bgLum, 1) + 0.05));
+    minDark = Math.min(minDark, (Math.max(bgLum, darkLum) + 0.05) / (Math.min(bgLum, darkLum) + 0.05));
+  }
+  return minDark >= minWhite ? DARK_TEXT : '#FFFFFF';
+}
+
 function buildCustomTheme(primary: string, secondary: string, isDark: boolean): AppColors {
   if (isDark) {
     return {
@@ -679,6 +698,13 @@ export type MaterialStyle = {
   /** Faint highlight overlay for the top portion of the surface. */
   sheenColor: string;
   /**
+   * Translucent dark overlay for the bottom portion of the surface. Paired with
+   * sheenColor (top) it fakes a top→bottom gradient out of stacked Views — no
+   * native gradient module, so it stays OTA-safe. Kept as an rgba('#000…') so it
+   * composites over both hex and translucent (glass) backgrounds.
+   */
+  shadeColor: string;
+  /**
    * Opaque hex equivalent of `backgroundColor` — pass this to contrastOn(),
    * never `backgroundColor` itself, since glass's backgroundColor is a
    * translucent rgba() string that contrastOn() can't parse.
@@ -806,6 +832,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 8,
         elevation: 9,
         sheenColor: rgba('#FFFFFF', 0.3),
+        shadeColor: rgba('#000000', 0.2),
         contrastBase: bg,
       };
     }
@@ -822,6 +849,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 12,
         elevation: 12,
         sheenColor: rgba('#FFFFFF', 0.06),
+        shadeColor: rgba('#000000', 0.24),
         contrastBase: bg,
       };
     }
@@ -838,6 +866,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 4,
         elevation: 2,
         sheenColor: rgba('#FFFFFF', 0.18),
+        shadeColor: rgba('#000000', 0.08),
         contrastBase: bg,
       };
     }
@@ -857,6 +886,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 16,
         elevation: 6,
         sheenColor: rgba('#FFFFFF', 0.5),
+        shadeColor: rgba('#000000', 0.12),
         contrastBase: tinted,
       };
     }
@@ -875,6 +905,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 7,
         elevation: 3,
         sheenColor: rgba('#FFFFFF', 0),
+        shadeColor: rgba('#000000', 0.1),
         contrastBase: base,
       };
   }
