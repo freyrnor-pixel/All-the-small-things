@@ -40,6 +40,7 @@ const en = {
   addNew: '+ New',
   backlog: 'Waiting for you',
   backlogHint: 'Every small step counts — just take one at a time.',
+  doneTasksSection: 'Done today',
   // Plans widget (home preview + full /plans screen)
   plansTitle: "Today's plans",
   essentialPlansTitle: '⭐ Essential plans today',
@@ -773,6 +774,7 @@ const no: typeof en = {
   addNew: '+ Ny',
   backlog: 'Venter på deg',
   backlogHint: 'Hvert lite steg teller — bare ta ett om gangen.',
+  doneTasksSection: 'Ferdig i dag',
   // Plans widget (home preview + full /plans screen)
   plansTitle: 'Dagens planer',
   essentialPlansTitle: '⭐ Viktige planer i dag',

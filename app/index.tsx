@@ -436,7 +436,7 @@ export default function HomeScreen() {
         {doneTodayTasks.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.doneTasksSection || 'Done'}</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.doneTasksSection}</Text>
             </View>
             <Surface style={styles.card}>
               {doneTodayTasks.map((task) => (
