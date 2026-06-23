@@ -18,6 +18,7 @@
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
  *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
  *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt (no price is parsed there worth tracking).
+ *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently updates that item's price — separate from recordPurchases' exact-match price sync on store_items.
  *   - Header's right-side link (reusing t.budget.title) pushes to /budget — a plain navigation, not a 9th BubbleMenu slot, per the AP-06B plan.
  */
 import React, { useEffect, useRef, useState } from 'react';
@@ -52,7 +53,7 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import { decodeSharePayload } from '@/lib/share';
-import { parseReceiptText, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
+import { parseReceiptText, findFuzzyMatch, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -63,6 +64,7 @@ const NORWEGIAN_STORES = [
 export default function ScanScreen() {
   const router = useRouter();
   const addShopping = useShoppingStore((s) => s.add);
+  const updateShoppingItem = useShoppingStore((s) => s.update);
   const shoppingItems = useShoppingStore((s) => s.items);
   const recordPurchases = useCatalogStore((s) => s.recordPurchases);
   const addReceipt = useReceiptStore((s) => s.addReceipt);
@@ -171,7 +173,20 @@ export default function ScanScreen() {
   function addToList() {
     const selected = parsedItems.filter((i) => i.selected);
     const existingNames = new Set(shoppingItems.map((i) => i.name.toLowerCase()));
+    // Catalog items (status='catalog') that fuzzy-match a scanned name get their
+    // price silently updated, even when the scanned item itself isn't on the list
+    // (recordPurchases below already does this for store_items; this covers the
+    // separate Katalog shopping_items rows the redesign introduced).
+    const catalogItems = shoppingItems.filter((i) => i.status === 'catalog');
+    const catalogNames = catalogItems.map((i) => i.name);
     selected.forEach((item) => {
+      const match = findFuzzyMatch(item.name, catalogNames);
+      if (match) {
+        const catalogItem = catalogItems.find((i) => i.name === match);
+        if (catalogItem && item.price > 0 && item.price !== catalogItem.price) {
+          updateShoppingItem(catalogItem.id, { price: item.price });
+        }
+      }
       addShopping({ name: item.name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: item.price, inventoryQty: 0 });
     });
     // Record this trip as a receipt (AP-06B) before logging purchases, so each
