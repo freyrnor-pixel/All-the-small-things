@@ -21,6 +21,9 @@
  *
  * Edit notes:
  *   - task-form, habit-form, share-modal and capture are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
+ *   - screenOptions sets a 150ms fade as the default transition (tab-switch feel for the
+ *     bottom-menu sites — see lib/siteNav.ts + components/BottomNav.tsx); modal screens
+ *     override it per-screen with slide_from_bottom.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
  *   - The notification-action effect (AP-05) is separate from the startup effect and mounted once too — onNotificationAction's handler always reads fresh store state via .getState() rather than closing over stale props, so it doesn't need deps.
  *   - DebugOverlay is gated on `loaded && debugModeEnabled` so it never flashes before settings load and is fully absent for users who haven't enabled it in Settings.
@@ -275,7 +278,18 @@ export default function RootLayout() {
       {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
       {/* @ts-expect-error */}
       <StatusBar style="dark" backgroundColor={Colors.cream} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.cream } }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: Colors.cream },
+          // Bottom-menu sites are switched far more often than they're "drilled into" —
+          // a quick fade reads as a tab switch, not a push (see ANIMATION_GUIDELINES.md §1's
+          // "Tab switch: 150–200ms" row vs. the default stack-push transition). Modal screens
+          // below override this with their own slide_from_bottom.
+          animation: 'fade',
+          animationDuration: 150,
+        }}
+      >
         <Stack.Screen name="index" />
         <Stack.Screen name="plans" />
         <Stack.Screen name="shopping" />

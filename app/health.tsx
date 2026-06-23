@@ -6,7 +6,7 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/BottomNav, components/ConfirmationBanner, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
+ *   Imports → components/BottomNav, components/ConfirmationBanner, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table); scaled fontSize via useScaledStyles()
  *
@@ -39,6 +39,7 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import { useT } from '@/lib/i18n';
 import { todayStr, getWeekDates } from '@/lib/date';
 import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
@@ -113,6 +114,7 @@ export default function HealthScreen() {
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       <ScreenHeader title={t.healthTitle} onBack={() => router.back()} />
 
+      <SiteSwipeView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           style={styles.scroll}
@@ -271,6 +273,7 @@ export default function HealthScreen() {
         <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+      </SiteSwipeView>
 
       <BottomNav />
     </SafeAreaView>

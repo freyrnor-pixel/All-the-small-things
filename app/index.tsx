@@ -7,7 +7,7 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items + pending) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -29,6 +29,10 @@
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; the link icon next to it goes to /shared (full sent/received history). DayTimeline rows push /task-form (also a modal).
+ *   - Cross-site links (settings gear, plans title, shared link, shopping "see all") go through
+ *     goToSite() (lib/siteNav.ts), not router.push, so the nav stack stays shallow and hardware/
+ *     gesture "back" from any site returns straight to Home. The ScrollView is wrapped in
+ *     SiteSwipeView so swiping left/right also moves between sites (vertical scroll still native).
  *   - SharedRequestsSection (kind='task') sits right under InboxSection — inline accept/dismiss for tasks a partner asked for via the scan flow, replacing the old bubble-wheel "Shared" entry.
  *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
@@ -70,7 +74,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -86,6 +90,8 @@ import DayTimeline from '@/components/DayTimeline';
 // TODO: re-enable bubble menu once redesigned
 // import BubbleMenu from '@/components/BubbleMenu';
 import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
+import { goToSite } from '@/lib/siteNav';
 import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
@@ -115,6 +121,7 @@ function isWithinWorkHours(start: string, end: string): boolean {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const today = todayStr();
   const settings = useSettingsStore();
   const t = useT();
@@ -307,6 +314,7 @@ export default function HomeScreen() {
         </Pressable>
       )}
 
+      <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -343,7 +351,7 @@ export default function HomeScreen() {
               </Pressable>
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
-                onPress={() => router.push('/settings')}
+                onPress={() => goToSite(router, pathname, '/settings')}
                 accessibilityLabel="Settings"
               >
                 <Ionicons name="settings-outline" size={20} color={theme.textLight} />
@@ -373,13 +381,13 @@ export default function HomeScreen() {
         {/* Plans — unified preview of today's agenda; tap the title for the full /plans screen */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Pressable style={{ flex: 1 }} onPress={() => router.push('/plans')}>
+            <Pressable style={{ flex: 1 }} onPress={() => goToSite(router, pathname, '/plans')}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 {settings.essentialsModeEnabled ? t.essentialPlansTitle : t.plansTitle}
               </Text>
             </Pressable>
             <View style={styles.sectionActions}>
-              <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
+              <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
                 <Ionicons name="link-outline" size={16} color={theme.textLight} />
               </Pressable>
               <Pressable
@@ -478,7 +486,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.shoppingPreview}</Text>
-            <Pressable onPress={() => router.push('/shopping')}>
+            <Pressable onPress={() => goToSite(router, pathname, '/shopping')}>
               <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
             </Pressable>
           </View>
@@ -551,6 +559,7 @@ export default function HomeScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+      </SiteSwipeView>
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
       {settings.petEnabled && <Pet completedToday={completedCount} />}

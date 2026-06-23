@@ -7,8 +7,8 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
- *   Used by → Expo Router route "/automations", reached via a nav row in app/settings.tsx
+ *   Imports → components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Used by → Expo Router route "/automations", reached via BottomNav
  *   Data    → useAutomationStore (ifttt_rules table)
  *
  * Edit notes:
@@ -25,6 +25,8 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import { useT } from '@/lib/i18n';
 import { warning, heavy } from '@/lib/haptics';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -210,6 +212,7 @@ export default function AutomationsScreen() {
         }
       />
 
+      <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <HintCard text={t.hints.automations.text} example={t.hints.automations.example} />
 
@@ -225,6 +228,9 @@ export default function AutomationsScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+      </SiteSwipeView>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

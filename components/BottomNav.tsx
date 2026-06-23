@@ -1,46 +1,40 @@
 /**
- * BottomNav.tsx — bottom navigation bar for the app's main sections.
+ * BottomNav.tsx — bottom navigation bar for every site in the app.
  *
- * Straightforward 5-tab row (Home / Shopping / Meals / Health / Habits) that stands
- * in for the disabled BubbleMenu (see app/index.tsx) as the primary nav entry point.
- * The active tab is derived from the current route and highlighted; navigation goes
- * through Expo Router.
+ * Box-grid of all 11 sites (wraps into 2 rows of 6 + 5), the app's only nav entry
+ * point now that BubbleMenu is disabled (see app/index.tsx — BubbleMenu work is
+ * deferred, see CLAUDE.md). The active tab is derived from the current route,
+ * highlighted with a "pushed in" shaded box, and taps go through goToSite() so the
+ * navigation stack stays shallow (back always lands on Home, not another site).
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/useAppTheme
- *   Used by → app/index.tsx, app/shopping.tsx, app/meals.tsx, app/health.tsx, app/habits.tsx
+ *   Imports → constants/theme, lib/i18n, lib/siteNav, lib/useAppTheme, components/PressableScale
+ *   Used by → every bottom-menu site screen: app/index, app/plans, app/shopping, app/meals,
+ *             app/health, app/scan, app/budget, app/shared, app/automations, app/habits, app/settings
  *   Data    → none (presentational; navigation only)
  *
  * Edit notes:
- *   - Icons are reused from BubbleMenu's WHEEL_ITEMS (shop/habits/health/meals) for visual
- *     consistency; "home" has no bubble equivalent so home-outline/home was picked to match
- *     the same outline-vs-filled convention used for the active state elsewhere (e.g. the
- *     focus star toggle in app/index.tsx).
- *   - Labels come from t.nav (shop/habits/health/meals already existed there for the bubble
- *     menu; `home` was added alongside them).
+ *   - SITE_ITEMS (lib/siteNav.ts) is the single source of truth for which sites exist and
+ *     their order — add new sites there, not here, so BottomNav and SiteSwipeView stay in sync.
+ *   - Item width is a fixed 1/6 of the bar so 6 items fill row 1 and the remaining 5 wrap to
+ *     row 2 — keep SITE_ITEMS at 11 entries or recompute this if that count changes.
  *   - BOTTOM_NAV_HEIGHT is exported so screens with their own absolutely-positioned bottom
- *     overlays (e.g. app/shopping.tsx's FAB + sticky footer) can offset above this bar.
+ *     overlays (e.g. app/shopping.tsx's FAB + sticky footer) can offset above this (now taller,
+ *     2-row) bar.
+ *   - Active-state shading is deliberately plain (border + fill, no theme colour material) per
+ *     "functional and looking ok, colour/nuance later."
  */
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useT } from '@/lib/i18n';
-import { FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import { goToSite, SITE_ITEMS } from '@/lib/siteNav';
+import PressableScale from '@/components/PressableScale';
 
-type IoniconsName = keyof typeof Ionicons.glyphMap;
-type NavItemKey = 'home' | 'shop' | 'meals' | 'health' | 'habits';
-
-export const BOTTOM_NAV_HEIGHT = 64;
-
-const ITEMS: { key: NavItemKey; icon: IoniconsName; activeIcon: IoniconsName; route: '/' | '/shopping' | '/meals' | '/health' | '/habits' }[] = [
-  { key: 'home', icon: 'home-outline', activeIcon: 'home', route: '/' },
-  { key: 'shop', icon: 'cart-outline', activeIcon: 'cart', route: '/shopping' },
-  { key: 'meals', icon: 'restaurant-outline', activeIcon: 'restaurant', route: '/meals' },
-  { key: 'health', icon: 'heart-outline', activeIcon: 'heart', route: '/health' },
-  { key: 'habits', icon: 'leaf-outline', activeIcon: 'leaf', route: '/habits' },
-];
+export const BOTTOM_NAV_HEIGHT = 120;
 
 export default function BottomNav() {
   const router = useRouter();
@@ -51,32 +45,55 @@ export default function BottomNav() {
 
   return (
     <View style={[styles.bar, { backgroundColor: theme.white, borderTopColor: theme.grayLight }]}>
-      {ITEMS.map((item) => {
+      {SITE_ITEMS.map((item) => {
         const active = pathname === item.route;
         const color = active ? theme.orange : theme.textLight;
         return (
-          <Pressable key={item.key} style={styles.item} onPress={() => router.push(item.route)} hitSlop={6}>
-            <Ionicons name={active ? item.activeIcon : item.icon} size={22} color={color} />
-            <Text style={[styles.label, { color }]}>{t.nav[item.key]}</Text>
-          </Pressable>
+          <PressableScale
+            key={item.key}
+            scaleTo={0.92}
+            style={[
+              styles.item,
+              active && [styles.itemActive, { backgroundColor: theme.grayLight }],
+            ]}
+            onPress={() => goToSite(router, pathname, item.route)}
+            hitSlop={4}
+          >
+            <Ionicons name={active ? item.activeIcon : item.icon} size={20} color={color} />
+            <Text style={[styles.label, { color }]} numberOfLines={1}>
+              {t.nav[item.key]}
+            </Text>
+          </PressableScale>
         );
       })}
     </View>
   );
 }
 
+const ITEM_WIDTH = `${100 / 6}%` as const;
+
 const baseStyles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     borderTopWidth: 1,
     paddingTop: Spacing.xs,
   },
   item: {
-    flex: 1,
+    width: ITEM_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingVertical: Spacing.xs,
+  },
+  itemActive: {
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    borderTopColor: 'rgba(0,0,0,0.16)',
+    borderLeftColor: 'rgba(0,0,0,0.16)',
+    borderBottomColor: 'rgba(255,255,255,0.7)',
+    borderRightColor: 'rgba(255,255,255,0.7)',
+    marginHorizontal: 1,
   },
   label: { fontSize: FontSize.xs, fontWeight: '600' },
 });

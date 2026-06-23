@@ -7,7 +7,7 @@
  * shared shopping/task payloads into the shared store.
  *
  * Connections:
- *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Imports → components/BottomNav, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, lib/siteNav, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -20,7 +20,10 @@
  *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt (no price is parsed there worth tracking).
  *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently updates that item's price — separate from recordPurchases' exact-match price sync on store_items.
  *   - Both addToList() and addManualItem() create their shopping_items rows with status='inWeeklyList' (not the add() default of 'catalog') — scanned/manually-confirmed items represent things just bought or being bought, so they belong on the Ukeliste working list, not the permanent Katalog.
- *   - Header's right-side link (reusing t.budget.title) pushes to /budget — a plain navigation, not a 9th BubbleMenu slot, per the AP-06B plan.
+ *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite() — a plain
+ *     navigation shortcut, separate from /budget's own BottomNav entry.
+ *   - The QR scanner modal and manual-entry sheet (both <Modal>) sit outside <SiteSwipeView> —
+ *     they're full-screen overlays, not the scrollable screen body.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
@@ -40,7 +43,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
@@ -53,6 +56,9 @@ import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
+import { goToSite } from '@/lib/siteNav';
 import { decodeSharePayload } from '@/lib/share';
 import { parseReceiptText, findFuzzyMatch, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -64,6 +70,7 @@ const NORWEGIAN_STORES = [
 
 export default function ScanScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const addShopping = useShoppingStore((s) => s.add);
   const updateShoppingItem = useShoppingStore((s) => s.update);
   const shoppingItems = useShoppingStore((s) => s.items);
@@ -247,7 +254,7 @@ export default function ScanScreen() {
         }))
       );
       Alert.alert(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'shopping'), [
-        { text: t.ok, onPress: () => { setQrScanVisible(false); router.push('/shared'); } },
+        { text: t.ok, onPress: () => { setQrScanVisible(false); goToSite(router, pathname, '/shared'); } },
       ]);
     } else {
       addSharedTasks(
@@ -260,7 +267,7 @@ export default function ScanScreen() {
         }))
       );
       Alert.alert(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'tasks'), [
-        { text: t.ok, onPress: () => { setQrScanVisible(false); router.push('/shared'); } },
+        { text: t.ok, onPress: () => { setQrScanVisible(false); goToSite(router, pathname, '/shared'); } },
       ]);
     }
   }
@@ -273,12 +280,13 @@ export default function ScanScreen() {
         onBack={() => router.back()}
         bordered
         right={
-          <Pressable onPress={() => router.push('/budget')} hitSlop={6}>
+          <Pressable onPress={() => goToSite(router, pathname, '/budget')} hitSlop={6}>
             <Text style={[styles.back, { color: theme.orange, textAlign: 'right' }]}>{t.budget.title}</Text>
           </Pressable>
         }
       />
 
+      <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <HintCard text={t.hints.scan.text} example={t.hints.scan.example} />
 
@@ -411,6 +419,9 @@ export default function ScanScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </SiteSwipeView>
+
+      <BottomNav />
 
       {/* QR scanner */}
       <Modal visible={qrScanVisible} animationType="slide" onRequestClose={() => setQrScanVisible(false)}>
