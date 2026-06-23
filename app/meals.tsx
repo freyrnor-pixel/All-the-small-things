@@ -6,7 +6,7 @@
  * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
+ *   Imports → components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
@@ -44,6 +44,7 @@ import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -423,6 +424,8 @@ export default function MealsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

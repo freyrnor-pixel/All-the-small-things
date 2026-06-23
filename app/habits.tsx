@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/BottomNav, components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -48,6 +48,7 @@ import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
+import BottomNav from '@/components/BottomNav';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
@@ -722,6 +723,8 @@ export default function HabitsScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }
