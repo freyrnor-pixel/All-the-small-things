@@ -14,7 +14,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
-import { Task } from '@/store/useTaskStore';
+import { Task, useTaskStore } from '@/store/useTaskStore';
 import { useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
@@ -50,25 +50,7 @@ export default function CoverTasksSection({
       {visible.length === 0 ? (
         <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.cover.noTasks}</Text>
       ) : (
-        visible.map((task) => (
-          <Pressable
-            key={task.id}
-            style={styles.taskRow}
-            onPress={() => onToggle(task.id)}
-            accessibilityLabel={task.title}
-            accessibilityRole="checkbox"
-          >
-            <View style={[styles.check, { borderColor: theme.orange }]}>
-              {task.done && <View style={[styles.checkFill, { backgroundColor: theme.orange }]} />}
-            </View>
-            <Text
-              style={[styles.taskTitle, { color: theme.text }, task.done && { color: theme.textLight }]}
-              numberOfLines={1}
-            >
-              {task.title}
-            </Text>
-          </Pressable>
-        ))
+        visible.map((task) => <CoverTaskRow key={task.id} task={task} onToggle={onToggle} theme={theme} />)
       )}
 
       {overflow > 0 && (
@@ -84,6 +66,35 @@ export default function CoverTasksSection({
         <Text style={[styles.addBtnText, { color: theme.green }]}>{t.cover.quickAdd}</Text>
       </Pressable>
     </View>
+  );
+}
+
+function CoverTaskRow({ task, onToggle, theme }: { task: Task; onToggle: (id: string) => void; theme: AppColors }) {
+  const styles = useScaledStyles(baseStyles);
+  const isPending = useTaskStore((s) => s.pending.has(task.id));
+
+  return (
+    <Pressable
+      style={[styles.taskRow, isPending && { opacity: 0.6 }]}
+      onPress={() => onToggle(task.id)}
+      accessibilityLabel={task.title}
+      accessibilityRole="checkbox"
+    >
+      <View style={[styles.check, { borderColor: theme.orange }]}>
+        {task.done && <View style={[styles.checkFill, { backgroundColor: theme.orange }]} />}
+      </View>
+      <Text
+        style={[
+          styles.taskTitle,
+          { color: theme.text },
+          task.done && { color: theme.textLight },
+          isPending && { color: theme.textLight, textDecorationLine: 'line-through', opacity: 0.7 },
+        ]}
+        numberOfLines={1}
+      >
+        {task.title}
+      </Text>
+    </Pressable>
   );
 }
 

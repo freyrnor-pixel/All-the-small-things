@@ -24,7 +24,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ShoppingItem } from '@/store/useShoppingStore';
+import { ShoppingItem, useShoppingStore } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 
@@ -41,6 +41,7 @@ type Props = {
 
 export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onRemove, inStockLabel }: Props) {
   const styles = useScaledStyles(baseStyles);
+  const isPending = useShoppingStore((s) => s.pending.has(item.id));
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
   const dimmed = variant !== 'planned';
@@ -54,7 +55,7 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
   if (priceTotal !== null) metaParts.push(`= ${priceTotal.toFixed(0)} kr`);
 
   return (
-    <View style={[styles.row, dimmed && styles.rowChecked]}>
+    <View style={[styles.row, dimmed && styles.rowChecked, isPending && { opacity: 0.5 }]}>
       <Pressable
         style={[
           styles.check,
@@ -72,7 +73,7 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
       </Pressable>
 
       <View style={styles.content}>
-        <Text style={[styles.name, { color: theme.text }, dimmed && { color: theme.gray, textDecorationLine: 'line-through' }]}>
+        <Text style={[styles.name, { color: theme.text }, (dimmed || isPending) && { color: theme.gray, textDecorationLine: 'line-through' }]}>
           {item.name}
         </Text>
         {(metaParts.length > 0 || item.inventoryQty > 0) && (

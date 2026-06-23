@@ -84,6 +84,8 @@ export default function ShoppingScreen() {
   const confirmStagingTray = useShoppingStore((s) => s.confirmStagingTray);
   const doneShopping = useShoppingStore((s) => s.doneShopping);
   const monthlyReset = useShoppingStore((s) => s.monthlyReset);
+  const shoppingPendingCount = useShoppingStore((s) => s.getPendingCount());
+  const confirmShoppingPending = useShoppingStore((s) => s.confirmPending);
   const monthlyResetDate = useSettingsStore((s) => s.monthlyResetDate);
   const lastMonthlyReset = useSettingsStore((s) => s.lastMonthlyReset);
   const updateSettings = useSettingsStore((s) => s.update);
@@ -493,6 +495,18 @@ export default function ShoppingScreen() {
             </>
           )}
 
+          {shoppingPendingCount > 0 && (
+            <View style={[styles.saveButtonSection, { paddingBottom: Spacing.md }]}>
+              <Pressable
+                style={[styles.saveButton, { backgroundColor: theme.green }]}
+                onPress={confirmShoppingPending}
+              >
+                <Text style={styles.saveButtonText}>{t.save}</Text>
+                <Text style={styles.saveButtonCount}>({shoppingPendingCount})</Text>
+              </Pressable>
+            </View>
+          )}
+
           <View style={{ height: 100 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -613,4 +627,9 @@ const baseStyles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
+
+  saveButtonSection: { paddingHorizontal: Spacing.md },
+  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
+  saveButtonText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
+  saveButtonCount: { color: '#fff', fontWeight: '600', fontSize: FontSize.sm },
 });

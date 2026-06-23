@@ -95,14 +95,17 @@ type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'mont
 type ShoppingStore = {
   items: ShoppingItem[];
   trips: ShoppingTrip[];
+  pending: Set<string>;
   load: () => void;
   add: (item: ShoppingAddInput) => string;
   update: (id: string, patch: Partial<Omit<ShoppingItem, 'id'>>) => void;
   toggleCheck: (id: string) => void;
+  confirmPending: () => void;
   remove: (id: string) => void;
   removeWithSource: (id: string) => void;
   adjustAmount: (id: string, delta: number) => void;
   resetWeekly: () => void;
+  getPendingCount: () => number;
   // New katalog/ukeliste pipeline actions
   setPendingRestock: (id: string, pending: boolean) => void;
   confirmStagingTray: () => void;
@@ -171,6 +174,7 @@ const ITEM_COLUMNS: FieldMap<ShoppingItem> = {
 export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
   trips: [],
+  pending: new Set(),
 
   load() {
     set({
@@ -217,7 +221,28 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   toggleCheck(id) {
     const item = get().items.find((i) => i.id === id);
     if (!item) return;
-    get().update(id, { checked: !item.checked });
+    set((s) => {
+      const newPending = new Set(s.pending);
+      if (newPending.has(id)) {
+        newPending.delete(id);
+      } else {
+        newPending.add(id);
+      }
+      return { pending: newPending };
+    });
+  },
+
+  confirmPending() {
+    const { pending } = get();
+    if (pending.size === 0) return;
+
+    for (const id of pending) {
+      const item = get().items.find((i) => i.id === id);
+      if (!item) continue;
+      get().update(id, { checked: !item.checked });
+    }
+
+    set({ pending: new Set() });
   },
 
   remove(id) {
@@ -260,6 +285,10 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     } else {
       get().update(id, { amount: String(next) });
     }
+  },
+
+  getPendingCount() {
+    return get().pending.size;
   },
 
   resetWeekly() {

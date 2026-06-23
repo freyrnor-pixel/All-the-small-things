@@ -119,8 +119,12 @@ export default function HomeScreen() {
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
   const completedCountFn = useTaskStore((s) => s.completedCount);
   const toggleTask = useTaskStore((s) => s.toggle);
+  const taskPendingCount = useTaskStore((s) => s.getPendingCount());
+  const confirmTasksPending = useTaskStore((s) => s.confirmPending);
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
+  const shoppingPendingCount = useShoppingStore((s) => s.getPendingCount());
+  const confirmShoppingPending = useShoppingStore((s) => s.confirmPending);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const energyLevels = useEnergyStore((s) => s.levels);
@@ -182,6 +186,10 @@ export default function HomeScreen() {
 
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
+  const doneTodayTasks = useMemo(
+    () => allTodayTasks.filter((t) => t.done),
+    [allTodayTasks]
+  );
 
   // Progress: completed vs. total tasks for today (including done ones)
   const totalToday = allTodayTasks.length;
@@ -231,6 +239,17 @@ export default function HomeScreen() {
       { text: t.switchModeConfirm, onPress: () => settings.setWorkModeSessionOverride(true) },
     ]);
   }
+
+  function handleSaveChanges() {
+    if (taskPendingCount > 0) {
+      confirmTasksPending();
+    }
+    if (shoppingPendingCount > 0) {
+      confirmShoppingPending();
+    }
+  }
+
+  const totalPendingCount = taskPendingCount + shoppingPendingCount;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -413,6 +432,25 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Done/Finished tasks for today */}
+        {doneTodayTasks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.doneTasksSection}</Text>
+            </View>
+            <Surface style={styles.card}>
+              {doneTodayTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggle={() => handleToggleTask(task.id)}
+                  onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
+                />
+              ))}
+            </Surface>
+          </View>
+        )}
+
         {/* Shopping preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -458,6 +496,20 @@ export default function HomeScreen() {
               {t.smallThingsCount(completedCount)}
             </Text>
           </Surface>
+        )}
+
+        {totalPendingCount > 0 && (
+          <View style={styles.saveButtonSection}>
+            <Pressable
+              style={[styles.saveButton, { backgroundColor: theme.green }]}
+              onPress={handleSaveChanges}
+            >
+              <Text style={styles.saveButtonText}>{t.save}</Text>
+              {totalPendingCount > 0 && (
+                <Text style={styles.saveButtonCount}>({totalPendingCount})</Text>
+              )}
+            </Pressable>
+          </View>
         )}
 
         <View style={{ height: 120 }} />
@@ -563,4 +615,8 @@ const baseStyles = StyleSheet.create({
   backlogBadgeText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
+  saveButtonSection: { paddingHorizontal: Spacing.md, marginBottom: Spacing.md },
+  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
+  saveButtonText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  saveButtonCount: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
 });
