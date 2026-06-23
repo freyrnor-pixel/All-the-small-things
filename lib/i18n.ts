@@ -283,6 +283,25 @@ const en = {
   weeklyEmptySubtitle: 'Mark items in the catalog to add them here',
   goToCatalogBtn: 'Go to catalog →',
   addAlsoToCatalogToggle: 'Also add to catalog',
+  // Weekly "+" source chooser (Katalog/Ukeliste redesign)
+  addSourceChooserTitle: 'Add item',
+  addFromInventoryOption: 'From inventory',
+  addFromCatalogueOption: 'From catalogue',
+  addFreeEntryOption: 'Type it in',
+  addSourceChooserInventoryEmpty: 'No matching items in your catalog.',
+  inventoryPickerTitle: 'Pick from inventory',
+  inventoryPickerSearchPlaceholder: 'Search catalog…',
+  // Inventory edit screen
+  editInventoryBtn: 'Edit inventory',
+  inventoryEditTitle: 'Edit inventory',
+  // Monthly reset summary
+  monthlyResetSummaryTitle: 'Monthly list reset',
+  monthlyResetSummaryInventorySection: 'Inventory',
+  monthlyResetSummarySpentLabel: (amount: string) => `${amount} kr spent`,
+  monthlyResetSummaryOfTotalLabel: (amount: string) => `of ${amount} kr total value`,
+  monthlyResetSummaryAdHocSection: 'Other purchases',
+  monthlyResetSummaryEmpty: 'Nothing was purchased this period.',
+  monthlyResetSummaryCloseBtn: 'Got it',
   category: 'Category',
   shoppingCategories: {
     produce: 'Fruit & veg',
@@ -1009,6 +1028,25 @@ const no: typeof en = {
   weeklyEmptySubtitle: 'Merk varer i katalogen for å legge dem til',
   goToCatalogBtn: 'Gå til katalog →',
   addAlsoToCatalogToggle: 'Legg også til i katalog',
+  // Ukeliste "+"-kilde-velger (Katalog/Ukeliste-redesign)
+  addSourceChooserTitle: 'Legg til vare',
+  addFromInventoryOption: 'Fra inventar',
+  addFromCatalogueOption: 'Fra katalog',
+  addFreeEntryOption: 'Skriv inn manuelt',
+  addSourceChooserInventoryEmpty: 'Ingen treff i katalogen din.',
+  inventoryPickerTitle: 'Velg fra inventar',
+  inventoryPickerSearchPlaceholder: 'Søk i katalog…',
+  // Rediger-inventar-skjerm
+  editInventoryBtn: 'Rediger inventar',
+  inventoryEditTitle: 'Rediger inventar',
+  // Månedlig nullstilling-sammendrag
+  monthlyResetSummaryTitle: 'Månedslisten er nullstilt',
+  monthlyResetSummaryInventorySection: 'Inventar',
+  monthlyResetSummarySpentLabel: (amount: string) => `${amount} kr brukt`,
+  monthlyResetSummaryOfTotalLabel: (amount: string) => `av ${amount} kr totalverdi`,
+  monthlyResetSummaryAdHocSection: 'Andre kjøp',
+  monthlyResetSummaryEmpty: 'Ingenting ble kjøpt denne perioden.',
+  monthlyResetSummaryCloseBtn: 'Skjønner',
   category: 'Kategori',
   shoppingCategories: {
     produce: 'Frukt og grønt',

@@ -15,9 +15,12 @@
  * Edit notes:
  *   - visible/item are controlled by the parent; internal field state resets via the useEffect keyed on item.id whenever a different item opens.
  *   - deleteArmed is local state for the inline "Er du sikker?" confirm step — resets whenever the sheet closes or a different item opens.
+ *   - Wrapped in a KeyboardAvoidingView because RN's <Modal> renders outside the
+ *     screen's own KeyboardAvoidingView subtree — without this, the keyboard covers
+ *     the name input on short screens.
  */
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -75,6 +78,7 @@ export default function UpdateSheet({ visible, item, theme, onClose, onSave, onD
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexFill}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
         <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
@@ -145,11 +149,13 @@ export default function UpdateSheet({ visible, item, theme, onClose, onSave, onD
           </Text>
         </Pressable>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const baseStyles = StyleSheet.create({
+  flexFill: { flex: 1 },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     position: 'absolute',

@@ -281,6 +281,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="plans" />
         <Stack.Screen name="shopping" />
+        <Stack.Screen name="inventory-edit" />
         <Stack.Screen name="meals" />
         <Stack.Screen name="health" />
         <Stack.Screen name="scan" />
