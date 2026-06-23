@@ -26,16 +26,16 @@
  * Edit notes:
  *   - monthly_source_id/monthlyAllocated are legacy weekly<-monthly allocation
  *     fields, kept for backward read compatibility on old rows; new code paths
- *     (the staging-tray flow) don't write them. adjustAmount/removeWithSource
- *     still release allocations for any pre-existing rows that carry one.
+ *     (the staging-tray flow) don't write them — the old writer (addFromMonthly)
+ *     was removed since no UI called it. adjustAmount/removeWithSource still
+ *     release allocations for any pre-existing rows that carry one.
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  *   - isTemporary purges on monthly reset; permanent (isTemporary=false) catalog
  *     items are NEVER deleted by reset, only their status/pendingRestock fields move.
  *   - targetQuantity is only ever edited via the Update Sheet (components/UpdateSheet.tsx) —
  *     there is no live +/- stepper on the main Katalog rows any more.
- *   - getCarryOverCandidates is now purely informational — there is no interactive
- *     carry/drop prompt; monthlyReset() always purges temporary items outright
- *     (see CarryOverPromptModal removal note in app/shopping.tsx).
+ *   - There is no interactive carry/drop prompt for temporary items any more
+ *     (CarryOverPromptModal was removed) — monthlyReset() always purges them outright.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -102,7 +102,6 @@ type ShoppingStore = {
   remove: (id: string) => void;
   removeWithSource: (id: string) => void;
   adjustAmount: (id: string, delta: number) => void;
-  addFromMonthly: (monthlyId: string, qty: number) => void;
   resetWeekly: () => void;
   // New katalog/ukeliste pipeline actions
   setPendingRestock: (id: string, pending: boolean) => void;
@@ -168,11 +167,6 @@ const ITEM_COLUMNS: FieldMap<ShoppingItem> = {
   targetQuantity: { col: 'target_quantity', to: (v) => v ?? 1 },
   shoppingTripId: { col: 'shopping_trip_id', to: (v) => v ?? null },
 };
-
-/** Informational only — items never purchased that will be purged on the next monthly reset. */
-export function getCarryOverCandidates(items: ShoppingItem[]): ShoppingItem[] {
-  return items.filter((i) => i.isTemporary && i.status !== 'purchased');
-}
 
 export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
@@ -266,60 +260,6 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     } else {
       get().update(id, { amount: String(next) });
     }
-  },
-
-  addFromMonthly(monthlyId, qty) {
-    if (qty <= 0) return;
-    const monthly = get().items.find((i) => i.id === monthlyId);
-    if (!monthly) return;
-
-    const weeklyId = generateId();
-    try {
-      insertRow('shopping_items', {
-        id: weeklyId,
-        name: monthly.name,
-        amount: String(qty),
-        unit: monthly.unit,
-        list_type: 'weekly',
-        checked: 0,
-        store: monthly.store,
-        price: monthly.price,
-        category: monthly.category,
-        monthly_allocated: 0,
-        monthly_source_id: monthlyId,
-        status: 'inWeeklyList',
-      });
-      db.runSync(
-        'UPDATE shopping_items SET monthly_allocated = monthly_allocated + ? WHERE id = ?',
-        [qty, monthlyId]
-      );
-    } catch { return; }
-
-    set((s) => ({
-      items: [
-        ...s.items.map((i) =>
-          i.id === monthlyId ? { ...i, monthlyAllocated: i.monthlyAllocated + qty } : i
-        ),
-        {
-          id: weeklyId,
-          name: monthly.name,
-          amount: String(qty),
-          unit: monthly.unit,
-          listType: 'weekly' as const,
-          checked: false,
-          store: monthly.store,
-          price: monthly.price,
-          category: monthly.category,
-          monthlyAllocated: 0,
-          monthlySourceId: monthlyId,
-          inventoryQty: 0,
-          status: 'inWeeklyList' as const,
-          isTemporary: false,
-          pendingRestock: false,
-          targetQuantity: 1,
-        },
-      ],
-    }));
   },
 
   resetWeekly() {
