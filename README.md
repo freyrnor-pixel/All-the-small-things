@@ -75,55 +75,15 @@ Builds are handled by [EAS Build](https://expo.dev/eas). A GitHub Actions workfl
 > to see how it fits in — you rarely need to read the whole thing first.
 
 ```
-index.ts                 # Real app entry (expo-router/entry)
-App.tsx                  # UNUSED leftover from the template — safe to delete
-app/
-  _layout.tsx            # Root layout: DB init, loads stores, syncs reminders, defines the Stack
-  index.tsx              # Home screen (route "/")
-  task-form.tsx          # Add / edit task (modal)
-  shopping.tsx           # Weekly + monthly shopping lists (with catalog autocomplete)
-  meals.tsx              # Dish library
-  health.tsx             # Health log
-  habits.tsx             # Habit tracker
-  habit-form.tsx         # Add / edit habit (modal)
-  scan.tsx               # Receipt scanner (OCR is inline here)
-  shared.tsx             # Items shared between users
-  share-modal.tsx        # QR share sheet (modal)
-  settings.tsx           # App settings
-  onboarding/            # language → guided/explore → name → work mode → shopping → notifications → theme
-components/
-  BubbleMenu.tsx         # Radial FAB navigation (labels via t.nav)
-  QuickAddSheet.tsx, TaskItem.tsx, ExpandableCard.tsx, ShoppingRow.tsx,
-  MonthlyTableRow.tsx, CarryOverPromptModal.tsx, DatePickerCalendar.tsx, TimePickerWheel.tsx,
-  HintCard.tsx, QRCodeDisplay.tsx
-store/                   # Zustand stores, one per domain (each owns its SQLite table[s])
-  useTaskStore, useShoppingStore, useMealStore, useHealthStore,
-  useHabitStore, useSharedStore, useCatalogStore, useSettingsStore
-lib/
-  db.ts                  # SQLite schema, migrations, indexes, retention (unfocus.db)
-  date.ts                # Shared date helpers (todayStr, dateStr)
-  i18n.ts                # EN/NO translations (useT hook + getTranslations)
-  notifications.ts       # Language-agnostic scheduling primitives
-  reminders.ts           # Coordinates weekly/monthly reminders from settings
-  holidays.ts            # Norwegian public-holiday calendar
-  catalogSeed.ts         # Seeds the shopping catalog (store_items) — the live seed
-  useAppTheme.ts         # Hook: resolves the active theme from settings
-  seed.ts                # Legacy/unused catalog seeder (superseded by catalogSeed.ts)
-  share.ts, id.ts
-constants/
-  theme.ts               # Colours, spacing, shadows, four theme presets
+index.ts          # Real app entry (expo-router/entry)
+app/               # File-based routes (Expo Router) — one screen per file; onboarding/ holds the first-run wizard
+components/        # Shared UI. BottomNav.tsx is the current primary nav; BubbleMenu.tsx (radial FAB) is disabled, kept for a future redesign
+store/             # Zustand stores, one per domain — each owns its SQLite table(s)
+lib/               # Framework-free helpers: db.ts (schema/migrations), dataAccess.ts (shared row read/write used by most stores), date.ts, i18n.ts, notifications.ts, reminders.ts, holidays.ts, catalogSeed.ts, useAppTheme.ts
+constants/         # theme.ts — colours, spacing, shadows, theme presets
 ```
 
 ## Conventions
 
-- **File headers**: every `.ts`/`.tsx` file opens with a JSDoc header — a one-line
-  purpose, a **Connections** block (what it imports, what uses it, which data it
-  touches) and **Edit notes** (file-specific gotchas). Keep it accurate when you
-  change a file's role or dependencies.
-- **Date format** everywhere: `YYYY-MM-DD` string. Use `todayStr()` / `dateStr(d)`.
-- **Translations**: all user-visible strings go through `useT()` (components) or
-  `getTranslations(lang)` (stores/schedulers). Never hardcode UI text.
-- **Notifications**: `lib/notifications.ts` takes already-localised content; callers
-  build the strings from the user's language.
-- **SQLite migrations**: add new columns as `ALTER TABLE … ADD COLUMN` entries in the
-  migrations array in `lib/db.ts`. They run once on first open after upgrade.
+See `AGENTS.md` — file headers, key invariants, and gotchas are documented there
+as the canonical reference and kept current; not duplicated here.
