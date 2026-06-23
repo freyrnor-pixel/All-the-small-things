@@ -11,7 +11,7 @@
  * MonthlyTableRow's tap-to-open.
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, components/UpdateSheet, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddItemSheet, components/AppModal, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, components/UpdateSheet, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -28,7 +28,6 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -50,6 +49,7 @@ import AddItemSheet from '@/components/AddItemSheet';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
+import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -162,7 +162,7 @@ export default function ShoppingScreen() {
 
   function handleDoneShopping() {
     if (weeklyUnchecked.length === 0 && weeklyChecked.length === 0) return;
-    Alert.alert(
+    showAppModal(
       t.doneShoppingDialogTitle,
       t.doneShoppingDialogBody,
       [

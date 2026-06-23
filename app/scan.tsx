@@ -7,7 +7,7 @@
  * shared shopping/task payloads into the shared store.
  *
  * Connections:
- *   Imports → components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
+ *   Imports → components/AppModal, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -25,7 +25,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -53,6 +52,7 @@ import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import { showAppModal } from '@/components/AppModal';
 import { decodeSharePayload } from '@/lib/share';
 import { parseReceiptText, findFuzzyMatch, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
 import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -108,7 +108,7 @@ export default function ScanScreen() {
   async function takePhoto() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t.permissionTitle, t.permissionBody);
+      showAppModal(t.permissionTitle, t.permissionBody);
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });
@@ -168,7 +168,7 @@ export default function ScanScreen() {
     addShopping({ name: trimmed, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: 0, inventoryQty: 0, status: 'inWeeklyList' });
     setManualName('');
     setManualVisible(false);
-    Alert.alert(t.addedTitle, t.addedBody(1), [{ text: t.ok }]);
+    showAppModal(t.addedTitle, t.addedBody(1), [{ text: t.ok }]);
   }
 
   function addToList() {
@@ -211,14 +211,14 @@ export default function ScanScreen() {
       })),
       receiptId
     );
-    Alert.alert(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);
+    showAppModal(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);
   }
 
   async function openQrScanner() {
     if (!cameraPermission?.granted) {
       const { granted } = await requestCameraPermission();
       if (!granted) {
-        Alert.alert(t.permissionTitle, t.permissionBody);
+        showAppModal(t.permissionTitle, t.permissionBody);
         return;
       }
     }
@@ -231,7 +231,7 @@ export default function ScanScreen() {
     setQrScanned(true);
     const payload = decodeSharePayload(data);
     if (!payload) {
-      Alert.alert('', t.qrInvalid, [{ text: t.ok, onPress: () => setQrScanned(false) }]);
+      showAppModal('', t.qrInvalid, [{ text: t.ok, onPress: () => setQrScanned(false) }]);
       return;
     }
     const sharedBy = payload.b || 'Unknown';
@@ -246,7 +246,7 @@ export default function ScanScreen() {
           sharedBy,
         }))
       );
-      Alert.alert(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'shopping'), [
+      showAppModal(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'shopping'), [
         { text: t.ok, onPress: () => { setQrScanVisible(false); router.push('/shared'); } },
       ]);
     } else {
@@ -259,7 +259,7 @@ export default function ScanScreen() {
           sharedBy,
         }))
       );
-      Alert.alert(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'tasks'), [
+      showAppModal(t.qrScanSuccess, t.qrScanSuccessBody(payload.i.length, 'tasks'), [
         { text: t.ok, onPress: () => { setQrScanVisible(false); router.push('/shared'); } },
       ]);
     }
