@@ -38,7 +38,7 @@
  *     0.16) at higher alpha) so every theme/feature colour keeps its own identity instead
  *     of washing toward a flat icy grey-blue.
  */
-export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'custom';
+export type ThemeName = 'default' | 'tech' | 'gothic' | 'nature' | 'fluffy' | 'custom';
 export type FontSizeScale = 'small' | 'default' | 'large';
 
 export interface AppColors {
@@ -123,6 +123,25 @@ export function contrastOn(hexBg: string): string {
   const contrastWithWhite = (Math.max(bgLum, 1) + 0.05) / (Math.min(bgLum, 1) + 0.05);
   const contrastWithDark = (Math.max(bgLum, darkLum) + 0.05) / (Math.min(bgLum, darkLum) + 0.05);
   return contrastWithDark >= contrastWithWhite ? DARK_TEXT : '#FFFFFF';
+}
+
+/**
+ * Like contrastOn(), but picks ONE text colour (DARK_TEXT or white) for a whole
+ * set of backgrounds — the one whose *worst-case* (minimum) contrast across all
+ * of them is highest. Used by the bubble wheel so every label is the same colour
+ * (not flipped per-hue) while still staying readable on the hardest bubble.
+ */
+export function contrastOnAll(hexBgs: string[]): string {
+  if (hexBgs.length === 0) return DARK_TEXT;
+  const darkLum = relLuminance(DARK_TEXT);
+  let minWhite = Infinity;
+  let minDark = Infinity;
+  for (const bg of hexBgs) {
+    const bgLum = relLuminance(bg);
+    minWhite = Math.min(minWhite, (Math.max(bgLum, 1) + 0.05) / (Math.min(bgLum, 1) + 0.05));
+    minDark = Math.min(minDark, (Math.max(bgLum, darkLum) + 0.05) / (Math.min(bgLum, darkLum) + 0.05));
+  }
+  return minDark >= minWhite ? DARK_TEXT : '#FFFFFF';
 }
 
 function buildCustomTheme(primary: string, secondary: string, isDark: boolean): AppColors {
@@ -279,6 +298,30 @@ export const THEMES: Record<ThemeName, AppColors> = {
     hintBorder: lighten('#16A34A', 0.65),
     hintAccent: '#16A34A',
   },
+  // Cheerful pastel pink/magenta — playful, soft.
+  fluffy: {
+    cream: '#FFF0F6',
+    orange: '#EC4899',
+    orangeLight: '#FBCFE8',
+    green: '#F472B6',
+    greenLight: '#FCE7F3',
+    brown: '#9D174D',
+    brownLight: '#F9A8D4',
+    white: lighten('#EC4899', 0.985),
+    offWhite: '#FCE7F3',
+    gray: '#C2839F',
+    grayLight: '#F8DCE8',
+    text: '#4A0E2E',
+    textLight: '#9D5B7D',
+    danger: '#DC2626',
+    dangerLight: '#FEE2E2',
+    shadow: 'rgba(74,14,46,0.12)',
+    border: '#FBCFE8',
+    neutral: '#E0A8C2',
+    hintBg: lighten('#EC4899', 0.9),
+    hintBorder: lighten('#EC4899', 0.65),
+    hintAccent: '#EC4899',
+  },
   // Placeholder — replaced at runtime by buildCustomTheme() using user's chosen colors.
   custom: {
     cream: '#F8F8F8',
@@ -310,6 +353,7 @@ export const THEME_META: Record<ThemeName, { label: string }> = {
   tech: { label: 'Tech' },
   gothic: { label: 'Gothic' },
   nature: { label: 'Nature' },
+  fluffy: { label: 'Fluffy pink' },
   custom: { label: 'Custom' },
 };
 
@@ -415,6 +459,30 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     hintBorder: darken('#22C55E', 0.5),
     hintAccent: lighten('#22C55E', 0.15),
   },
+  // Deep plum/maroon with vivid pink accents — fluffy's true-dark counterpart.
+  fluffy: {
+    cream: '#1A0612',
+    orange: '#F472B6',
+    orangeLight: '#3A1228',
+    green: '#F9A8D4',
+    greenLight: '#2A0E1C',
+    brown: '#FBCFE8',
+    brownLight: '#4A1830',
+    white: '#3A2A32',
+    offWhite: '#241620',
+    gray: '#9D5B7D',
+    grayLight: '#4F4248',
+    text: '#FCE7F3',
+    textLight: '#E0A0C0',
+    danger: '#FB7185',
+    dangerLight: '#2A0810',
+    shadow: 'rgba(0,0,0,0.6)',
+    border: '#F472B6',
+    neutral: '#8A4868',
+    hintBg: darken('#F472B6', 0.75),
+    hintBorder: darken('#F472B6', 0.5),
+    hintAccent: lighten('#F472B6', 0.15),
+  },
   // Placeholder — replaced at runtime by buildCustomTheme().
   custom: {
     cream: '#0C0C14',
@@ -467,6 +535,16 @@ export function getSoftTheme(c: AppColors): AppColors {
 }
 
 export const Colors = THEMES.default;
+
+/** Ionicons glyph name shown inside each theme's swatch circle (SwatchPicker). */
+export const THEME_ICONS: Record<ThemeName, string> = {
+  default: 'water-outline',
+  tech: 'flash-outline',
+  gothic: 'moon-outline',
+  nature: 'leaf-outline',
+  fluffy: 'flower-outline',
+  custom: 'color-palette-outline',
+};
 
 /**
  * Bubble/FAB accent colors for BubbleMenu + the task-type accents in task-form/TaskItem.
@@ -620,6 +698,13 @@ export type MaterialStyle = {
   /** Faint highlight overlay for the top portion of the surface. */
   sheenColor: string;
   /**
+   * Translucent dark overlay for the bottom portion of the surface. Paired with
+   * sheenColor (top) it fakes a top→bottom gradient out of stacked Views — no
+   * native gradient module, so it stays OTA-safe. Kept as an rgba('#000…') so it
+   * composites over both hex and translucent (glass) backgrounds.
+   */
+  shadeColor: string;
+  /**
    * Opaque hex equivalent of `backgroundColor` — pass this to contrastOn(),
    * never `backgroundColor` itself, since glass's backgroundColor is a
    * translucent rgba() string that contrastOn() can't parse.
@@ -638,7 +723,7 @@ function rgba(hex: string, alpha: number): string {
 }
 
 /** Per-channel linear blend toward hexB; t=0 → hexA, t=1 → hexB. */
-function mix(hexA: string, hexB: string, t: number): string {
+export function mix(hexA: string, hexB: string, t: number): string {
   const [r1, g1, b1] = hexToRgb(hexA);
   const [r2, g2, b2] = hexToRgb(hexB);
   return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
@@ -661,7 +746,7 @@ function hexToHsl(hex: string): [number, number, number] {
   return [h, s, l];
 }
 
-function hslToHex(h: number, s: number, l: number): string {
+export function hslToHex(h: number, s: number, l: number): string {
   const hue2rgb = (p: number, q: number, t: number) => {
     if (t < 0) t += 1;
     if (t > 1) t -= 1;
@@ -712,6 +797,21 @@ export function tintToTheme(base: string, themeAccent: string, ratio = 0.38): st
   return tint(base, themeAccent, ratio);
 }
 
+/**
+ * Derives the Egendefinert (custom) theme's primary + secondary accent colours
+ * from a single user-chosen hue (0-360). Saturation/lightness are fixed at
+ * values tuned to stay contrast-safe with white text (same range as the
+ * built-in theme accents), so the user only ever controls hue — every other
+ * token (disabled states, surface tints, FAB gradient) already derives from
+ * these two via buildCustomTheme().
+ */
+export function hueToCustomColors(hue: number): { primary: string; secondary: string } {
+  const h = ((hue % 360) + 360) % 360;
+  const primary = hslToHex(h / 360, 0.62, 0.5);
+  const secondary = hslToHex(((h + 140) % 360) / 360, 0.55, 0.45);
+  return { primary, secondary };
+}
+
 /** Real-world reference hue + blend strength each finish tints its base toward. */
 const MATERIAL_TINT: Record<'metal' | 'rock' | 'paper', { color: string; ratio: number }> = {
   metal: { color: '#9AA5AD', ratio: 0.6 }, // brushed steel grey
@@ -747,6 +847,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 8,
         elevation: 9,
         sheenColor: rgba('#FFFFFF', 0.3),
+        shadeColor: rgba('#000000', 0.2),
         contrastBase: bg,
       };
     }
@@ -763,6 +864,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 12,
         elevation: 12,
         sheenColor: rgba('#FFFFFF', 0.06),
+        shadeColor: rgba('#000000', 0.24),
         contrastBase: bg,
       };
     }
@@ -779,6 +881,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 4,
         elevation: 2,
         sheenColor: rgba('#FFFFFF', 0.18),
+        shadeColor: rgba('#000000', 0.08),
         contrastBase: bg,
       };
     }
@@ -798,6 +901,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 16,
         elevation: 6,
         sheenColor: rgba('#FFFFFF', 0.5),
+        shadeColor: rgba('#000000', 0.12),
         contrastBase: tinted,
       };
     }
@@ -816,6 +920,7 @@ export function getMaterialStyle(base: string, material: MaterialName): Material
         shadowRadius: 7,
         elevation: 3,
         sheenColor: rgba('#FFFFFF', 0),
+        shadeColor: rgba('#000000', 0.1),
         contrastBase: base,
       };
   }
