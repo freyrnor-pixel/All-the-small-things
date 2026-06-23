@@ -186,6 +186,10 @@ export default function HomeScreen() {
 
   const backlog = backlogTasksFn(today);
   const completedCount = completedCountFn();
+  const doneTodayTasks = useMemo(
+    () => allTodayTasks.filter((t) => t.done),
+    [allTodayTasks]
+  );
 
   // Progress: completed vs. total tasks for today (including done ones)
   const totalToday = allTodayTasks.length;
@@ -425,6 +429,25 @@ export default function HomeScreen() {
               ))}
             </Surface>
             <Text style={[styles.backlogHint, { color: theme.textLight }]}>{t.backlogHint}</Text>
+          </View>
+        )}
+
+        {/* Done/Finished tasks for today */}
+        {doneTodayTasks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.doneTasksSection || 'Done'}</Text>
+            </View>
+            <Surface style={styles.card}>
+              {doneTodayTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggle={() => handleToggleTask(task.id)}
+                  onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
+                />
+              ))}
+            </Surface>
           </View>
         )}
 
