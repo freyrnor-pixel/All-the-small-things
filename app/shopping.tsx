@@ -1,35 +1,40 @@
 /**
  * shopping.tsx — Katalog (permanent inventory) & Ukeliste (weekly working list)
  *
- * Tabbed shopping screen. The "Katalog" tab is the permanent household
- * inventory: a checkbox per row flags items into a pinned staging tray;
- * confirming the tray moves them into the weekly working list. The "Ukeliste"
- * tab is that working list — check items off as you shop, then "Handlingen
- * fullført" marks everything purchased, creates a shopping_trips row, and
- * clears the list. Both screens share AddItemSheet (free-add) and Katalog
- * additionally uses UpdateSheet (edit/delete a single item) via
- * MonthlyTableRow's tap-to-open.
+ * Tabbed shopping screen. The "Katalog" tab is now read-mostly: a checkbox per
+ * row flags items into a pinned staging tray (confirming it moves them into the
+ * weekly working list), but rows aren't tappable any more — all additions,
+ * removals, and quantity/price/name edits happen on the dedicated /inventory-edit
+ * screen, reached via the header's pencil icon (Katalog tab only). The "Ukeliste"
+ * tab is the working list — check items off into the cart, optionally tick them
+ * "collected" while shopping, then "Handlingen fullført" marks everything
+ * purchased, creates a shopping_trips row, and clears the list. The weekly tab's
+ * "+" opens AddSourceChooser (inventory / catalogue / free entry); the Katalog
+ * tab's "+" opens AddItemSheet directly (its only source is the product catalog).
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, components/UpdateSheet, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddItemSheet, components/AddSourceChooser, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT().
- *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it goes to /shared.
+ *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it goes to /shared; the pencil icon (Katalog tab only) goes to /inventory-edit.
  *   - SharedRequestsSection (kind='shopping') sits above the summary row.
  *   - Katalog tab badge = count of pendingRestock items; Ukeliste tab badge = count of unchecked inWeeklyList items. Both hidden when 0.
  *   - The staging tray is pinned (non-scrolling) at the top of the Katalog tab content, only rendered when there's at least one pendingRestock item.
  *   - "Kjøpt denne måneden" groups purchased items by shoppingTripId (shopping_trips row), most-recent trip expanded by default.
- *   - The automatic payday-boundary reset (once per month, when today's day-of-month >= monthlyResetDate) calls monthlyReset() directly — there is no carry-over prompt any more (CarryOverPromptModal was removed; isTemporary items are always purged on reset, per the redesign's simpler model).
+ *   - The automatic payday-boundary reset (once per month, when today's day-of-month >= monthlyResetDate) calls buildMonthlyResetSummary() FIRST (captured into state and shown via MonthlyResetSummaryModal), then monthlyReset() — there is no carry-over prompt any more (CarryOverPromptModal was removed; isTemporary items are always purged on reset, per the redesign's simpler model).
  *   - The 'shopping_opened' trigger fires once per mount ([] deps).
  *   - Add sheet (components/AddItemSheet.tsx) supports an "also add to catalog" toggle only when opened from the Ukeliste tab — interpreted as: the new item is created directly with status='inWeeklyList', and when the toggle is on, a SECOND permanent catalog row (status='catalog', pendingRestock=false) is also created with the same name/price/targetQuantity, so it persists for future weeks without being purchased=true this trip.
+ *   - The bottom Save(n) button (confirmPending) only ever reflects weekly-tab toggle staging (toggleCheck/pending Set) — scoped to `tab === 'weekly'` so it never shows up looking ambiguous on the Katalog tab.
+ *   - The "Handlingen fullført" sticky button is disabled + dimmed (CHECKED_OPACITY) when the cart (weeklyChecked) is empty — this only gates the button itself, not individual item press behavior.
+ *   - The "done shopping" confirmation is a plain in-app Modal placeholder, not a native Alert — see its TODO(06-theming-and-popups) comment below.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,14 +44,15 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useShoppingStore, ShoppingItem } from '@/store/useShoppingStore';
+import { useShoppingStore, ShoppingItem, MonthlyResetSummary } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
-import ShoppingRow from '@/components/ShoppingRow';
+import ShoppingRow, { CHECKED_OPACITY } from '@/components/ShoppingRow';
 import MonthlyTableRow from '@/components/MonthlyTableRow';
-import UpdateSheet from '@/components/UpdateSheet';
 import AddItemSheet from '@/components/AddItemSheet';
+import AddSourceChooser from '@/components/AddSourceChooser';
+import MonthlyResetSummaryModal from '@/components/MonthlyResetSummaryModal';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
@@ -58,7 +64,7 @@ import EmptyState from '@/components/EmptyState';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
-import { useAppTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
 type Tab = 'weekly' | 'monthly';
@@ -70,27 +76,30 @@ export default function ShoppingScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('weekly');
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showAddSourceChooser, setShowAddSourceChooser] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
-  const [updateItem, setUpdateItem] = useState<ShoppingItem | null>(null);
   const [purchasedExpanded, setPurchasedExpanded] = useState<string | null>(null);
+  const [resetSummary, setResetSummary] = useState<MonthlyResetSummary | null>(null);
+  const [showDoneShoppingConfirm, setShowDoneShoppingConfirm] = useState(false);
 
   const items = useShoppingStore((s) => s.items);
   const trips = useShoppingStore((s) => s.trips);
   const add = useShoppingStore((s) => s.add);
-  const update = useShoppingStore((s) => s.update);
   const toggle = useShoppingStore((s) => s.toggleCheck);
+  const toggleCollected = useShoppingStore((s) => s.toggleCollected);
+  const addToWeeklyFromCatalog = useShoppingStore((s) => s.addToWeeklyFromCatalog);
   const removeWithSource = useShoppingStore((s) => s.removeWithSource);
   const setPendingRestock = useShoppingStore((s) => s.setPendingRestock);
   const confirmStagingTray = useShoppingStore((s) => s.confirmStagingTray);
   const doneShopping = useShoppingStore((s) => s.doneShopping);
   const monthlyReset = useShoppingStore((s) => s.monthlyReset);
+  const buildMonthlyResetSummary = useShoppingStore((s) => s.buildMonthlyResetSummary);
   const shoppingPendingCount = useShoppingStore((s) => s.getPendingCount());
   const confirmShoppingPending = useShoppingStore((s) => s.confirmPending);
   const monthlyResetDate = useSettingsStore((s) => s.monthlyResetDate);
   const lastMonthlyReset = useSettingsStore((s) => s.lastMonthlyReset);
   const updateSettings = useSettingsStore((s) => s.update);
   const dishes = useMealStore((s) => s.dishes);
-  const { reducedMotion } = useAccessibility();
   const t = useT();
 
   // Fire the 'shopping_opened' automation trigger once per screen visit.
@@ -106,9 +115,10 @@ export default function ShoppingScreen() {
     const periodKey = today.slice(0, 7); // YYYY-MM
     if (lastMonthlyReset.slice(0, 7) === periodKey) return;
     if (new Date().getDate() < monthlyResetDate) return;
+    setResetSummary(buildMonthlyResetSummary());
     monthlyReset();
     updateSettings({ lastMonthlyReset: today });
-  }, [lastMonthlyReset, monthlyResetDate, monthlyReset, updateSettings]);
+  }, [lastMonthlyReset, monthlyResetDate, monthlyReset, updateSettings, buildMonthlyResetSummary]);
 
   const catalogItems = useMemo(
     () => items.filter((i) => i.status === 'catalog').sort((a, b) => a.name.localeCompare(b.name)),
@@ -161,22 +171,17 @@ export default function ShoppingScreen() {
   }
 
   function handleDoneShopping() {
-    if (weeklyUnchecked.length === 0 && weeklyChecked.length === 0) return;
-    Alert.alert(
-      t.doneShoppingDialogTitle,
-      t.doneShoppingDialogBody,
-      [
-        { text: t.cancelBtn, style: 'cancel' },
-        {
-          text: t.doneShoppingConfirmBtn,
-          onPress: () => {
-            doneShopping(t.tripLabel(dateStr(new Date())), monthlyResetDate);
-            heavy();
-            setConfirm(t.doneShoppingSuccessText);
-          },
-        },
-      ]
-    );
+    if (weeklyChecked.length === 0) return;
+    setShowDoneShoppingConfirm(true);
+  }
+
+  // TODO(06-theming-and-popups): swap this in-app Modal for the shared popup/
+  // action-sheet component once it lands — placeholder per the coordination doc.
+  function confirmDoneShopping() {
+    doneShopping(t.tripLabel(dateStr(new Date())), monthlyResetDate);
+    heavy();
+    setConfirm(t.doneShoppingSuccessText);
+    setShowDoneShoppingConfirm(false);
   }
 
   function handleAddItem(input: { name: string; price: number; targetQuantity: number; isTemporary: boolean; alsoAddToCatalog: boolean }) {
@@ -226,21 +231,6 @@ export default function ShoppingScreen() {
     setConfirm(t.itemAddedToList(input.name));
   }
 
-  function handleUpdateSave(patch: { name: string; price: number; targetQuantity: number; isTemporary: boolean }) {
-    if (!updateItem) return;
-    update(updateItem.id, patch);
-    setUpdateItem(null);
-    success();
-    setConfirm(t.itemAddedToList(patch.name));
-  }
-
-  function handleUpdateDelete() {
-    if (!updateItem) return;
-    removeWithSource(updateItem.id);
-    setUpdateItem(null);
-    heavy();
-  }
-
   const tabAccent = tab === 'weekly' ? theme.green : theme.orange;
 
   return (
@@ -254,6 +244,11 @@ export default function ShoppingScreen() {
         bordered
         right={
           <View style={styles.headerActions}>
+            {tab === 'monthly' && (
+              <Pressable onPress={() => router.push('/inventory-edit')} hitSlop={8}>
+                <Ionicons name="create-outline" size={20} color={theme.textLight} />
+              </Pressable>
+            )}
             <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
               <Ionicons name="link-outline" size={20} color={theme.textLight} />
             </Pressable>
@@ -350,10 +345,7 @@ export default function ShoppingScreen() {
                           item={item}
                           theme={theme}
                           onTogglePending={() => setPendingRestock(item.id, !item.pendingRestock)}
-                          onPress={() => setUpdateItem(item)}
-                          onDelete={() => removeWithSource(item.id)}
                           temporaryLabel={t.temporaryBadge}
-                          reducedMotion={reducedMotion}
                         />
                         {idx < restItems.length - 1 && (
                           <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
@@ -483,7 +475,14 @@ export default function ShoppingScreen() {
                   <Surface style={styles.card}>
                     {weeklyChecked.map((item, idx) => (
                       <View key={item.id}>
-                        <ShoppingRow item={item} theme={theme} variant="cart" onToggle={() => toggle(item.id)} onRemove={() => removeWithSource(item.id)} />
+                        <ShoppingRow
+                          item={item}
+                          theme={theme}
+                          variant="cart"
+                          onToggle={() => toggle(item.id)}
+                          onCollect={() => toggleCollected(item.id)}
+                          onRemove={() => removeWithSource(item.id)}
+                        />
                         {idx < weeklyChecked.length - 1 && (
                           <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                         )}
@@ -495,7 +494,7 @@ export default function ShoppingScreen() {
             </>
           )}
 
-          {shoppingPendingCount > 0 && (
+          {tab === 'weekly' && shoppingPendingCount > 0 && (
             <View style={[styles.saveButtonSection, { paddingBottom: Spacing.md }]}>
               <Pressable
                 style={[styles.saveButton, { backgroundColor: theme.green }]}
@@ -515,8 +514,13 @@ export default function ShoppingScreen() {
       {tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) && (
         <View style={[styles.stickyFooter, { paddingBottom: Math.max(Spacing.md, bottomInset) }]}>
           <PressableScale
-            style={[styles.doneShoppingBtn, { backgroundColor: theme.green }]}
+            style={[
+              styles.doneShoppingBtn,
+              { backgroundColor: theme.green },
+              weeklyChecked.length === 0 && { opacity: CHECKED_OPACITY },
+            ]}
             onPress={handleDoneShopping}
+            disabled={weeklyChecked.length === 0}
           >
             <Text style={styles.doneShoppingText}>{t.doneShoppingBtn}</Text>
           </PressableScale>
@@ -526,7 +530,7 @@ export default function ShoppingScreen() {
       {/* FAB */}
       <Pressable
         style={[styles.fab, { backgroundColor: tabAccent, bottom: tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) ? Spacing.xl + 64 : Spacing.xl }]}
-        onPress={() => setShowAddSheet(true)}
+        onPress={() => (tab === 'weekly' ? setShowAddSourceChooser(true) : setShowAddSheet(true))}
       >
         <Text style={styles.fabText}>+</Text>
       </Pressable>
@@ -539,14 +543,45 @@ export default function ShoppingScreen() {
         onAdd={handleAddItem}
       />
 
-      <UpdateSheet
-        visible={updateItem !== null}
-        item={updateItem}
+      <AddSourceChooser
+        visible={showAddSourceChooser}
         theme={theme}
-        onClose={() => setUpdateItem(null)}
-        onSave={handleUpdateSave}
-        onDelete={handleUpdateDelete}
+        catalogItems={catalogItems}
+        onClose={() => setShowAddSourceChooser(false)}
+        onPickFromInventory={(id) => {
+          const picked = catalogItems.find((i) => i.id === id);
+          addToWeeklyFromCatalog(id);
+          success();
+          if (picked) setConfirm(t.itemAddedToList(picked.name));
+        }}
+        onOpenAddSheet={() => setShowAddSheet(true)}
       />
+
+      <MonthlyResetSummaryModal
+        visible={resetSummary !== null}
+        summary={resetSummary}
+        theme={theme}
+        onClose={() => setResetSummary(null)}
+      />
+
+      {/* TODO(06-theming-and-popups): plain in-app Modal placeholder for the
+          "done shopping" confirmation — swap for the shared popup/action-sheet
+          component once it lands. */}
+      <Modal visible={showDoneShoppingConfirm} transparent animationType="fade" onRequestClose={() => setShowDoneShoppingConfirm(false)}>
+        <Pressable style={styles.confirmBackdrop} onPress={() => setShowDoneShoppingConfirm(false)} />
+        <View style={[styles.confirmCard, { backgroundColor: theme.white }]}>
+          <Text style={[styles.confirmTitle, { color: theme.text }]}>{t.doneShoppingDialogTitle}</Text>
+          <Text style={[styles.confirmBody, { color: theme.textLight }]}>{t.doneShoppingDialogBody}</Text>
+          <View style={styles.confirmActions}>
+            <Pressable style={styles.confirmCancelBtn} onPress={() => setShowDoneShoppingConfirm(false)}>
+              <Text style={[styles.confirmCancelText, { color: theme.textLight }]}>{t.cancelBtn}</Text>
+            </Pressable>
+            <PressableScale style={[styles.confirmOkBtn, { backgroundColor: theme.green }]} onPress={confirmDoneShopping}>
+              <Text style={styles.confirmOkText}>{t.doneShoppingConfirmBtn}</Text>
+            </PressableScale>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -632,4 +667,21 @@ const baseStyles = StyleSheet.create({
   saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
   saveButtonText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
   saveButtonCount: { color: '#fff', fontWeight: '600', fontSize: FontSize.sm },
+
+  confirmBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+  confirmCard: {
+    position: 'absolute',
+    left: Spacing.xl, right: Spacing.xl, top: '35%',
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    ...Shadow.fab,
+  },
+  confirmTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  confirmBody: { fontSize: FontSize.sm },
+  confirmActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md, marginTop: Spacing.sm },
+  confirmCancelBtn: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm },
+  confirmCancelText: { fontSize: FontSize.md, fontWeight: '600' },
+  confirmOkBtn: { borderRadius: Radius.md, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
+  confirmOkText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 });

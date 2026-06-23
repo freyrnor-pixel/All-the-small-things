@@ -4,26 +4,35 @@
  * Opened from the FAB on either the Katalog screen (creates a catalog item) or
  * the Ukeliste screen (creates a weekly working-list item, with an extra
  * "Legg også til i katalog" toggle so the user can optionally persist it as a
- * permanent catalog item too). Fields: Varenavn (required), Estimert pris
- * (optional), Ønsket antall (stepper, default 1), and a "Midlertidig" toggle
- * (defaults to true on both screens — most free-adds are one-off needs).
+ * permanent catalog item too). Fields: Varenavn (required, with a live
+ * catalog-search dropdown), Estimert pris (optional, auto-filled when a
+ * suggestion is picked), Ønsket antall (stepper, default 1), and a "Midlertidig"
+ * toggle (defaults to true on both screens — most free-adds are one-off needs).
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/useAppTheme
+ *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore
  *   Used by → app/shopping.tsx
- *   Data    → none directly — creation flows out via onAdd; the parent calls useShoppingStore.add()
+ *   Data    → none directly — creation flows out via onAdd; the parent calls useShoppingStore.add(). Reads useCatalogStore.suggest() (read-only) for the name-field autocomplete.
  *
  * Edit notes:
  *   - `origin` controls whether the "Legg også til i katalog" toggle renders at all
  *     (only meaningful when adding from the weekly/Ukeliste screen).
  *   - Resets all fields on close via the useEffect keyed on `visible`.
+ *   - Wrapped in a KeyboardAvoidingView because RN's <Modal> renders outside the
+ *     screen's own KeyboardAvoidingView subtree — without this, the keyboard covers
+ *     the name input on short screens.
+ *   - Suggestions come from useCatalogStore.suggest(name), which already does
+ *     case-insensitive substring matching with startsWith-priority ordering — don't
+ *     duplicate that logic here, just render its result. Dismissed once a suggestion
+ *     is picked or the name is cleared.
  */
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
+import { useCatalogStore } from '@/store/useCatalogStore';
 
 type Props = {
   visible: boolean;
@@ -43,11 +52,13 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
   const { bottom: bottomInset } = useSafeAreaInsets();
   const styles = useScaledStyles(baseStyles);
   const t = useT();
+  const catalogSuggest = useCatalogStore((s) => s.suggest);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [targetQty, setTargetQty] = useState(1);
   const [temporary, setTemporary] = useState(true);
   const [alsoAddToCatalog, setAlsoAddToCatalog] = useState(false);
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -56,8 +67,20 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
       setTargetQty(1);
       setTemporary(true);
       setAlsoAddToCatalog(false);
+      setSuggestionsDismissed(false);
     }
   }, [visible]);
+
+  const suggestions = useMemo(
+    () => (suggestionsDismissed ? [] : catalogSuggest(name, 5)),
+    [catalogSuggest, name, suggestionsDismissed]
+  );
+
+  function handlePickSuggestion(item: { name: string; price: number }) {
+    setName(item.name);
+    if (item.price > 0) setPrice(String(item.price));
+    setSuggestionsDismissed(true);
+  }
 
   function handleAdd() {
     if (!name.trim()) return;
@@ -72,6 +95,7 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexFill}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
         <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
@@ -81,13 +105,27 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
         <TextInput
           style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
           value={name}
-          onChangeText={setName}
+          onChangeText={(v) => { setName(v); setSuggestionsDismissed(false); }}
           placeholder={t.shoppingItemPlaceholder}
           placeholderTextColor={theme.gray}
           autoFocus
           returnKeyType="done"
           onSubmitEditing={handleAdd}
         />
+        {suggestions.length > 0 && (
+          <View style={[styles.suggestionsBox, { backgroundColor: theme.offWhite, borderColor: theme.grayLight }]}>
+            <ScrollView keyboardShouldPersistTaps="handled" style={styles.suggestionsScroll}>
+              {suggestions.map((s) => (
+                <Pressable key={s.id} style={styles.suggestionRow} onPress={() => handlePickSuggestion(s)}>
+                  <Text style={[styles.suggestionName, { color: theme.text }]} numberOfLines={1}>{s.name}</Text>
+                  {s.price > 0 && (
+                    <Text style={[styles.suggestionPrice, { color: theme.textLight }]}>{s.price.toFixed(0)} kr</Text>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         <Text style={[styles.label, { color: theme.textLight }]}>{t.estimertPrisLabel}</Text>
         <TextInput
@@ -149,11 +187,13 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
           </Pressable>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const baseStyles = StyleSheet.create({
+  flexFill: { flex: 1 },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     position: 'absolute',
@@ -170,6 +210,11 @@ const baseStyles = StyleSheet.create({
   title: { fontSize: FontSize.lg, fontWeight: '700', marginBottom: Spacing.sm },
   label: { fontSize: FontSize.xs, fontWeight: '600', marginTop: Spacing.sm, marginBottom: 4 },
   input: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
+  suggestionsBox: { borderRadius: Radius.sm, borderWidth: 1, marginTop: 4, overflow: 'hidden' },
+  suggestionsScroll: { maxHeight: 160 },
+  suggestionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm },
+  suggestionName: { flex: 1, fontSize: FontSize.sm },
+  suggestionPrice: { fontSize: FontSize.xs },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   stepBtn: { width: 34, height: 34, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: FontSize.lg, fontWeight: '700', lineHeight: 22 },

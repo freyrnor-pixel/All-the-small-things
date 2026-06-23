@@ -315,6 +315,11 @@ export function initDb() {
     "UPDATE shopping_items SET status = 'catalog' WHERE list_type = 'monthly' AND status = 'list'",
     "UPDATE shopping_items SET status = 'inWeeklyList' WHERE list_type = 'monthly' AND status = 'in_cart'",
     "UPDATE shopping_items SET status = 'catalog', pending_restock = 1 WHERE list_type = 'monthly' AND status = 'staged'",
+    // Cart "collected" checkbox state (distinct from 'checked', which now means
+    // "moved to cart") + provenance flag for the monthly reset summary's
+    // inventory-vs-ad-hoc split.
+    "ALTER TABLE shopping_items ADD COLUMN collected INTEGER DEFAULT 0",
+    "ALTER TABLE shopping_items ADD COLUMN from_catalog INTEGER DEFAULT 0",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
