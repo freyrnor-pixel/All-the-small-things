@@ -149,9 +149,9 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
     return {
       cream: '#0C0C14',
       orange: lighten(primary, 0.2),
-      orangeLight: darken(primary, 0.6),
+      orangeLight: darken(primary, 0.75),
       green: lighten(secondary, 0.2),
-      greenLight: darken(secondary, 0.6),
+      greenLight: darken(secondary, 0.75),
       brown: lighten(primary, 0.4),
       brownLight: darken(primary, 0.5),
       // Same ~10%-step elevation ladder as the static dark themes (see
@@ -363,9 +363,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
   default: {
     cream: '#070B16',
     orange: '#4EA8FC',
-    orangeLight: '#1C3A66',
+    orangeLight: darken('#4EA8FC', 0.75),
     green: '#34D399',
-    greenLight: '#0D2A1A',
+    greenLight: darken('#34D399', 0.75),
     brown: '#8FC7FF',
     brownLight: '#16335E',
     // white/offWhite/grayLight step up from cream in ~10%-lighter layers (each
@@ -392,9 +392,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
   tech: {
     cream: '#080E16',
     orange: '#38BDF8',
-    orangeLight: '#0A2030',
+    orangeLight: darken('#38BDF8', 0.75),
     green: '#22D3EE',
-    greenLight: '#081820',
+    greenLight: darken('#22D3EE', 0.75),
     brown: '#7DD3FC',
     brownLight: '#0C1A28',
     white: '#33373e',
@@ -416,9 +416,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
   gothic: {
     cream: '#0E0818',
     orange: '#A855F7',
-    orangeLight: '#2A1050',
+    orangeLight: darken('#A855F7', 0.75),
     green: '#C084FC',
-    greenLight: '#1A0830',
+    greenLight: darken('#C084FC', 0.75),
     brown: '#E9D5FF',
     brownLight: '#3A1870',
     white: '#37333f',
@@ -439,9 +439,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
   nature: {
     cream: '#08140A',
     orange: '#22C55E',
-    orangeLight: '#0A2810',
+    orangeLight: darken('#22C55E', 0.75),
     green: '#16A34A',
-    greenLight: '#061608',
+    greenLight: darken('#16A34A', 0.75),
     brown: '#FB923C',
     brownLight: '#2A1408',
     white: '#333d35',
@@ -463,9 +463,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
   fluffy: {
     cream: '#1A0612',
     orange: '#F472B6',
-    orangeLight: '#3A1228',
+    orangeLight: darken('#F472B6', 0.75),
     green: '#F9A8D4',
-    greenLight: '#2A0E1C',
+    greenLight: darken('#F9A8D4', 0.75),
     brown: '#FBCFE8',
     brownLight: '#4A1830',
     white: '#3A2A32',
@@ -487,9 +487,9 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
   custom: {
     cream: '#0C0C14',
     orange: '#8888AA',
-    orangeLight: '#1E1E30',
+    orangeLight: darken('#8888AA', 0.75),
     green: '#669A77',
-    greenLight: '#0E1E12',
+    greenLight: darken('#669A77', 0.75),
     brown: '#AAAACC',
     brownLight: '#181828',
     white: '#141420',

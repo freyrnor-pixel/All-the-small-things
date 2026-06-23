@@ -7,7 +7,7 @@
  * delete); a `kind` param pre-seeds build vs. break for new habits.
  *
  * Connections:
- *   Imports → components/HabitIcon, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/AppModal, components/HabitIcon, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder; scaled fontSize via useScaledStyles()
  *
@@ -26,7 +26,6 @@
  */
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -49,6 +48,7 @@ import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HabitIcon, { HABIT_ICON_NAMES } from '@/components/HabitIcon';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import { showAppModal } from '@/components/AppModal';
 
 const HABIT_ICONS = HABIT_ICON_NAMES;
 
@@ -206,7 +206,7 @@ export default function HabitForm() {
 
   function confirmDelete() {
     warning();
-    Alert.alert(
+    showAppModal(
       t.resetConfirmTitle(form.title),
       t.resetConfirmBody,
       [

@@ -13,7 +13,7 @@
  *   - "Reset" — clears all notes, behind a confirm dialog — irreversible.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, constants/theme, lib/haptics, lib/i18n,
+ *   Imports → components/AppModal, components/ConfirmationBanner, constants/theme, lib/haptics, lib/i18n,
  *             lib/useAppTheme, store/useFeedbackStore
  *   Used by → app/_layout.tsx
  *   Data    → reads/writes feedback_notes via useFeedbackStore
@@ -25,7 +25,6 @@
  */
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -45,6 +44,7 @@ import { useT } from '@/lib/i18n';
 import { tap, warning, heavy } from '@/lib/haptics';
 import { useFeedbackStore } from '@/store/useFeedbackStore';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
+import { showAppModal } from '@/components/AppModal';
 
 type Composer = { title: string; note: string };
 
@@ -79,7 +79,7 @@ export default function DebugOverlay() {
 
   function resetNotes() {
     warning();
-    Alert.alert(t.resetConfirmTitle(t.debug.resetNotes), t.resetConfirmBody, [
+    showAppModal(t.resetConfirmTitle(t.debug.resetNotes), t.resetConfirmBody, [
       { text: t.cancel, style: 'cancel' },
       { text: t.resetConfirmBtn, style: 'destructive', onPress: () => { heavy(); clearNotes(); } },
     ]);

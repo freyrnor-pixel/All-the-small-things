@@ -7,12 +7,26 @@
  * (no native gradient dependency) with a draggable thumb on top.
  *
  * Connections:
- *   Imports → constants/theme
+ *   Imports → constants/theme, react-native-gesture-handler, react-native-reanimated
  *   Used by → app/settings.tsx (custom theme section)
  *   Data    → none (controlled: value/onChange only)
+ *
+ * Edit notes:
+ *   - The thumb's position is driven by a Reanimated shared value updated
+ *     synchronously on the UI thread via Gesture.Pan(), not by the `value`
+ *     prop re-rendering — that's deliberate. settings.tsx subscribes to the
+ *     whole settings store, so every onChange() during a drag triggers a
+ *     heavy screen re-render; if the thumb's position depended on that
+ *     round trip it visibly lagged/snapped back toward its start (the bug
+ *     this rewrite fixes). `dragging` guards the external→internal sync
+ *     effect so a mid-drag prop update can't fight the live gesture.
+ *   - minDistance(0) so the gesture activates on first touch — this is a
+ *     tap-to-jump-or-drag strip, not a swipe that needs a travel threshold.
  */
-import React, { useRef } from 'react';
-import { View, StyleSheet, PanResponder, LayoutChangeEvent } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-native-reanimated';
 import { hslToHex } from '@/constants/theme';
 
 type Props = {
@@ -24,56 +38,75 @@ type Props = {
 const SEGMENTS = 36;
 
 export default function HuePicker({ value, onChange, height = 36 }: Props) {
-  const widthRef = useRef(0);
+  const width = useSharedValue(0);
+  const ratio = useSharedValue(value / 360);
+  const dragging = useRef(false);
 
-  const setFromX = (x: number) => {
-    const w = widthRef.current;
-    if (w <= 0) return;
-    const ratio = Math.min(1, Math.max(0, x / w));
-    onChange(Math.round(ratio * 360));
-  };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => setFromX(e.nativeEvent.locationX),
-      onPanResponderMove: (e) => setFromX(e.nativeEvent.locationX),
-    })
-  ).current;
+  useEffect(() => {
+    if (!dragging.current) ratio.value = value / 360;
+  }, [value, ratio]);
 
   const onLayout = (e: LayoutChangeEvent) => {
-    widthRef.current = e.nativeEvent.layout.width;
+    width.value = e.nativeEvent.layout.width;
   };
 
-  const thumbLeftPct = (value / 360) * 100;
+  const setDragging = (v: boolean) => {
+    dragging.current = v;
+  };
+
+  const moveTo = (x: number) => {
+    'worklet';
+    if (width.value <= 0) return;
+    const r = Math.min(1, Math.max(0, x / width.value));
+    ratio.value = r;
+    runOnJS(onChange)(Math.round(r * 360));
+  };
+
+  const pan = Gesture.Pan()
+    .minDistance(0)
+    .onStart((e) => {
+      runOnJS(setDragging)(true);
+      moveTo(e.x);
+    })
+    .onUpdate((e) => {
+      moveTo(e.x);
+    })
+    .onEnd(() => {
+      runOnJS(setDragging)(false);
+    });
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    left: `${ratio.value * 100}%`,
+  }));
 
   return (
-    <View style={[styles.wrap, { height }]} onLayout={onLayout} {...panResponder.panHandlers}>
-      <View style={[styles.strip, { borderRadius: height / 2 }]}>
-        {Array.from({ length: SEGMENTS }).map((_, i) => (
-          <View
-            key={i}
-            style={[styles.segment, { backgroundColor: hslToHex(i / SEGMENTS, 0.65, 0.55) }]}
-          />
-        ))}
+    <GestureDetector gesture={pan}>
+      <View style={[styles.wrap, { height }]} onLayout={onLayout}>
+        <View style={[styles.strip, { borderRadius: height / 2 }]}>
+          {Array.from({ length: SEGMENTS }).map((_, i) => (
+            <View
+              key={i}
+              style={[styles.segment, { backgroundColor: hslToHex(i / SEGMENTS, 0.65, 0.55) }]}
+            />
+          ))}
+        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.thumb,
+            thumbStyle,
+            {
+              height: height + 8,
+              width: height + 8,
+              borderRadius: (height + 8) / 2,
+              marginLeft: -(height + 8) / 2,
+              marginTop: -(height + 8) / 2,
+              backgroundColor: hslToHex(value / 360, 0.62, 0.5),
+            },
+          ]}
+        />
       </View>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.thumb,
-          {
-            height: height + 8,
-            width: height + 8,
-            borderRadius: (height + 8) / 2,
-            left: `${thumbLeftPct}%`,
-            marginLeft: -(height + 8) / 2,
-            marginTop: -(height + 8) / 2,
-            backgroundColor: hslToHex(value / 360, 0.62, 0.5),
-          },
-        ]}
-      />
-    </View>
+    </GestureDetector>
   );
 }
 

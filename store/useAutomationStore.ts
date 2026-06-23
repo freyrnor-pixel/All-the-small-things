@@ -10,25 +10,26 @@
  * when its triggers fire.
  *
  * Connections:
- *   Imports → lib/db, lib/dataAccess, lib/i18n, lib/id, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AppModal, lib/db, lib/dataAccess, lib/i18n, lib/id, store/useSettingsStore, store/useShoppingStore
  *   Used by → app/automations.tsx, app/shopping.tsx, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns SQLite table ifttt_rules
  *
  * Edit notes:
  *   - trigger_params is left at its DB default ('{}') — neither trigger type takes
  *     parameters today. Add a column-backed field only when a trigger actually needs one.
- *   - executeAction's 'show_message' branch uses Alert.alert directly (not
+ *   - executeAction's 'show_message' branch uses showAppModal() directly (not
  *     ConfirmationBanner) because it must work from non-component call sites
- *     (store methods), where there's no screen-owned banner state to set.
+ *     (store methods), where there's no screen-owned banner state to set — showAppModal()
+ *     is a plain function, safe to call outside React.
  *   - New trigger/action types go through TriggerType/ActionType here AND the
  *     automations.tsx picker UI AND the call site that should fire them.
  */
-import { Alert } from 'react-native';
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { Row, loadAll, insertRow, updateRow, readStr, readInt, readBool, readJson } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 import { getTranslations } from '@/lib/i18n';
+import { showAppModal } from '@/components/AppModal';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 
@@ -69,7 +70,7 @@ function executeAction(rule: AutomationRule) {
     const message = rule.actionParams.message?.trim();
     if (!message) return;
     const t = getTranslations(useSettingsStore.getState().language);
-    Alert.alert(t.automations.alertTitle, message);
+    showAppModal(t.automations.alertTitle, message);
   } else if (rule.actionType === 'add_shopping_item') {
     const name = rule.actionParams.name?.trim();
     if (!name) return;
