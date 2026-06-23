@@ -140,6 +140,7 @@ export default function MealsScreen() {
         price: 0,
         inventoryQty: 0,
         dishName: dish.name,
+        status: 'inWeeklyList',
       });
     });
     success();

@@ -58,7 +58,7 @@ export default function SharedRequestsSection({ kind }: Props) {
 
   function acceptShopping(id: string, name: string, amount: string, unit: string) {
     success();
-    addShoppingItem({ name, amount, unit, listType: 'weekly', store: '', price: 0, category: undefined, inventoryQty: 0 });
+    addShoppingItem({ name, amount, unit, listType: 'weekly', store: '', price: 0, category: undefined, inventoryQty: 0, status: 'inWeeklyList' });
     toggleShopping(id);
   }
 

@@ -72,7 +72,7 @@ export default function SettingsScreen() {
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
   const resetWeekly = useShoppingStore((s) => s.resetWeekly);
-  const resetMonthly = useShoppingStore((s) => s.resetMonthly);
+  const monthlyReset = useShoppingStore((s) => s.monthlyReset);
   const clearTasks = useTaskStore((s) => s.clearAll);
   const syncTaskNotifs = useTaskStore((s) => s.syncAllTaskNotifications);
   const syncHabitNotifs = useHabitStore((s) => s.syncAllHabitReminders);
@@ -126,7 +126,7 @@ export default function SettingsScreen() {
 
     taskStore.clearAll();
     shoppingStore.resetWeekly();
-    shoppingStore.resetMonthly();
+    shoppingStore.monthlyReset();
     habitStore.habits.forEach((h) => habitStore.remove(h.id));
   }
 
@@ -846,7 +846,7 @@ export default function SettingsScreen() {
               <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetWeekly}</Text>
             </Pressable>
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
-            <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetMonthly.toLowerCase(), resetMonthly)}>
+            <Pressable style={styles.dangerBtn} onPress={() => confirmReset(t.resetMonthly.toLowerCase(), monthlyReset)}>
               <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.resetMonthly}</Text>
             </Pressable>
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />

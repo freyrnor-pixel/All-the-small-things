@@ -9,7 +9,7 @@
  * Connections:
  *   Imports → lib/date
  *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useInboxStore.ts, store/useMealStore.ts, store/useReceiptStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
@@ -295,6 +295,26 @@ export function initDb() {
     "ALTER TABLE habits ADD COLUMN notification_times TEXT DEFAULT '[]'",
     // Hue-only custom theme picker (handoff 1D) — primary/secondary colors above are derived from this
     "ALTER TABLE settings ADD COLUMN custom_hue INTEGER DEFAULT 217",
+    // Katalog/Ukeliste redesign — staging tray + shopping trips, replacing the
+    // monthly list/staged/in_cart pipeline and weekKey-grouped weekly history.
+    "ALTER TABLE shopping_items ADD COLUMN pending_restock INTEGER DEFAULT 0",
+    "ALTER TABLE shopping_items ADD COLUMN target_quantity INTEGER DEFAULT 1",
+    "ALTER TABLE shopping_items ADD COLUMN shopping_trip_id TEXT DEFAULT NULL",
+    `CREATE TABLE IF NOT EXISTS shopping_trips (
+      id TEXT PRIMARY KEY,
+      completed_at TEXT NOT NULL,
+      label TEXT NOT NULL,
+      month_reset_date INTEGER DEFAULT 1
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_shopping_trips_completed ON shopping_trips(completed_at)",
+    // Remap the old status pipeline ('list'|'staged'|'in_cart'|'purchased') onto the
+    // new one ('catalog'|'staged'|'inWeeklyList'|'purchased') so existing rows aren't
+    // orphaned. Weekly rows never used 'staged'/'in_cart', so they only need the
+    // 'list' -> 'inWeeklyList' remap (the weekly list IS the working list now).
+    "UPDATE shopping_items SET status = 'inWeeklyList' WHERE list_type = 'weekly' AND status = 'list'",
+    "UPDATE shopping_items SET status = 'catalog' WHERE list_type = 'monthly' AND status = 'list'",
+    "UPDATE shopping_items SET status = 'inWeeklyList' WHERE list_type = 'monthly' AND status = 'in_cart'",
+    "UPDATE shopping_items SET status = 'catalog', pending_restock = 1 WHERE list_type = 'monthly' AND status = 'staged'",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

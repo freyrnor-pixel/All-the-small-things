@@ -1,28 +1,41 @@
 /**
- * useShoppingStore.ts — weekly + monthly shopping list
+ * useShoppingStore.ts — Katalog (permanent inventory) + Ukeliste (weekly working list)
  *
- * Zustand store for shopping items across a weekly and a monthly list, with
- * check-off, quantity adjust, and a monthly→weekly allocation flow (a monthly
- * staple can spawn weekly entries that decrement its allocated count when removed).
+ * Zustand store for shopping items, all living in the single `shopping_items`
+ * table, driven by a single `status` pipeline:
+ *   'catalog' -> 'staged' -> 'inWeeklyList' -> 'purchased'
+ * ('staged' is vestigial — staging is now tracked via the `pendingRestock` flag
+ * while status stays 'catalog', not via the status enum; the value is kept in
+ * the type only so old rows remain a valid enum value.)
  *
- * Monthly items additionally run through a `status` pipeline —
- * 'list' -> 'staged' -> 'in_cart' -> 'purchased' — driven from app/shopping.tsx
- * (circle tap stages, "Save/Add to shopping list" commits to cart, "Finish
- * shopping" commits to purchased). Weekly items keep using `checked` for cart
- * state, but also gain a 'purchased' status (with weekKey) once a weekly trip
- * is finished, so past weeks can be reviewed.
+ * Katalog (was "Månedsliste") is the permanent household inventory: items sit
+ * at status='catalog', optionally flagged pendingRestock=true ("in the staging
+ * tray"). Confirming the tray moves them to status='inWeeklyList' — the working
+ * list for the current shopping trip. "Handlingen fullført" (doneShopping)
+ * marks every inWeeklyList item 'purchased', stamps shoppingTripId +
+ * purchasedAt, and creates a shopping_trips row that groups them for the
+ * "Kjøpt denne måneden" sections back in Katalog. Monthly reset reverts
+ * purchased/inWeeklyList non-temporary items back to 'catalog' and purges
+ * shopping_trips + isTemporary rows (see monthlyReset()).
  *
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/id
- *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/CarryOverPromptModal.tsx, components/MonthlyTableRow.tsx, components/ShoppingRow.tsx, store/useAutomationStore.ts (read-only, for the add_shopping_item action)
- *   Data    → defines a Zustand store; owns SQLite table shopping_items (both weekly and monthly rows, distinguished by list_type)
+ *   Used by → app/_layout.tsx, app/index.tsx, app/meals.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, components/MonthlyTableRow.tsx, components/ShoppingRow.tsx, components/UpdateSheet.tsx, components/AddItemSheet.tsx, store/useAutomationStore.ts (read-only, for the add_shopping_item action)
+ *   Data    → defines a Zustand store; owns SQLite tables shopping_items + shopping_trips
  *
  * Edit notes:
- *   - monthly_source_id links a weekly item back to its monthly staple; removeWithSource()/adjustAmount()/resetWeekly() must release the parent's monthly_allocated — use these, not the bare remove().
- *   - resetWeekly() deletes all weekly rows (releasing allocations first); resetMonthly() only unchecks + zeroes monthly_allocated, it does not delete. resetMonthlyWithCarryOver() is the carry-over-aware variant the UI should call instead.
- *   - New columns (e.g. monthly_allocated, monthly_source_id, status, is_temporary) go through the migrations array in lib/db.ts; never recreate tables.
- *   - dishName (dish_name column) is set when an item was pushed from a meal dish (app/meals.tsx); used to group shopping items by dish in app/shopping.tsx.
- *   - status/isTemporary are monthly-only concepts; weekly rows keep status:'list' except the one-way bump to 'purchased' done by finishShopping('weekly', weekKey).
+ *   - monthly_source_id/monthlyAllocated are legacy weekly<-monthly allocation
+ *     fields, kept for backward read compatibility on old rows; new code paths
+ *     (the staging-tray flow) don't write them — the old writer (addFromMonthly)
+ *     was removed since no UI called it. adjustAmount/removeWithSource still
+ *     release allocations for any pre-existing rows that carry one.
+ *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ *   - isTemporary purges on monthly reset; permanent (isTemporary=false) catalog
+ *     items are NEVER deleted by reset, only their status/pendingRestock fields move.
+ *   - targetQuantity is only ever edited via the Update Sheet (components/UpdateSheet.tsx) —
+ *     there is no live +/- stepper on the main Katalog rows any more.
+ *   - There is no interactive carry/drop prompt for temporary items any more
+ *     (CarryOverPromptModal was removed) — monthlyReset() always purges them outright.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -35,11 +48,12 @@ import {
   rowValues,
   readStr,
   readReal,
+  readInt,
   readBool,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
-export type ShoppingStatus = 'list' | 'staged' | 'in_cart' | 'purchased';
+export type ShoppingStatus = 'catalog' | 'staged' | 'inWeeklyList' | 'purchased';
 
 export type ShoppingItem = {
   id: string;
@@ -59,15 +73,28 @@ export type ShoppingItem = {
   isTemporary: boolean;
   purchasedAt?: string;
   weekKey?: string;
+  pendingRestock: boolean;
+  targetQuantity: number;
+  shoppingTripId?: string;
 };
 
-type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId' | 'status' | 'purchasedAt' | 'weekKey' | 'isTemporary'> & {
+export type ShoppingTrip = {
+  id: string;
+  completedAt: string;
+  label: string;
+  monthResetDate: number;
+};
+
+type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'monthlyAllocated' | 'monthlySourceId' | 'status' | 'purchasedAt' | 'weekKey' | 'isTemporary' | 'pendingRestock' | 'targetQuantity' | 'shoppingTripId'> & {
   category?: string;
   isTemporary?: boolean;
+  status?: ShoppingStatus;
+  targetQuantity?: number;
 };
 
 type ShoppingStore = {
   items: ShoppingItem[];
+  trips: ShoppingTrip[];
   load: () => void;
   add: (item: ShoppingAddInput) => string;
   update: (id: string, patch: Partial<Omit<ShoppingItem, 'id'>>) => void;
@@ -75,13 +102,12 @@ type ShoppingStore = {
   remove: (id: string) => void;
   removeWithSource: (id: string) => void;
   adjustAmount: (id: string, delta: number) => void;
-  addFromMonthly: (monthlyId: string, qty: number) => void;
   resetWeekly: () => void;
-  resetMonthly: () => void;
-  stageItem: (id: string) => void;
-  commitStaged: () => void;
-  finishShopping: (listType: 'weekly' | 'monthly', weekKey?: string) => void;
-  resetMonthlyWithCarryOver: (carryIds: string[], dropIds: string[]) => void;
+  // New katalog/ukeliste pipeline actions
+  setPendingRestock: (id: string, pending: boolean) => void;
+  confirmStagingTray: () => void;
+  doneShopping: (label: string, monthResetDate: number) => string;
+  monthlyReset: () => void;
 };
 
 function rowToItem(row: Row): ShoppingItem {
@@ -99,10 +125,22 @@ function rowToItem(row: Row): ShoppingItem {
     monthlySourceId: readStr(row, 'monthly_source_id') || undefined,
     inventoryQty: readReal(row, 'inventory_qty'),
     dishName: readStr(row, 'dish_name') || undefined,
-    status: (readStr(row, 'status') || 'list') as ShoppingStatus,
+    status: (readStr(row, 'status') || 'catalog') as ShoppingStatus,
     isTemporary: readBool(row, 'is_temporary'),
     purchasedAt: readStr(row, 'purchased_at') || undefined,
     weekKey: readStr(row, 'week_key') || undefined,
+    pendingRestock: readBool(row, 'pending_restock'),
+    targetQuantity: readInt(row, 'target_quantity', 1),
+    shoppingTripId: readStr(row, 'shopping_trip_id') || undefined,
+  };
+}
+
+function rowToTrip(row: Row): ShoppingTrip {
+  return {
+    id: readStr(row, 'id'),
+    completedAt: readStr(row, 'completed_at'),
+    label: readStr(row, 'label'),
+    monthResetDate: readInt(row, 'month_reset_date', 1),
   };
 }
 
@@ -125,24 +163,28 @@ const ITEM_COLUMNS: FieldMap<ShoppingItem> = {
   isTemporary: { col: 'is_temporary', to: (v) => (v ? 1 : 0) },
   purchasedAt: { col: 'purchased_at', to: (v) => v ?? null },
   weekKey: { col: 'week_key', to: (v) => v ?? null },
+  pendingRestock: { col: 'pending_restock', to: (v) => (v ? 1 : 0) },
+  targetQuantity: { col: 'target_quantity', to: (v) => v ?? 1 },
+  shoppingTripId: { col: 'shopping_trip_id', to: (v) => v ?? null },
 };
-
-/** Candidates for the payday-boundary carry-over prompt: temporary monthly items never bought. */
-export function getCarryOverCandidates(items: ShoppingItem[]): ShoppingItem[] {
-  return items.filter((i) => i.listType === 'monthly' && i.isTemporary && i.status !== 'purchased');
-}
 
 export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
+  trips: [],
 
   load() {
-    set({ items: loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' }) });
+    set({
+      items: loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' }),
+      trips: loadAll('shopping_trips', rowToTrip, { orderBy: 'completed_at DESC' }),
+    });
   },
 
   add(item) {
     const id = generateId();
     const category = item.category ?? 'other';
     const isTemporary = item.isTemporary ?? false;
+    const status = item.status ?? 'catalog';
+    const targetQuantity = item.targetQuantity ?? 1;
     const newItem: ShoppingItem = {
       ...item,
       id,
@@ -151,10 +193,13 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       monthlyAllocated: 0,
       monthlySourceId: undefined,
       inventoryQty: item.inventoryQty ?? 0,
-      status: 'list',
+      status,
       isTemporary,
       purchasedAt: undefined,
       weekKey: undefined,
+      pendingRestock: false,
+      targetQuantity,
+      shoppingTripId: undefined,
     };
     insertRow('shopping_items', rowValues(newItem, ITEM_COLUMNS));
     set((s) => ({ items: [...s.items, newItem] }));
@@ -217,57 +262,6 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     }
   },
 
-  addFromMonthly(monthlyId, qty) {
-    if (qty <= 0) return;
-    const monthly = get().items.find((i) => i.id === monthlyId);
-    if (!monthly) return;
-
-    const weeklyId = generateId();
-    try {
-      insertRow('shopping_items', {
-        id: weeklyId,
-        name: monthly.name,
-        amount: String(qty),
-        unit: monthly.unit,
-        list_type: 'weekly',
-        checked: 0,
-        store: monthly.store,
-        price: monthly.price,
-        category: monthly.category,
-        monthly_allocated: 0,
-        monthly_source_id: monthlyId,
-      });
-      db.runSync(
-        'UPDATE shopping_items SET monthly_allocated = monthly_allocated + ? WHERE id = ?',
-        [qty, monthlyId]
-      );
-    } catch { return; }
-
-    set((s) => ({
-      items: [
-        ...s.items.map((i) =>
-          i.id === monthlyId ? { ...i, monthlyAllocated: i.monthlyAllocated + qty } : i
-        ),
-        {
-          id: weeklyId,
-          name: monthly.name,
-          amount: String(qty),
-          unit: monthly.unit,
-          listType: 'weekly' as const,
-          checked: false,
-          store: monthly.store,
-          price: monthly.price,
-          category: monthly.category,
-          monthlyAllocated: 0,
-          monthlySourceId: monthlyId,
-          inventoryQty: 0,
-          status: 'list' as const,
-          isTemporary: false,
-        },
-      ],
-    }));
-  },
-
   resetWeekly() {
     // Release any monthly allocations before deleting weekly items
     const weeklyWithSource = get().items.filter(
@@ -298,83 +292,81 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     });
   },
 
-  resetMonthly() {
-    db.runSync("UPDATE shopping_items SET checked = 0, monthly_allocated = 0 WHERE list_type = 'monthly'");
-    set((s) => ({
-      items: s.items.map((i) =>
-        i.listType === 'monthly' ? { ...i, checked: false, monthlyAllocated: 0 } : i
-      ),
-    }));
+  /** Catalog checkbox press: flags an item for the staging tray without changing status. */
+  setPendingRestock(id, pending) {
+    get().update(id, { pendingRestock: pending });
   },
 
-  stageItem(id) {
-    const item = get().items.find((i) => i.id === id);
-    if (!item || item.listType !== 'monthly') return;
-    if (item.status !== 'list' && item.status !== 'staged') return;
-    get().update(id, { status: item.status === 'staged' ? 'list' : 'staged' });
-  },
-
-  commitStaged() {
-    db.runSync("UPDATE shopping_items SET status = 'in_cart' WHERE list_type = 'monthly' AND status = 'staged'");
-    set((s) => ({
-      items: s.items.map((i) =>
-        i.listType === 'monthly' && i.status === 'staged' ? { ...i, status: 'in_cart' as const } : i
-      ),
-    }));
-  },
-
-  finishShopping(listType, weekKey) {
-    const now = new Date().toISOString();
-    if (listType === 'monthly') {
-      db.runSync(
-        "UPDATE shopping_items SET status = 'purchased', purchased_at = ? WHERE list_type = 'monthly' AND status = 'in_cart'",
-        [now]
-      );
-      set((s) => ({
-        items: s.items.map((i) =>
-          i.listType === 'monthly' && i.status === 'in_cart'
-            ? { ...i, status: 'purchased' as const, purchasedAt: now }
-            : i
-        ),
-      }));
-    } else {
-      db.runSync(
-        "UPDATE shopping_items SET status = 'purchased', checked = 0, purchased_at = ?, week_key = ? WHERE list_type = 'weekly' AND checked = 1",
-        [now, weekKey ?? null]
-      );
-      set((s) => ({
-        items: s.items.map((i) =>
-          i.listType === 'weekly' && i.checked
-            ? { ...i, status: 'purchased' as const, checked: false, purchasedAt: now, weekKey }
-            : i
-        ),
-      }));
-    }
-  },
-
-  resetMonthlyWithCarryOver(carryIds, dropIds) {
-    for (const id of dropIds) {
-      get().remove(id);
-    }
-    const carrySet = new Set(carryIds);
+  /** Staging tray "Legg til i ukeliste" — commits every staged (pendingRestock) catalog item to the weekly list. */
+  confirmStagingTray() {
+    const staged = get().items.filter((i) => i.pendingRestock && i.status === 'catalog');
+    if (staged.length === 0) return;
     db.runSync(
-      "UPDATE shopping_items SET status = 'list', checked = 0, monthly_allocated = 0 WHERE list_type = 'monthly' AND is_temporary = 0"
+      "UPDATE shopping_items SET status = 'inWeeklyList', pending_restock = 0 WHERE pending_restock = 1 AND status = 'catalog'"
     );
-    for (const id of carryIds) {
-      db.runSync(
-        "UPDATE shopping_items SET status = 'list', checked = 0, monthly_allocated = 0 WHERE id = ?",
-        [id]
-      );
-    }
     set((s) => ({
+      items: s.items.map((i) =>
+        i.pendingRestock && i.status === 'catalog'
+          ? { ...i, status: 'inWeeklyList' as const, pendingRestock: false }
+          : i
+      ),
+    }));
+  },
+
+  /** "Handlingen fullført" — creates a shopping_trips row and marks every inWeeklyList item purchased. */
+  doneShopping(label, monthResetDate) {
+    const tripId = generateId();
+    const now = new Date().toISOString();
+    insertRow('shopping_trips', {
+      id: tripId,
+      completed_at: now,
+      label,
+      month_reset_date: monthResetDate,
+    });
+    db.runSync(
+      "UPDATE shopping_items SET status = 'purchased', purchased_at = ?, shopping_trip_id = ?, checked = 0 WHERE status = 'inWeeklyList'",
+      [now, tripId]
+    );
+    const trip: ShoppingTrip = { id: tripId, completedAt: now, label, monthResetDate };
+    set((s) => ({
+      trips: [trip, ...s.trips],
+      items: s.items.map((i) =>
+        i.status === 'inWeeklyList'
+          ? { ...i, status: 'purchased' as const, purchasedAt: now, shoppingTripId: tripId, checked: false }
+          : i
+      ),
+    }));
+    return tripId;
+  },
+
+  /**
+   * Monthly reset, per the redesign's 5-step contract:
+   *  1. Every shopping_trips row's purchased items get detached (status='catalog',
+   *     shopping_trip_id=NULL, purchased_at=NULL), then all trip rows are deleted.
+   *  2. Delete all isTemporary=1 items outright (purges quick adds permanently).
+   *  3. Clear pendingRestock on everything that's left.
+   *  4. Any remaining status='inWeeklyList' item (guaranteed isTemporary=0 here,
+   *     since step 2 already removed temporary ones) reverts to status='catalog'.
+   *  5. isTemporary=0 catalog items are never deleted — only their status/flags move.
+   */
+  monthlyReset() {
+    db.runSync(
+      "UPDATE shopping_items SET status = 'catalog', shopping_trip_id = NULL, purchased_at = NULL WHERE shopping_trip_id IS NOT NULL"
+    );
+    db.runSync('DELETE FROM shopping_trips');
+    db.runSync('DELETE FROM shopping_items WHERE is_temporary = 1');
+    db.runSync('UPDATE shopping_items SET pending_restock = 0');
+    db.runSync("UPDATE shopping_items SET status = 'catalog' WHERE status = 'inWeeklyList'");
+
+    set((s) => ({
+      trips: [],
       items: s.items
-        .filter((i) => !dropIds.includes(i.id))
+        .filter((i) => !i.isTemporary)
         .map((i) => {
-          if (i.listType !== 'monthly') return i;
-          if (!i.isTemporary || carrySet.has(i.id)) {
-            return { ...i, status: 'list' as const, checked: false, monthlyAllocated: 0 };
+          if (i.shoppingTripId || i.status === 'inWeeklyList') {
+            return { ...i, status: 'catalog' as const, shoppingTripId: undefined, purchasedAt: undefined, pendingRestock: false };
           }
-          return i;
+          return { ...i, pendingRestock: false };
         }),
     }));
   },
