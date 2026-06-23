@@ -60,15 +60,18 @@ export type Task = {
 
 type TaskStore = {
   tasks: Task[];
+  pending: Set<string>;
   load: () => void;
   add: (t: Omit<Task, 'id'>) => Task;
   update: (id: string, patch: Partial<Omit<Task, 'id'>>) => void;
   toggle: (id: string) => void;
+  confirmPending: () => void;
   remove: (id: string) => void;
   clearAll: () => void;
   tasksForDate: (date: string) => Task[];
   backlogTasks: (today: string) => Task[];
   completedCount: () => number;
+  getPendingCount: () => number;
   /** First pending task for the focus view, respecting work-mode filter. */
   focusTask: (date: string, workModeActive: boolean) => Task | null;
   /** Re-schedule every task's reminder (after a settings/language change). */
@@ -113,6 +116,7 @@ const TASK_COLUMNS: FieldMap<Task> = {
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
+  pending: new Set(),
 
   load() {
     set({ tasks: loadAll('tasks', rowToTask, { orderBy: 'task_date, task_time' }) });
@@ -139,9 +143,30 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   toggle(id) {
     const task = get().tasks.find((t) => t.id === id);
     if (!task) return;
-    const wasDone = task.done;
-    get().update(id, { done: !task.done });
-    if (!wasDone) useAutomationStore.getState().fireTrigger('task_completed');
+    set((s) => {
+      const newPending = new Set(s.pending);
+      if (newPending.has(id)) {
+        newPending.delete(id);
+      } else {
+        newPending.add(id);
+      }
+      return { pending: newPending };
+    });
+  },
+
+  confirmPending() {
+    const { pending } = get();
+    if (pending.size === 0) return;
+
+    for (const id of pending) {
+      const task = get().tasks.find((t) => t.id === id);
+      if (!task) continue;
+      const wasDone = task.done;
+      get().update(id, { done: !task.done });
+      if (!wasDone) useAutomationStore.getState().fireTrigger('task_completed');
+    }
+
+    set({ pending: new Set() });
   },
 
   remove(id) {
@@ -177,6 +202,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   completedCount() {
     return get().tasks.filter((t) => t.done).length;
+  },
+
+  getPendingCount() {
+    return get().pending.size;
   },
 
   focusTask(date, workModeActive) {

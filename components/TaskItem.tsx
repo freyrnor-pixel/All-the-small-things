@@ -21,7 +21,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Task } from '@/store/useTaskStore';
+import { Task, useTaskStore } from '@/store/useTaskStore';
 // OLD: import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 //      Colors was used for hardcoded warm-theme values that ignored the user's
 //      chosen colour theme and broke dark mode (dark text on dark backgrounds).
@@ -47,6 +47,7 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const t = useT();
   const { reducedMotion } = useAccessibility();
   const styles = useScaledStyles(baseStyles);
+  const isPending = useTaskStore((s) => s.pending.has(task.id));
   const isTimebox = task.taskType === 'time-box';
   const isEssential = task.importance === 'essential';
   const checkScale = useRef(new Animated.Value(1)).current;
@@ -82,10 +83,10 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const checkBorderColor = muted ? theme.gray : theme.orange;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, isPending && { opacity: 0.6 }]}>
       <CompletionGlow trigger={task.done} color={theme.green} radius={Radius.md} />
       <View style={styles.row}>
-      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
+      <View style={[styles.stripe, { backgroundColor: stripeColor, opacity: isPending ? 0.5 : 1 }]} />
 
       <Animated.View style={{ transform: [{ scale: checkScale }] }}>
         <Pressable
@@ -114,11 +115,12 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
               { color: theme.text },
               muted && { color: theme.gray, fontWeight: '400' },
               task.done && { color: theme.gray, textDecorationLine: 'line-through' },
+              isPending && { color: theme.gray, textDecorationLine: 'line-through', opacity: 0.5 },
             ]}
           >
             {task.title}
           </Text>
-          {isEssential && !task.done && (
+          {isEssential && !task.done && !isPending && (
             <Ionicons name="star" size={14} color={theme.orange} />
           )}
         </View>
