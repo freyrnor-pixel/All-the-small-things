@@ -47,6 +47,7 @@ import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import EmptyState from '@/components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
@@ -374,7 +375,7 @@ function WeekView({
   if (habits.length === 0) {
     return (
       <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>{t.noHabitsYet}</Text>
+        <EmptyState text={t.noHabitsYet} />
       </View>
     );
   }
@@ -452,7 +453,7 @@ function MonthView({
   if (habits.length === 0) {
     return (
       <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>{t.noHabitsYet}</Text>
+        <EmptyState text={t.noHabitsYet} />
       </View>
     );
   }

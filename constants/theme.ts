@@ -723,7 +723,7 @@ function rgba(hex: string, alpha: number): string {
 }
 
 /** Per-channel linear blend toward hexB; t=0 → hexA, t=1 → hexB. */
-function mix(hexA: string, hexB: string, t: number): string {
+export function mix(hexA: string, hexB: string, t: number): string {
   const [r1, g1, b1] = hexToRgb(hexA);
   const [r2, g2, b2] = hexToRgb(hexB);
   return rgbToHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
@@ -746,7 +746,7 @@ function hexToHsl(hex: string): [number, number, number] {
   return [h, s, l];
 }
 
-function hslToHex(h: number, s: number, l: number): string {
+export function hslToHex(h: number, s: number, l: number): string {
   const hue2rgb = (p: number, q: number, t: number) => {
     if (t < 0) t += 1;
     if (t > 1) t -= 1;
@@ -795,6 +795,21 @@ function tint(base: string, target: string, ratio: number): string {
  */
 export function tintToTheme(base: string, themeAccent: string, ratio = 0.38): string {
   return tint(base, themeAccent, ratio);
+}
+
+/**
+ * Derives the Egendefinert (custom) theme's primary + secondary accent colours
+ * from a single user-chosen hue (0-360). Saturation/lightness are fixed at
+ * values tuned to stay contrast-safe with white text (same range as the
+ * built-in theme accents), so the user only ever controls hue — every other
+ * token (disabled states, surface tints, FAB gradient) already derives from
+ * these two via buildCustomTheme().
+ */
+export function hueToCustomColors(hue: number): { primary: string; secondary: string } {
+  const h = ((hue % 360) + 360) % 360;
+  const primary = hslToHex(h / 360, 0.62, 0.5);
+  const secondary = hslToHex(((h + 140) % 360) / 360, 0.55, 0.45);
+  return { primary, secondary };
 }
 
 /** Real-world reference hue + blend strength each finish tints its base toward. */

@@ -59,6 +59,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -84,6 +85,7 @@ import InboxSection from '@/components/InboxSection';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import TreeWatermark from '@/components/TreeWatermark';
 import CoverScreen from '@/components/cover/CoverScreen';
 import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr } from '@/lib/date';
@@ -110,6 +112,7 @@ export default function HomeScreen() {
   const { isCoverScreen } = useCoverScreen();
   const isDark = useIsDark();
   const styles = useScaledStyles(baseStyles);
+  const { width, height } = useWindowDimensions();
 
   const tasks = useTaskStore((s) => s.tasks);
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
@@ -232,6 +235,9 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
+      <View style={styles.watermarkWrap} pointerEvents="none">
+        <TreeWatermark size={Math.min(width, height) * 0.7} opacity={0.08} absolute={false} />
+      </View>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {updateReady && (
         <View style={[styles.workBanner, { backgroundColor: theme.green }]}>
@@ -466,6 +472,7 @@ export default function HomeScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
+  watermarkWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   workBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,

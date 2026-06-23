@@ -60,6 +60,7 @@ import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import EmptyState from '@/components/EmptyState';
 import { success, selection, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -450,6 +451,10 @@ export default function ShoppingScreen() {
             </View>
           )}
 
+          {dishGroups.length === 0 && ungroupedUnchecked.length === 0 && checked.length === 0 && (
+            <EmptyState text={tab === 'weekly' ? t.emptyWeeklyList : t.emptyMonthlyList} />
+          )}
+
           {/* Items pushed from a dish (app/meals.tsx), grouped under that dish's name */}
           {dishGroups.length > 0 && (
             <View style={styles.section}>
@@ -729,7 +734,7 @@ export default function ShoppingScreen() {
                         {suggestions.map((s) => (
                           <PressableScale
                             key={s.id}
-                            style={[styles.suggestChip, { backgroundColor: theme.greenLight }]}
+                            style={[styles.suggestChip, { backgroundColor: theme.orangeLight }]}
                             onPress={() => pickSuggestion(s.name, s.category, s.price)}
                           >
                             <Text style={[styles.suggestText, { color: theme.text }]}>{s.name}</Text>
@@ -802,6 +807,16 @@ export default function ShoppingScreen() {
                         ))}
                       </View>
                     </ScrollView>
+                  )}
+                  {tab === 'monthly' && (
+                    <Pressable
+                      style={[styles.temporaryToggle, { borderColor: theme.orange }, addAsTemporary && { backgroundColor: theme.orange }]}
+                      onPress={() => setAddAsTemporary((v) => !v)}
+                    >
+                      <Text style={[styles.temporaryToggleText, { color: addAsTemporary ? '#fff' : theme.orange }]}>
+                        {t.temporaryItemTag}
+                      </Text>
+                    </Pressable>
                   )}
                   <View style={styles.addActions}>
                     <Pressable style={styles.cancelBtn} onPress={() => setShowAddSheet(false)}>
@@ -981,13 +996,22 @@ const baseStyles = StyleSheet.create({
   },
   categoryToggleText: { fontSize: FontSize.xs, fontWeight: '600' },
   categoryToggleChevron: { fontSize: FontSize.xs, fontWeight: '700' },
+  temporaryToggle: {
+    alignSelf: 'flex-start',
+    borderWidth: 2,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    marginTop: Spacing.xs,
+  },
+  temporaryToggleText: { fontSize: FontSize.xs, fontWeight: '700' },
   categoryRow: { flexDirection: 'row', gap: Spacing.xs, paddingVertical: Spacing.xs },
   categoryChip: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: Radius.full },
   categoryChipText: { fontSize: FontSize.xs, fontWeight: '600' },
   addActions: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'flex-end' },
   cancelBtn: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   cancelBtnText: { fontSize: FontSize.md },
-  confirmBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
+  confirmBtn: { borderRadius: Radius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
   confirmBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },

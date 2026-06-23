@@ -411,8 +411,12 @@ export default function MealsScreen() {
               <Pressable style={[styles.cancelSheetBtn, { borderColor: theme.grayLight }]} onPress={() => setModalVisible(false)}>
                 <Text style={[styles.cancelSheetText, { color: theme.textLight }]}>{t.cancel}</Text>
               </Pressable>
-              <Pressable style={[styles.saveBtn, { backgroundColor: dishName.trim() ? theme.orange : theme.grayLight }]} onPress={saveDish}>
-                <Text style={[styles.saveBtnText, { color: dishName.trim() ? '#fff' : theme.gray }]}>{t.save}</Text>
+              <Pressable
+                style={[styles.saveBtn, { backgroundColor: theme.orange }, !dishName.trim() && { opacity: 0.4 }]}
+                onPress={saveDish}
+                disabled={!dishName.trim()}
+              >
+                <Text style={[styles.saveBtnText, { color: '#fff' }]}>{t.save}</Text>
               </Pressable>
             </View>
           </View>
@@ -522,6 +526,6 @@ const baseStyles = StyleSheet.create({
   sheetFooter: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
   cancelSheetBtn: { flex: 1, borderWidth: 1, borderRadius: Radius.full, padding: Spacing.md, alignItems: 'center' },
   cancelSheetText: { fontSize: FontSize.md, fontWeight: '600' },
-  saveBtn: { flex: 2, borderRadius: Radius.full, padding: Spacing.md, alignItems: 'center', ...Shadow.card },
+  saveBtn: { flex: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', ...Shadow.card },
   saveBtnText: { fontSize: FontSize.md, fontWeight: '700' },
 });

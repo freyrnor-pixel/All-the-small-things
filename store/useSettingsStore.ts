@@ -77,6 +77,8 @@ export type Settings = {
   // Custom theme colors
   customPrimaryColor: string;
   customSecondaryColor: string;
+  // Custom theme accent hue (0-360); primary/secondary colors above are derived from this
+  customHue: number;
   // Bubble menu surface finish
   bubbleMaterial: BubbleMaterial;
   // Persistent "today's overview" notification
@@ -150,6 +152,7 @@ function rowToSettings(row: Row): Settings {
     leftHanded: readBool(row, 'left_handed'),
     customPrimaryColor: readStr(row, 'custom_primary_color', '#3B82F6'),
     customSecondaryColor: readStr(row, 'custom_secondary_color', '#10B981'),
+    customHue: readInt(row, 'custom_hue', 217),
     bubbleMaterial: readStr(row, 'bubble_material', 'glass') as BubbleMaterial,
     persistentNotifEnabled: readBool(row, 'persistent_notif_enabled'),
     quietHoursEnabled: readBool(row, 'quiet_hours_enabled'),
@@ -198,6 +201,7 @@ const SETTINGS_COLUMNS: FieldMap<Settings> = {
   leftHanded: { col: 'left_handed', to: bool },
   customPrimaryColor: { col: 'custom_primary_color' },
   customSecondaryColor: { col: 'custom_secondary_color' },
+  customHue: { col: 'custom_hue' },
   bubbleMaterial: { col: 'bubble_material' },
   persistentNotifEnabled: { col: 'persistent_notif_enabled', to: bool },
   quietHoursEnabled: { col: 'quiet_hours_enabled', to: bool },
@@ -243,6 +247,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   leftHanded: false,
   customPrimaryColor: '#3B82F6',
   customSecondaryColor: '#10B981',
+  customHue: 217,
   bubbleMaterial: 'glass' as BubbleMaterial,
   persistentNotifEnabled: false,
   quietHoursEnabled: false,
