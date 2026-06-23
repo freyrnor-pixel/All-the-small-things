@@ -13,7 +13,7 @@
  * tab's "+" opens AddItemSheet directly (its only source is the product catalog).
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/AddSourceChooser, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -29,19 +29,20 @@
  *   - Add sheet (components/AddItemSheet.tsx) supports an "also add to catalog" toggle only when opened from the Ukeliste tab — interpreted as: the new item is created directly with status='inWeeklyList', and when the toggle is on, a SECOND permanent catalog row (status='catalog', pendingRestock=false) is also created with the same name/price/targetQuantity, so it persists for future weeks without being purchased=true this trip.
  *   - The bottom Save(n) button (confirmPending) only ever reflects weekly-tab toggle staging (toggleCheck/pending Set) — scoped to `tab === 'weekly'` so it never shows up looking ambiguous on the Katalog tab.
  *   - The "Handlingen fullført" sticky button is disabled + dimmed (CHECKED_OPACITY) when the cart (weeklyChecked) is empty — this only gates the button itself, not individual item press behavior.
- *   - The "done shopping" confirmation is a plain in-app Modal placeholder, not a native Alert — see its TODO(06-theming-and-popups) comment below.
+ *   - The "done shopping" confirmation goes through showAppModal() (components/AppModal.tsx), the shared themed popup — not a native Alert.
+ *   - The FAB and the "Handlingen fullført" sticky footer are offset above BOTTOM_NAV_HEIGHT
+ *     (from components/BottomNav.tsx) so they don't overlap the bottom nav bar.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useShoppingStore, ShoppingItem, MonthlyResetSummary } from '@/store/useShoppingStore';
@@ -56,11 +57,13 @@ import MonthlyResetSummaryModal from '@/components/MonthlyResetSummaryModal';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
+import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -73,14 +76,12 @@ export default function ShoppingScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
-  const { bottom: bottomInset } = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('weekly');
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showAddSourceChooser, setShowAddSourceChooser] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [purchasedExpanded, setPurchasedExpanded] = useState<string | null>(null);
   const [resetSummary, setResetSummary] = useState<MonthlyResetSummary | null>(null);
-  const [showDoneShoppingConfirm, setShowDoneShoppingConfirm] = useState(false);
 
   const items = useShoppingStore((s) => s.items);
   const trips = useShoppingStore((s) => s.trips);
@@ -172,16 +173,21 @@ export default function ShoppingScreen() {
 
   function handleDoneShopping() {
     if (weeklyChecked.length === 0) return;
-    setShowDoneShoppingConfirm(true);
-  }
-
-  // TODO(06-theming-and-popups): swap this in-app Modal for the shared popup/
-  // action-sheet component once it lands — placeholder per the coordination doc.
-  function confirmDoneShopping() {
-    doneShopping(t.tripLabel(dateStr(new Date())), monthlyResetDate);
-    heavy();
-    setConfirm(t.doneShoppingSuccessText);
-    setShowDoneShoppingConfirm(false);
+    showAppModal(
+      t.doneShoppingDialogTitle,
+      t.doneShoppingDialogBody,
+      [
+        { text: t.cancelBtn, style: 'cancel' },
+        {
+          text: t.doneShoppingConfirmBtn,
+          onPress: () => {
+            doneShopping(t.tripLabel(dateStr(new Date())), monthlyResetDate);
+            heavy();
+            setConfirm(t.doneShoppingSuccessText);
+          },
+        },
+      ]
+    );
   }
 
   function handleAddItem(input: { name: string; price: number; targetQuantity: number; isTemporary: boolean; alsoAddToCatalog: boolean }) {
@@ -512,7 +518,7 @@ export default function ShoppingScreen() {
 
       {/* Sticky "Handlingen fullført" button — Ukeliste tab only, visible when there's anything on the list */}
       {tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) && (
-        <View style={[styles.stickyFooter, { paddingBottom: Math.max(Spacing.md, bottomInset) }]}>
+        <View style={[styles.stickyFooter, { bottom: BOTTOM_NAV_HEIGHT, paddingBottom: Spacing.md }]}>
           <PressableScale
             style={[
               styles.doneShoppingBtn,
@@ -529,7 +535,7 @@ export default function ShoppingScreen() {
 
       {/* FAB */}
       <Pressable
-        style={[styles.fab, { backgroundColor: tabAccent, bottom: tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) ? Spacing.xl + 64 : Spacing.xl }]}
+        style={[styles.fab, { backgroundColor: tabAccent, bottom: (tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) ? Spacing.xl + 64 : Spacing.xl) + BOTTOM_NAV_HEIGHT }]}
         onPress={() => (tab === 'weekly' ? setShowAddSourceChooser(true) : setShowAddSheet(true))}
       >
         <Text style={styles.fabText}>+</Text>
@@ -564,24 +570,7 @@ export default function ShoppingScreen() {
         onClose={() => setResetSummary(null)}
       />
 
-      {/* TODO(06-theming-and-popups): plain in-app Modal placeholder for the
-          "done shopping" confirmation — swap for the shared popup/action-sheet
-          component once it lands. */}
-      <Modal visible={showDoneShoppingConfirm} transparent animationType="fade" onRequestClose={() => setShowDoneShoppingConfirm(false)}>
-        <Pressable style={styles.confirmBackdrop} onPress={() => setShowDoneShoppingConfirm(false)} />
-        <View style={[styles.confirmCard, { backgroundColor: theme.white }]}>
-          <Text style={[styles.confirmTitle, { color: theme.text }]}>{t.doneShoppingDialogTitle}</Text>
-          <Text style={[styles.confirmBody, { color: theme.textLight }]}>{t.doneShoppingDialogBody}</Text>
-          <View style={styles.confirmActions}>
-            <Pressable style={styles.confirmCancelBtn} onPress={() => setShowDoneShoppingConfirm(false)}>
-              <Text style={[styles.confirmCancelText, { color: theme.textLight }]}>{t.cancelBtn}</Text>
-            </Pressable>
-            <PressableScale style={[styles.confirmOkBtn, { backgroundColor: theme.green }]} onPress={confirmDoneShopping}>
-              <Text style={styles.confirmOkText}>{t.doneShoppingConfirmBtn}</Text>
-            </PressableScale>
-          </View>
-        </View>
-      </Modal>
+      <BottomNav />
     </SafeAreaView>
   );
 }
@@ -640,7 +629,7 @@ const baseStyles = StyleSheet.create({
 
   stickyFooter: {
     position: 'absolute',
-    left: 0, right: 0, bottom: 0,
+    left: 0, right: 0,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
   },
@@ -667,21 +656,4 @@ const baseStyles = StyleSheet.create({
   saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
   saveButtonText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
   saveButtonCount: { color: '#fff', fontWeight: '600', fontSize: FontSize.sm },
-
-  confirmBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-  confirmCard: {
-    position: 'absolute',
-    left: Spacing.xl, right: Spacing.xl, top: '35%',
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-    ...Shadow.fab,
-  },
-  confirmTitle: { fontSize: FontSize.lg, fontWeight: '700' },
-  confirmBody: { fontSize: FontSize.sm },
-  confirmActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md, marginTop: Spacing.sm },
-  confirmCancelBtn: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm },
-  confirmCancelText: { fontSize: FontSize.md, fontWeight: '600' },
-  confirmOkBtn: { borderRadius: Radius.md, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg },
-  confirmOkText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
 });

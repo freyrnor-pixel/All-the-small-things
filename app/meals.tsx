@@ -6,7 +6,7 @@
  * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
+ *   Imports → components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
@@ -19,7 +19,6 @@
  */
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -40,10 +39,12 @@ import { useCatalogStore, StoreItem } from '@/store/useCatalogStore';
 import ExpandableCard from '@/components/ExpandableCard';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
+import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -150,13 +151,13 @@ export default function MealsScreen() {
   function pickRandom(mealType?: MealType) {
     const dish = randomDish(mealType);
     if (!dish) {
-      Alert.alert(
+      showAppModal(
         t.noDishesTitle,
         mealType ? t.noDishesBody(mealLabel(mealType).toLowerCase()) : t.noDishesBodyGeneric
       );
       return;
     }
-    Alert.alert(
+    showAppModal(
       dish.name,
       dish.ingredients.length > 0
         ? t.randomIngredientsLabel(dish.ingredients.map((i) => `${i.amount} ${i.unit} ${i.name}`).join(', '))
@@ -423,6 +424,8 @@ export default function MealsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

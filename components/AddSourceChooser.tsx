@@ -14,11 +14,6 @@
  * The Katalog/Inventory screen does NOT use this chooser — it only has one
  * source (the product catalog), so its "+" opens AddItemSheet directly.
  *
- * TODO(06-theming-and-popups): restyle this as the shared popup/action-sheet
- * component once it lands — this is a plain in-app Modal placeholder per the
- * task brief's instruction to coordinate with the popup redesign rather than
- * block on it.
- *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useShoppingStore (ShoppingItem type only)
  *   Used by → app/shopping.tsx

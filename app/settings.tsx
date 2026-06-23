@@ -8,12 +8,12 @@
  * ungrouped between Appearance and Notifications, each carrying its own
  * section title for separation. Each control carries a one-sentence
  * description. Destructive reset actions live in the danger-tinted Data
- * section at the bottom (each confirms via Alert), preceded there by the
+ * section at the bottom (each confirms via showAppModal), preceded there by the
  * Test data card. Changing reminder-, notification- or language-related
  * settings re-syncs the scheduled reminders.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/AppModal, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
  *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled, quietHours*, monthlyBudgetNok); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders / syncNotificationCategories; scaled fontSize via useScaledStyles()
  *
@@ -28,7 +28,6 @@
  */
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -51,6 +50,7 @@ import { seedTestData } from '@/lib/seedTestData';
 import { useT, getTranslations } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { selection, warning, heavy } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
+import { showAppModal } from '@/components/AppModal';
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -109,7 +109,7 @@ export default function SettingsScreen() {
 
   function confirmReset(label: string, action: () => void) {
     warning();
-    Alert.alert(
+    showAppModal(
       t.resetConfirmTitle(label),
       t.resetConfirmBody,
       [
@@ -225,10 +225,7 @@ export default function SettingsScreen() {
             <SwatchPicker
               items={(Object.keys(THEMES) as ThemeName[]).map((key) => ({ key, label: t.themeNames[key] }))}
               value={settings.colorTheme}
-              onChange={(key) => {
-                settings.update({ colorTheme: key as ThemeName });
-                if (key === 'gothic') settings.update({ darkMode: 'on' });
-              }}
+              onChange={(key) => settings.update({ colorTheme: key as ThemeName })}
               renderSwatch={(key) => {
                 const th = THEMES[key as ThemeName];
                 if (key === 'custom') {
@@ -299,7 +296,6 @@ export default function SettingsScreen() {
 
         {/* Dark mode (Appearance) — three options: Light, Dark, Follow System */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionAppearance}</Text>
           <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
             <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
@@ -599,7 +595,6 @@ export default function SettingsScreen() {
 
         {/* Reminders */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionNotifications}</Text>
           <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
@@ -710,7 +705,6 @@ export default function SettingsScreen() {
 
         {/* Work mode */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionWorkMode}</Text>
           <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workModeDesc}</Text>
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
@@ -739,18 +733,26 @@ export default function SettingsScreen() {
             {settings.enforceWorkHours && (
               <>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
-                <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
-                <TimePickerWheel
-                  value={settings.workHoursStart || '09:00'}
-                  onChange={(v) => settings.update({ workHoursStart: v })}
-                  theme={theme}
-                />
-                <Text style={[styles.fieldLabel, { color: theme.textLight, marginTop: Spacing.md }]}>{t.workHoursTo}</Text>
-                <TimePickerWheel
-                  value={settings.workHoursEnd || '17:00'}
-                  onChange={(v) => settings.update({ workHoursEnd: v })}
-                  theme={theme}
-                />
+                <View style={styles.workHoursRow}>
+                  <View style={styles.workHoursCol}>
+                    <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
+                    <TimePickerWheel
+                      value={settings.workHoursStart || '09:00'}
+                      onChange={(v) => settings.update({ workHoursStart: v })}
+                      theme={theme}
+                      size="compact"
+                    />
+                  </View>
+                  <View style={styles.workHoursCol}>
+                    <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursTo}</Text>
+                    <TimePickerWheel
+                      value={settings.workHoursEnd || '17:00'}
+                      onChange={(v) => settings.update({ workHoursEnd: v })}
+                      theme={theme}
+                      size="compact"
+                    />
+                  </View>
+                </View>
               </>
             )}
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
@@ -818,7 +820,7 @@ export default function SettingsScreen() {
               style={styles.dangerBtn}
               onPress={() => {
                 seedTestData();
-                Alert.alert('', t.loadTestDataDone);
+                showAppModal('', t.loadTestDataDone);
               }}
             >
               <Text style={[styles.dangerBtnText, { color: theme.green }]}>{t.loadTestData}</Text>
@@ -829,7 +831,7 @@ export default function SettingsScreen() {
               style={styles.dangerBtn}
               onPress={() => confirmReset(t.removeTestData.toLowerCase(), () => {
                 clearTestData();
-                Alert.alert('', t.removeTestDataDone);
+                showAppModal('', t.removeTestDataDone);
               })}
             >
               <Text style={[styles.dangerBtnText, { color: theme.danger }]}>{t.removeTestData}</Text>
@@ -902,8 +904,18 @@ const baseStyles = StyleSheet.create({
   segActive: { ...Shadow.card },
   segText: { fontSize: FontSize.sm, fontWeight: '600' },
   divider: { height: 1, marginVertical: Spacing.md },
-  dayRow: { flexDirection: 'row', gap: Spacing.xs },
-  dayChip: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, borderRadius: Radius.full },
+  workHoursRow: { flexDirection: 'row', gap: Spacing.md },
+  workHoursCol: { flex: 1 },
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+  dayChip: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   paydayHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -7,7 +7,7 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Imports → components/AppModal, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
  *   Used by → Expo Router route "/automations", reached via a nav row in app/settings.tsx
  *   Data    → useAutomationStore (ifttt_rules table)
  *
@@ -16,7 +16,7 @@
  *   - Saving is disabled until the action's required field (message / item name) is non-empty.
  */
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,7 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import { showAppModal } from '@/components/AppModal';
 import { useT } from '@/lib/i18n';
 import { warning, heavy } from '@/lib/haptics';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -54,7 +55,7 @@ function RuleCard({ rule, onToggle, onDelete }: {
 
   function confirmDelete() {
     warning();
-    Alert.alert(t.automations.deleteTitle, t.automations.deleteBody, [
+    showAppModal(t.automations.deleteTitle, t.automations.deleteBody, [
       { text: t.cancel, style: 'cancel' },
       { text: t.automations.deleteBtn, style: 'destructive', onPress: () => { heavy(); onDelete(rule.id); } },
     ]);
