@@ -3,12 +3,12 @@
  *
  * Compares this month's scanned/manual receipt total (useReceiptStore) against
  * the optional monthly budget set in Settings, with a gentle progress bar and
- * a list of this month's receipts. Linked from a small header button on
- * app/scan.tsx — not a BubbleMenu entry, per the AP-06B plan.
+ * a list of this month's receipts. Has its own BottomNav entry; also linked
+ * from a small header button on app/scan.tsx.
  *
  * Connections:
- *   Imports → components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
- *   Used by → Expo Router route "/budget"; app/scan.tsx (header link)
+ *   Imports → components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
+ *   Used by → Expo Router route "/budget"; reached via BottomNav or app/scan.tsx (header link)
  *   Data    → reads useReceiptStore (receipts table, via receiptsForMonth/totalForMonth) and useSettingsStore.monthlyBudgetNok; writes nothing
  *
  * Edit notes:
@@ -27,6 +27,8 @@ import { currentMonthStr } from '@/lib/date';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import { FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -53,6 +55,7 @@ export default function BudgetScreen() {
       <ScreenBackground />
       <ScreenHeader title={t.budget.title} onBack={() => router.back()} bordered />
 
+      <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Surface style={styles.card}>
           {hasBudget ? (
@@ -93,6 +96,9 @@ export default function BudgetScreen() {
           )}
         </View>
       </ScrollView>
+      </SiteSwipeView>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

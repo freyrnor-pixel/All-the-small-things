@@ -447,7 +447,8 @@ const en = {
   nav: {
     newTask: 'New task', plans: 'Plans', shop: 'Shopping', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
-    capture: 'Quick note', home: 'Home',
+    capture: 'Quick note', home: 'Home', budget: 'Budget', automations: 'Automations',
+    shared: 'Shared',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -1318,7 +1319,8 @@ const no: typeof en = {
   nav: {
     newTask: 'Ny oppgave', plans: 'Planer', shop: 'Handleliste', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
-    capture: 'Notér', home: 'Hjem',
+    capture: 'Notér', home: 'Hjem', budget: 'Budsjett', automations: 'Automatisering',
+    shared: 'Delt',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',

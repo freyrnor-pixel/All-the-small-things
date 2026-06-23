@@ -6,7 +6,7 @@
  * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
+ *   Imports → components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
@@ -45,6 +45,7 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -189,6 +190,7 @@ export default function MealsScreen() {
 
       {/* Category tile view */}
       {!activeCategory && (
+        <SiteSwipeView>
         <ScrollView contentContainerStyle={styles.tileGrid} showsVerticalScrollIndicator={false}>
           <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
 
@@ -219,10 +221,12 @@ export default function MealsScreen() {
             })}
           </View>
         </ScrollView>
+        </SiteSwipeView>
       )}
 
       {/* Category dish list */}
       {activeCategory && (
+        <SiteSwipeView>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {categoryDishes.length === 0 && (
@@ -290,6 +294,7 @@ export default function MealsScreen() {
             <View style={{ height: 40 }} />
           </ScrollView>
         </KeyboardAvoidingView>
+        </SiteSwipeView>
       )}
 
       {/* New dish modal */}

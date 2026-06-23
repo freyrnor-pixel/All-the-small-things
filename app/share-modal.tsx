@@ -13,6 +13,11 @@
  * Edit notes:
  *   - All visible strings go through useT(); kind param ('t' = tasks, anything else = shopping) drives the whole sheet.
  *   - Source lists are filtered to unchecked shopping / future-dated undone tasks (today via todayStr()); payload built with encodeSharePayload.
+ *   - The post-share "Done" button uses dismissAll() + push('/shared'), not back()/replace() — this modal
+ *     can be opened from Home, /plans, or /shopping, and a plain replace() would only swap the modal's own
+ *     stack slot, leaving the site screen underneath it in place (e.g. [Home, /plans, /shared] — 3 deep,
+ *     so back from /shared would land on /plans instead of Home). dismissAll() collapses back to Home first
+ *     so the result always matches the rest of the app's <=2-deep site-stack invariant (lib/siteNav.ts).
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -206,7 +211,7 @@ export default function ShareModal() {
 
             <Pressable
               style={[styles.doneBtn, { backgroundColor: theme.greenLight }]}
-              onPress={() => router.replace('/shared')}
+              onPress={() => { router.dismissAll(); router.push('/shared'); }}
             >
               <Text style={[styles.doneBtnText, { color: theme.green }]}>{t.sharedTitle} →</Text>
             </Pressable>

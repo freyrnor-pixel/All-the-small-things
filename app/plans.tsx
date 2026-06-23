@@ -7,8 +7,8 @@
  * Share button that opens /share-modal for the day's plans.
  *
  * Connections:
- *   Imports → components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
- *   Used by → Expo Router route "/plans" (plain push from app/index.tsx's Plans widget title)
+ *   Imports → components/BottomNav, components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Used by → Expo Router route "/plans", reached via BottomNav or a swipe/push from app/index.tsx's Plans widget title
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *
  * Edit notes:
@@ -32,6 +32,8 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -77,6 +79,7 @@ export default function PlansScreen() {
         }
       />
 
+      <SiteSwipeView>
       <View style={styles.content}>
         <HintCard text={t.hints.plans.text} example={t.hints.plans.example} />
 
@@ -93,6 +96,9 @@ export default function PlansScreen() {
           </Surface>
         )}
       </View>
+      </SiteSwipeView>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

@@ -13,17 +13,17 @@
  * settings re-syncs the scheduled reminders.
  *
  * Connections:
- *   Imports → components/AppModal, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
  *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled, quietHours*, monthlyBudgetNok); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders / syncNotificationCategories; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
  *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly. Quiet-hours keys re-sync task notifications (so existing reminders honour the new window); a language change also re-registers the interactive notification action button labels via syncNotificationCategories.
- *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, task notifications, persistent overview, quiet hours, holidays, automations link) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
+ *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, task notifications, persistent overview, quiet hours, holidays) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet is configured during onboarding step6 by default; this section lets returning users change it later.
- *   - The Automations row navigates to /automations via router.push — it's a plain link, not a control, so it doesn't import useAutomationStore itself.
+ *   - Automations no longer has a settings row — it's reached directly via BottomNav (app/automations.tsx).
  *   - Monthly budget (AP-06B) lives at the bottom of the Shopping List card; an empty input means "no budget set" (monthlyBudgetNok = 0), which app/budget.tsx reads as "don't show a progress bar."
  */
 import React, { useState } from 'react';
@@ -55,6 +55,8 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import BottomNav from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import SectionDivider from '@/components/SectionDivider';
 import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, MATERIAL_META, MaterialName, getMaterialStyle, hueToCustomColors, hslToHex } from '@/constants/theme';
@@ -135,6 +137,7 @@ export default function SettingsScreen() {
       <ScreenBackground />
       <ScreenHeader title={t.settingsTitle} onBack={() => router.back()} bordered />
 
+      <SiteSwipeView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
         <HintCard text={t.hints.settings.text} example={t.hints.settings.example} />
@@ -697,8 +700,6 @@ export default function SettingsScreen() {
           </Surface>
         </View>
 
-        {/* Automations — hidden for now, not a near-term feature (see design handoff Q1) */}
-
         {/* ===== WORK MODE ===== */}
         <SectionDivider />
         <Text style={[styles.groupHeader, { color: theme.text }]}>{t.config.sections.workMode}</Text>
@@ -873,6 +874,9 @@ export default function SettingsScreen() {
         <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+      </SiteSwipeView>
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

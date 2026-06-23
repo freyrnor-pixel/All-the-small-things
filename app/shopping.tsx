@@ -13,13 +13,16 @@
  * tab's "+" opens AddItemSheet directly (its only source is the product catalog).
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT().
- *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it goes to /shared; the pencil icon (Katalog tab only) goes to /inventory-edit.
+ *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it
+ *     goes to /shared via goToSite() (lib/siteNav.ts), keeping the nav stack shallow; the pencil icon
+ *     (Katalog tab only) goes to /inventory-edit (a plain push, not a site).
+ *   - ScrollView is wrapped in SiteSwipeView so swiping left/right moves between sites.
  *   - SharedRequestsSection (kind='shopping') sits above the summary row.
  *   - Katalog tab badge = count of pendingRestock items; Ukeliste tab badge = count of unchecked inWeeklyList items. Both hidden when 0.
  *   - The staging tray is pinned (non-scrolling) at the top of the Katalog tab content, only rendered when there's at least one pendingRestock item.
@@ -44,7 +47,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useShoppingStore, ShoppingItem, MonthlyResetSummary } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
@@ -64,8 +67,10 @@ import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
 import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
+import SiteSwipeView from '@/components/SiteSwipeView';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
+import { goToSite } from '@/lib/siteNav';
 import { todayStr, dateStr } from '@/lib/date';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -74,6 +79,7 @@ type Tab = 'weekly' | 'monthly';
 
 export default function ShoppingScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
   const [tab, setTab] = useState<Tab>('weekly');
@@ -255,7 +261,7 @@ export default function ShoppingScreen() {
                 <Ionicons name="create-outline" size={20} color={theme.textLight} />
               </Pressable>
             )}
-            <Pressable onPress={() => router.push('/shared')} hitSlop={8}>
+            <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
               <Ionicons name="link-outline" size={20} color={theme.textLight} />
             </Pressable>
             <Pressable
@@ -300,6 +306,7 @@ export default function ShoppingScreen() {
       </View>
 
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <SiteSwipeView>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
 
@@ -514,6 +521,7 @@ export default function ShoppingScreen() {
 
           <View style={{ height: 100 }} />
         </ScrollView>
+        </SiteSwipeView>
       </KeyboardAvoidingView>
 
       {/* Sticky "Handlingen fullført" button — Ukeliste tab only, visible when there's anything on the list */}
