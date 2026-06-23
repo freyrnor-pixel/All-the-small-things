@@ -2,14 +2,14 @@
  * index.tsx — Home screen
  *
  * The app's daily landing screen: greeting, a unified Plans widget + backlog, a
- * weekly shopping preview (tickable inline), gentle completed-count points, and
- * the BubbleMenu / QuickAddSheet entry points. Honours work mode and essentials
- * (focus) mode, both driven by settings.
+ * weekly shopping preview (tickable inline, both not-yet-in-cart and in-cart items),
+ * gentle completed-count points, and the BottomNav / QuickAddSheet entry points.
+ * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BubbleMenu, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items + pending) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
  *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard right
@@ -50,6 +50,14 @@
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
  *     it looks unused; it's a re-render trigger + a useMemo dep.
+ *   - BubbleMenu is disabled (commented out, not deleted — see the TODO at its old mount point);
+ *     BottomNav (Home/Shopping/Meals/Health/Habits) replaces it as the nav entry point. This
+ *     also removes BubbleMenu's center-button trigger for QuickAddSheet — quickAddVisible/
+ *     setQuickAddVisible and the <QuickAddSheet> mount are kept (task creation still works via
+ *     /task-form), but the sheet itself has no UI entry point until the menu is redesigned.
+ *   - Shopping preview shows weekly items unchecked-first then checked/in-cart, capped at
+ *     PREVIEW_LIMIT total, reading the same `pending`/`checked` state app/shopping.tsx uses —
+ *     checking an item here goes through the same pending→Save flow as the rest of the app.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -75,7 +83,9 @@ import { rankTodayTasks } from '@/lib/taskOrder';
 import { suggestNextTask } from '@/lib/taskSuggestion';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
-import BubbleMenu from '@/components/BubbleMenu';
+// TODO: re-enable bubble menu once redesigned
+// import BubbleMenu from '@/components/BubbleMenu';
+import BottomNav from '@/components/BottomNav';
 import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
@@ -122,6 +132,7 @@ export default function HomeScreen() {
   const taskPendingCount = useTaskStore((s) => s.getPendingCount());
   const confirmTasksPending = useTaskStore((s) => s.confirmPending);
   const shoppingItems = useShoppingStore((s) => s.items);
+  const shoppingPending = useShoppingStore((s) => s.pending);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const shoppingPendingCount = useShoppingStore((s) => s.getPendingCount());
   const confirmShoppingPending = useShoppingStore((s) => s.confirmPending);
@@ -196,11 +207,23 @@ export default function HomeScreen() {
   const completedToday = allTodayTasks.filter((t) => t.done).length;
   const progressRatio = totalToday > 0 ? completedToday / totalToday : 0;
 
-  const weeklyPending = useMemo(
+  // Shopping preview: unchecked (not-yet-in-cart) items first, then checked
+  // (in-cart) ones below, capped to PREVIEW_LIMIT total — lets a full shopping
+  // run happen from this widget alone (moving items to cart and back).
+  const PREVIEW_LIMIT = 5;
+  const weeklyUnchecked = useMemo(
     () => shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked),
     [shoppingItems]
   );
-  const pendingShopping = weeklyPending.slice(0, 5);
+  const weeklyChecked = useMemo(
+    () => shoppingItems.filter((i) => i.listType === 'weekly' && i.checked),
+    [shoppingItems]
+  );
+  const weeklyPreview = useMemo(
+    () => [...weeklyUnchecked, ...weeklyChecked].slice(0, PREVIEW_LIMIT),
+    [weeklyUnchecked, weeklyChecked]
+  );
+  const weeklyTotal = weeklyUnchecked.length + weeklyChecked.length;
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]} />;
@@ -459,30 +482,44 @@ export default function HomeScreen() {
               <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
             </Pressable>
           </View>
-          {pendingShopping.length === 0 ? (
+          {weeklyPreview.length === 0 ? (
             <Surface tint={theme.offWhite} style={styles.emptyCard}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
             </Surface>
           ) : (
             <Surface style={styles.card}>
-              {pendingShopping.map((item) => (
-                // OLD: <View key={item.id} style={styles.shoppingPreviewRow}>
-                //        <View style={[styles.shoppingDot, { backgroundColor: theme.green }]} />
-                //        <Text ...>{item.amount} {item.unit} {item.name}</Text>
-                //      </View>
-                //      Items were read-only; tapping anywhere navigated to /shopping instead
-                //      of acting on the individual item. Changed to a per-item checkbox so
-                //      users can tick things off from the home screen while shopping.
-                <Pressable key={item.id} style={styles.shoppingPreviewRow} onPress={() => toggleShoppingItem(item.id)}>
-                  <View style={[styles.shoppingCheck, { borderColor: theme.green }]} />
-                  <Text style={[styles.shoppingPreviewName, { color: theme.text }]}>
-                    {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
-                  </Text>
-                </Pressable>
-              ))}
-              {weeklyPending.length > 5 && (
+              {weeklyPreview.map((item) => {
+                const isItemPending = shoppingPending.has(item.id);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={[styles.shoppingPreviewRow, isItemPending && { opacity: 0.5 }]}
+                    onPress={() => toggleShoppingItem(item.id)}
+                  >
+                    <View
+                      style={[
+                        styles.shoppingCheck,
+                        { borderColor: theme.green },
+                        item.checked && { backgroundColor: theme.green },
+                      ]}
+                    >
+                      {item.checked && <Ionicons name="checkmark" size={12} color={theme.white} />}
+                    </View>
+                    <Text
+                      style={[
+                        styles.shoppingPreviewName,
+                        { color: theme.text },
+                        (item.checked || isItemPending) && { color: theme.gray, textDecorationLine: 'line-through' },
+                      ]}
+                    >
+                      {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              {weeklyTotal > weeklyPreview.length && (
                 <Text style={[styles.moreText, { color: theme.textLight }]}>
-                  {t.moreItems(weeklyPending.length - 5)}
+                  {t.moreItems(weeklyTotal - weeklyPreview.length)}
                 </Text>
               )}
             </Surface>
@@ -517,7 +554,9 @@ export default function HomeScreen() {
 
       <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
       {settings.petEnabled && <Pet completedToday={completedCount} />}
-      <BubbleMenu onNewTask={() => setQuickAddVisible(true)} />
+      {/* TODO: re-enable bubble menu once redesigned */}
+      {/* <BubbleMenu onNewTask={() => setQuickAddVisible(true)} /> */}
+      <BottomNav />
     </SafeAreaView>
   );
 }
@@ -593,13 +632,8 @@ const baseStyles = StyleSheet.create({
   // toggles plansExpanded in place rather than navigating anywhere.
   expandStrip: { paddingVertical: Spacing.xs, alignItems: 'center' },
   expandStripText: { fontSize: FontSize.md, fontWeight: '600', letterSpacing: 2 },
-  // OLD: shoppingPreviewRow: { ..., paddingVertical: 4 }  — increased to 6 for easier tap target
   shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: Spacing.sm },
-  // OLD: shoppingDot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: theme.green }
-  //      Solid filled dot — purely decorative, gave no hint the row was interactive.
-  //      Replaced with an open circle (shoppingCheck) to signal "tap to complete".
-  shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2 },
-  // OLD: shoppingPreviewName: { fontSize: FontSize.md }  — added flex:1 so long names don't overflow
+  shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },

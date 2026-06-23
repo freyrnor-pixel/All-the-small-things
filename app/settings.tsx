@@ -299,7 +299,6 @@ export default function SettingsScreen() {
 
         {/* Dark mode (Appearance) — three options: Light, Dark, Follow System */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionAppearance}</Text>
           <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
             <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
@@ -599,7 +598,6 @@ export default function SettingsScreen() {
 
         {/* Reminders */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionNotifications}</Text>
           <Surface style={styles.card}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1, marginRight: Spacing.md }}>
@@ -710,7 +708,6 @@ export default function SettingsScreen() {
 
         {/* Work mode */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.sectionWorkMode}</Text>
           <Surface style={styles.card}>
             <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workModeDesc}</Text>
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
