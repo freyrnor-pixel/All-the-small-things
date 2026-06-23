@@ -11,7 +11,7 @@
  * MonthlyTableRow's tap-to-open.
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/AppModal, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, components/UpdateSheet, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddItemSheet, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/Surface, components/UpdateSheet, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -25,6 +25,8 @@
  *   - The automatic payday-boundary reset (once per month, when today's day-of-month >= monthlyResetDate) calls monthlyReset() directly — there is no carry-over prompt any more (CarryOverPromptModal was removed; isTemporary items are always purged on reset, per the redesign's simpler model).
  *   - The 'shopping_opened' trigger fires once per mount ([] deps).
  *   - Add sheet (components/AddItemSheet.tsx) supports an "also add to catalog" toggle only when opened from the Ukeliste tab — interpreted as: the new item is created directly with status='inWeeklyList', and when the toggle is on, a SECOND permanent catalog row (status='catalog', pendingRestock=false) is also created with the same name/price/targetQuantity, so it persists for future weeks without being purchased=true this trip.
+ *   - The FAB and the "Handlingen fullført" sticky footer are offset above BOTTOM_NAV_HEIGHT
+ *     (from components/BottomNav.tsx) so they don't overlap the bottom nav bar.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -35,7 +37,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useShoppingStore, ShoppingItem } from '@/store/useShoppingStore';
@@ -55,6 +57,7 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
@@ -67,7 +70,6 @@ export default function ShoppingScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
-  const { bottom: bottomInset } = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('weekly');
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -513,7 +515,7 @@ export default function ShoppingScreen() {
 
       {/* Sticky "Handlingen fullført" button — Ukeliste tab only, visible when there's anything on the list */}
       {tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) && (
-        <View style={[styles.stickyFooter, { paddingBottom: Math.max(Spacing.md, bottomInset) }]}>
+        <View style={[styles.stickyFooter, { bottom: BOTTOM_NAV_HEIGHT, paddingBottom: Spacing.md }]}>
           <PressableScale
             style={[styles.doneShoppingBtn, { backgroundColor: theme.green }]}
             onPress={handleDoneShopping}
@@ -525,7 +527,7 @@ export default function ShoppingScreen() {
 
       {/* FAB */}
       <Pressable
-        style={[styles.fab, { backgroundColor: tabAccent, bottom: tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) ? Spacing.xl + 64 : Spacing.xl }]}
+        style={[styles.fab, { backgroundColor: tabAccent, bottom: (tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) ? Spacing.xl + 64 : Spacing.xl) + BOTTOM_NAV_HEIGHT }]}
         onPress={() => setShowAddSheet(true)}
       >
         <Text style={styles.fabText}>+</Text>
@@ -547,6 +549,8 @@ export default function ShoppingScreen() {
         onSave={handleUpdateSave}
         onDelete={handleUpdateDelete}
       />
+
+      <BottomNav />
     </SafeAreaView>
   );
 }

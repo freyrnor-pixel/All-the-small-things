@@ -13,7 +13,9 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/haptics, lib/useAppTheme, store/useSettingsStore
- *   Used by → app/index.tsx
+ *   Used by → app/index.tsx (currently DISABLED — mount is commented out there pending a
+ *             redesign; BottomNav.tsx covers primary navigation in the meantime). Component
+ *             and its logic are kept intact, not deleted.
  *   Data    → none (presentational); reads colorTheme + leftHanded + bubbleSize/bubbleSpacing/
  *             bubbleSpringIntensity/bubbleAnimSpeed (debug overlay tuning) from useSettingsStore,
  *             reducedMotion via useAccessibility()
