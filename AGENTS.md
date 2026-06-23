@@ -46,6 +46,7 @@ Every `.ts`/`.tsx` file starts with a JSDoc header block. **Read it before editi
 | `todayStr()` / `dateStr(d)` from `lib/date.ts` | Shared helpers — do not re-implement locally |
 | SQLite file name: `unfocus.db` | Set in `lib/db.ts` |
 | New DB columns: `ALTER TABLE … ADD COLUMN` in migrations array | Runs once on upgrade; never drop or recreate tables |
+| Stores read/write rows via `lib/dataAccess.ts` (`loadFirst`/`loadAll`/`updateRow` + `FieldMap`) | Used by 13 of 14 stores; don't hand-roll row mapping in a new store |
 
 ## Architecture at a glance
 
@@ -57,15 +58,15 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
                        constants/theme.ts (getTheme, Colors)
 ```
 
-- **Navigation**: file-based Expo Router; no bottom tabs — a radial FAB (`BubbleMenu`) is the only nav entry point
-- **Onboarding**: language → guided/explore choice → name → work mode → shopping day → notifications → theme → home
+- **Navigation**: file-based Expo Router. Primary nav is `components/BottomNav.tsx` (Home/Shopping/Meals/Health/Habits); other screens are reached via links/buttons from those 5. `BubbleMenu` (radial FAB) is currently disabled — commented out at its mount in `app/index.tsx`, code kept intact for a future redesign. Don't wire new screens through it; see its header before touching either file.
+- **Onboarding** (`app/onboarding/*`, in file order): language → privacy → guided/explore → index (name) → step2 (work mode) → step3 (shopping days) → step4 (notification confirm) → step5 (theme + handedness) → step6 (pet naming) → home
 - **i18n**: `const t = useT()` in any component; `t.someKey`; add new keys to both `en` and `no` objects in `lib/i18n.ts`
 
 ## Common tasks
 
 ### Add a new screen
 1. Create `app/my-screen.tsx`
-2. Add a bubble entry in `components/BubbleMenu.tsx` `BASE_ITEMS` array
+2. Add an entry point: a tab in `components/BottomNav.tsx` if it's a main section, otherwise a link/button from whichever screen owns it (`BubbleMenu`'s `WHEEL_ITEMS` is disabled — don't add new screens there)
 3. Add hint strings to `lib/i18n.ts` under `hints.myScreen`
 4. Add `HintCard` at the top of the scroll content
 
@@ -79,7 +80,7 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
    ```ts
    "ALTER TABLE my_table ADD COLUMN new_col TEXT DEFAULT ''"
    ```
-2. Update the Zustand store `load()` to read it, and `update()` to write it
+2. Add it to the store's FieldMap and `update()` values — most stores go through `lib/dataAccess.ts` (`loadFirst`/`loadAll`/`updateRow`); check the target store's header for its exact pattern
 3. Add the TypeScript field to the Settings/Task/etc. type
 
 ### Add a new setting toggle
@@ -95,7 +96,7 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - `useT()` depends on `useSettingsStore`, so it re-renders when language changes — this is intentional. Outside components (stores, schedulers) use `getTranslations(lang?)` instead — it reads the current language from the store when no arg is given.
 - `QuickAddSheet` day options are memoized on `t.today`/`t.tomorrow` — they'll update when language changes
 - The scan uses on-device OCR via `@react-native-ml-kit/text-recognition` (`parseReceiptText` in `app/scan.tsx`). Confirmed items are added to the shopping list, logged to `purchase_log`, and upserted into the `store_items` catalog (powers shopping autocomplete).
-- `BubbleMenu` labels are localised via `t.nav` — add new entries there when adding a bubble.
+- `BubbleMenu` and `BottomNav` labels both read from `t.nav` — add new entries there when adding a bubble or tab.
 - `completedCount` in `useTaskStore` counts all-time done tasks (intentional — cumulative "small things add up" philosophy)
 - `backlogTasks(today)` only returns non-recurring tasks; recurring tasks reappear by date schedule
 - **Notifications**: `lib/notifications.ts` only takes already-localised content. Per-task reminders live in `useTaskStore` and cover both kinds — one-off tasks fire once (skipped if done/past), weekly-recurring tasks fire on every selected weekday (via `scheduleWeeklyTaskNotifications`); time-box tasks also get an "end" reminder. Habit daily reminders in `useHabitStore`; weekly/monthly reminders in `lib/reminders.ts` (`syncReminders`). `settings.tsx` re-syncs on relevant changes; `_layout.tsx` and onboarding step 6 sync on startup/finish.

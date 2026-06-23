@@ -35,7 +35,7 @@ echo 'export ANDROID_HOME="$HOME/Library/Android/sdk"' >> ~/.zshrc
 ```bash
 git clone https://github.com/freyrnor-pixel/all-the-small-things.git
 cd all-the-small-things
-git checkout claude/adhd-task-life-app-TOdFj
+git checkout main
 git pull
 ```
 
