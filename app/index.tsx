@@ -7,7 +7,7 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AppModal, components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items + pending) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -61,7 +61,6 @@
  */
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -95,6 +94,7 @@ import InboxSection from '@/components/InboxSection';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
+import { showAppModal } from '@/components/AppModal';
 import TreeWatermark from '@/components/TreeWatermark';
 import CoverScreen from '@/components/cover/CoverScreen';
 import { useCoverScreen } from '@/lib/useCoverScreen';
@@ -257,7 +257,7 @@ export default function HomeScreen() {
   }
 
   function handleWorkModeOverride() {
-    Alert.alert(t.switchModeTitle, t.switchModeBody, [
+    showAppModal(t.switchModeTitle, t.switchModeBody, [
       { text: t.cancel, style: 'cancel' },
       { text: t.switchModeConfirm, onPress: () => settings.setWorkModeSessionOverride(true) },
     ]);
