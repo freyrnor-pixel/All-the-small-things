@@ -320,6 +320,16 @@ export function initDb() {
     // inventory-vs-ad-hoc split.
     "ALTER TABLE shopping_items ADD COLUMN collected INTEGER DEFAULT 0",
     "ALTER TABLE shopping_items ADD COLUMN from_catalog INTEGER DEFAULT 0",
+    // Backfill: the ADD COLUMN above defaults every pre-existing row to 0, which
+    // wrongly marks the user's actual standing Katalog rows as "not from catalog" —
+    // breaking the red put-back icon (ShoppingRow.tsx) and putBackToInventory routing
+    // (app/shopping.tsx's handleRemoveWeeklyItem) for all data older than this migration.
+    // Rows currently sitting at status='catalog' ARE the inventory by definition, so
+    // backfill those; addToWeeklyFromCatalog/confirmStagingTray flip status in place on
+    // the same row (never re-insert), so this also fixes any future weekly/cart view of
+    // them. Rows already flipped to inWeeklyList/purchased before this migration ran
+    // can't be retroactively attributed and are left at 0 (they cycle out on next reset).
+    "UPDATE shopping_items SET from_catalog = 1 WHERE status = 'catalog'",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
