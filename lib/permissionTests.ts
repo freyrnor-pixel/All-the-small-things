@@ -7,7 +7,12 @@
  *
  * Connections:
  *   Imports → expo-av, expo-location, expo-calendar, expo-contacts, expo-sensors, expo-media-library
- *   Used by → app/settings.tsx (permission test buttons)
+ *   Used by → none currently — the debug-mode test buttons in app/settings.tsx were
+ *     reverted because this file imports native modules (expo-audio, expo-location,
+ *     expo-calendar, expo-contacts, expo-sensors, expo-media-library) that aren't
+ *     compiled into the currently-installed APK (runtime 1.0.0 / build 148977ec).
+ *     Re-wire this back into settings.tsx only after a new native build/APK that
+ *     includes these packages has shipped.
  *   Data    → none (permissions only)
  *
  * Edit notes:
