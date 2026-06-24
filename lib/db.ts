@@ -300,6 +300,18 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN pending_restock INTEGER DEFAULT 0",
     "ALTER TABLE shopping_items ADD COLUMN target_quantity INTEGER DEFAULT 1",
     "ALTER TABLE shopping_items ADD COLUMN shopping_trip_id TEXT DEFAULT NULL",
+    // Permission pre-bake — location-based reminders, calendar sync, voice notes, settings toggles
+    "ALTER TABLE settings ADD COLUMN location_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN background_location_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN calendar_sync_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN voice_notes_enabled INTEGER DEFAULT 0",
+    "ALTER TABLE tasks ADD COLUMN location_lat REAL DEFAULT NULL",
+    "ALTER TABLE tasks ADD COLUMN location_lng REAL DEFAULT NULL",
+    "ALTER TABLE tasks ADD COLUMN location_radius_m INTEGER DEFAULT NULL",
+    "ALTER TABLE tasks ADD COLUMN geofence_id TEXT DEFAULT NULL",
+    "ALTER TABLE tasks ADD COLUMN calendar_event_id TEXT DEFAULT NULL",
+    "ALTER TABLE tasks ADD COLUMN audio_uri TEXT DEFAULT NULL",
+    "ALTER TABLE tasks ADD COLUMN transcript TEXT DEFAULT NULL",
     `CREATE TABLE IF NOT EXISTS shopping_trips (
       id TEXT PRIMARY KEY,
       completed_at TEXT NOT NULL,

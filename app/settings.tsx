@@ -50,6 +50,11 @@ import { seedTestData } from '@/lib/seedTestData';
 import { useT, getTranslations } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { selection, warning, heavy } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
+import {
+  testMicrophonePermission, testLocationForegroundPermission, testLocationBackgroundPermission,
+  testCalendarPermission, testContactsPermission, testActivityRecognitionPermission,
+  testMediaLibraryPermission,
+} from '@/lib/permissionTests';
 import { showAppModal } from '@/components/AppModal';
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
@@ -85,6 +90,7 @@ export default function SettingsScreen() {
   const [monthlyBudgetInput, setMonthlyBudgetInput] = useState(
     settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : ''
   );
+  const [permissionTestResults, setPermissionTestResults] = useState<Record<string, boolean>>({});
 
   const DAY_LABELS = t.dayFull;
 
@@ -811,6 +817,43 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+
+        {/* Permission Tests (debug only) */}
+        {settings.debugModeEnabled && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Permission Tests</Text>
+            <View style={[styles.card, { backgroundColor: theme.white, borderWidth: 1, borderColor: theme.textLight }]}>
+              <Text style={[styles.descText, { color: theme.textLight, marginBottom: Spacing.md, marginTop: 0 }]}>
+                Test each permission to verify they work after native build.
+              </Text>
+              {[
+                { label: 'Test Microphone', fn: testMicrophonePermission, key: 'microphone' },
+                { label: 'Test Location (Foreground)', fn: testLocationForegroundPermission, key: 'locFg' },
+                { label: 'Test Location (Background)', fn: testLocationBackgroundPermission, key: 'locBg' },
+                { label: 'Test Calendar', fn: testCalendarPermission, key: 'calendar' },
+                { label: 'Test Contacts', fn: testContactsPermission, key: 'contacts' },
+                { label: 'Test Activity Recognition', fn: testActivityRecognitionPermission, key: 'activity' },
+                { label: 'Test Media Library', fn: testMediaLibraryPermission, key: 'media' },
+              ].map((test, i) => (
+                <View key={test.key}>
+                  <Pressable
+                    style={[styles.dangerBtn, { backgroundColor: theme.primary + '20' }]}
+                    onPress={async () => {
+                      const result = await test.fn();
+                      setPermissionTestResults((prev) => ({ ...prev, [test.key]: result }));
+                      showAppModal('', result ? `✓ ${test.label} granted` : `✗ ${test.label} denied`);
+                    }}
+                  >
+                    <Text style={[styles.dangerBtnText, { color: theme.primary }]}>
+                      {test.label} {permissionTestResults[test.key] !== undefined && (permissionTestResults[test.key] ? '✓' : '✗')}
+                    </Text>
+                  </Pressable>
+                  {i < 6 && <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />}
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Test data */}
         <View style={styles.section}>
