@@ -320,6 +320,10 @@ export function initDb() {
     // inventory-vs-ad-hoc split.
     "ALTER TABLE shopping_items ADD COLUMN collected INTEGER DEFAULT 0",
     "ALTER TABLE shopping_items ADD COLUMN from_catalog INTEGER DEFAULT 0",
+    // Backfill from_catalog for rows created before that column existed — any row
+    // currently flagged as a standing Katalog item (status = 'catalog') is
+    // unambiguously from-catalog regardless of when it was created.
+    "UPDATE shopping_items SET from_catalog = 1 WHERE status = 'catalog'",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
