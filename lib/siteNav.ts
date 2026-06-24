@@ -12,11 +12,16 @@
  * Connections:
  *   Imports → lib/i18n (Translations, for the nav label keys)
  *   Used by → components/BottomNav, components/SiteSwipeView, app/index, app/shopping,
- *             app/scan, and any other screen that links to another site
+ *             and any other screen that links to another site
  *   Data    → none (pure navigation logic)
  *
  * Edit notes:
- *   - SITE_ITEMS order is the bottom menu's visual order (wraps into rows).
+ *   - SITE_ITEMS order is the bottom menu's visual order.
+ *   - Nav bar now has exactly 3 items: Home, Shopping, Health.
+ *   - Removed from nav (routes/screens kept): meals, plans, scan, budget,
+ *     shared, automations, settings, habits. Access points moved to
+ *     Home screen (gear → settings, tap → plans) and Shopping screen
+ *     (buttons → scan, budget). Habits lives as sub-section in health.tsx.
  *   - goToSite() invariant: Home ('/') is always the stack root. Going from Home to
  *     any site pushes (so back() returns to Home). Going from one non-Home site to
  *     another replaces (so the stack never grows past depth 2). Going to Home
@@ -32,10 +37,10 @@ export type SiteKey = Exclude<keyof Translations['nav'], 'newTask' | 'capture'>;
 
 export type SiteRoute =
   | '/'
-  | '/plans'
   | '/shopping'
-  | '/meals'
   | '/health'
+  | '/plans'
+  | '/meals'
   | '/habits'
   | '/scan'
   | '/budget'
@@ -51,17 +56,9 @@ export type SiteItem = {
 };
 
 export const SITE_ITEMS: SiteItem[] = [
-  { key: 'home', icon: 'home-outline', activeIcon: 'home', route: '/' },
-  { key: 'shop', icon: 'cart-outline', activeIcon: 'cart', route: '/shopping' },
-  { key: 'meals', icon: 'restaurant-outline', activeIcon: 'restaurant', route: '/meals' },
-  { key: 'health', icon: 'heart-outline', activeIcon: 'heart', route: '/health' },
-  { key: 'habits', icon: 'leaf-outline', activeIcon: 'leaf', route: '/habits' },
-  { key: 'plans', icon: 'list-outline', activeIcon: 'list', route: '/plans' },
-  { key: 'scan', icon: 'camera-outline', activeIcon: 'camera', route: '/scan' },
-  { key: 'budget', icon: 'wallet-outline', activeIcon: 'wallet', route: '/budget' },
-  { key: 'shared', icon: 'link-outline', activeIcon: 'link', route: '/shared' },
-  { key: 'automations', icon: 'flash-outline', activeIcon: 'flash', route: '/automations' },
-  { key: 'settings', icon: 'settings-outline', activeIcon: 'settings', route: '/settings' },
+  { key: 'home',   icon: 'home-outline', activeIcon: 'home',  route: '/'         },
+  { key: 'shop',   icon: 'cart-outline', activeIcon: 'cart',  route: '/shopping' },
+  { key: 'health', icon: 'heart-outline', activeIcon: 'heart', route: '/health'  },
 ];
 
 /** Navigate between sites while keeping the stack shallow (Home stays the root). */
