@@ -122,8 +122,16 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 ### New APK build (only when native code changes)
 - Workflow: `.github/workflows/build-android.yml` — **manual trigger only** (`workflow_dispatch`)
 - Use when: new native package added, `app.json` plugin changed, `eas.json` build config changed
-- Produces an Android APK downloadable from **expo.dev → project → Builds** (not Updates)
+- Runs `npx expo prebuild` + a local `./gradlew assembleDebug` on the runner — this is a debug-signed APK, downloadable from the **GitHub Actions run's Artifacts** (not expo.dev; this workflow never calls EAS Build). For a real signed release build, see "Production release" below.
 - Takes ~20–30 min on CI
+
+### Production release (Play Store AAB)
+- This is a managed Expo project — there is no checked-in `android/` folder and no hand-edited Gradle signing config. Release signing and building is handled entirely by **EAS Build**, via `eas.json`'s `production` profile (`buildType: app-bundle`, `distribution: store`, `autoIncrement: true`).
+- **Upload keystore (one-time, Play App Signing)**: run interactively from your own Expo account session, not from an agent session — `eas credentials -p android --profile production` → "Set up a new keystore" → let EAS generate and store it. Google holds the actual app signing key (Play App Signing); this upload key can be re-issued by Google's account-recovery process if lost.
+- **Versioning**: `cli.appVersionSource: "remote"` + `production.autoIncrement: true` means EAS tracks and auto-bumps the Android `versionCode` on its own servers on every production build. Do **not** manually bump `android.versionCode` in `app.json` before a release build — it's unused by this profile. The human-facing `version` string in `app.json` (e.g. `"1.1.0"`) is still manual; bump it whenever it makes sense.
+- **Build**: `eas build --platform android --profile production` → produces a signed `.aab`, listed under **expo.dev → project → Builds**.
+- **Sanity-check before submitting**: AABs can't be installed directly. Use Google's `bundletool` (`build-apks --bundle=app.aab --output=app.apks --mode=universal`, then `install-apks --apks=app.apks`) to confirm it launches without a red-screen "Unable to load script" error.
+- **Submit**: once a Play Console app + service account key exist, save the key as `google-play-service-account.json` at the repo root (gitignored) — it already matches `submit.production.android.serviceAccountKeyPath` in `eas.json` — then run `eas submit -p android --profile production --latest`. First upload should go to the `internal` track (already set in `eas.json`) before promoting to production in Play Console.
 
 ### When to do a new build vs. OTA update
 | Change type | Need new build? |
