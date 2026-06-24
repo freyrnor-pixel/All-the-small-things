@@ -346,7 +346,11 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   toggleCheck(id) {
     const item = get().items.find((i) => i.id === id);
     if (!item) return;
-    get().update(id, { checked: !item.checked });
+    const patch: Partial<Omit<ShoppingItem, 'id'>> = { checked: !item.checked };
+    // When unchecking a collected cart item, clear collected too so it
+    // doesn't silently re-enter the cart in a pre-collected state.
+    if (item.checked && item.collected) patch.collected = false;
+    get().update(id, patch);
   },
 
   remove(id) {
@@ -480,12 +484,12 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
    */
   monthlyReset() {
     db.runSync(
-      "UPDATE shopping_items SET status = 'catalog', shopping_trip_id = NULL, purchased_at = NULL WHERE shopping_trip_id IS NOT NULL"
+      "UPDATE shopping_items SET status = 'catalog', shopping_trip_id = NULL, purchased_at = NULL, checked = 0, collected = 0 WHERE shopping_trip_id IS NOT NULL"
     );
     db.runSync('DELETE FROM shopping_trips');
     db.runSync('DELETE FROM shopping_items WHERE is_temporary = 1');
     db.runSync('UPDATE shopping_items SET pending_restock = 0');
-    db.runSync("UPDATE shopping_items SET status = 'catalog' WHERE status = 'inWeeklyList'");
+    db.runSync("UPDATE shopping_items SET status = 'catalog', checked = 0, collected = 0 WHERE status = 'inWeeklyList'");
 
     set((s) => ({
       trips: [],
@@ -493,7 +497,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
         .filter((i) => !i.isTemporary)
         .map((i) => {
           if (i.shoppingTripId || i.status === 'inWeeklyList') {
-            return { ...i, status: 'catalog' as const, shoppingTripId: undefined, purchasedAt: undefined, pendingRestock: false };
+            return { ...i, status: 'catalog' as const, shoppingTripId: undefined, purchasedAt: undefined, pendingRestock: false, checked: false, collected: false };
           }
           return { ...i, pendingRestock: false };
         }),
