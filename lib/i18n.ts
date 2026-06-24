@@ -17,6 +17,9 @@
  *   - All user-facing strings go through here; no hardcoded UI text in screens.
  *   - In components use the useT() hook (reactive); in stores/schedulers use
  *     getTranslations(lang) — useT cannot run outside React.
+ *   - Added keys: nav.settingsLabel, home.todaysPlans, home.seeAllPlans,
+ *     health.habits, health.seeAllHabits, health.noHabits, health.addHabit,
+ *     shopping.scan, shopping.budget.
  */
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -450,7 +453,21 @@ const en = {
     newTask: 'New task', plans: 'Plans', shop: 'Shopping', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
     capture: 'Quick note', home: 'Home', budget: 'Budget', automations: 'Automations',
-    shared: 'Shared',
+    shared: 'Shared', settingsLabel: 'Settings',
+  },
+  home: {
+    todaysPlans: "Today's Plans",
+    seeAllPlans: 'See all plans',
+  },
+  health: {
+    habits: 'Habits',
+    seeAllHabits: 'See all habits',
+    noHabits: 'No habits yet',
+    addHabit: 'Add habit',
+  },
+  shopping: {
+    scan: 'Scan',
+    budget: 'Budget',
   },
   moreItems: (n: number) => `+ ${n} more`,
   errorTitle: 'Something went wrong',
@@ -516,6 +533,8 @@ const en = {
   // --- W-D additions (health) ---
   healthSelfCareNote: 'Noting how you feel is an act of self-care.',
   noLogsGentle: 'No entries yet — log how you’re feeling when you’re ready.',
+  healthSeeAllHabits: 'See all habits',
+  healthAddHabit: 'Add habit',
   // --- end W-D additions ---
   // Habits — shame-free labels (Proposal 5)
   habits: {
@@ -1324,7 +1343,21 @@ const no: typeof en = {
     newTask: 'Ny oppgave', plans: 'Planer', shop: 'Handleliste', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
     capture: 'Notér', home: 'Hjem', budget: 'Budsjett', automations: 'Automatisering',
-    shared: 'Delt',
+    shared: 'Delt', settingsLabel: 'Innstillinger',
+  },
+  home: {
+    todaysPlans: 'Dagens planer',
+    seeAllPlans: 'Se alle planer',
+  },
+  health: {
+    habits: 'Vaner',
+    seeAllHabits: 'Se alle vaner',
+    noHabits: 'Ingen vaner ennå',
+    addHabit: 'Legg til vane',
+  },
+  shopping: {
+    scan: 'Skann',
+    budget: 'Budsjett',
   },
   moreItems: (n: number) => `+ ${n} til`,
   errorTitle: 'Noe gikk galt',
@@ -1388,6 +1421,8 @@ const no: typeof en = {
   // --- W-D additions (health) ---
   healthSelfCareNote: 'Å legge merke til hvordan du har det er omsorg for deg selv.',
   noLogsGentle: 'Ingen oppføringer enda — logg hvordan du føler deg når du er klar.',
+  healthSeeAllHabits: 'Se alle vaner',
+  healthAddHabit: 'Legg til vane',
   // --- end W-D additions ---
   cover: {
     tasksToday: 'I dag',

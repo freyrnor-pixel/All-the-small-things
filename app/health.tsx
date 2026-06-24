@@ -6,9 +6,9 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/BottomNav, components/ConfirmationBanner, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore
+ *   Imports → components/BottomNav, components/ConfirmationBanner, components/HintCard, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
  *   Used by → Expo Router route "/health"
- *   Data    → useHealthStore (health_logs table); scaled fontSize via useScaledStyles()
+ *   Data    → useHealthStore (health_logs table); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); dates are YYYY-MM-DD via todayStr()/dateStr().
@@ -17,6 +17,11 @@
  *   - W-D: this is an emotional screen — uses useSoftTheme() for a gentler palette and
  *     PressableScale severity targets. SEVERITY_COLORS is a soft purple→blue family
  *     (NOT red/green — avoids alarm connotations); labels come from t.severityLabels.
+ *   - Habits sub-section: inline today-progress rows (main profile only, childName === '') with
+ *     +/- count buttons, mirroring app/habits.tsx's HabitCard fields (icon, title, kind colour,
+ *     count/dailyGoal). The chevron header links to the full /habits screen; the add row pushes
+ *     the shared /habit-form modal. Full streak/expand/rest-day UI stays on /habits — keep this
+ *     inline view light.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -31,8 +36,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useHealthStore } from '@/store/useHealthStore';
+import { useHabitStore } from '@/store/useHabitStore';
 import HintCard from '@/components/HintCard';
+import HabitIcon from '@/components/HabitIcon';
 import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import Surface from '@/components/Surface';
@@ -50,6 +58,9 @@ import { useSoftTheme, useScaledStyles } from '@/lib/useAppTheme';
 // of the active theme so the overview chart always reads gently.
 const SEVERITY_COLORS = ['#C9D4F0', '#A9B8E8', '#8C9AE0', '#7C82D6', '#6E6BC8'];
 
+// Mirrors habits.tsx's habitColor(): build = green, break = calm blue (never red).
+const HABIT_BREAK_BLUE = '#4A8EC2';
+
 function severities() {
   return SEVERITY_COLORS.map((color, i) => ({ value: i + 1, color }));
 }
@@ -59,6 +70,11 @@ export default function HealthScreen() {
   const logs = useHealthStore((s) => s.logs);
   const add = useHealthStore((s) => s.add);
   const remove = useHealthStore((s) => s.remove);
+  const allHabits = useHabitStore((s) => s.habits);
+  const habitLogs = useHabitStore((s) => s.logs);
+  const incrementHabit = useHabitStore((s) => s.increment);
+  const decrementHabit = useHabitStore((s) => s.decrement);
+  const habits = allHabits.filter((h) => h.childName === '');
 
   const [adding, setAdding] = useState(false);
   const [ailment, setAilment] = useState('');
@@ -270,6 +286,59 @@ export default function HealthScreen() {
           );
         })}
 
+        {/* Habits */}
+        <View style={styles.section}>
+          <Pressable
+            onPress={() => router.push('/habits')}
+            accessibilityRole="button"
+            accessibilityLabel={t.healthSeeAllHabits}
+            style={styles.sectionHeader}
+          >
+            <Text style={[styles.sectionLabel, { color: theme.textLight, marginBottom: 0 }]}>{t.nav.habits}</Text>
+            <Ionicons name="chevron-forward" size={16} color={theme.textLight} />
+          </Pressable>
+
+          {habits.length === 0 ? (
+            <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noHabitsYet}</Text>
+          ) : (
+            habits.map((habit) => {
+              const log = habitLogs.find((l) => l.habitId === habit.id && l.logDate === today);
+              const count = log?.count ?? 0;
+              const accent = habit.kind === 'break' ? HABIT_BREAK_BLUE : theme.green;
+              return (
+                <View key={habit.id} style={styles.habitRow}>
+                  <HabitIcon icon={habit.icon} size={20} color={accent} />
+                  <Text style={[styles.habitName, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
+                  <Text style={[styles.habitCount, { color: theme.textLight }]}>{count}/{habit.dailyGoal}</Text>
+                  <Pressable
+                    style={[styles.adjBtn, { backgroundColor: theme.grayLight }]}
+                    onPress={() => decrementHabit(habit.id, today)}
+                    hitSlop={8}
+                  >
+                    <Text style={[styles.adjBtnText, { color: theme.textLight }]}>−</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.adjBtn, { backgroundColor: accent }]}
+                    onPress={() => incrementHabit(habit.id, today)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.adjBtnPlusText}>+</Text>
+                  </Pressable>
+                </View>
+              );
+            })
+          )}
+
+          <Pressable
+            onPress={() => router.push('/habit-form')}
+            style={styles.addButton}
+            accessibilityLabel={t.healthAddHabit}
+          >
+            <Ionicons name="add-circle-outline" size={20} color={theme.orange} />
+            <Text style={[styles.addButtonText, { color: theme.orange }]}>{t.healthAddHabit}</Text>
+          </Pressable>
+        </View>
+
         <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -409,4 +478,37 @@ const baseStyles = StyleSheet.create({
   severityBadgeText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
   removeText: { fontSize: 20, color: Colors.gray },
   logNotes: { fontSize: FontSize.sm, color: Colors.textLight, marginTop: Spacing.sm },
+  section: { gap: Spacing.sm },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  habitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 6,
+  },
+  habitName: {
+    flex: 1,
+    fontSize: FontSize.sm,
+    color: Colors.text,
+  },
+  habitCount: { fontSize: FontSize.xs, color: Colors.textLight },
+  adjBtn: {
+    width: 26, height: 26,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adjBtnText: { fontSize: FontSize.md, lineHeight: 26, color: Colors.textLight },
+  adjBtnPlusText: { fontSize: FontSize.md, color: Colors.white, fontWeight: '700', lineHeight: 26 },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+  },
+  addButtonText: { fontSize: FontSize.sm, color: Colors.orange, fontWeight: '600' },
 });

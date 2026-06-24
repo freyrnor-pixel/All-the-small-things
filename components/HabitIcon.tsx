@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → @expo/vector-icons
- *   Used by → app/habit-form.tsx (icon picker), app/habits.tsx (habit cards/week/month rows)
+ *   Used by → app/habit-form.tsx (icon picker), app/habits.tsx (habit cards/week/month rows), app/health.tsx (inline habits sub-section)
  *   Data    → none
  */
 import React from 'react';
