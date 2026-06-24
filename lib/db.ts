@@ -330,6 +330,14 @@ export function initDb() {
     // them. Rows already flipped to inWeeklyList/purchased before this migration ran
     // can't be retroactively attributed and are left at 0 (they cycle out on next reset).
     "UPDATE shopping_items SET from_catalog = 1 WHERE status = 'catalog'",
+    // Follow-up backfill: the migration above only caught rows still sitting at
+    // status='catalog' at that moment. Any row already moved to inWeeklyList/purchased
+    // before that migration ran (i.e. basically every pre-existing weekly-list item, since
+    // the from_catalog feature is new) was left at 0 and never got the red put-back icon —
+    // this is exactly what users with an existing list see ("the icon is totally lacking").
+    // Heuristic fix: a weekly/purchased row whose name matches a still-standing catalog
+    // row almost certainly originated from that same catalog item, so attribute it now.
+    "UPDATE shopping_items SET from_catalog = 1 WHERE from_catalog = 0 AND status IN ('inWeeklyList', 'purchased') AND name IN (SELECT name FROM shopping_items WHERE status = 'catalog')",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
