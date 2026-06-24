@@ -105,6 +105,11 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - **Materials**: `bubbleMaterial` (settings) + `getMaterialStyle()` in `constants/theme.ts` give the FAB/bubbles a surface finish (glass/metal/rock/paper) independent of colour theme — a bubble's hue and its finish vary separately. Rendered via a two-layer view (outer = border + shadow, inner `overflow:'hidden'` mask = fill + sheen) so shadows aren't clipped.
 - **Animation, button-press, and haptics**: read `ANIMATION_GUIDELINES.md` (repo root) before writing or editing any of these — it has the real timing/easing/spring values and the `lib/haptics.ts` contract this codebase actually uses. Paste its §8 block at the top of any animation/interaction/haptics prompt.
 
+## Current deployment state
+
+- Runtime 1.0.0 is in Preview — all updates deploy here
+- This is the current target for all OTA updates and APK builds going forward
+
 ## Builds and updates
 
 ### OTA updates (normal flow)
