@@ -16,6 +16,12 @@
  *     planned is a separate trailing "undo" icon (calls onToggle), so collecting and
  *     un-cart-ing don't share a button any more; 'purchased' shows a static checkmark
  *     (read-only — purchased/history rows only leave via removeWithSource, never onToggle).
+ *   - The trailing remove button shows the red InventoryIcon (not "×") for
+ *     `item.fromCatalog` rows on 'planned'/'cart' variants — those rows originated in
+ *     the standing Katalog, so the parent's onRemove should put them back to
+ *     status='catalog' (useShoppingStore.putBackToInventory) instead of deleting them.
+ *     'purchased' rows and non-catalog (ad-hoc) rows keep the plain "×" delete look —
+ *     this component doesn't decide which store action runs, only which icon to show.
  *   - dimmed (CHECKED_OPACITY) applies to 'purchased' rows and to 'cart' rows once collected —
  *     NOT to every cart row, since "moved to cart" alone should stay fully opaque. This is the
  *     same opacity constant used by the "Shopping done" disabled state in app/shopping.tsx —
@@ -33,6 +39,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem, useShoppingStore } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
+import InventoryIcon from '@/components/InventoryIcon';
 
 type Variant = 'planned' | 'cart' | 'purchased';
 
@@ -107,7 +114,11 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
       )}
 
       <Pressable style={styles.remove} onPress={onRemove} hitSlop={8}>
-        <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
+        {item.fromCatalog && variant !== 'purchased' ? (
+          <InventoryIcon size={18} color={theme.danger} />
+        ) : (
+          <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
+        )}
       </Pressable>
     </View>
   );

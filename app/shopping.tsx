@@ -33,6 +33,16 @@
  *   - The bottom Save(n) button (confirmPending) only ever reflects weekly-tab toggle staging (toggleCheck/pending Set) — scoped to `tab === 'weekly'` so it never shows up looking ambiguous on the Katalog tab.
  *   - The "Handlingen fullført" sticky button is disabled + dimmed (CHECKED_OPACITY) when the cart (weeklyChecked) is empty — this only gates the button itself, not individual item press behavior.
  *   - The "done shopping" confirmation goes through showAppModal() (components/AppModal.tsx), the shared themed popup — not a native Alert.
+ *   - Removing a weekly/cart row that's `fromCatalog` calls putBackToInventory (status
+ *     reverts to 'catalog') instead of removeWithSource (hard delete) via
+ *     handleRemoveWeeklyItem — that single row IS the user's standing Katalog entry, so
+ *     deleting it would drop it from inventory permanently. Only wired into the weekly-tab
+ *     rows (dish groups, ungrouped planned, cart); the purchased-history rows keep using
+ *     removeWithSource since they're past trips, not the live working list.
+ *   - AddSourceChooser's inventory step now supports picking several items with a qty each
+ *     before committing — onConfirmInventoryPicks receives the whole batch at once and this
+ *     screen loops it through addToWeeklyFromCatalog(id, quantity), showing a combined toast
+ *     for >1 item (itemsAddedToList) vs. the singular one (itemAddedToList).
  *   - The FAB and the "Handlingen fullført" sticky footer are offset above BOTTOM_NAV_HEIGHT
  *     (from components/BottomNav.tsx) so they don't overlap the bottom nav bar.
  */
@@ -95,6 +105,7 @@ export default function ShoppingScreen() {
   const toggle = useShoppingStore((s) => s.toggleCheck);
   const toggleCollected = useShoppingStore((s) => s.toggleCollected);
   const addToWeeklyFromCatalog = useShoppingStore((s) => s.addToWeeklyFromCatalog);
+  const putBackToInventory = useShoppingStore((s) => s.putBackToInventory);
   const removeWithSource = useShoppingStore((s) => s.removeWithSource);
   const setPendingRestock = useShoppingStore((s) => s.setPendingRestock);
   const confirmStagingTray = useShoppingStore((s) => s.confirmStagingTray);
@@ -175,6 +186,18 @@ export default function ShoppingScreen() {
     confirmStagingTray();
     success();
     setConfirm(t.confirmStagingBtn(stagedItems.length));
+  }
+
+  // Weekly/cart rows that came from the Katalog go back to inventory instead of
+  // being deleted outright (their single row IS the standing catalog entry).
+  function handleRemoveWeeklyItem(item: ShoppingItem) {
+    if (item.fromCatalog) {
+      putBackToInventory(item.id);
+      success();
+      setConfirm(t.itemPutBackToInventory(item.name));
+    } else {
+      removeWithSource(item.id);
+    }
   }
 
   function handleDoneShopping() {
@@ -442,7 +465,7 @@ export default function ShoppingScreen() {
                               theme={theme}
                               variant="planned"
                               onToggle={() => toggle(item.id)}
-                              onRemove={() => removeWithSource(item.id)}
+                              onRemove={() => handleRemoveWeeklyItem(item)}
                               inStockLabel={t.inStockLabel}
                             />
                             {idx < groupItems.length - 1 && (
@@ -470,7 +493,7 @@ export default function ShoppingScreen() {
                           theme={theme}
                           variant="planned"
                           onToggle={() => toggle(item.id)}
-                          onRemove={() => removeWithSource(item.id)}
+                          onRemove={() => handleRemoveWeeklyItem(item)}
                           inStockLabel={t.inStockLabel}
                         />
                         {idx < ungroupedWeeklyUnchecked.length - 1 && (
@@ -494,7 +517,7 @@ export default function ShoppingScreen() {
                           variant="cart"
                           onToggle={() => toggle(item.id)}
                           onCollect={() => toggleCollected(item.id)}
-                          onRemove={() => removeWithSource(item.id)}
+                          onRemove={() => handleRemoveWeeklyItem(item)}
                         />
                         {idx < weeklyChecked.length - 1 && (
                           <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
@@ -562,11 +585,17 @@ export default function ShoppingScreen() {
         theme={theme}
         catalogItems={catalogItems}
         onClose={() => setShowAddSourceChooser(false)}
-        onPickFromInventory={(id) => {
-          const picked = catalogItems.find((i) => i.id === id);
-          addToWeeklyFromCatalog(id);
+        onConfirmInventoryPicks={(picks) => {
+          for (const pick of picks) {
+            addToWeeklyFromCatalog(pick.id, pick.quantity);
+          }
           success();
-          if (picked) setConfirm(t.itemAddedToList(picked.name));
+          if (picks.length === 1) {
+            const picked = catalogItems.find((i) => i.id === picks[0].id);
+            if (picked) setConfirm(t.itemAddedToList(picked.name));
+          } else if (picks.length > 1) {
+            setConfirm(t.itemsAddedToList(picks.length));
+          }
         }}
         onOpenAddSheet={() => setShowAddSheet(true)}
       />

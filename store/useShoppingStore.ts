@@ -46,6 +46,16 @@
  *     the monthly reset summary's inventory-vs-ad-hoc split (buildMonthlyResetSummary()).
  *     Call buildMonthlyResetSummary() BEFORE monthlyReset() — reset clears the very
  *     purchasedAt/shoppingTripId fields the summary reads.
+ *   - load() runs every row through mergeDuplicateItems() first: a one-time self-healing
+ *     pass that merges any pre-existing duplicate rows (same status+name+dishName) left
+ *     over from before add()'s dedup safeguard existed, summing amount/targetQuantity
+ *     and deleting the extra row(s). New duplicates can't form going forward (add()
+ *     already prevents them) — this only cleans up old data.
+ *   - putBackToInventory(id) reverts ANY row to status='catalog' (clearing checked/
+ *     collected/pendingRestock) — used when removing a fromCatalog row from the weekly
+ *     list/cart, since that single row IS the user's permanent Katalog entry (deleting it
+ *     would lose it from inventory forever). addToWeeklyFromCatalog's optional `quantity`
+ *     sets the new weekly row's `amount` (defaults to 1, matching the old no-arg behaviour).
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -144,8 +154,12 @@ type ShoppingStore = {
   // Cart "collected" checkbox (distinct from "checked" = moved to cart)
   toggleCollected: (id: string) => void;
   // "+" menu's "From Inventory" option — flips an existing catalog row straight
-  // into the weekly list, bypassing the staging tray.
-  addToWeeklyFromCatalog: (id: string) => void;
+  // into the weekly list, bypassing the staging tray. `quantity` sets the
+  // weekly row's amount (defaults to 1).
+  addToWeeklyFromCatalog: (id: string, quantity?: number) => void;
+  // Reverts a row back to status='catalog' — used when a fromCatalog item is
+  // removed from the weekly list/cart instead of deleting it outright.
+  putBackToInventory: (id: string) => void;
   buildMonthlyResetSummary: () => MonthlyResetSummary;
 };
 
@@ -211,14 +225,62 @@ const ITEM_COLUMNS: FieldMap<ShoppingItem> = {
   fromCatalog: { col: 'from_catalog', to: (v) => (v ? 1 : 0) },
 };
 
+/**
+ * One-time self-healing pass: merges rows that share status+name+dishName (the
+ * same key add()'s dedup safeguard checks) into a single row, summing amount
+ * (weekly/cart/purchased rows) or targetQuantity (catalog rows) and deleting the
+ * extras. Needed because that safeguard only stops *new* duplicates — rows
+ * created before it existed can still be sitting in the DB.
+ */
+function mergeDuplicateItems(items: ShoppingItem[]): ShoppingItem[] {
+  const groups = new Map<string, ShoppingItem[]>();
+  for (const item of items) {
+    const key = `${item.status}|${item.name.trim().toLowerCase()}|${item.dishName ?? ''}`;
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
+  }
+
+  const result: ShoppingItem[] = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+    try {
+      const [keep, ...dupes] = [...group].sort((a, b) => a.id.localeCompare(b.id));
+      let amount = parseInt(keep.amount, 10) || 1;
+      let targetQuantity = keep.targetQuantity;
+      let price = keep.price;
+      for (const dupe of dupes) {
+        if (keep.status === 'catalog') {
+          targetQuantity += dupe.targetQuantity;
+        } else {
+          amount += parseInt(dupe.amount, 10) || 1;
+        }
+        if (dupe.price > 0) price = dupe.price;
+        db.runSync('DELETE FROM shopping_items WHERE id = ?', [dupe.id]);
+      }
+      const merged: ShoppingItem = { ...keep, amount: String(amount), targetQuantity, price };
+      updateRow('shopping_items', rowValues(merged, ITEM_COLUMNS), 'id = ?', [keep.id]);
+      result.push(merged);
+    } catch {
+      // Merge failed (e.g. mid-write error) — keep the rows as-is rather than losing data.
+      result.push(...group);
+    }
+  }
+  return result;
+}
+
 export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
   trips: [],
   pending: new Set(),
 
   load() {
+    const items = loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' });
     set({
-      items: loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' }),
+      items: mergeDuplicateItems(items),
       trips: loadAll('shopping_trips', rowToTrip, { orderBy: 'completed_at DESC' }),
     });
   },
@@ -471,10 +533,16 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     get().update(id, { collected: !item.collected });
   },
 
-  addToWeeklyFromCatalog(id) {
+  addToWeeklyFromCatalog(id, quantity = 1) {
     const item = get().items.find((i) => i.id === id && i.status === 'catalog');
     if (!item) return;
-    get().update(id, { status: 'inWeeklyList', pendingRestock: false });
+    get().update(id, { status: 'inWeeklyList', pendingRestock: false, amount: String(Math.max(1, quantity)) });
+  },
+
+  putBackToInventory(id) {
+    const item = get().items.find((i) => i.id === id);
+    if (!item) return;
+    get().update(id, { status: 'catalog', checked: false, collected: false, pendingRestock: false });
   },
 
   /**

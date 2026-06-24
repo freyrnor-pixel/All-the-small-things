@@ -247,6 +247,8 @@ const en = {
   weeklyResetsOnShort: (day: string) => `Resets ${day}`,
   clearCheckedItems: (n: number) => `Clear ${n} checked ${n === 1 ? 'item' : 'items'}`,
   itemAddedToList: (name: string) => `${name} added ✓`,
+  itemsAddedToList: (n: number) => `${n} items added ✓`,
+  itemPutBackToInventory: (name: string) => `${name} put back in inventory`,
   // --- end W-C additions ---
   addItemTrigger: '+ Add item',
   weeklyItemsSection: 'Weekly list',
@@ -993,6 +995,8 @@ const no: typeof en = {
   weeklyResetsOnShort: (day: string) => `Nullstilles ${day}`,
   clearCheckedItems: (n: number) => `Fjern ${n} avkrysset${n === 1 ? '' : 'e'}`,
   itemAddedToList: (name: string) => `${name} lagt til ✓`,
+  itemsAddedToList: (n: number) => `${n} varer lagt til ✓`,
+  itemPutBackToInventory: (name: string) => `${name} lagt tilbake i inventar`,
   // --- end W-C additions ---
   addItemTrigger: '+ Legg til vare',
   weeklyItemsSection: 'Ukeliste',

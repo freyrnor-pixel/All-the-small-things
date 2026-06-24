@@ -8,8 +8,8 @@
  * off to AddItemSheet (which already searches the catalog live as you type, so
  * there's nothing left to differentiate downstream — the distinction here is
  * purely about user intent/framing). "Fra inventar" instead shows a second,
- * in-sheet step listing current Katalog items to flip straight into the weekly
- * list (bypassing the staging tray).
+ * in-sheet step listing current Katalog items: tapping one selects it (with a
+ * qty stepper), and a sticky "Save" button commits every selection at once.
  *
  * The Katalog/Inventory screen does NOT use this chooser — it only has one
  * source (the product catalog), so its "+" opens AddItemSheet directly.
@@ -22,11 +22,17 @@
  * Edit notes:
  *   - `catalogItems` should be the parent's `status === 'catalog'` list (same one
  *     the Katalog tab renders) — this component doesn't read the store itself.
- *   - Resets the inventory-picker step + filter text on close via the useEffect
- *     keyed on `visible`.
+ *   - Resets the inventory-picker step, filter text and selected `picks` on close
+ *     via the useEffect keyed on `visible` (and also on navigating back to the
+ *     "choose" step, so a stale selection can't survive a re-entry into the picker).
+ *   - `onConfirmInventoryPicks` receives the whole batch in one call (`{id, quantity}[]`)
+ *     rather than firing once per item — the parent does the actual store writes/toasts.
+ *   - Wrapped in a KeyboardAvoidingView because RN's <Modal> renders outside the
+ *     screen's own KeyboardAvoidingView subtree — without this, the keyboard covers
+ *     the search input on short screens (same fix as AddItemSheet.tsx).
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -38,20 +44,22 @@ type Props = {
   theme: AppColors;
   catalogItems: ShoppingItem[];
   onClose: () => void;
-  onPickFromInventory: (id: string) => void;
+  onConfirmInventoryPicks: (picks: { id: string; quantity: number }[]) => void;
   onOpenAddSheet: () => void;
 };
 
-export default function AddSourceChooser({ visible, theme, catalogItems, onClose, onPickFromInventory, onOpenAddSheet }: Props) {
+export default function AddSourceChooser({ visible, theme, catalogItems, onClose, onConfirmInventoryPicks, onOpenAddSheet }: Props) {
   const styles = useScaledStyles(baseStyles);
   const t = useT();
   const [step, setStep] = useState<'choose' | 'inventory'>('choose');
   const [filter, setFilter] = useState('');
+  const [picks, setPicks] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (visible) {
       setStep('choose');
       setFilter('');
+      setPicks({});
     }
   }, [visible]);
 
@@ -62,8 +70,37 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
     return sorted.filter((i) => i.name.toLowerCase().includes(q));
   }, [catalogItems, filter]);
 
-  function handlePick(id: string) {
-    onPickFromInventory(id);
+  const pickCount = Object.keys(picks).length;
+
+  function handleBackToChoose() {
+    setStep('choose');
+    setPicks({});
+  }
+
+  function handleSelect(id: string) {
+    setPicks((p) => ({ ...p, [id]: 1 }));
+  }
+
+  function handleIncrement(id: string) {
+    setPicks((p) => ({ ...p, [id]: (p[id] ?? 1) + 1 }));
+  }
+
+  function handleDecrement(id: string) {
+    setPicks((p) => {
+      const next = (p[id] ?? 1) - 1;
+      if (next <= 0) {
+        const { [id]: _removed, ...rest } = p;
+        return rest;
+      }
+      return { ...p, [id]: next };
+    });
+  }
+
+  function handleSavePicks() {
+    const list = Object.entries(picks).map(([id, quantity]) => ({ id, quantity }));
+    if (list.length === 0) return;
+    onConfirmInventoryPicks(list);
+    setPicks({});
     onClose();
   }
 
@@ -74,6 +111,7 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexFill}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: theme.white }]}>
         <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
@@ -110,7 +148,7 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
         ) : (
           <>
             <View style={styles.pickerHeader}>
-              <Pressable onPress={() => setStep('choose')} hitSlop={8}>
+              <Pressable onPress={handleBackToChoose} hitSlop={8}>
                 <Ionicons name="chevron-back" size={22} color={theme.textLight} />
               </Pressable>
               <Text style={[styles.title, { color: theme.text, marginBottom: 0, flex: 1 }]}>{t.inventoryPickerTitle}</Text>
@@ -129,24 +167,66 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.addSourceChooserInventoryEmpty}</Text>
             ) : (
               <ScrollView style={styles.pickerScroll} keyboardShouldPersistTaps="handled">
-                {filteredCatalogItems.map((item) => (
-                  <Pressable key={item.id} style={styles.pickerRow} onPress={() => handlePick(item.id)}>
-                    <Text style={[styles.pickerName, { color: theme.text }]} numberOfLines={1}>{item.name}</Text>
-                    {item.price > 0 && (
-                      <Text style={[styles.pickerPrice, { color: theme.textLight }]}>{item.price.toFixed(0)} kr</Text>
-                    )}
-                  </Pressable>
-                ))}
+                {filteredCatalogItems.map((item) => {
+                  const qty = picks[item.id];
+                  const isSelected = qty !== undefined;
+                  return (
+                    <View key={item.id} style={[styles.pickerRow, isSelected && { backgroundColor: theme.greenLight }]}>
+                      <View style={styles.pickerNameWrap}>
+                        <Text style={[styles.pickerName, { color: theme.text }]} numberOfLines={1}>{item.name}</Text>
+                        {item.price > 0 && (
+                          <Text style={[styles.pickerPrice, { color: theme.textLight }]}>{item.price.toFixed(0)} kr</Text>
+                        )}
+                      </View>
+                      {isSelected ? (
+                        <View style={styles.pickerStepperRow}>
+                          <Pressable
+                            style={[styles.pickerStepBtn, { backgroundColor: theme.grayLight }]}
+                            onPress={() => handleDecrement(item.id)}
+                            hitSlop={6}
+                          >
+                            <Text style={[styles.pickerStepText, { color: theme.text }]}>−</Text>
+                          </Pressable>
+                          <Text style={[styles.pickerQtyText, { color: theme.text }]}>{qty}</Text>
+                          <Pressable
+                            style={[styles.pickerStepBtn, { backgroundColor: theme.green }]}
+                            onPress={() => handleIncrement(item.id)}
+                            hitSlop={6}
+                          >
+                            <Text style={[styles.pickerStepText, { color: theme.white }]}>+</Text>
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <Pressable
+                          style={[styles.pickerAddBtn, { backgroundColor: theme.greenLight }]}
+                          onPress={() => handleSelect(item.id)}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="add" size={16} color={theme.green} />
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })}
               </ScrollView>
+            )}
+
+            {pickCount > 0 && (
+              <Pressable style={[styles.pickerSaveBtn, { backgroundColor: theme.green }]} onPress={handleSavePicks}>
+                <Text style={styles.pickerSaveBtnText}>{t.save}</Text>
+                <Text style={styles.pickerSaveBtnCount}>({pickCount})</Text>
+              </Pressable>
             )}
           </>
         )}
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const baseStyles = StyleSheet.create({
+  flexFill: { flex: 1 },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: {
     position: 'absolute',
@@ -170,8 +250,17 @@ const baseStyles = StyleSheet.create({
   pickerHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   searchInput: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md, marginTop: Spacing.xs },
   pickerScroll: { marginTop: Spacing.xs },
-  pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.sm },
-  pickerName: { flex: 1, fontSize: FontSize.sm },
+  pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderRadius: Radius.sm },
+  pickerNameWrap: { flex: 1, minWidth: 0, marginRight: Spacing.sm },
+  pickerName: { fontSize: FontSize.sm },
   pickerPrice: { fontSize: FontSize.xs },
+  pickerAddBtn: { width: 28, height: 28, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  pickerStepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  pickerStepBtn: { width: 26, height: 26, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  pickerStepText: { fontSize: FontSize.md, fontWeight: '700' },
+  pickerQtyText: { fontSize: FontSize.sm, fontWeight: '700', minWidth: 20, textAlign: 'center' },
+  pickerSaveBtn: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.sm },
+  pickerSaveBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
+  pickerSaveBtnCount: { color: '#fff', fontWeight: '600', fontSize: FontSize.sm },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center', paddingVertical: Spacing.lg },
 });
