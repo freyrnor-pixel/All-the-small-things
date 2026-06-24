@@ -44,3 +44,6 @@ yarn-error.*
 .claude/
 
 # generated assets are tracked (needed for EAS cloud build)
+
+# Play Console service account key (used by `eas submit`) — never commit
+google-play-service-account.json
