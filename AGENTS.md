@@ -133,3 +133,34 @@ Screens (app/)  →  Zustand stores (store/)  →  SQLite (lib/db.ts)
 - `runtimeVersion` in `app.json` is hardcoded to `"1.0.0"` (not derived from `version` via policy)
 - This targets the installed APK (build 148977ec, runtime `1.0.0`) — do NOT change it without a new APK build
 - When native changes require a new APK: bump BOTH `version` AND `runtimeVersion` in `app.json` to the same new value, build the APK, then OTA updates will automatically target the new runtime
+
+## Token policy
+
+- **Trust the header, don't re-derive it.** Every file's `Connections:` block
+  already states its imports and callers. Don't grep the whole repo to map
+  dependencies that are already written down — read the header first, and
+  only fall back to grep if the header looks stale.
+- **Open only what the task touches.** For a cookbook task (add screen, add
+  i18n string, add SQLite column, add setting), read just the files named in
+  that task's steps in `AGENTS.md` — not the whole `app/`, `store/`, or `lib/`
+  directory. The map in "Architecture at a glance" plus the per-file headers
+  should make full-directory scans unnecessary.
+- **Update headers as you go, not in a separate sweep.** When you change a
+  file's imports or callers, fix both ends of the `Connections:` block in the
+  same edit. This is cheap now and expensive later — a stale map forces the
+  next session to re-derive it from scratch via grep/read.
+- **No multi-agent delegation for this repo.** It's a single-branch,
+  single-dev, cookbook-task codebase — splitting trivial steps across
+  subagents adds coordination overhead with no payoff at this size. Do the
+  task directly.
+- **Don't re-read docs you already pulled this session.** If you've already
+  fetched the SDK 56 docs for a given API in this conversation, reuse that
+  context instead of re-fetching on a later turn in the same session.
+- **`/clear` after a completed, committed cookbook task** (new screen, new
+  migration, new setting) before starting an unrelated one — but not
+  mid-task. Carry forward only: which file(s) changed, and any new i18n
+  keys/migration lines added, so the next step doesn't need to re-read what
+  was just written.
+- **Skip the architecture-at-a-glance diagram re-derivation.** It's already
+  correct in this file. Only revisit it if you've actually restructured
+  `app/`, `store/`, or `lib/`.
