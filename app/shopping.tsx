@@ -31,7 +31,10 @@
  *   - The 'shopping_opened' trigger fires once per mount ([] deps).
  *   - Add sheet (components/AddItemSheet.tsx) supports an "also add to catalog" toggle only when opened from the Ukeliste tab — interpreted as: the new item is created directly with status='inWeeklyList', and when the toggle is on, a SECOND permanent catalog row (status='catalog', pendingRestock=false) is also created with the same name/price/targetQuantity, so it persists for future weeks without being purchased=true this trip.
  *   - The bottom Save(n) button (confirmPending) only ever reflects weekly-tab toggle staging (toggleCheck/pending Set) — scoped to `tab === 'weekly'` so it never shows up looking ambiguous on the Katalog tab.
- *   - The "Handlingen fullført" sticky button is disabled + dimmed (CHECKED_OPACITY) when the cart (weeklyChecked) is empty — this only gates the button itself, not individual item press behavior.
+ *   - The "Handlingen fullført" sticky button is always rendered on the Ukeliste tab (never
+ *     conditionally hidden); when the cart (weeklyChecked) is empty it's dimmed to opacity 0.4
+ *     and non-interactive (disabled + pointerEvents="none") rather than removed. handleDoneShopping
+ *     also guards on weeklyChecked.length === 0 at the top, so even a stray tap can't fire it.
  *   - The "done shopping" confirmation goes through showAppModal() (components/AppModal.tsx), the shared themed popup — not a native Alert.
  *   - Removing a weekly/cart row that's `fromCatalog` calls putBackToInventory (status
  *     reverts to 'catalog') instead of removeWithSource (hard delete) via
@@ -62,7 +65,7 @@ import { useShoppingStore, ShoppingItem, MonthlyResetSummary } from '@/store/use
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
-import ShoppingRow, { CHECKED_OPACITY } from '@/components/ShoppingRow';
+import ShoppingRow from '@/components/ShoppingRow';
 import MonthlyTableRow from '@/components/MonthlyTableRow';
 import AddItemSheet from '@/components/AddItemSheet';
 import AddSourceChooser from '@/components/AddSourceChooser';
@@ -547,17 +550,18 @@ export default function ShoppingScreen() {
         </SiteSwipeView>
       </KeyboardAvoidingView>
 
-      {/* Sticky "Handlingen fullført" button — Ukeliste tab only, visible when there's anything on the list */}
-      {tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) && (
+      {/* Sticky "Handlingen fullført" button — Ukeliste tab only, always rendered; dimmed + non-interactive when the cart is empty */}
+      {tab === 'weekly' && (
         <View style={[styles.stickyFooter, { bottom: BOTTOM_NAV_HEIGHT, paddingBottom: Spacing.md }]}>
           <PressableScale
             style={[
               styles.doneShoppingBtn,
               { backgroundColor: theme.green },
-              weeklyChecked.length === 0 && { opacity: CHECKED_OPACITY },
+              weeklyChecked.length === 0 && { opacity: 0.4 },
             ]}
             onPress={handleDoneShopping}
             disabled={weeklyChecked.length === 0}
+            pointerEvents={weeklyChecked.length === 0 ? 'none' : 'auto'}
           >
             <Text style={styles.doneShoppingText}>{t.doneShoppingBtn}</Text>
           </PressableScale>
@@ -566,7 +570,7 @@ export default function ShoppingScreen() {
 
       {/* FAB */}
       <Pressable
-        style={[styles.fab, { backgroundColor: tabAccent, bottom: (tab === 'weekly' && (weeklyUnchecked.length > 0 || weeklyChecked.length > 0) ? Spacing.xl + 64 : Spacing.xl) + BOTTOM_NAV_HEIGHT }]}
+        style={[styles.fab, { backgroundColor: tabAccent, bottom: (tab === 'weekly' ? Spacing.xl + 64 : Spacing.xl) + BOTTOM_NAV_HEIGHT }]}
         onPress={() => (tab === 'weekly' ? setShowAddSourceChooser(true) : setShowAddSheet(true))}
       >
         <Text style={styles.fabText}>+</Text>
