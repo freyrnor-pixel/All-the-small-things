@@ -32,9 +32,17 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build APK
-        run: eas build --platform android --profile preview --non-interactive
+      - name: Build APK (local)
+        run: npx eas-cli build --platform android --profile preview --local --non-interactive
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/*.apk
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Build complete
         run: |
-          echo "APK ready — download from https://expo.dev (project → Builds)"
+          echo "APK built locally and uploaded as artifact 'android-apk'"
