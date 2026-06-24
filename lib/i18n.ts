@@ -516,6 +516,8 @@ const en = {
   // --- W-D additions (health) ---
   healthSelfCareNote: 'Noting how you feel is an act of self-care.',
   noLogsGentle: 'No entries yet — log how you’re feeling when you’re ready.',
+  healthSeeAllHabits: 'See all habits',
+  healthAddHabit: 'Add habit',
   // --- end W-D additions ---
   // Habits — shame-free labels (Proposal 5)
   habits: {
@@ -1388,6 +1390,8 @@ const no: typeof en = {
   // --- W-D additions (health) ---
   healthSelfCareNote: 'Å legge merke til hvordan du har det er omsorg for deg selv.',
   noLogsGentle: 'Ingen oppføringer enda — logg hvordan du føler deg når du er klar.',
+  healthSeeAllHabits: 'Se alle vaner',
+  healthAddHabit: 'Legg til vane',
   // --- end W-D additions ---
   cover: {
     tasksToday: 'I dag',

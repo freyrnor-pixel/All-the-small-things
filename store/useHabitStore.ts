@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/id, lib/habitNotifications, store/useSettingsStore
- *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/settings.tsx
+ *   Used by → app/_layout.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/settings.tsx
  *   Data    → defines a Zustand store; owns SQLite tables habits and habit_logs; schedules per-habit daily notifications
  *
  * Edit notes:
