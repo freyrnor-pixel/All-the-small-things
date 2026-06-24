@@ -15,7 +15,7 @@
 ## Testing policy
 
 - No testing needed until further notice (no Jest runs, no live-app/browser verification).
-- Still always do regular checking: TypeScript typecheck (`npx tsc --noEmit`) and a quick read-through for bugs/dead code.
+- Still always do regular checking: manual read-through for bugs/dead code. (TypeScript typecheck via `npx tsc --noEmit` is not available in the remote environment since `node_modules` is not pre-installed.)
 
 ## Navigation: BottomNav is current, BubbleMenu is deferred
 
