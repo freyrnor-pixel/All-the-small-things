@@ -22,9 +22,11 @@
  *
  * Edit notes:
  *   - To add a screen, append a WHEEL_ITEMS entry AND add a matching key under t.nav in lib/i18n.ts.
- *   - Focus and Shared were removed as bubbles: Focus had no other entry point (app/focus.tsx
+ *   - Focus, Shared, and Plans were removed as bubbles: Focus had no other entry point (app/focus.tsx
  *     was deleted with it); Shared is now handled per-screen instead (components/SharedRequestsSection.tsx
- *     in app/shopping.tsx + app/index.tsx, with a link icon to the still-live /shared history screen).
+ *     in app/shopping.tsx + app/index.tsx, with a link icon to the still-live /shared history screen);
+ *     Plans has its own BottomNav tab (lib/siteNav.ts) and doesn't need a wheel bubble too.
+ *     WHEEL_ITEMS is back to 7 entries — the geometry comments/defaults below were tuned for that count.
  *   - Wheel geometry (radius/bubbleSize) is derived per-render from settings (default 88/58,
  *     clamped — see clamp() calls in BubbleMenu) instead of fixed module consts, so the debug
  *     overlay's "Bubble Wheel" tab can tune it live. DRAG_SENSITIVITY stays a fixed module
@@ -93,7 +95,6 @@ type Props = {
 
 const WHEEL_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color: string }[] = [
   { icon: 'add-outline',        labelKey: 'newTask', route: '/task-form', color: FeatureColors.task },
-  { icon: 'list-outline',       labelKey: 'plans',   route: '/plans',     color: FeatureColors.shared },
   { icon: 'cart-outline',       labelKey: 'shop',    route: '/shopping',  color: FeatureColors.shop },
   { icon: 'leaf-outline',       labelKey: 'habits',  route: '/habits',    color: FeatureColors.habits },
   { icon: 'heart-outline',      labelKey: 'health',  route: '/health',    color: FeatureColors.health },
@@ -105,7 +106,7 @@ const WHEEL_ITEMS: { icon: IoniconsName; labelKey: NavKey; route: string; color:
 const FAB_MARGIN_SIDE = 48; // must match sideStyle left/right value below — kept equal to styles.container's bottom (48) so the FAB sits the same distance from the bottom edge as the side edge
 const FAB_SIZE = 60;
 // Default orbit radius/bubble size for a fresh install with no settings row. Bumped up
-// from the original 78/50 — with fewer items (Focus/Shared removed) there's more room per
+// from the original 78/50 — with fewer items (Focus/Shared/Plans removed) there's more room per
 // bubble, so they read as bigger and easier to tap/read instead of "lifeless and small".
 // The orbit is always a true circle (one radius, not an ellipse) so bubble spacing is
 // uniform all the way around the wheel.
