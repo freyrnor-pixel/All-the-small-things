@@ -586,13 +586,18 @@ export default function ShoppingScreen() {
         catalogItems={catalogItems}
         onClose={() => setShowAddSourceChooser(false)}
         onConfirmInventoryPicks={(picks) => {
+          // Capture item names BEFORE updating status
+          const pickNames = picks.map(p => {
+            const item = items.find(i => i.id === p.id);
+            return item?.name;
+          });
+
           for (const pick of picks) {
             addToWeeklyFromCatalog(pick.id, pick.quantity);
           }
           success();
-          if (picks.length === 1) {
-            const picked = catalogItems.find((i) => i.id === picks[0].id);
-            if (picked) setConfirm(t.itemAddedToList(picked.name));
+          if (picks.length === 1 && pickNames[0]) {
+            setConfirm(t.itemAddedToList(pickNames[0]));
           } else if (picks.length > 1) {
             setConfirm(t.itemsAddedToList(picks.length));
           }
