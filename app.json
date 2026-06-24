@@ -46,8 +46,7 @@
       "expo-calendar",
       "expo-task-manager",
       "expo-background-task",
-      "expo-sensors",
-      "expo-haptics"
+      "expo-sensors"
     ],
     "ios": {
       "supportsTablet": false,
