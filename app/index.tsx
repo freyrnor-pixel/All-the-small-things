@@ -12,6 +12,9 @@
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
+ *   - Added ⚙ gear icon (header right) → /settings.
+ *   - "Today's Plans" title row is now pressable → /plans (chevron affordance).
+ *   - BubbleMenu mount remains commented out — do not remove.
  *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard right
  *     below it is purely the ⭐ focus-mode instruction (t.hints.home.text) — keep these
  *     two separate, don't recombine them into one string.
@@ -34,7 +37,6 @@
  *     gesture "back" from any site returns straight to Home. The ScrollView is wrapped in
  *     SiteSwipeView so swiping left/right also moves between sites (vertical scroll still native).
  *   - SharedRequestsSection (kind='task') sits right under InboxSection — inline accept/dismiss for tasks a partner asked for via the scan flow, replacing the old bubble-wheel "Shared" entry.
- *   - Settings gear is absolutely positioned top-right (zIndex 10); navigates to /settings.
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
  *   - Pet companion is shown when settings.petEnabled (set during onboarding step6 or via Settings).
@@ -54,11 +56,6 @@
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
  *     it looks unused; it's a re-render trigger + a useMemo dep.
- *   - BubbleMenu is disabled (commented out, not deleted — see the TODO at its old mount point);
- *     BottomNav (Home/Shopping/Meals/Health/Habits) replaces it as the nav entry point. This
- *     also removes BubbleMenu's center-button trigger for QuickAddSheet — quickAddVisible/
- *     setQuickAddVisible and the <QuickAddSheet> mount are kept (task creation still works via
- *     /task-form), but the sheet itself has no UI entry point until the menu is redesigned.
  *   - Shopping preview shows weekly items unchecked-first then checked/in-cart, capped at
  *     PREVIEW_LIMIT total. Tapping a row calls toggleCheck directly — it flips `checked`
  *     immediately (no staging/Save step), same as app/shopping.tsx. The "Save changes" pill
@@ -347,9 +344,10 @@ export default function HomeScreen() {
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
                 onPress={() => goToSite(router, pathname, '/settings')}
-                accessibilityLabel="Settings"
+                accessibilityLabel={t.nav.settingsLabel}
+                hitSlop={12}
               >
-                <Ionicons name="settings-outline" size={20} color={theme.textLight} />
+                <Ionicons name="settings-outline" size={22} color={theme.textLight} />
               </Pressable>
             </View>
           </View>
@@ -376,10 +374,16 @@ export default function HomeScreen() {
         {/* Plans — unified preview of today's agenda; tap the title for the full /plans screen */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Pressable style={{ flex: 1 }} onPress={() => goToSite(router, pathname, '/plans')}>
+            <Pressable
+              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+              onPress={() => goToSite(router, pathname, '/plans')}
+              accessibilityRole="button"
+              accessibilityLabel={t.home.seeAllPlans}
+            >
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 {settings.essentialsModeEnabled ? t.essentialPlansTitle : t.plansTitle}
               </Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
             </Pressable>
             <View style={styles.sectionActions}>
               <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
