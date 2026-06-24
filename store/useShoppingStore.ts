@@ -40,8 +40,10 @@
  *     as an existing row bumps that row's targetQuantity (catalog) or amount
  *     (weekly/inWeeklyList) instead of inserting a new row — never assume add()
  *     always returns a freshly created id.
+ *   - toggleCheck(id) flips `checked` immediately — a single tap moves an item straight
+ *     into the cart, no separate staging/confirm step.
  *   - collected = "checked off while sitting in the cart" (cart-only UI state, distinct
- *     from checked/pending which mean "moved to cart"). fromCatalog = true means this
+ *     from checked, which means "moved to cart"). fromCatalog = true means this
  *     row originated from the standing Katalog (status started as 'catalog'); it powers
  *     the monthly reset summary's inventory-vs-ad-hoc split (buildMonthlyResetSummary()).
  *     Call buildMonthlyResetSummary() BEFORE monthlyReset() — reset clears the very
@@ -135,17 +137,14 @@ type ShoppingAddInput = Omit<ShoppingItem, 'id' | 'checked' | 'category' | 'mont
 type ShoppingStore = {
   items: ShoppingItem[];
   trips: ShoppingTrip[];
-  pending: Set<string>;
   load: () => void;
   add: (item: ShoppingAddInput) => string;
   update: (id: string, patch: Partial<Omit<ShoppingItem, 'id'>>) => void;
   toggleCheck: (id: string) => void;
-  confirmPending: () => void;
   remove: (id: string) => void;
   removeWithSource: (id: string) => void;
   adjustAmount: (id: string, delta: number) => void;
   resetWeekly: () => void;
-  getPendingCount: () => number;
   // New katalog/ukeliste pipeline actions
   setPendingRestock: (id: string, pending: boolean) => void;
   confirmStagingTray: () => void;
@@ -275,7 +274,6 @@ function mergeDuplicateItems(items: ShoppingItem[]): ShoppingItem[] {
 export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   items: [],
   trips: [],
-  pending: new Set(),
 
   load() {
     const items = loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' });
@@ -348,28 +346,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   toggleCheck(id) {
     const item = get().items.find((i) => i.id === id);
     if (!item) return;
-    set((s) => {
-      const newPending = new Set(s.pending);
-      if (newPending.has(id)) {
-        newPending.delete(id);
-      } else {
-        newPending.add(id);
-      }
-      return { pending: newPending };
-    });
-  },
-
-  confirmPending() {
-    const { pending } = get();
-    if (pending.size === 0) return;
-
-    for (const id of pending) {
-      const item = get().items.find((i) => i.id === id);
-      if (!item) continue;
-      get().update(id, { checked: !item.checked });
-    }
-
-    set({ pending: new Set() });
+    get().update(id, { checked: !item.checked });
   },
 
   remove(id) {
@@ -412,10 +389,6 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     } else {
       get().update(id, { amount: String(next) });
     }
-  },
-
-  getPendingCount() {
-    return get().pending.size;
   },
 
   resetWeekly() {

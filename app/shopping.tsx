@@ -30,7 +30,8 @@
  *   - The automatic payday-boundary reset (once per month, when today's day-of-month >= monthlyResetDate) calls buildMonthlyResetSummary() FIRST (captured into state and shown via MonthlyResetSummaryModal), then monthlyReset() — there is no carry-over prompt any more (CarryOverPromptModal was removed; isTemporary items are always purged on reset, per the redesign's simpler model).
  *   - The 'shopping_opened' trigger fires once per mount ([] deps).
  *   - Add sheet (components/AddItemSheet.tsx) supports an "also add to catalog" toggle only when opened from the Ukeliste tab — interpreted as: the new item is created directly with status='inWeeklyList', and when the toggle is on, a SECOND permanent catalog row (status='catalog', pendingRestock=false) is also created with the same name/price/targetQuantity, so it persists for future weeks without being purchased=true this trip.
- *   - The bottom Save(n) button (confirmPending) only ever reflects weekly-tab toggle staging (toggleCheck/pending Set) — scoped to `tab === 'weekly'` so it never shows up looking ambiguous on the Katalog tab.
+ *   - Checking a weekly-tab row (toggle -> toggleCheck) flips `checked` immediately — there
+ *     is no separate staging/confirm step; the row moves straight into the cart section.
  *   - The "Handlingen fullført" sticky button is always rendered on the Ukeliste tab (never
  *     conditionally hidden); when the cart (weeklyChecked) is empty it's dimmed to opacity 0.4
  *     and non-interactive (disabled + pointerEvents="none") rather than removed. handleDoneShopping
@@ -115,8 +116,6 @@ export default function ShoppingScreen() {
   const doneShopping = useShoppingStore((s) => s.doneShopping);
   const monthlyReset = useShoppingStore((s) => s.monthlyReset);
   const buildMonthlyResetSummary = useShoppingStore((s) => s.buildMonthlyResetSummary);
-  const shoppingPendingCount = useShoppingStore((s) => s.getPendingCount());
-  const confirmShoppingPending = useShoppingStore((s) => s.confirmPending);
   const monthlyResetDate = useSettingsStore((s) => s.monthlyResetDate);
   const lastMonthlyReset = useSettingsStore((s) => s.lastMonthlyReset);
   const updateSettings = useSettingsStore((s) => s.update);
@@ -533,18 +532,6 @@ export default function ShoppingScreen() {
             </>
           )}
 
-          {tab === 'weekly' && shoppingPendingCount > 0 && (
-            <View style={[styles.saveButtonSection, { paddingBottom: Spacing.md }]}>
-              <Pressable
-                style={[styles.saveButton, { backgroundColor: theme.green }]}
-                onPress={confirmShoppingPending}
-              >
-                <Text style={styles.saveButtonText}>{t.save}</Text>
-                <Text style={styles.saveButtonCount}>({shoppingPendingCount})</Text>
-              </Pressable>
-            </View>
-          )}
-
           <View style={{ height: 100 }} />
         </ScrollView>
         </SiteSwipeView>
@@ -697,9 +684,4 @@ const baseStyles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
-
-  saveButtonSection: { paddingHorizontal: Spacing.md },
-  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
-  saveButtonText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
-  saveButtonCount: { color: '#fff', fontWeight: '600', fontSize: FontSize.sm },
 });

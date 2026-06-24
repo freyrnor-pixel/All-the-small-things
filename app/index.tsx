@@ -9,7 +9,7 @@
  * Connections:
  *   Imports → components/AppModal, components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items + pending) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
  *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard right
@@ -60,8 +60,9 @@
  *     setQuickAddVisible and the <QuickAddSheet> mount are kept (task creation still works via
  *     /task-form), but the sheet itself has no UI entry point until the menu is redesigned.
  *   - Shopping preview shows weekly items unchecked-first then checked/in-cart, capped at
- *     PREVIEW_LIMIT total, reading the same `pending`/`checked` state app/shopping.tsx uses —
- *     checking an item here goes through the same pending→Save flow as the rest of the app.
+ *     PREVIEW_LIMIT total. Tapping a row calls toggleCheck directly — it flips `checked`
+ *     immediately (no staging/Save step), same as app/shopping.tsx. The "Save changes" pill
+ *     near the bottom of this screen only ever reflects task pending count now.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -139,10 +140,7 @@ export default function HomeScreen() {
   const taskPendingCount = useTaskStore((s) => s.getPendingCount());
   const confirmTasksPending = useTaskStore((s) => s.confirmPending);
   const shoppingItems = useShoppingStore((s) => s.items);
-  const shoppingPending = useShoppingStore((s) => s.pending);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
-  const shoppingPendingCount = useShoppingStore((s) => s.getPendingCount());
-  const confirmShoppingPending = useShoppingStore((s) => s.confirmPending);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const energyLevels = useEnergyStore((s) => s.levels);
@@ -274,12 +272,9 @@ export default function HomeScreen() {
     if (taskPendingCount > 0) {
       confirmTasksPending();
     }
-    if (shoppingPendingCount > 0) {
-      confirmShoppingPending();
-    }
   }
 
-  const totalPendingCount = taskPendingCount + shoppingPendingCount;
+  const totalPendingCount = taskPendingCount;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -496,35 +491,32 @@ export default function HomeScreen() {
             </Surface>
           ) : (
             <Surface style={styles.card}>
-              {weeklyPreview.map((item) => {
-                const isItemPending = shoppingPending.has(item.id);
-                return (
-                  <Pressable
-                    key={item.id}
-                    style={[styles.shoppingPreviewRow, isItemPending && { opacity: 0.5 }]}
-                    onPress={() => toggleShoppingItem(item.id)}
+              {weeklyPreview.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={[styles.shoppingPreviewRow, item.checked && { opacity: 0.5 }]}
+                  onPress={() => toggleShoppingItem(item.id)}
+                >
+                  <View
+                    style={[
+                      styles.shoppingCheck,
+                      { borderColor: theme.green },
+                      item.checked && { backgroundColor: theme.green },
+                    ]}
                   >
-                    <View
-                      style={[
-                        styles.shoppingCheck,
-                        { borderColor: theme.green },
-                        item.checked && { backgroundColor: theme.green },
-                      ]}
-                    >
-                      {item.checked && <Ionicons name="checkmark" size={12} color={theme.white} />}
-                    </View>
-                    <Text
-                      style={[
-                        styles.shoppingPreviewName,
-                        { color: theme.text },
-                        (item.checked || isItemPending) && { color: theme.gray, textDecorationLine: 'line-through' },
-                      ]}
-                    >
-                      {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                    {item.checked && <Ionicons name="checkmark" size={12} color={theme.white} />}
+                  </View>
+                  <Text
+                    style={[
+                      styles.shoppingPreviewName,
+                      { color: theme.text },
+                      item.checked && { color: theme.gray, textDecorationLine: 'line-through' },
+                    ]}
+                  >
+                    {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
+                  </Text>
+                </Pressable>
+              ))}
               {weeklyTotal > weeklyPreview.length && (
                 <Text style={[styles.moreText, { color: theme.textLight }]}>
                   {t.moreItems(weeklyTotal - weeklyPreview.length)}
