@@ -11,10 +11,10 @@
  *
  * Edit notes:
  *   - `variant` drives the leading button: 'planned' shows a checkbox — unchecked is an
- *     outlined "+" (calls onToggle, which stages the item into the pending/cart-staging
- *     Set in useShoppingStore); once staged (isPending) it renders filled/checked with
- *     the item name struck through + dimmed, same look as the other "in cart" states
- *     below, and tapping again un-stages it. 'cart' shows the "collected" checkbox (filled
+ *     outlined "+" (calls onToggle, which flips item.checked immediately via
+ *     useShoppingStore.toggleCheck — no separate confirm step); once checked it renders
+ *     filled/checked with the item name struck through + dimmed, same look as the other
+ *     "in cart" states below, and tapping again unchecks it. 'cart' shows the "collected" checkbox (filled
  *     checkmark + strikethrough + CHECKED_OPACITY when item.collected, calls onCollect) —
  *     moving a cart item back to planned is a separate trailing "undo" icon (calls
  *     onToggle), so collecting and un-cart-ing don't share a button any more; 'purchased'
@@ -40,7 +40,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ShoppingItem, useShoppingStore } from '@/store/useShoppingStore';
+import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import InventoryIcon from '@/components/InventoryIcon';
@@ -62,10 +62,9 @@ type Props = {
 
 export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, inStockLabel }: Props) {
   const styles = useScaledStyles(baseStyles);
-  const isPending = useShoppingStore((s) => s.pending.has(item.id));
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
-  const dimmed = variant === 'purchased' || (variant === 'cart' && item.collected) || (variant === 'planned' && isPending);
+  const dimmed = variant === 'purchased' || (variant === 'cart' && item.collected) || (variant === 'planned' && item.checked);
 
   const priceTotal = item.price > 0 && isNumeric ? item.price * qty : null;
 
@@ -80,7 +79,7 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
       <Pressable
         style={[
           styles.check,
-          variant === 'planned' && (isPending
+          variant === 'planned' && (item.checked
             ? { backgroundColor: theme.green, borderColor: theme.green }
             : { borderColor: theme.green }),
           variant === 'cart' && (item.collected
@@ -92,7 +91,7 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
         disabled={variant === 'purchased'}
         hitSlop={6}
       >
-        {variant === 'planned' && (isPending
+        {variant === 'planned' && (item.checked
           ? <Ionicons name="checkmark" size={14} color={theme.white} />
           : <Ionicons name="add" size={16} color={theme.green} />)}
         {variant === 'cart' && item.collected && <Ionicons name="checkmark" size={14} color={theme.white} />}
