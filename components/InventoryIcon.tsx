@@ -10,11 +10,11 @@
  *   Data    → none
  *
  * Edit notes:
- *   - Placeholder only (per product note) — swap the Ionicons name here when a
- *     real icon is ready, not at each call site.
+ *   - Cardboard-box glyph (MaterialCommunityIcons "package-variant-closed") — swap
+ *     the name here when a custom icon is ready, not at each call site.
  */
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type Props = {
   size?: number;
@@ -22,5 +22,5 @@ type Props = {
 };
 
 export default function InventoryIcon({ size = 18, color }: Props) {
-  return <Ionicons name="cube" size={size} color={color} />;
+  return <MaterialCommunityIcons name="package-variant-closed" size={size} color={color} />;
 }
