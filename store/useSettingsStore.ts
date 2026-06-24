@@ -97,6 +97,11 @@ export type Settings = {
   bubbleAnimSpeed: number;
   // Last payday-boundary monthly reset, as YYYY-MM-DD; drives the automatic reset check in app/shopping.tsx
   lastMonthlyReset: string;
+  // Permission toggles (permission pre-bake)
+  locationEnabled: boolean;
+  backgroundLocationEnabled: boolean;
+  calendarSyncEnabled: boolean;
+  voiceNotesEnabled: boolean;
 };
 
 type SettingsStore = Settings & {
@@ -165,6 +170,10 @@ function rowToSettings(row: Row): Settings {
     bubbleSpringIntensity: readReal(row, 'bubble_spring_intensity', 50),
     bubbleAnimSpeed: readReal(row, 'bubble_anim_speed', 50),
     lastMonthlyReset: readStr(row, 'last_monthly_reset'),
+    locationEnabled: readBool(row, 'location_enabled'),
+    backgroundLocationEnabled: readBool(row, 'background_location_enabled'),
+    calendarSyncEnabled: readBool(row, 'calendar_sync_enabled'),
+    voiceNotesEnabled: readBool(row, 'voice_notes_enabled'),
   };
 }
 
@@ -214,6 +223,10 @@ const SETTINGS_COLUMNS: FieldMap<Settings> = {
   bubbleSpringIntensity: { col: 'bubble_spring_intensity' },
   bubbleAnimSpeed: { col: 'bubble_anim_speed' },
   lastMonthlyReset: { col: 'last_monthly_reset' },
+  locationEnabled: { col: 'location_enabled', to: bool },
+  backgroundLocationEnabled: { col: 'background_location_enabled', to: bool },
+  calendarSyncEnabled: { col: 'calendar_sync_enabled', to: bool },
+  voiceNotesEnabled: { col: 'voice_notes_enabled', to: bool },
 };
 
 export const useSettingsStore = create<SettingsStore>((set) => ({
@@ -260,6 +273,10 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   bubbleSpringIntensity: 50,
   bubbleAnimSpeed: 50,
   lastMonthlyReset: '',
+  locationEnabled: false,
+  backgroundLocationEnabled: false,
+  calendarSyncEnabled: false,
+  voiceNotesEnabled: false,
   loaded: false,
   workModeSessionOverride: false,
 
