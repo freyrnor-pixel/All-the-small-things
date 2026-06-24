@@ -18,6 +18,9 @@
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
+ *   - Added quick-action buttons for Scan (→ /scan) and Budget (→ /budget) at the top of the
+ *     scroll content (both tabs). These routes are no longer in the nav bar; Shopping is their
+ *     entry point. Uses t.nav.scan/t.nav.budget (already existed) rather than new i18n keys.
  *   - All visible strings go through useT().
  *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it
  *     goes to /shared via goToSite() (lib/siteNav.ts), keeping the nav stack shallow; the pencil icon
@@ -333,6 +336,27 @@ export default function ShoppingScreen() {
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <SiteSwipeView>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {/* Quick actions */}
+          <View style={styles.quickActions}>
+            <Pressable
+              onPress={() => goToSite(router, pathname, '/scan')}
+              style={[styles.quickAction, { backgroundColor: theme.white }]}
+              accessibilityLabel={t.nav.scan}
+            >
+              <Ionicons name="camera-outline" size={22} color={theme.textLight} />
+              <Text style={[styles.quickActionLabel, { color: theme.text }]}>{t.nav.scan}</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => goToSite(router, pathname, '/budget')}
+              style={[styles.quickAction, { backgroundColor: theme.white }]}
+              accessibilityLabel={t.nav.budget}
+            >
+              <Ionicons name="wallet-outline" size={22} color={theme.textLight} />
+              <Text style={[styles.quickActionLabel, { color: theme.text }]}>{t.nav.budget}</Text>
+            </Pressable>
+          </View>
+
           <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
 
           <SharedRequestsSection kind="shopping" />
@@ -631,6 +655,18 @@ const baseStyles = StyleSheet.create({
 
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
+
+  quickActions: { flexDirection: 'row', gap: Spacing.sm },
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: Spacing.xs + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.full,
+    ...Shadow.card,
+  },
+  quickActionLabel: { fontSize: FontSize.sm, fontWeight: '600' },
 
   banner: { borderRadius: Radius.md, padding: Spacing.sm },
   bannerText: { fontSize: FontSize.xs, fontWeight: '600' },
