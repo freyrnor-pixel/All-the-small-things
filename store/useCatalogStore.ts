@@ -13,7 +13,7 @@
  * Edit notes:
  *   - seedCatalog() runs on every load() and uses stable name-derived IDs ('cat_<name>') with INSERT OR IGNORE — safe to re-run, but renaming seed items orphans old rows.
  *   - price_source ('seed' | 'purchase') tracks where a row's price came from: seedCatalog() keeps 'seed' rows in sync with lib/catalogSeed.ts on every load, but never overwrites a price once a real purchase sets it to 'purchase'.
- *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/price/category.
+ *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/category, but only raises price — a new purchase price below the existing catalog price never lowers it (store/category still update unconditionally).
  *   - recordPurchases()'s optional receiptId (AP-06B) links each purchase_log row to a store/useReceiptStore.ts receipt for the budget screen — pass it whenever app/scan.tsx has already created the receipt; omit it for purchases with no receipt (e.g. manual catalog edits).
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  */
@@ -129,19 +129,23 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
 
       const idx = next.findIndex((i) => i.name.toLowerCase() === name.toLowerCase());
       if (idx >= 0) {
+        // Catalog price only ever moves up from a real purchase — a lower price
+        // on a later receipt (sale, different store) doesn't overwrite the
+        // catalog's known price.
+        const priceIncreased = p.price > next[idx].price;
         const merged: StoreItem = {
           ...next[idx],
           store: p.store || next[idx].store,
-          price: p.price > 0 ? p.price : next[idx].price,
+          price: priceIncreased ? p.price : next[idx].price,
           category: p.category ?? next[idx].category,
         };
         next[idx] = merged;
         try {
           db.runSync(
             `UPDATE store_items SET store = ?, price = ?, category = ?, last_updated = ?,
-              price_source = CASE WHEN ? > 0 THEN 'purchase' ELSE price_source END
+              price_source = CASE WHEN ? THEN 'purchase' ELSE price_source END
              WHERE id = ?`,
-            [merged.store, merged.price, merged.category, now, p.price, merged.id]
+            [merged.store, merged.price, merged.category, now, priceIncreased ? 1 : 0, merged.id]
           );
         } catch { /* ignore */ }
       } else {
