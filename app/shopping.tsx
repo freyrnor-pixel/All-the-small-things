@@ -52,6 +52,8 @@
  *     for >1 item (itemsAddedToList) vs. the singular one (itemAddedToList).
  *   - The FAB and the "Handlingen fullført" sticky footer are offset above BOTTOM_NAV_HEIGHT
  *     (from components/BottomNav.tsx) so they don't overlap the bottom nav bar.
+ *   - Design system pass: all fontWeight string literals replaced with Fonts.* tokens;
+ *     tab/quickAction/tray-confirm/done-shopping touch targets bumped to minHeight 44.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -317,7 +319,7 @@ export default function ShoppingScreen() {
               <Text style={[
                 styles.tabText,
                 { color: isActive ? accent : theme.textLight },
-                isActive && { fontWeight: '700' },
+                isActive && { fontFamily: Fonts.bold },
               ]}>
                 {tabOption === 'weekly' ? t.weeklyTabLabel : t.monthlyTabLabel}
               </Text>
@@ -636,7 +638,7 @@ const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   shareHeaderBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
-  shareHeaderBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
+  shareHeaderBtnText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
 
   tabsContainer: { flexDirection: 'row', borderBottomWidth: 1, paddingHorizontal: Spacing.md },
   tab: {
@@ -644,14 +646,15 @@ const baseStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
     paddingVertical: Spacing.sm + 2,
     gap: Spacing.xs,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabText: { fontSize: FontSize.sm, fontWeight: '600' },
+  tabText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   tabBadge: { minWidth: 18, height: 18, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  tabBadgeText: { fontSize: 10, fontWeight: '700' },
+  tabBadgeText: { fontSize: 10, fontFamily: Fonts.bold },
 
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
@@ -661,22 +664,23 @@ const baseStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    minHeight: 44,
     paddingVertical: Spacing.xs + 2,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.full,
     ...Shadow.card,
   },
-  quickActionLabel: { fontSize: FontSize.sm, fontWeight: '600' },
+  quickActionLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
 
   banner: { borderRadius: Radius.md, padding: Spacing.sm },
-  bannerText: { fontSize: FontSize.xs, fontWeight: '600' },
+  bannerText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
 
   trayCard: { borderRadius: Radius.md, borderWidth: 2, padding: Spacing.md, gap: Spacing.xs },
-  trayHeader: { fontSize: FontSize.sm, fontWeight: '700', marginBottom: Spacing.xs },
+  trayHeader: { fontSize: FontSize.sm, fontFamily: Fonts.bold, marginBottom: Spacing.xs },
   trayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   trayItemName: { flex: 1, fontSize: FontSize.sm },
-  trayConfirmBtn: { borderRadius: Radius.md, paddingVertical: Spacing.sm, alignItems: 'center', marginTop: Spacing.sm },
-  trayConfirmText: { color: '#fff', fontWeight: '700', fontSize: FontSize.sm },
+  trayConfirmBtn: { borderRadius: Radius.md, paddingVertical: Spacing.sm, alignItems: 'center', marginTop: Spacing.sm, minHeight: 44, justifyContent: 'center' },
+  trayConfirmText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.sm },
 
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
   cardAccent: { borderLeftWidth: 3 },
@@ -684,17 +688,17 @@ const baseStyles = StyleSheet.create({
   section: { gap: Spacing.xs },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
   sectionRule: { flex: 1, height: 2, borderRadius: Radius.full, opacity: 0.4 },
-  sectionLabel: { fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
   dishGroupHeader: { paddingTop: Spacing.sm, paddingBottom: 2 },
   dishGroupName: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   dishGroupMeta: { fontSize: FontSize.xs, marginTop: 1 },
 
-  disclosureChevron: { fontSize: FontSize.sm, fontWeight: '700' },
-  weekLabel: { fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  disclosureChevron: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
+  weekLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
 
   weeklyEmptyExtra: { alignItems: 'center', gap: Spacing.sm, marginTop: -Spacing.lg },
   weeklyEmptySubtitle: { fontSize: FontSize.sm, textAlign: 'center' },
-  goToCatalogText: { fontSize: FontSize.sm, fontWeight: '700' },
+  goToCatalogText: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
 
   stickyFooter: {
     position: 'absolute',
@@ -702,8 +706,8 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
   },
-  doneShoppingBtn: { borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', ...Shadow.fab },
-  doneShoppingText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
+  doneShoppingBtn: { borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', minHeight: 44, ...Shadow.fab },
+  doneShoppingText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
 
   fab: {
     position: 'absolute',
@@ -719,5 +723,5 @@ const baseStyles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
+  fabText: { color: '#fff', fontSize: 28, fontFamily: Fonts.bold, lineHeight: 32 },
 });
