@@ -435,7 +435,7 @@ export default function ScanScreen() {
       <SafeAreaView style={styles.safe}>
         <ScreenBackground />
         <View style={styles.scanningContainer}>
-          <Animated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }] }]}>
+          <Animated.View style={[styles.pulseCircle, { backgroundColor: theme.orangeLight, transform: [{ scale: pulseAnim }] }]}>
             <Ionicons name="camera-outline" size={42} color={theme.orange} />
           </Animated.View>
           <Text style={[styles.scanningTitle, { color: theme.text }]}>{t.analysingReceipt}</Text>
@@ -491,7 +491,7 @@ export default function ScanScreen() {
               <Text style={styles.confirmButtonText}>{t.addToListButton(selectedCount)}</Text>
             </Pressable>
 
-            <Pressable style={styles.cancelButton} onPress={() => {
+            <Pressable style={[styles.cancelButton, { borderColor: theme.border }]} onPress={() => {
               setMode('idle');
               setImageUri(null);
               setParsedItems([]);
@@ -550,7 +550,7 @@ export default function ScanScreen() {
                 </Text>
               </Pressable>
 
-              <Pressable style={styles.cancelButton} onPress={() => {
+              <Pressable style={[styles.cancelButton, { borderColor: theme.border }]} onPress={() => {
                 setMode('idle');
                 setManualText('');
                 setImageUri(null);
@@ -674,6 +674,7 @@ const baseStyles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cancelButtonText: { fontSize: FontSize.md, fontWeight: '600' },
 
