@@ -15,7 +15,7 @@
  *   - `active` adds primary-colored background + border to show state.
  */
 import React from 'react';
-import { StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, StyleProp, ViewStyle, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Radius } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
@@ -80,8 +80,6 @@ export default function IconButton({
     </PressableScale>
   );
 }
-
-import { View } from 'react-native';
 
 const styles = StyleSheet.create({
   hit: {
