@@ -415,6 +415,7 @@ export default function HomeScreen() {
               <DayTimeline
                 tasks={plansTasks}
                 onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
+                onToggle={(task) => handleToggleTask(task.id)}
               />
             </Surface>
           )}

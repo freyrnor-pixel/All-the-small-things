@@ -34,6 +34,7 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
+import { dateStr } from '@/lib/date';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { syncHabitReminder as scheduleHabitReminder, cancelHabitReminders } from '@/lib/habitNotifications';
 
@@ -167,7 +168,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   load() {
     const since = new Date();
     since.setDate(since.getDate() - 35);
-    const sinceStr = since.toISOString().slice(0, 10);
+    const sinceStr = dateStr(since); // local date, matching log_date storage (see lib/db.ts pruneOldData)
     set({
       habits: loadAll('habits', rowToHabit, { where: 'active = 1', orderBy: 'routine_order, created_at' }),
       logs: loadAll('habit_logs', rowToLog, { where: 'log_date >= ?', params: [sinceStr] }),

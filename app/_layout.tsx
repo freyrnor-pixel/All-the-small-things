@@ -8,7 +8,8 @@
  * notification permission it re-syncs all reminders/notifications to the loaded data
  * and language, registers the interactive "Done"/"Remind me later" notification
  * action buttons (syncNotificationCategories) and listens for taps on them
- * (onNotificationAction), and keeps the persistent "today's overview" notification
+ * (onNotificationAction — "Done" calls completeDirect() so the toggle persists to SQLite
+ * immediately, since there's no Save step to trigger a confirm), and keeps the persistent "today's overview" notification
  * (if enabled) refreshed as tasks/shopping change.
  * Defines the expo-router Stack and per-screen options, redirects to onboarding
  * until setup is complete, mounts the global DebugOverlay when debug mode is on and the
@@ -193,13 +194,14 @@ export default function RootLayout() {
     });
   }, []);
 
-  // Interactive notification action buttons (AP-05): "Done" toggles the task in
-  // place; "Remind me later" snoozes a follow-up via scheduleReNudge. Mounted
+  // Interactive notification action buttons (AP-05): "Done" completes the task
+  // directly (persists to SQLite, fires the automation trigger); "Remind me later"
+  // snoozes a follow-up via scheduleReNudge. Mounted
   // once — onNotificationAction reads fresh store state per tap, not a closure.
   useEffect(() => {
     return onNotificationAction((action, taskId) => {
       if (action === 'done') {
-        useTaskStore.getState().toggle(taskId);
+        useTaskStore.getState().completeDirect(taskId);
         return;
       }
       const task = useTaskStore.getState().tasks.find((tk) => tk.id === taskId);
