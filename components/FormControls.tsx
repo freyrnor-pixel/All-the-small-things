@@ -76,13 +76,15 @@ type SwitchProps = {
 export function Switch({ checked, onChange, disabled }: SwitchProps) {
   const theme = useAppTheme();
   return (
-    <RNSwitch
-      value={checked}
-      onValueChange={onChange}
-      disabled={disabled}
-      trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
-      thumbColor={checked ? theme.orange : theme.white}
-    />
+    <View style={styles.switchRow}>
+      <RNSwitch
+        value={checked}
+        onValueChange={onChange}
+        disabled={disabled}
+        trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+        thumbColor={checked ? theme.orange : theme.white}
+      />
+    </View>
   );
 }
 
@@ -171,16 +173,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: Radius.sm,
     padding: 4,
+    minHeight: 44,
   },
   segment: {
     flex: 1,
-    minHeight: 36,
+    minHeight: 40,
     borderRadius: Radius.sm - 2,
     alignItems: 'center',
     justifyContent: 'center',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12,
     shadowRadius: 3,
+  },
+  switchRow: {
+    minHeight: 44,
+    justifyContent: 'center',
   },
   segmentLabel: {
     fontSize: FontSize.sm,
