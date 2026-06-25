@@ -22,6 +22,10 @@
  *     count/dailyGoal). The chevron header links to the full /habits screen; the add row pushes
  *     the shared /habit-form modal. Full streak/expand/rest-day UI stays on /habits — keep this
  *     inline view light.
+ *   - Design system pass: removed static Colors.* fallbacks from baseStyles (theme.* was
+ *     already applied inline everywhere except saveBtnText/adjBtnPlusText, now fixed);
+ *     fontWeight string literals replaced with Fonts.* tokens; dropped unused back/title
+ *     styles (superseded by ScreenHeader).
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -50,7 +54,7 @@ import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { useT } from '@/lib/i18n';
 import { todayStr, getWeekDates } from '@/lib/date';
-import { Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 // W-D: soft purple→blue severity family. Lighter (mild) → deeper (severe) without
@@ -243,7 +247,7 @@ export default function HealthScreen() {
                 <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
               </Pressable>
               <Pressable style={[styles.saveBtn, { backgroundColor: theme.orange }]} onPress={save}>
-                <Text style={styles.saveBtnText}>{t.save}</Text>
+                <Text style={[styles.saveBtnText, { color: theme.white }]}>{t.save}</Text>
               </Pressable>
             </View>
           </Surface>
@@ -322,7 +326,7 @@ export default function HealthScreen() {
                     onPress={() => incrementHabit(habit.id, today)}
                     hitSlop={8}
                   >
-                    <Text style={styles.adjBtnPlusText}>+</Text>
+                    <Text style={[styles.adjBtnPlusText, { color: theme.white }]}>+</Text>
                   </Pressable>
                 </View>
               );
@@ -350,24 +354,21 @@ export default function HealthScreen() {
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.md,
   },
-  back: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.text },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
   overviewCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
     ...Shadow.card,
   },
-  sectionLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: Spacing.xs },
+  sectionLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold, marginBottom: Spacing.xs },
   overviewAilment: { marginTop: Spacing.sm },
   overviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   ailmentWeekStrip: {
@@ -377,9 +378,9 @@ const baseStyles = StyleSheet.create({
     paddingLeft: 2,
   },
   ailmentDotCol: { alignItems: 'center', gap: 2 },
-  ailmentDayAbbr: { fontSize: 7, color: Colors.textLight, fontWeight: '600' },
+  ailmentDayAbbr: { fontSize: 7, fontFamily: Fonts.semibold },
   ailmentDot: { width: 9, height: 9, borderRadius: Radius.full, borderWidth: 1.5 },
-  overviewName: { fontSize: FontSize.sm, color: Colors.text, width: 100 },
+  overviewName: { fontSize: FontSize.sm, width: 100 },
   overviewBar: {
     flex: 1,
     height: 8,
@@ -387,25 +388,24 @@ const baseStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   overviewFill: { height: 8, borderRadius: Radius.full },
-  overviewCount: { fontSize: FontSize.xs, color: Colors.textLight, width: 28, textAlign: 'right' },
+  overviewCount: { fontSize: FontSize.xs, width: 28, textAlign: 'right' },
   addTrigger: {
     padding: Spacing.md,
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  addTriggerText: { fontSize: FontSize.md, color: Colors.orange, fontWeight: '600' },
+  addTriggerText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   addCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
     ...Shadow.card,
   },
-  formLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
+  formLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   input: {
-    backgroundColor: Colors.offWhite,
     borderRadius: Radius.sm,
     padding: Spacing.sm,
     fontSize: FontSize.md,
-    color: Colors.text,
     marginTop: 4,
   },
   notesInput: { minHeight: 80, textAlignVertical: 'top' },
@@ -428,8 +428,8 @@ const baseStyles = StyleSheet.create({
     gap: 2,
   },
   severityActive: { borderWidth: 2 },
-  severityNum: { fontSize: FontSize.lg, fontFamily: Fonts.bold, fontWeight: '700' },
-  severityTargetLabel: { fontSize: 11, fontFamily: Fonts.semibold, fontWeight: '600', textAlign: 'center' },
+  severityNum: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
+  severityTargetLabel: { fontSize: 11, fontFamily: Fonts.semibold, textAlign: 'center' },
   selfCareNote: {
     fontSize: FontSize.xs,
     fontStyle: 'italic',
@@ -444,40 +444,39 @@ const baseStyles = StyleSheet.create({
     gap: Spacing.md,
     marginTop: Spacing.md,
   },
-  cancelText: { fontSize: FontSize.md, color: Colors.textLight },
+  cancelText: { fontSize: FontSize.md },
   saveBtn: {
-    backgroundColor: Colors.orange,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  saveBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  saveBtnText: { fontFamily: Fonts.bold, fontSize: FontSize.md },
   emptyCard: {
-    backgroundColor: Colors.offWhite,
     borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
   },
-  emptyText: { fontSize: FontSize.sm, color: Colors.textLight },
+  emptyText: { fontSize: FontSize.sm },
   logCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
     borderLeftWidth: 4,
     ...Shadow.card,
   },
   logTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  logAilment: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  logDate: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
+  logAilment: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
+  logDate: { fontSize: FontSize.xs, marginTop: 2 },
   logRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   severityBadge: {
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
-  severityBadgeText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  removeText: { fontSize: 20, color: Colors.gray },
-  logNotes: { fontSize: FontSize.sm, color: Colors.textLight, marginTop: Spacing.sm },
+  severityBadgeText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
+  removeText: { fontSize: 20 },
+  logNotes: { fontSize: FontSize.sm, marginTop: Spacing.sm },
   section: { gap: Spacing.sm },
   sectionHeader: {
     flexDirection: 'row',
@@ -493,22 +492,22 @@ const baseStyles = StyleSheet.create({
   habitName: {
     flex: 1,
     fontSize: FontSize.sm,
-    color: Colors.text,
   },
-  habitCount: { fontSize: FontSize.xs, color: Colors.textLight },
+  habitCount: { fontSize: FontSize.xs },
   adjBtn: {
     width: 26, height: 26,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  adjBtnText: { fontSize: FontSize.md, lineHeight: 26, color: Colors.textLight },
-  adjBtnPlusText: { fontSize: FontSize.md, color: Colors.white, fontWeight: '700', lineHeight: 26 },
+  adjBtnText: { fontSize: FontSize.md, lineHeight: 26 },
+  adjBtnPlusText: { fontSize: FontSize.md, fontFamily: Fonts.bold, lineHeight: 26 },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: Spacing.sm,
+    minHeight: 44,
   },
-  addButtonText: { fontSize: FontSize.sm, color: Colors.orange, fontWeight: '600' },
+  addButtonText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
 });
