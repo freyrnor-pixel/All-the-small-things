@@ -2,32 +2,33 @@
  * scan.tsx — receipt OCR scanner & QR import
  *
  * Captures or picks a receipt photo, runs ML Kit text recognition, and parses
- * lines into priced items (parseReceiptText lives here). The user picks a store,
- * edits/deselects rows, and confirms. Also hosts a QR scanner that imports
- * shared shopping/task payloads into the shared store.
+ * lines into priced items (parseReceiptText lives here). The user picks a store
+ * (or enters a custom store name), edits/deselects rows, overrides categories,
+ * and confirms. Also hosts a QR scanner that imports shared shopping/task
+ * payloads into the shared store.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, lib/siteNav, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, @expo/vector-icons (Ionicons)
+ *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, lib/siteNav, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, @expo/vector-icons (Ionicons)
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Four screen modes via `mode` state: idle, scanning, result, manual. Mode transitions handle navigation.
- *   - OCR pipeline: takePhoto/pickImage → mode:scanning → processImage → TextRecognition.recognize → parseReceiptText → auto-transition to mode:result with found items.
- *   - Recognised items are ALWAYS reviewed (checkbox list) before adding; never auto-added. Default: all selected except high-uncertainty items.
- *   - On OCR failure/empty result, friendly message shows and mode:manual opens automatically.
+ *   - OCR pipeline: takePhoto/pickImage → mode:scanning → processImage → TextRecognition.recognize → parseReceiptText → enrichItemsWithCategories (early fuzzy match) → auto-transition to mode:result with found items.
+ *   - Recognised items are ALWAYS reviewed (checkbox list) before adding; never auto-added.
+ *   - On OCR failure/empty result, mode:manual opens automatically.
+ *   - Categories are pre-populated via early fuzzy match against store_items and shown as tappable chips in result mode; the user can override via the category picker modal.
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
- *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
- *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItems() does NOT create a receipt (no price is parsed there worth tracking).
- *   - addToList() requires a store to be picked first (NORWEGIAN_STORES chip row) — without one it shows selectStoreFirstTitle/Body and bails before logging anything.
- *   - Manual entry supports multiple items per line (newline-delimited text), counted live.
- *   - QR scanner modal sits outside the screen content — full-screen overlay.
+ *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list plus "Annen butikk…" for custom entry.
+ *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend.
+ *   - addToList() requires a store to be picked first (NORWEGIAN_STORES chip row, or custom store) — without one it shows selectStoreFirstTitle/Body and bails before logging anything.
+ *   - Manual entry supports multiple items per line (newline-delimited text), counted live. An optional price field applies only when exactly one line is entered; with a store selected and price > 0, it creates a receipt and logs the purchase like addToList does.
+ *   - QR scanner and category picker modals sit outside the screen content — full-screen overlays.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated } from 'react-native';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import {
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -51,7 +52,6 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import HintCard from '@/components/HintCard';
-import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -61,12 +61,14 @@ import { goToSite } from '@/lib/siteNav';
 import { showAppModal } from '@/components/AppModal';
 import { decodeSharePayload } from '@/lib/share';
 import { parseReceiptText, findFuzzyMatch, ParsedReceiptItem as ParsedItem } from '@/lib/receipt';
-import { Colors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 const NORWEGIAN_STORES = [
   'REMA 1000', 'Kiwi', 'Coop Extra', 'Coop Mega', 'Meny', 'Spar', 'Bunnpris', 'Joker', 'Prix',
 ];
+
+const CATEGORIES = ['produce', 'dairy', 'meat', 'fish', 'bread', 'frozen', 'canned', 'dry', 'snacks', 'drinks', 'cleaning', 'personal', 'other'];
 
 type ScreenMode = 'idle' | 'scanning' | 'result' | 'manual';
 
@@ -92,9 +94,15 @@ export default function ScanScreen() {
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selectedStore, setSelectedStore] = useState('');
   const [manualText, setManualText] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
+  const [customStoreVisible, setCustomStoreVisible] = useState(false);
+  const [customStoreName, setCustomStoreName] = useState('');
   const [qrScanVisible, setQrScanVisible] = useState(false);
   const [qrScanned, setQrScanned] = useState(false);
+  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const [categoryPickerIndex, setCategoryPickerIndex] = useState(-1);
   const manualInputRef = useRef<TextInput>(null);
+  const customStoreRef = useRef<TextInput>(null);
   const cameraLaunched = useRef(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -153,12 +161,22 @@ export default function ScanScreen() {
     }
   }
 
+  function enrichItemsWithCategories(items: ParsedItem[]): ParsedItem[] {
+    const storeItemNames = catalogStoreItems.map((i) => i.name);
+    return items.map((item) => {
+      const match = findFuzzyMatch(item.name, storeItemNames);
+      const category = match ? catalogStoreItems.find((i) => i.name === match)?.category : undefined;
+      return { ...item, category };
+    });
+  }
+
   async function processImage(uri: string) {
     try {
       const result = await TextRecognition.recognize(uri);
       const items = parseReceiptText(result.text);
       if (items.length > 0) {
-        setParsedItems(items);
+        const enrichedItems = enrichItemsWithCategories(items);
+        setParsedItems(enrichedItems);
         // Simulate OCR processing time, then transition to result
         await new Promise((resolve) => setTimeout(resolve, 1800));
         setMode('result');
@@ -184,15 +202,29 @@ export default function ScanScreen() {
     setParsedItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, name } : item)));
   }
 
+  function updateCategory(i: number, category: string) {
+    setParsedItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, category } : item)));
+  }
+
   function addManualItems() {
     const lines = manualText.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
     if (lines.length === 0) return;
 
-    lines.forEach((name) => {
-      addShopping({ name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: 0, inventoryQty: 0, status: 'inWeeklyList' });
+    // A price only makes sense when there's exactly one item to attach it to.
+    const price = lines.length === 1 ? parseFloat(manualPrice.replace(',', '.')) || 0 : 0;
+    let receiptId: string | undefined;
+    if (selectedStore && price > 0) {
+      const receipt = addReceipt({ date: todayStr(), store: selectedStore, total: price, category: 'groceries' });
+      receiptId = receipt.id;
+      recordPurchases([{ name: lines[0], store: selectedStore, price, wasOnList: false }], receiptId);
+    }
+
+    lines.forEach((name, idx) => {
+      addShopping({ name, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: idx === 0 ? price : 0, inventoryQty: 0, status: 'inWeeklyList' });
     });
 
     setManualText('');
+    setManualPrice('');
     setImageUri(null);
     setParsedItems([]);
     setMode('idle');
@@ -208,7 +240,6 @@ export default function ScanScreen() {
     const existingNames = new Set(shoppingItems.map((i) => i.name.toLowerCase()));
     const catalogItems = shoppingItems.filter((i) => i.status === 'catalog');
     const catalogNames = catalogItems.map((i) => i.name);
-    const storeItemNames = catalogStoreItems.map((i) => i.name);
 
     selected.forEach((item) => {
       const match = findFuzzyMatch(item.name, catalogNames);
@@ -230,20 +261,17 @@ export default function ScanScreen() {
         }).id
       : undefined;
 
+    // Category is already pre-populated from the early fuzzy match in
+    // enrichItemsWithCategories, or manually overridden by the user via the
+    // category picker.
     recordPurchases(
-      selected.map((item) => {
-        const storeItemMatch = findFuzzyMatch(item.name, storeItemNames);
-        const category = storeItemMatch
-          ? catalogStoreItems.find((i) => i.name === storeItemMatch)?.category
-          : undefined;
-        return {
-          name: item.name,
-          store: selectedStore,
-          price: item.price,
-          category,
-          wasOnList: existingNames.has(item.name.toLowerCase()),
-        };
-      }),
+      selected.map((item) => ({
+        name: item.name,
+        store: selectedStore,
+        price: item.price,
+        category: item.category,
+        wasOnList: existingNames.has(item.name.toLowerCase()),
+      })),
       receiptId
     );
 
@@ -309,6 +337,45 @@ export default function ScanScreen() {
   const totalPrice = parsedItems.filter((i) => i.selected).reduce((sum, item) => sum + item.price, 0);
   const manualLineCount = manualText.split('\n').filter((line) => line.trim().length > 0).length;
 
+  function renderStoreSelector() {
+    return (
+      <View style={styles.storeSection}>
+        <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.store.toUpperCase()}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storeScroll}>
+          <View style={styles.storeRow}>
+            {NORWEGIAN_STORES.map((store) => (
+              <Pressable
+                key={store}
+                style={[
+                  styles.storeChip,
+                  { borderWidth: 1, borderColor: theme.border },
+                  selectedStore === store && { backgroundColor: theme.orange, borderColor: theme.orange },
+                ]}
+                onPress={() => setSelectedStore(selectedStore === store ? '' : store)}
+              >
+                <Text style={[styles.storeChipText, { color: theme.text }, selectedStore === store && { color: Colors.white }]}>
+                  {store}
+                </Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={[
+                styles.storeChip,
+                { borderWidth: 1, borderColor: theme.border },
+                selectedStore && !NORWEGIAN_STORES.includes(selectedStore) && { backgroundColor: theme.orange, borderColor: theme.orange },
+              ]}
+              onPress={() => setCustomStoreVisible(true)}
+            >
+              <Text style={[styles.storeChipText, { color: theme.text }, selectedStore && !NORWEGIAN_STORES.includes(selectedStore) && { color: Colors.white }]}>
+                {selectedStore && !NORWEGIAN_STORES.includes(selectedStore) ? selectedStore : t.otherStore}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // IDLE MODE — main scan screen
   if (mode === 'idle') {
     return (
@@ -338,29 +405,7 @@ export default function ScanScreen() {
               <Text style={[styles.tipText, { color: theme.text }]}>{t.scanHintBanner}</Text>
             </View>
 
-            {/* Store selector */}
-            <View style={styles.storeSection}>
-              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.store.toUpperCase()}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storeScroll}>
-                <View style={styles.storeRow}>
-                  {NORWEGIAN_STORES.map((store) => (
-                    <Pressable
-                      key={store}
-                      style={[
-                        styles.storeChip,
-                        { borderWidth: 1, borderColor: theme.border },
-                        selectedStore === store && { backgroundColor: theme.orange, borderColor: theme.orange },
-                      ]}
-                      onPress={() => setSelectedStore(selectedStore === store ? '' : store)}
-                    >
-                      <Text style={[styles.storeChipText, { color: theme.text }, selectedStore === store && { color: Colors.white }]}>
-                        {store}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
+            {renderStoreSelector()}
 
             {/* Primary camera button */}
             <Pressable
@@ -425,6 +470,53 @@ export default function ScanScreen() {
             </SafeAreaView>
           </View>
         </Modal>
+
+        {/* Custom store sheet */}
+        <Modal visible={customStoreVisible} transparent animationType="slide" onRequestClose={() => setCustomStoreVisible(false)}>
+          <Pressable style={styles.backdrop} onPress={() => setCustomStoreVisible(false)} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetKvWrapper}>
+            <View style={[styles.manualSheet, { backgroundColor: theme.white }]}>
+              <View style={[styles.sheetHandle, { backgroundColor: theme.grayLight }]} />
+              <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.otherStore}</Text>
+              <Text style={[styles.sheetLabel, { color: theme.textLight }]}>{t.customStoreLabel}</Text>
+              <TextInput
+                ref={customStoreRef}
+                style={[styles.sheetInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+                placeholder={t.customStorePlaceholder}
+                placeholderTextColor={theme.gray}
+                value={customStoreName}
+                onChangeText={setCustomStoreName}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (customStoreName.trim()) {
+                    setSelectedStore(customStoreName.trim());
+                    setCustomStoreName('');
+                    setCustomStoreVisible(false);
+                  }
+                }}
+                autoFocus
+              />
+              <View style={styles.sheetButtons}>
+                <Pressable style={[styles.sheetCancelBtn, { borderColor: theme.grayLight }]} onPress={() => setCustomStoreVisible(false)}>
+                  <Text style={[styles.sheetCancelText, { color: theme.textLight }]}>{t.cancel}</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.sheetAddBtn, { backgroundColor: theme.orange }, !customStoreName.trim() && { opacity: 0.4 }]}
+                  onPress={() => {
+                    if (customStoreName.trim()) {
+                      setSelectedStore(customStoreName.trim());
+                      setCustomStoreName('');
+                      setCustomStoreVisible(false);
+                    }
+                  }}
+                  disabled={!customStoreName.trim()}
+                >
+                  <Text style={styles.sheetAddText}>{t.ok}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -466,20 +558,30 @@ export default function ScanScreen() {
 
             <Surface style={styles.itemsCard}>
               {parsedItems.map((item, i) => (
-                <Pressable key={i} style={styles.itemRow} onPress={() => toggleItem(i)}>
-                  <View style={[styles.checkbox, { borderColor: theme.orange }, item.selected && { backgroundColor: theme.orange }]}>
-                    {item.selected && <Text style={styles.checkMark}>✓</Text>}
-                  </View>
-                  <Text style={[styles.itemName, { color: theme.text }, !item.selected && { opacity: 0.42 }]}>
-                    {item.name}
-                  </Text>
-                  <Text style={[styles.itemQty, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
-                    {item.qty || '1'} stk
-                  </Text>
-                  <Text style={[styles.itemPrice, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
-                    {item.price.toFixed(2)} kr
-                  </Text>
-                </Pressable>
+                <View key={i}>
+                  <Pressable style={styles.itemRow} onPress={() => toggleItem(i)}>
+                    <View style={[styles.checkbox, { borderColor: theme.orange }, item.selected && { backgroundColor: theme.orange }]}>
+                      {item.selected && <Text style={styles.checkMark}>✓</Text>}
+                    </View>
+                    <TextInput
+                      style={[styles.itemName, { color: theme.text }, !item.selected && { opacity: 0.42 }]}
+                      value={item.name}
+                      onChangeText={(v) => updateName(i, v)}
+                    />
+                    <Text style={[styles.itemQty, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
+                      {item.qty || '1'} stk
+                    </Text>
+                    <Text style={[styles.itemPrice, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
+                      {item.price.toFixed(2)} kr
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.categoryChip, { backgroundColor: theme.offWhite }]}
+                    onPress={() => { setCategoryPickerIndex(i); setCategoryPickerVisible(true); }}
+                  >
+                    <Text style={[styles.categoryChipText, { color: theme.textLight }]}>{item.category ?? 'other'}</Text>
+                  </Pressable>
+                </View>
               ))}
 
               <View style={[styles.totalRow, { borderTopColor: theme.border, borderTopWidth: 1 }]}>
@@ -504,6 +606,33 @@ export default function ScanScreen() {
         </SiteSwipeView>
 
         <BottomNav />
+
+        {/* Category picker modal */}
+        <Modal visible={categoryPickerVisible} transparent animationType="slide" onRequestClose={() => setCategoryPickerVisible(false)}>
+          <Pressable style={styles.backdrop} onPress={() => setCategoryPickerVisible(false)} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetKvWrapper}>
+            <View style={[styles.manualSheet, { backgroundColor: theme.white }]}>
+              <View style={[styles.sheetHandle, { backgroundColor: theme.grayLight }]} />
+              <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.recognisedItems}</Text>
+              <ScrollView style={styles.categoryGrid} contentContainerStyle={styles.categoryGridContent}>
+                {CATEGORIES.map((cat) => (
+                  <Pressable
+                    key={cat}
+                    style={[styles.categoryOption, { backgroundColor: parsedItems[categoryPickerIndex]?.category === cat ? theme.orange : theme.offWhite }]}
+                    onPress={() => {
+                      updateCategory(categoryPickerIndex, cat);
+                      setCategoryPickerVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.categoryOptionText, { color: parsedItems[categoryPickerIndex]?.category === cat ? Colors.white : theme.text }]}>
+                      {cat}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -518,6 +647,7 @@ export default function ScanScreen() {
           onBack={() => {
             setMode('idle');
             setManualText('');
+            setManualPrice('');
             setImageUri(null);
             setParsedItems([]);
           }}
@@ -529,6 +659,8 @@ export default function ScanScreen() {
             <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
               <HintCard text={t.manualEntryHint} example="" />
 
+              {renderStoreSelector()}
+
               <TextInput
                 ref={manualInputRef}
                 multiline
@@ -539,6 +671,21 @@ export default function ScanScreen() {
                 value={manualText}
                 onChangeText={setManualText}
               />
+
+              {manualLineCount === 1 && (
+                <View>
+                  <Text style={[styles.sheetLabel, { color: theme.textLight }]}>{t.estimertPrisLabel}</Text>
+                  <TextInput
+                    style={[styles.sheetInput, { color: theme.text, backgroundColor: theme.white, borderWidth: 1.5, borderColor: theme.border }]}
+                    placeholder="0.00"
+                    placeholderTextColor={theme.gray}
+                    value={manualPrice}
+                    onChangeText={setManualPrice}
+                    keyboardType="decimal-pad"
+                    returnKeyType="done"
+                  />
+                </View>
+              )}
 
               <Pressable
                 style={[styles.confirmButton, { backgroundColor: theme.orange }, manualLineCount === 0 && { opacity: 0.5 }]}
@@ -553,6 +700,7 @@ export default function ScanScreen() {
               <Pressable style={[styles.cancelButton, { borderColor: theme.border }]} onPress={() => {
                 setMode('idle');
                 setManualText('');
+                setManualPrice('');
                 setImageUri(null);
                 setParsedItems([]);
               }}>
@@ -659,6 +807,26 @@ const baseStyles = StyleSheet.create({
   totalRow: { paddingTop: Spacing.sm, paddingBottom: Spacing.sm, alignItems: 'flex-end' },
   totalText: { fontSize: FontSize.sm, fontWeight: '600' },
 
+  categoryChip: {
+    alignSelf: 'flex-start',
+    marginLeft: 32,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+  },
+  categoryChipText: { fontSize: FontSize.xs, fontWeight: '500' },
+  categoryGrid: { maxHeight: 280 },
+  categoryGridContent: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingVertical: Spacing.sm },
+  categoryOption: {
+    width: '48%',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+  },
+  categoryOptionText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
+
   // BUTTONS
   confirmButton: {
     borderRadius: Radius.lg,
@@ -687,6 +855,30 @@ const baseStyles = StyleSheet.create({
     lineHeight: 24,
     textAlignVertical: 'top',
   },
+
+  // Custom store / category picker sheets
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)' },
+  sheetKvWrapper: { flex: 1, justifyContent: 'flex-end' },
+  manualSheet: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.md,
+    ...Shadow.fab,
+  },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: Radius.full },
+  sheetTitle: { fontSize: FontSize.xl, fontWeight: '700' },
+  sheetLabel: { fontSize: FontSize.sm, fontWeight: '600', marginTop: Spacing.xs },
+  sheetInput: { borderRadius: Radius.md, padding: Spacing.md, fontSize: FontSize.lg },
+  sheetButtons: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  sheetCancelBtn: {
+    flex: 1, borderRadius: Radius.md, padding: Spacing.md,
+    alignItems: 'center', borderWidth: 1,
+  },
+  sheetCancelText: { fontWeight: '600', fontSize: FontSize.md },
+  sheetAddBtn: { flex: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  sheetAddText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
 
   // QR SCANNER
   qrModal: { flex: 1, backgroundColor: '#000' },

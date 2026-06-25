@@ -35,6 +35,7 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
+import { dayOfWeekMon0 } from '@/lib/date';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { cancelTaskNotification } from '@/lib/notifications';
@@ -194,8 +195,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   tasksForDate(date) {
     const { tasks } = get();
-    const dayOfWeek = new Date(date + 'T12:00:00').getDay(); // 0=Sun, convert to 0=Mon
-    const mon0 = (dayOfWeek + 6) % 7;
+    const mon0 = dayOfWeekMon0(new Date(date + 'T12:00:00'));
     return tasks.filter((t) => {
       if (t.date === date) return true;
       if (t.recurring === 'weekly' && t.recurringDays.includes(mon0)) return true;

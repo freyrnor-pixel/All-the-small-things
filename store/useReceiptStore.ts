@@ -3,8 +3,8 @@
  *
  * Zustand store for the `receipts` table: one row per confirmed scan/manual
  * grocery trip (date, store, total, category, month). Feeds app/budget.tsx's
- * spend-vs-budget view; app/scan.tsx creates a receipt right before logging
- * its items via useCatalogStore.recordPurchases(purchases, receipt.id).
+ * spend-vs-budget view and per-month/per-store breakdowns; app/scan.tsx creates
+ * a receipt right before logging its items via useCatalogStore.recordPurchases(purchases, receipt.id).
  *
  * Connections:
  *   Imports → lib/date, lib/dataAccess, lib/id
@@ -12,8 +12,9 @@
  *   Data    → defines a Zustand store; owns SQLite table receipts; purchase_log rows link back via the optional receipt_id passed into useCatalogStore.recordPurchases
  *
  * Edit notes:
- *   - month is stored as `YYYY-MM` (lib/date.ts's currentMonthStr()) so receiptsForMonth/totalForMonth are simple equality filters, not date-range scans.
- *   - load() fetches all receipts into memory — same small-table assumption as useEnergyStore; revisit if receipt volume grows much beyond a year of history (pruneOldData() already trims rows past RETENTION_DAYS).
+ *   - month is stored as `YYYY-MM` (lib/date.ts's currentMonthStr()) so receiptsForMonth/totalForMonth/receiptsByStore are simple filters.
+ *   - months() returns distinct month values sorted descending (newest first); receiptsByStore(month) sums receipts per store for a given month.
+ *   - load() fetches all receipts into memory — same small-table assumption as useEnergyStore; revisit if receipt volume grows beyond a year of history (pruneOldData() already trims rows past RETENTION_DAYS).
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  */
 import { create } from 'zustand';
@@ -43,6 +44,8 @@ type ReceiptStore = {
   addReceipt: (input: ReceiptInput) => Receipt;
   receiptsForMonth: (month: string) => Receipt[];
   totalForMonth: (month: string) => number;
+  months: () => string[];
+  receiptsByStore: (month: string) => Record<string, number>;
 };
 
 function rowToReceipt(row: Row): Receipt {
@@ -92,5 +95,20 @@ export const useReceiptStore = create<ReceiptStore>((set, get) => ({
 
   totalForMonth(month) {
     return get().receipts.filter((r) => r.month === month).reduce((sum, r) => sum + r.total, 0);
+  },
+
+  months() {
+    const monthSet = new Set(get().receipts.map((r) => r.month));
+    return Array.from(monthSet).sort().reverse();
+  },
+
+  receiptsByStore(month) {
+    const byStore: Record<string, number> = {};
+    get().receipts
+      .filter((r) => r.month === month)
+      .forEach((r) => {
+        byStore[r.store] = (byStore[r.store] || 0) + r.total;
+      });
+    return byStore;
   },
 }));

@@ -28,6 +28,11 @@ export function currentMonthStr(): string {
   return todayStr().slice(0, 7);
 }
 
+/** Convert Date.getDay() (0 = Sun, 6 = Sat) to app convention (0 = Mon, 6 = Sun). */
+export function dayOfWeekMon0(d: Date): number {
+  return (d.getDay() + 6) % 7;
+}
+
 /** App weekday (0 = Mon … 6 = Sun) → Expo weekday (1 = Sun … 7 = Sat). */
 export function toExpoWeekday(mon0: number): number {
   return ((mon0 + 1) % 7) + 1;
@@ -37,7 +42,7 @@ export function toExpoWeekday(mon0: number): number {
 export function getWeekDates(today: string): string[] {
   const d = new Date(today + 'T12:00:00');
   const mon = new Date(d);
-  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  mon.setDate(d.getDate() - dayOfWeekMon0(d));
   return Array.from({ length: 7 }, (_, i) => {
     const day = new Date(mon);
     day.setDate(mon.getDate() + i);

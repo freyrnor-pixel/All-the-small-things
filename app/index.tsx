@@ -102,7 +102,7 @@ import { showAppModal } from '@/components/AppModal';
 import TreeWatermark from '@/components/TreeWatermark';
 import CoverScreen from '@/components/cover/CoverScreen';
 import { useCoverScreen } from '@/lib/useCoverScreen';
-import { todayStr } from '@/lib/date';
+import { todayStr, dayOfWeekMon0 } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
@@ -148,11 +148,13 @@ export default function HomeScreen() {
     if (settings.workModeSessionOverride) return false;
     if (settings.workModeEnabled) return true;
     // Auto-activation respects weekends and (optionally) Norwegian holidays —
-    // no work mode on days off.
+    // no work mode on days off. Also respects the user's configured work days.
+    const now = new Date();
     if (
       settings.enforceWorkHours &&
       isWithinWorkHours(settings.workHoursStart, settings.workHoursEnd) &&
-      !isWeekendOrHoliday(new Date(), settings.holidaysEnabled)
+      !isWeekendOrHoliday(now, settings.holidaysEnabled) &&
+      settings.workDays.includes(dayOfWeekMon0(now))
     ) {
       return true;
     }
@@ -164,6 +166,7 @@ export default function HomeScreen() {
     settings.workHoursStart,
     settings.workHoursEnd,
     settings.holidaysEnabled,
+    settings.workDays,
   ]);
 
   // Single clear purpose on open — "what do I need right now?": surface today's

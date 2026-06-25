@@ -1,9 +1,10 @@
 /**
- * useCatalogStore.ts — item catalog + purchase history (store/price suggestions)
+ * useCatalogStore.ts — item catalog + purchase history (store/price/category learning)
  *
  * Zustand store backing the scan/shopping autocomplete: remembers known grocery
- * items with their last store and price, and logs every purchase. Powers the
- * suggest() typeahead and learns from recordPurchases() so suggestions improve.
+ * items with their last store, price, and category, and logs every purchase.
+ * Powers the suggest() typeahead and learns from recordPurchases() so suggestions
+ * improve. Also supports resetItemPrice() for escape-hatch correction of misread OCR prices.
  *
  * Connections:
  *   Imports → lib/catalogSeed, lib/db, lib/dataAccess, lib/id
@@ -13,8 +14,9 @@
  * Edit notes:
  *   - seedCatalog() runs on every load() and uses stable name-derived IDs ('cat_<name>') with INSERT OR IGNORE — safe to re-run, but renaming seed items orphans old rows.
  *   - price_source ('seed' | 'purchase') tracks where a row's price came from: seedCatalog() keeps 'seed' rows in sync with lib/catalogSeed.ts on every load, but never overwrites a price once a real purchase sets it to 'purchase'.
- *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/category, but only raises price — a new purchase price below the existing catalog price never lowers it (store/category still update unconditionally).
- *   - recordPurchases()'s optional receiptId (AP-06B) links each purchase_log row to a store/useReceiptStore.ts receipt for the budget screen — pass it whenever app/scan.tsx has already created the receipt; omit it for purchases with no receipt (e.g. manual catalog edits).
+ *   - purchase_log is append-only and pruned by RETENTION_DAYS in lib/db.ts; recordPurchases() also upserts the catalog row's store/category, but only raises price — a lower purchase price never lowers the catalog price (store/category still update unconditionally).
+ *   - recordPurchases()'s optional receiptId (AP-06B) links each purchase_log row to a useReceiptStore.ts receipt for the budget screen — pass it whenever app/scan.tsx has already created the receipt.
+ *   - resetItemPrice(id, newPrice) directly updates a store_items row's price and sets price_source = 'purchase' — escape hatch for correcting misread OCR prices.
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
  */
 import { create } from 'zustand';
@@ -44,6 +46,7 @@ type CatalogStore = {
   load: () => void;
   suggest: (query: string, limit?: number) => StoreItem[];
   recordPurchases: (purchases: PurchaseInput[], receiptId?: string) => void;
+  resetItemPrice: (id: string, newPrice: number) => void;
 };
 
 function rowToItem(row: Row): StoreItem {
@@ -167,6 +170,26 @@ export const useCatalogStore = create<CatalogStore>((set, get) => ({
     }
     });
 
+    next.sort((a, b) => a.name.localeCompare(b.name, 'no'));
+    set({ items: next });
+  },
+
+  resetItemPrice(id, newPrice) {
+    const idx = get().items.findIndex((i) => i.id === id);
+    if (idx < 0) return;
+    const now = new Date().toISOString();
+    const updated: StoreItem = {
+      ...get().items[idx],
+      price: newPrice,
+    };
+    const next = [...get().items];
+    next[idx] = updated;
+    try {
+      db.runSync(
+        'UPDATE store_items SET price = ?, price_source = ?, last_updated = ? WHERE id = ?',
+        [newPrice, 'purchase', now, id]
+      );
+    } catch { /* ignore */ }
     next.sort((a, b) => a.name.localeCompare(b.name, 'no'));
     set({ items: next });
   },
