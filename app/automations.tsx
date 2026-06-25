@@ -25,7 +25,7 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
-import BottomNav from '@/components/BottomNav';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { showAppModal } from '@/components/AppModal';
 import { useT } from '@/lib/i18n';
@@ -227,7 +227,7 @@ export default function AutomationsScreen() {
           ))
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: BOTTOM_NAV_HEIGHT }} />
       </ScrollView>
       </SiteSwipeView>
 

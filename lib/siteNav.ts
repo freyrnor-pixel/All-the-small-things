@@ -16,12 +16,10 @@
  *   Data    → none (pure navigation logic)
  *
  * Edit notes:
- *   - SITE_ITEMS order is the bottom menu's visual order.
- *   - Nav bar now has exactly 3 items: Home, Shopping, Health.
- *   - Removed from nav (routes/screens kept): meals, plans, scan, budget,
- *     shared, automations, settings, habits. Access points moved to
- *     Home screen (gear → settings, tap → plans) and Shopping screen
- *     (buttons → scan, budget). Habits lives as sub-section in health.tsx.
+ *   - SITE_ITEMS order is the bottom menu's visual order (left to right).
+ *   - Nav bar has 5 items: Shopping, Plans, Home (centre), Health, Scan.
+ *   - Removed from nav (routes/screens kept): meals, budget, shared, automations,
+ *     settings, habits. Access points: settings in home screen header, habits in health.
  *   - goToSite() invariant: Home ('/') is always the stack root. Going from Home to
  *     any site pushes (so back() returns to Home). Going from one non-Home site to
  *     another replaces (so the stack never grows past depth 2). Going to Home
@@ -56,9 +54,11 @@ export type SiteItem = {
 };
 
 export const SITE_ITEMS: SiteItem[] = [
-  { key: 'home',   icon: 'home-outline', activeIcon: 'home',  route: '/'         },
-  { key: 'shop',   icon: 'cart-outline', activeIcon: 'cart',  route: '/shopping' },
-  { key: 'health', icon: 'heart-outline', activeIcon: 'heart', route: '/health'  },
+  { key: 'shop',   icon: 'cart-outline', activeIcon: 'cart',     route: '/shopping' },
+  { key: 'plans',  icon: 'clipboard-outline', activeIcon: 'clipboard', route: '/plans'    },
+  { key: 'home',   icon: 'home-outline', activeIcon: 'home',     route: '/'         },
+  { key: 'health', icon: 'heart-outline', activeIcon: 'heart',   route: '/health'   },
+  { key: 'scan',   icon: 'camera-outline', activeIcon: 'camera', route: '/scan'     },
 ];
 
 /** Navigate between sites while keeping the stack shallow (Home stays the root). */
