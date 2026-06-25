@@ -139,7 +139,7 @@ const en = {
   addToListButton: (n: number) => `Add to shopping list (${n})`,
   totalAmount: (sum: number) => `Total: ${sum.toFixed(2)} kr`,
   manualEntryTitle: 'Type in manually',
-  manualEntryHint: 'Type item names, one per line. We'll add them to your shopping list.',
+  manualEntryHint: "Type item names, one per line. We'll add them to your shopping list.",
   manualEntryPlaceholder: 'Milk\nBread\nEggs\n...',
   addedTitle: 'Added!',
   addedBody: (n: number) => `${n} item${n !== 1 ? 's' : ''} added to your shopping list.`,
