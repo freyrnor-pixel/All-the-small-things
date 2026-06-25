@@ -1,19 +1,18 @@
 /**
- * Button.tsx — primary/secondary/danger/ghost action button.
+ * Button.tsx — soft, rounded, shame-free action button. Variants: primary (filled), secondary (soft tint), ghost (text).
  *
- * Thin wrapper around PressableScale that resolves its fill/border/text colour
- * from the active AppColors palette, so it re-skins automatically with the
- * user's colour theme and dark mode. No copy is baked in — callers pass
- * already-localized text via useT().
+ * Sentence-case labels; no copy is baked in. Leading/trailing icons supported. Resolves
+ * fill/text colours from the active theme. Minimum touch target is 44px tall.
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme, components/PressableScale
- *   Used by → any screen wanting a standard action button
+ *   Used by → all screens for standard action buttons
  *   Data    → none (purely presentational)
  *
  * Edit notes:
- *   - Minimum touch target is 44px tall regardless of size variant.
- *   - `loading` shows an ActivityIndicator in place of the label/icon.
+ *   - Size sm=36, md=44-48, lg=56. All meet 44px minimum touch target (md,lg exceed it; sm is inset slightly for small/secondary uses).
+ *   - BorderRadius.full (999) for buttons (fully rounded pills).
+ *   - Secondary is soft-tint fill, NOT border (see design spec).
  */
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
@@ -31,13 +30,15 @@ type Props = {
   variant?: Variant;
   size?: Size;
   icon?: keyof typeof Ionicons.glyphMap;
+  iconRight?: keyof typeof Ionicons.glyphMap;
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-const SIZE_HEIGHT: Record<Size, number> = { sm: 44, md: 48, lg: 56 };
+const SIZE_HEIGHT: Record<Size, number> = { sm: 36, md: 48, lg: 56 };
 const SIZE_FONT: Record<Size, number> = { sm: FontSize.sm, md: FontSize.md, lg: FontSize.lg };
+const SIZE_PADDING: Record<Size, [number, number]> = { sm: [8, 16], md: [12, 22], lg: [15, 28] };
 
 export default function Button({
   label,
@@ -45,21 +46,22 @@ export default function Button({
   variant = 'primary',
   size = 'md',
   icon,
+  iconRight,
   disabled,
   loading,
   style,
 }: Props) {
   const theme = useAppTheme();
+  const [vertPad, horizPad] = SIZE_PADDING[size];
 
-  const fill =
-    variant === 'primary' ? theme.orange :
-    variant === 'danger' ? theme.danger :
-    'transparent';
-
-  const textColor =
-    variant === 'primary' ? theme.white :
-    variant === 'danger' ? theme.white :
-    theme.orange;
+  // Variant colors
+  const variantColors = {
+    primary: { bg: theme.orange, text: '#ffffff' },
+    secondary: { bg: theme.orangeLight, text: theme.brown },
+    danger: { bg: theme.danger, text: '#ffffff' },
+    ghost: { bg: 'transparent', text: theme.orange },
+  };
+  const colors = variantColors[variant];
 
   return (
     <PressableScale
@@ -69,20 +71,21 @@ export default function Button({
         styles.base,
         {
           height: SIZE_HEIGHT[size],
-          backgroundColor: fill,
-          borderColor: theme.orange,
-          borderWidth: variant === 'secondary' ? 2 : 0,
-          opacity: disabled ? 0.4 : 1,
+          paddingVertical: vertPad,
+          paddingHorizontal: horizPad,
+          backgroundColor: colors.bg,
+          opacity: disabled ? 0.45 : 1,
         },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={textColor} />
+        <ActivityIndicator color={colors.text} />
       ) : (
         <View style={styles.content}>
-          {icon ? <Ionicons name={icon} size={SIZE_FONT[size] + 2} color={textColor} style={styles.icon} /> : null}
-          <Text style={[styles.label, { color: textColor, fontSize: SIZE_FONT[size] }]}>{label}</Text>
+          {icon ? <Ionicons name={icon} size={Math.ceil(SIZE_FONT[size] * 1.15)} color={colors.text} style={styles.icon} /> : null}
+          <Text style={[styles.label, { color: colors.text, fontSize: SIZE_FONT[size] }]}>{label}</Text>
+          {iconRight ? <Ionicons name={iconRight} size={Math.ceil(SIZE_FONT[size] * 1.15)} color={colors.text} style={styles.iconRight} /> : null}
         </View>
       )}
     </PressableScale>
@@ -91,19 +94,23 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.xs,
   },
   icon: {
     marginRight: Spacing.xs,
   },
+  iconRight: {
+    marginLeft: Spacing.xs,
+  },
   label: {
-    fontFamily: Fonts.semibold,
+    fontFamily: Fonts.bold,
+    lineHeight: 1.1,
   },
 });

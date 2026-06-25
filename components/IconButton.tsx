@@ -1,70 +1,92 @@
 /**
- * IconButton.tsx — icon-only tappable control with a guaranteed 44x44 hit target.
+ * IconButton.tsx — circular icon-only button. Round affordance for settings, focus, etc.
  *
- * Used for header actions, list-row affordances, and anywhere a Button would
- * be too heavy. Always pass `accessibilityLabel` — there's no visible text.
+ * Defaults to soft chip fill; pass `tint` for background override. `active` state shows
+ * primary background + border. Always pass `label` for accessibility.
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme, components/PressableScale
- *   Used by → any screen wanting a standalone icon action
+ *   Used by → header actions, focus toggles, standalone icon controls
  *   Data    → none (purely presentational)
  *
  * Edit notes:
- *   - `size` controls the icon glyph size; the touch target stays >=44px regardless.
+ *   - `size` controls outer button size (default 36); hit target always >=44px (achieved via Pressable wrapper).
+ *   - Icon size is automatically 50% of button size.
+ *   - `active` adds primary-colored background + border to show state.
  */
 import React from 'react';
-import { StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, StyleProp, ViewStyle, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Radius } from '@/constants/theme';
 import { useAppTheme } from '@/lib/useAppTheme';
 import PressableScale from '@/components/PressableScale';
 
-const HIT_TARGET = 44;
-
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
-  accessibilityLabel: string;
+  label: string;
   onPress: () => void;
   size?: number;
+  tint?: string;
   color?: string;
-  background?: string;
+  active?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 export default function IconButton({
   icon,
-  accessibilityLabel,
+  label,
   onPress,
-  size = 22,
+  size = 36,
+  tint,
   color,
-  background,
+  active = false,
   disabled,
   style,
 }: Props) {
   const theme = useAppTheme();
+  const iconSize = Math.round(size * 0.5);
+  const hitTarget = Math.max(44, size + 8);
+
+  const bgColor = active ? theme.orangeLight : (tint ?? theme.offWhite);
+  const fgColor = color ?? (active ? theme.orange : theme.textLight);
+  const borderColor = active ? theme.orange : 'transparent';
 
   return (
     <PressableScale
       onPress={onPress}
       disabled={disabled}
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled, pressed: active }}
       style={[
-        styles.base,
-        { backgroundColor: background ?? 'transparent', opacity: disabled ? 0.5 : 1 },
+        styles.hit,
+        { width: hitTarget, height: hitTarget, opacity: disabled ? 0.45 : 1 },
         style,
       ]}
     >
-      <Ionicons name={icon} size={size} color={color ?? theme.text} />
+      <View style={[
+        styles.base,
+        {
+          width: size,
+          height: size,
+          backgroundColor: bgColor,
+          borderWidth: active ? 1.5 : 0,
+          borderColor: borderColor,
+        },
+      ]}>
+        <Ionicons name={icon} size={iconSize} color={fgColor} />
+      </View>
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
+  hit: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   base: {
-    width: HIT_TARGET,
-    height: HIT_TARGET,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
