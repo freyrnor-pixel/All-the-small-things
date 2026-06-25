@@ -2,9 +2,10 @@
  * scan.tsx — receipt OCR scanner & QR import
  *
  * Captures or picks a receipt photo, runs ML Kit text recognition, and parses
- * lines into priced items (parseReceiptText lives here). The user picks a store,
- * edits/deselects rows, and confirms. Also hosts a QR scanner that imports
- * shared shopping/task payloads into the shared store.
+ * lines into priced items (parseReceiptText lives here). The user picks a store
+ * (or enters a custom store name), edits/deselects rows, overrides categories,
+ * optionally enters a manual price, and confirms. Also hosts a QR scanner that
+ * imports shared shopping/task payloads into the shared store.
  *
  * Connections:
  *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, lib/siteNav, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore
@@ -12,22 +13,20 @@
  *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
- *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → reviewable checklist → confirm via addToList.
+ *   - OCR pipeline: takePhoto/pickImage → processImage → TextRecognition.recognize → parseReceiptText → enrichItemsWithCategories (early fuzzy match) → reviewable checklist with category overrides → confirm via addToList.
  *   - Recognised items are ALWAYS reviewed (checkbox list) before adding; never auto-added.
- *   - On OCR failure/empty result, a friendly message shows and the manual-entry sheet opens automatically.
+ *   - On OCR failure/empty result, a friendly message shows in the manual-entry sheet that opens automatically.
+ *   - Categories are pre-populated via early fuzzy match against store_items and shown as tappable chips; the user can override via category picker.
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
- *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
- *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt (no price is parsed there worth tracking).
- *   - addToList() requires a store to be picked first (NORWEGIAN_STORES chip row) — without one it shows selectStoreFirstTitle/Body and bails before logging anything.
- *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently raises that item's price if higher — separate from recordPurchases' exact-match price sync on store_items. Both paths only ever raise the catalog price, never lower it.
- *   - addToList() also fuzzy-matches each scanned name against useCatalogStore's store_items to inherit that item's category ("type of item") when passing purchases to recordPurchases.
- *   - Both addToList() and addManualItem() create their shopping_items rows with status='inWeeklyList' (not the add() default of 'catalog') — scanned/manually-confirmed items represent things just bought or being bought, so they belong on the Ukeliste working list, not the permanent Katalog.
- *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite(), which
- *     replaces this route rather than pushing — Shopping (this screen's own predecessor, see
- *     app/shopping.tsx) stays underneath, so back()/hardware-back from Budget still lands on
- *     Shopping, not Home. Both scan and budget were dropped from the BottomNav (see lib/siteNav.ts).
- *   - The QR scanner modal and manual-entry sheet (both <Modal>) sit outside <SiteSwipeView> —
- *     they're full-screen overlays, not the scrollable screen body.
+ *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list plus "Annen butikk…" for custom entry.
+ *   - addManualItem() now parses an optional price field; if selectedStore is set AND price > 0, it creates a receipt and logs the purchase like addToList does.
+ *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; same for addManualItem when price > 0.
+ *   - addToList() requires a store to be picked first (NORWEGIAN_STORES chip row, or custom store) — without one it shows selectStoreFirstTitle/Body and bails before logging anything.
+ *   - addToList() also fuzzy-matches each scanned name against Katalog shopping_items (status='catalog') and silently raises that item's price if higher — separate from recordPurchases' exact-match price sync on store_items. Both paths only ever raise the catalog price, never lower it.
+ *   - Category inheritance is done early in enrichItemsWithCategories (before review), then the user can override per item via tappable category chips.
+ *   - Both addToList() and addManualItem() create their shopping_items rows with status='inWeeklyList' — scanned/manually-confirmed items belong on the Ukeliste working list, not the permanent Katalog.
+ *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite(), which replaces this route — Shopping stays underneath, so back()/hardware-back from Budget lands on Shopping. Both scan and budget were dropped from the BottomNav.
+ *   - Modals (QR scanner, manual-entry sheet, category picker, custom-store sheet) sit outside <SiteSwipeView> — they're full-screen overlays.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
@@ -96,10 +95,19 @@ export default function ScanScreen() {
   const [ocrEmpty, setOcrEmpty] = useState(false);
   const [manualVisible, setManualVisible] = useState(false);
   const [manualName, setManualName] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
+  const [customStoreVisible, setCustomStoreVisible] = useState(false);
+  const [customStoreName, setCustomStoreName] = useState('');
   const [qrScanVisible, setQrScanVisible] = useState(false);
   const [qrScanned, setQrScanned] = useState(false);
+  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const [categoryPickerIndex, setCategoryPickerIndex] = useState(-1);
   const manualInputRef = useRef<TextInput>(null);
+  const manualPriceRef = useRef<TextInput>(null);
+  const customStoreRef = useRef<TextInput>(null);
   const cameraLaunched = useRef(false);
+
+  const CATEGORIES = ['produce', 'dairy', 'meat', 'fish', 'bread', 'frozen', 'canned', 'dry', 'snacks', 'drinks', 'cleaning', 'personal', 'other'];
 
   // Open camera automatically on first load
   useEffect(() => {
@@ -113,6 +121,7 @@ export default function ScanScreen() {
   useEffect(() => {
     if (manualVisible) {
       setManualName('');
+      setManualPrice('');
       setTimeout(() => manualInputRef.current?.focus(), 80);
     }
   }, [manualVisible]);
@@ -140,6 +149,15 @@ export default function ScanScreen() {
     }
   }
 
+  function enrichItemsWithCategories(items: ParsedItem[]): ParsedItem[] {
+    const storeItemNames = catalogStoreItems.map((i) => i.name);
+    return items.map((item) => {
+      const match = findFuzzyMatch(item.name, storeItemNames);
+      const category = match ? catalogStoreItems.find((i) => i.name === match)?.category : undefined;
+      return { ...item, category };
+    });
+  }
+
   async function processImage(uri: string) {
     setLoading(true);
     setOcrEmpty(false);
@@ -148,7 +166,8 @@ export default function ScanScreen() {
       const result = await TextRecognition.recognize(uri);
       const items = parseReceiptText(result.text);
       if (items.length > 0) {
-        setParsedItems(items);
+        const enrichedItems = enrichItemsWithCategories(items);
+        setParsedItems(enrichedItems);
       } else {
         handleOcrFailure();
       }
@@ -174,11 +193,23 @@ export default function ScanScreen() {
     setParsedItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, name } : item)));
   }
 
+  function updateCategory(i: number, category: string) {
+    setParsedItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, category } : item)));
+  }
+
   function addManualItem() {
     const trimmed = manualName.trim();
     if (!trimmed) return;
-    addShopping({ name: trimmed, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price: 0, inventoryQty: 0, status: 'inWeeklyList' });
+    const price = parseFloat(manualPrice.replace(',', '.')) || 0;
+    let receiptId: string | undefined;
+    if (selectedStore && price > 0) {
+      const receipt = addReceipt({ date: todayStr(), store: selectedStore, total: price, category: 'groceries' });
+      receiptId = receipt.id;
+      recordPurchases([{ name: trimmed, store: selectedStore, price, wasOnList: false }], receiptId);
+    }
+    addShopping({ name: trimmed, amount: '1', unit: '', listType: 'weekly', store: selectedStore, price, inventoryQty: 0, status: 'inWeeklyList' });
     setManualName('');
+    setManualPrice('');
     setManualVisible(false);
     showAppModal(t.addedTitle, t.addedBody(1), [{ text: t.ok }]);
   }
@@ -222,22 +253,17 @@ export default function ScanScreen() {
         }).id
       : undefined;
     // Log the receipt as purchases and keep the catalog's price/store/category
-    // current. Category ("type of item") is inherited from the matching
-    // store_items catalog row when the scanned name matches one already known.
+    // current. Category is already pre-populated from the early fuzzy match in
+    // enrichItemsWithCategories, or manually overridden by the user via the
+    // category picker.
     recordPurchases(
-      selected.map((item) => {
-        const storeItemMatch = findFuzzyMatch(item.name, storeItemNames);
-        const category = storeItemMatch
-          ? catalogStoreItems.find((i) => i.name === storeItemMatch)?.category
-          : undefined;
-        return {
-          name: item.name,
-          store: selectedStore,
-          price: item.price,
-          category,
-          wasOnList: existingNames.has(item.name.toLowerCase()),
-        };
-      }),
+      selected.map((item) => ({
+        name: item.name,
+        store: selectedStore,
+        price: item.price,
+        category: item.category,
+        wasOnList: existingNames.has(item.name.toLowerCase()),
+      })),
       receiptId
     );
     showAppModal(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);
@@ -342,6 +368,14 @@ export default function ScanScreen() {
                   </Text>
                 </Pressable>
               ))}
+              <Pressable
+                style={[styles.storeChip, { backgroundColor: theme.grayLight }, selectedStore && !NORWEGIAN_STORES.includes(selectedStore) && { backgroundColor: theme.orange }]}
+                onPress={() => setCustomStoreVisible(true)}
+              >
+                <Text style={[styles.storeText, { color: theme.text }, selectedStore && !NORWEGIAN_STORES.includes(selectedStore) && { color: Colors.white }]}>
+                  {t.otherStore}
+                </Text>
+              </Pressable>
             </View>
           </ScrollView>
         </View>
@@ -416,19 +450,29 @@ export default function ScanScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.recognisedItems}</Text>
             {parsedItems.map((item, i) => (
-              <View key={i} style={[styles.parsedRow, { backgroundColor: theme.white }]}>
-                <Pressable
-                  style={[styles.checkBox, { borderColor: theme.orange }, item.selected && { backgroundColor: theme.orange }]}
-                  onPress={() => toggleItem(i)}
-                >
-                  {item.selected && <Text style={styles.checkMark}>✓</Text>}
-                </Pressable>
-                <TextInput
-                  style={[styles.parsedName, { color: theme.text }, !item.selected && { color: theme.gray, textDecorationLine: 'line-through' }]}
-                  value={item.name}
-                  onChangeText={(v) => updateName(i, v)}
-                />
-                <Text style={[styles.parsedPrice, { color: theme.textLight }]}>{item.price.toFixed(2)} kr</Text>
+              <View key={i}>
+                <View style={[styles.parsedRow, { backgroundColor: theme.white }]}>
+                  <Pressable
+                    style={[styles.checkBox, { borderColor: theme.orange }, item.selected && { backgroundColor: theme.orange }]}
+                    onPress={() => toggleItem(i)}
+                  >
+                    {item.selected && <Text style={styles.checkMark}>✓</Text>}
+                  </Pressable>
+                  <TextInput
+                    style={[styles.parsedName, { color: theme.text }, !item.selected && { color: theme.gray, textDecorationLine: 'line-through' }]}
+                    value={item.name}
+                    onChangeText={(v) => updateName(i, v)}
+                  />
+                  <Text style={[styles.parsedPrice, { color: theme.textLight }]}>{item.price.toFixed(2)} kr</Text>
+                </View>
+                <View style={[styles.categoryRow, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
+                  <Pressable
+                    style={[styles.categoryChip, { backgroundColor: theme.offWhite }]}
+                    onPress={() => { setCategoryPickerIndex(i); setCategoryPickerVisible(true); }}
+                  >
+                    <Text style={[styles.categoryChipText, { color: theme.textLight }]}>{item.category ?? 'other'}</Text>
+                  </Pressable>
+                </View>
               </View>
             ))}
             <Pressable style={[styles.addBtn, { backgroundColor: theme.orange }]} onPress={addToList}>
@@ -444,6 +488,33 @@ export default function ScanScreen() {
       </SiteSwipeView>
 
       <BottomNav />
+
+      {/* Category picker modal */}
+      <Modal visible={categoryPickerVisible} transparent animationType="slide" onRequestClose={() => setCategoryPickerVisible(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setCategoryPickerVisible(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.kvWrapper}>
+          <View style={[styles.manualSheet, { backgroundColor: theme.white }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: theme.grayLight }]} />
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>Velg kategori</Text>
+            <ScrollView style={styles.categoryGrid} contentContainerStyle={styles.categoryGridContent}>
+              {CATEGORIES.map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[styles.categoryOption, { backgroundColor: parsedItems[categoryPickerIndex]?.category === cat ? theme.orange : theme.offWhite }]}
+                  onPress={() => {
+                    updateCategory(categoryPickerIndex, cat);
+                    setCategoryPickerVisible(false);
+                  }}
+                >
+                  <Text style={[styles.categoryOptionText, { color: parsedItems[categoryPickerIndex]?.category === cat ? 'white' : theme.text }]}>
+                    {cat}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* QR scanner */}
       <Modal visible={qrScanVisible} animationType="slide" onRequestClose={() => setQrScanVisible(false)}>
@@ -472,6 +543,53 @@ export default function ScanScreen() {
         </View>
       </Modal>
 
+      {/* Custom store sheet */}
+      <Modal visible={customStoreVisible} transparent animationType="slide" onRequestClose={() => setCustomStoreVisible(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setCustomStoreVisible(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.kvWrapper}>
+          <View style={[styles.manualSheet, { backgroundColor: theme.white }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: theme.grayLight }]} />
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.otherStore}</Text>
+            <Text style={[styles.sheetLabel, { color: theme.textLight }]}>{t.customStoreLabel}</Text>
+            <TextInput
+              ref={customStoreRef}
+              style={[styles.sheetInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+              placeholder={t.customStorePlaceholder}
+              placeholderTextColor={theme.gray}
+              value={customStoreName}
+              onChangeText={setCustomStoreName}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (customStoreName.trim()) {
+                  setSelectedStore(customStoreName.trim());
+                  setCustomStoreName('');
+                  setCustomStoreVisible(false);
+                }
+              }}
+              autoFocus
+            />
+            <View style={styles.sheetButtons}>
+              <Pressable style={[styles.sheetCancelBtn, { borderColor: theme.grayLight }]} onPress={() => setCustomStoreVisible(false)}>
+                <Text style={[styles.sheetCancelText, { color: theme.textLight }]}>{t.cancel}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.sheetAddBtn, { backgroundColor: theme.orange }, !customStoreName.trim() && { opacity: 0.4 }]}
+                onPress={() => {
+                  if (customStoreName.trim()) {
+                    setSelectedStore(customStoreName.trim());
+                    setCustomStoreName('');
+                    setCustomStoreVisible(false);
+                  }
+                }}
+                disabled={!customStoreName.trim()}
+              >
+                <Text style={styles.sheetAddText}>{t.ok}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Manual add sheet */}
       <Modal visible={manualVisible} transparent animationType="slide" onRequestClose={() => setManualVisible(false)}>
         <Pressable style={styles.backdrop} onPress={() => setManualVisible(false)} />
@@ -479,6 +597,11 @@ export default function ScanScreen() {
           <View style={[styles.manualSheet, { backgroundColor: theme.white }]}>
             <View style={[styles.sheetHandle, { backgroundColor: theme.grayLight }]} />
             <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.addManually}</Text>
+            {ocrEmpty && (
+              <Text style={[styles.sheetLabel, { color: theme.textLight }]}>
+                {t.ocrNoItemsFriendly}
+              </Text>
+            )}
             <Text style={[styles.sheetLabel, { color: theme.textLight }]}>{t.manualItemLabel}</Text>
             <TextInput
               ref={manualInputRef}
@@ -487,6 +610,18 @@ export default function ScanScreen() {
               placeholderTextColor={theme.gray}
               value={manualName}
               onChangeText={setManualName}
+              returnKeyType="next"
+              onSubmitEditing={() => manualPriceRef.current?.focus()}
+            />
+            <Text style={[styles.sheetLabel, { color: theme.textLight }]}>{t.estimertPrisLabel}</Text>
+            <TextInput
+              ref={manualPriceRef}
+              style={[styles.sheetInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+              placeholder="0.00"
+              placeholderTextColor={theme.gray}
+              value={manualPrice}
+              onChangeText={setManualPrice}
+              keyboardType="decimal-pad"
               returnKeyType="done"
               onSubmitEditing={addManualItem}
             />
@@ -592,7 +727,8 @@ const baseStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    borderRadius: Radius.sm,
+    borderTopLeftRadius: Radius.sm,
+    borderTopRightRadius: Radius.sm,
     padding: Spacing.sm,
     ...Shadow.card,
   },
@@ -603,6 +739,31 @@ const baseStyles = StyleSheet.create({
   checkMark: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
   parsedName: { flex: 1, fontSize: FontSize.sm },
   parsedPrice: { fontSize: FontSize.sm, fontWeight: '500' },
+  categoryRow: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderBottomLeftRadius: Radius.sm,
+    borderBottomRightRadius: Radius.sm,
+    borderBottomWidth: 1,
+    ...Shadow.card,
+  },
+  categoryChip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    alignSelf: 'flex-start',
+  },
+  categoryChipText: { fontSize: FontSize.xs, fontWeight: '500' },
+  categoryGrid: { maxHeight: 280 },
+  categoryGridContent: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingVertical: Spacing.sm },
+  categoryOption: {
+    width: '48%',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+  },
+  categoryOptionText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
   addBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
   addBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
   // Manual sheet

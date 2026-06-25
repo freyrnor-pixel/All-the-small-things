@@ -19,7 +19,7 @@
  *     is intentionally conservative (distance <= 2 for short names) so it doesn't
  *     silently overwrite the price of an unrelated item.
  */
-export type ParsedReceiptItem = { name: string; price: number; selected: boolean };
+export type ParsedReceiptItem = { name: string; price: number; selected: boolean; category?: string };
 
 /** Classic iterative Levenshtein edit distance between two strings (case-sensitive). */
 export function levenshtein(a: string, b: string): number {
