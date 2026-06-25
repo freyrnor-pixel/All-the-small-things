@@ -25,6 +25,10 @@
  *     textLight, so done/past rows dim consistently with the title.
  *   - Essential tasks get a small star indicator — regular tasks get none. Done
  *     tasks are muted (not hidden) so the day's shape stays visible.
+ *   - onToggle is optional: when passed, the dot becomes its own tappable check
+ *     target (mirrors TaskItem's checkbox) so tasks can be checked off inline,
+ *     same as the Backlog section; the rest of the row still calls onPress to
+ *     open the edit form. Without onToggle the whole row falls back to onPress only.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -37,6 +41,7 @@ import { useT } from '@/lib/i18n';
 type Props = {
   tasks: Task[];
   onPress: (task: Task) => void;
+  onToggle?: (task: Task) => void;
 };
 
 function toMinutes(time: string): number | null {
@@ -67,7 +72,7 @@ function useNowMinutes(): number {
   return now;
 }
 
-export default function DayTimeline({ tasks, onPress }: Props) {
+export default function DayTimeline({ tasks, onPress, onToggle }: Props) {
   const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
@@ -118,13 +123,19 @@ export default function DayTimeline({ tasks, onPress }: Props) {
           )}
         </View>
         <View style={styles.lineCol}>
-          <View
-            style={[
-              styles.dot,
-              { borderColor: isHappeningNow ? theme.orange : theme.grayLight },
-              isHappeningNow && { backgroundColor: theme.orange },
-            ]}
-          />
+          <Pressable
+            disabled={!onToggle}
+            hitSlop={8}
+            onPress={onToggle ? (e) => { e.stopPropagation(); onToggle(task); } : undefined}
+          >
+            <View
+              style={[
+                styles.dot,
+                { borderColor: isHappeningNow ? theme.orange : theme.grayLight },
+                (isHappeningNow || task.done) && { backgroundColor: theme.orange },
+              ]}
+            />
+          </Pressable>
           {!isLast && <View style={[styles.connector, { backgroundColor: theme.grayLight }]} />}
         </View>
         <View style={styles.contentCol}>

@@ -452,6 +452,16 @@ function MonthView({
     };
   }, [today, offset]);
 
+  // load() only keeps the last 35 days of logs (streak window) — navigating to an
+  // earlier month would silently show empty dots regardless of actual history, so
+  // cap ‹ at the month containing the start of that window.
+  const minOffset = useMemo(() => {
+    const cutoff = new Date(today + 'T12:00:00');
+    cutoff.setDate(cutoff.getDate() - 35);
+    const base = new Date(today + 'T12:00:00');
+    return (cutoff.getFullYear() - base.getFullYear()) * 12 + (cutoff.getMonth() - base.getMonth());
+  }, [today]);
+
   if (habits.length === 0) {
     return (
       <View style={styles.emptyCard}>
@@ -463,7 +473,11 @@ function MonthView({
   return (
     <View>
       <View style={styles.monthNav}>
-        <Pressable onPress={() => setOffset((o) => o - 1)} style={styles.monthNavBtn}>
+        <Pressable
+          onPress={() => setOffset((o) => Math.max(minOffset, o - 1))}
+          style={[styles.monthNavBtn, offset <= minOffset && { opacity: 0.3 }]}
+          disabled={offset <= minOffset}
+        >
           <Text style={[styles.monthNavText, { color: theme.orange }]}>‹</Text>
         </Pressable>
         <Text style={[styles.monthLabel, { color: theme.text }]}>{label}</Text>
@@ -535,8 +549,12 @@ export default function HabitsScreen() {
 
   const buildHabits = profileHabits.filter((h) => h.kind === 'build');
   const breakHabits = profileHabits.filter((h) => h.kind === 'break');
+  // 'neutral' habits aren't rendered as cards in the Today view (no Building/Breaking
+  // section for them), so exclude them here too — otherwise the summary chip's
+  // denominator outgrows the number of visible cards and 100% becomes unreachable.
+  const visibleHabits = profileHabits.filter((h) => h.kind !== 'neutral');
 
-  const metCount = profileHabits.filter((h) => {
+  const metCount = visibleHabits.filter((h) => {
     const log = logs.find((l) => l.habitId === h.id && l.logDate === today);
     return (log?.count ?? 0) >= h.dailyGoal;
   }).length;
@@ -676,10 +694,10 @@ export default function HabitsScreen() {
 
         {tab === 'today' && (
           <>
-            {profileHabits.length > 0 && (
+            {visibleHabits.length > 0 && (
               <View style={[styles.summaryChip, { backgroundColor: theme.white }]}>
-                <Text style={[styles.summaryChipText, { color: metCount === profileHabits.length ? theme.green : theme.textLight }]}>
-                  {metCount} / {profileHabits.length} {t.habitSummaryLabel}
+                <Text style={[styles.summaryChipText, { color: metCount === visibleHabits.length ? theme.green : theme.textLight }]}>
+                  {metCount} / {visibleHabits.length} {t.habitSummaryLabel}
                 </Text>
               </View>
             )}
