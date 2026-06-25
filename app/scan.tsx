@@ -477,7 +477,7 @@ export default function ScanScreen() {
                     {item.qty || '1'} stk
                   </Text>
                   <Text style={[styles.itemPrice, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
-                    €{item.price.toFixed(2)}
+                    {item.price.toFixed(2)} kr
                   </Text>
                 </Pressable>
               ))}
