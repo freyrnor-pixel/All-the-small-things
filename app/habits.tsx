@@ -78,6 +78,28 @@ function progressColor(ratio: number, kind: HabitKind, theme: AppColors): string
   return theme.neutral;
 }
 
+/** Determine whether a habit should be shown on a given date based on its recurrence setting. */
+function shouldShowHabitOnDate(habit: Habit, dateStr: string): boolean {
+  if (habit.recurrence === 'daily') return true;
+  if (habit.recurrence === 'one-time') {
+    // One-time habits show only on their creation date (best-effort).
+    // Without a dedicated field, we can't perfectly filter, so treat as daily.
+    return true;
+  }
+  if (habit.recurrence === 'weekly') {
+    if (habit.recurrenceDays.length === 0) return true; // No days set; default to showing always.
+    const date = new Date(dateStr + 'T12:00:00');
+    const dayOfWeek = (date.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
+    return habit.recurrenceDays.includes(dayOfWeek);
+  }
+  if (habit.recurrence === 'monthly') {
+    if (habit.recurrenceDays.length === 0) return true; // No days set; default to showing always.
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.getDate() === habit.recurrenceDays[0];
+  }
+  return true; // Unknown recurrence; show as fallback.
+}
+
 /**
  * Current streak: consecutive met days (count ≥ dailyGoal, or marked as a rest day)
  * ending today (or, if today isn't met yet, ending yesterday so an in-progress day
@@ -377,7 +399,13 @@ function WeekView({
   const t = useT();
   const styles = useScaledStyles(baseStyles);
 
-  if (habits.length === 0) {
+  // Filter habits to only those that appear on at least one date in this week
+  const visibleHabits = useMemo(
+    () => habits.filter((h) => weekDates.some((d) => shouldShowHabitOnDate(h, d))),
+    [habits, weekDates]
+  );
+
+  if (visibleHabits.length === 0) {
     return (
       <View style={styles.emptyCard}>
         <EmptyState text={t.noHabitsYet} />
@@ -402,7 +430,7 @@ function WeekView({
         ))}
       </View>
 
-      {habits.map((habit) => (
+      {visibleHabits.map((habit) => (
         <View key={habit.id} style={styles.weekGridRow}>
           <View style={styles.weekGridLabel}>
             <HabitIcon icon={habit.icon} size={16} color={theme.textLight} />
@@ -465,7 +493,13 @@ function MonthView({
     return (cutoff.getFullYear() - base.getFullYear()) * 12 + (cutoff.getMonth() - base.getMonth());
   }, [today]);
 
-  if (habits.length === 0) {
+  // Filter habits to only those that appear on at least one date in this month
+  const visibleHabits = useMemo(
+    () => habits.filter((h) => dates.some((d) => shouldShowHabitOnDate(h, d))),
+    [habits, dates]
+  );
+
+  if (visibleHabits.length === 0) {
     return (
       <View style={styles.emptyCard}>
         <EmptyState text={t.noHabitsYet} />
@@ -493,7 +527,7 @@ function MonthView({
         </Pressable>
       </View>
 
-      {habits.map((habit) => (
+      {visibleHabits.map((habit) => (
         <View key={habit.id} style={[styles.monthRow, { borderBottomColor: theme.grayLight }]}>
           <View style={styles.monthRowLabel}>
             <HabitIcon icon={habit.icon} size={14} color={theme.textLight} />
@@ -550,12 +584,12 @@ export default function HabitsScreen() {
 
   const profileHabits = habits.filter((h) => h.childName === selectedProfile);
 
-  const buildHabits = profileHabits.filter((h) => h.kind === 'build');
-  const breakHabits = profileHabits.filter((h) => h.kind === 'break');
+  const buildHabits = profileHabits.filter((h) => h.kind === 'build' && shouldShowHabitOnDate(h, today));
+  const breakHabits = profileHabits.filter((h) => h.kind === 'break' && shouldShowHabitOnDate(h, today));
   // 'neutral' habits aren't rendered as cards in the Today view (no Building/Breaking
   // section for them), so exclude them here too — otherwise the summary chip's
   // denominator outgrows the number of visible cards and 100% becomes unreachable.
-  const visibleHabits = profileHabits.filter((h) => h.kind !== 'neutral');
+  const visibleHabits = profileHabits.filter((h) => h.kind !== 'neutral' && shouldShowHabitOnDate(h, today));
 
   const metCount = visibleHabits.filter((h) => {
     const log = logs.find((l) => l.habitId === h.id && l.logDate === today);

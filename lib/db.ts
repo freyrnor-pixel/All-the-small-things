@@ -29,6 +29,7 @@ export const RETENTION_DAYS = 365;
 export function initDb() {
   db.execSync(`
     PRAGMA journal_mode = WAL;
+    PRAGMA foreign_keys = ON;
 
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY,
@@ -395,6 +396,8 @@ export function pruneOldData() {
     db.runSync('DELETE FROM shared_tasks WHERE date < ?', [c]);
     db.runSync('DELETE FROM shared_shopping_items WHERE created_at < ?', [c]);
     db.runSync('DELETE FROM receipts WHERE receipt_date < ?', [c]);
+    db.runSync('DELETE FROM energy_logs WHERE log_date < ?', [c]);
+    db.runSync('DELETE FROM inbox_items WHERE created_at < ?', [c]);
   } catch { /* never block startup on cleanup */ }
 }
 

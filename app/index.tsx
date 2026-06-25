@@ -148,11 +148,14 @@ export default function HomeScreen() {
     if (settings.workModeSessionOverride) return false;
     if (settings.workModeEnabled) return true;
     // Auto-activation respects weekends and (optionally) Norwegian holidays —
-    // no work mode on days off.
+    // no work mode on days off. Also respects the user's configured work days.
+    const now = new Date();
+    const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Mon, 6 = Sun (matches settings.workDays convention)
     if (
       settings.enforceWorkHours &&
       isWithinWorkHours(settings.workHoursStart, settings.workHoursEnd) &&
-      !isWeekendOrHoliday(new Date(), settings.holidaysEnabled)
+      !isWeekendOrHoliday(now, settings.holidaysEnabled) &&
+      settings.workDays.includes(dayOfWeek)
     ) {
       return true;
     }
@@ -164,6 +167,7 @@ export default function HomeScreen() {
     settings.workHoursStart,
     settings.workHoursEnd,
     settings.holidaysEnabled,
+    settings.workDays,
   ]);
 
   // Single clear purpose on open — "what do I need right now?": surface today's
