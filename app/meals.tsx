@@ -16,6 +16,7 @@
  *   - New dish modal collects name + ingredients with catalog autocomplete via suggest().
  *   - pushDishToShopping always adds ingredients as listType 'weekly', tags them with dishName so app/shopping.tsx can group by dish, and surfaces a ConfirmationBanner.
  *   - estimatedPriceNok on a dish is optional (defaults to 0, hidden from the subtitle when 0).
+ *   - Design system pass: fontWeight string literals replaced with Fonts.* tokens.
  */
 import React, { useState } from 'react';
 import {
@@ -48,7 +49,7 @@ import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 const MEAL_TYPES: { value: MealType; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
@@ -443,8 +444,8 @@ const baseStyles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: Spacing.md,
   },
-  back: { fontSize: FontSize.md, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700' },
+  back: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
+  title: { fontSize: FontSize.xl, fontFamily: Fonts.bold },
   randomBtn: {
     width: 40, height: 40, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
@@ -460,7 +461,7 @@ const baseStyles = StyleSheet.create({
     ...Shadow.card,
   },
   tileIconView: { marginBottom: 2 },
-  tileLabel: { fontSize: FontSize.md, fontWeight: '700', color: '#fff' },
+  tileLabel: { fontSize: FontSize.md, fontFamily: Fonts.bold, color: '#fff' },
   tileCount: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.85)' },
   surpriseBtn: {
     borderRadius: Radius.lg,
@@ -471,12 +472,12 @@ const baseStyles = StyleSheet.create({
     ...Shadow.card,
   },
   surpriseIconView: { marginBottom: 2 },
-  surpriseTitle: { color: '#fff', fontWeight: '700', fontSize: FontSize.xl, marginTop: 4 },
+  surpriseTitle: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.xl, marginTop: 4 },
   surpriseSub: { color: 'rgba(255,255,255,0.9)', fontSize: FontSize.sm },
   content: { padding: Spacing.md, gap: Spacing.sm },
   shoppingBtn: { width: 28, height: 28, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   ingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.xs },
-  ingText: { fontSize: FontSize.sm, fontWeight: '500' },
+  ingText: { fontSize: FontSize.sm, fontFamily: Fonts.medium },
   removeText: { fontSize: 18 },
   ingFooter: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: Spacing.sm },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -488,10 +489,10 @@ const baseStyles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.sm,
   },
-  addTriggerText: { fontSize: FontSize.md, fontWeight: '600' },
+  addTriggerText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   emptyState: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm, ...Shadow.card },
   emptyEmoji: { marginBottom: 2 },
-  emptyTitle: { fontSize: FontSize.md, fontWeight: '600' },
+  emptyTitle: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   emptyBody: { fontSize: FontSize.sm, textAlign: 'center' },
 
   // Modal / sheet
@@ -507,11 +508,11 @@ const baseStyles = StyleSheet.create({
     ...Shadow.card,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc', alignSelf: 'center', marginBottom: 4 },
-  sheetTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  sheetTitle: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
   typeRow: { flexDirection: 'row', gap: Spacing.xs },
   typePill: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center', gap: 2 },
   typePillIconView: {},
-  typePillLabel: { fontSize: FontSize.xs, fontWeight: '500' },
+  typePillLabel: { fontSize: FontSize.xs, fontFamily: Fonts.medium },
   nameInput: {
     borderWidth: 2, borderRadius: Radius.sm,
     padding: Spacing.md,
@@ -527,14 +528,14 @@ const baseStyles = StyleSheet.create({
   unitInput: { width: 56, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
   ingNameInput: { flex: 1, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
   addIngBtn: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
-  addIngBtnText: { color: '#fff', fontSize: FontSize.lg, fontWeight: '700' },
+  addIngBtnText: { color: '#fff', fontSize: FontSize.lg, fontFamily: Fonts.bold },
   suggestList: { maxHeight: 160, borderWidth: 1, borderRadius: Radius.sm },
   suggestRow: { padding: Spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between' },
   suggestText: { fontSize: FontSize.sm },
   suggestMeta: { fontSize: FontSize.xs },
   sheetFooter: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
   cancelSheetBtn: { flex: 1, borderWidth: 1, borderRadius: Radius.full, padding: Spacing.md, alignItems: 'center' },
-  cancelSheetText: { fontSize: FontSize.md, fontWeight: '600' },
+  cancelSheetText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   saveBtn: { flex: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', ...Shadow.card },
-  saveBtnText: { fontSize: FontSize.md, fontWeight: '700' },
+  saveBtnText: { fontSize: FontSize.md, fontFamily: Fonts.bold },
 });
