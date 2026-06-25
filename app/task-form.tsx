@@ -40,7 +40,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTaskStore, TaskType, Importance, Priority } from '@/store/useTaskStore';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
-import { todayStr, dateStr } from '@/lib/date';
+import { todayStr, dateStr, dayOfWeekMon0 } from '@/lib/date';
 import { tap } from '@/lib/haptics';
 import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
@@ -96,7 +96,7 @@ export default function TaskFormScreen() {
   // Mon–Sun of the current calendar week, for one-tap date selection.
   const weekDays = useMemo(() => {
     const today = new Date();
-    const mon0 = (today.getDay() + 6) % 7; // days since Monday
+    const mon0 = dayOfWeekMon0(today);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
       d.setDate(today.getDate() - mon0 + i);
@@ -117,8 +117,8 @@ export default function TaskFormScreen() {
     if (savedDate === dateStr(tomorrow)) {
       return t.taskSavedReminder(savedTime, t.tomorrow);
     }
-    // new Date(YYYY-MM-DD).getDay(): 0=Sun … convert to Mon-0 to index dayFull.
-    const mon0 = (new Date(savedDate).getDay() + 6) % 7;
+    // new Date(YYYY-MM-DD).getDay(): 0=Sun → convert to Mon-0 to index dayFull.
+    const mon0 = dayOfWeekMon0(new Date(savedDate + 'T12:00:00'));
     return t.taskSavedReminder(savedTime, t.dayFull[mon0]);
   }
 

@@ -102,7 +102,7 @@ import { showAppModal } from '@/components/AppModal';
 import TreeWatermark from '@/components/TreeWatermark';
 import CoverScreen from '@/components/cover/CoverScreen';
 import { useCoverScreen } from '@/lib/useCoverScreen';
-import { todayStr } from '@/lib/date';
+import { todayStr, dayOfWeekMon0 } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
@@ -150,12 +150,11 @@ export default function HomeScreen() {
     // Auto-activation respects weekends and (optionally) Norwegian holidays —
     // no work mode on days off. Also respects the user's configured work days.
     const now = new Date();
-    const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Mon, 6 = Sun (matches settings.workDays convention)
     if (
       settings.enforceWorkHours &&
       isWithinWorkHours(settings.workHoursStart, settings.workHoursEnd) &&
       !isWeekendOrHoliday(now, settings.holidaysEnabled) &&
-      settings.workDays.includes(dayOfWeek)
+      settings.workDays.includes(dayOfWeekMon0(now))
     ) {
       return true;
     }
