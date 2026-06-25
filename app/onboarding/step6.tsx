@@ -50,8 +50,10 @@ import { requestPermissions } from '@/lib/notifications';
 import { syncReminders } from '@/lib/reminders';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing, THEMES } from '@/constants/theme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 import Pet from '@/components/Pet';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
@@ -85,6 +87,7 @@ export default function OnboardingStep6() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -95,53 +98,57 @@ export default function OnboardingStep6() {
             <View style={[styles.iconBadge, { backgroundColor: theme.orangeLight }]}>
               <Ionicons name="paw-outline" size={36} color={theme.orange} />
             </View>
-            <Text style={styles.heading}>{t.onboarding.step6.title}</Text>
-            <Text style={styles.sub}>{t.onboarding.step6.subtitle}</Text>
+            <Text style={[styles.heading, { color: theme.text }]}>{t.onboarding.step6.title}</Text>
+            <Text style={[styles.sub, { color: theme.textMuted }]}>{t.onboarding.step6.subtitle}</Text>
           </View>
 
           <View style={styles.previewWrap}>
             <Pet completedToday={0} />
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.settings.pet.name}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.settings.pet.name}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.text, borderColor: theme.orange, backgroundColor: theme.white }]}
               value={petNameInput}
               onChangeText={setPetNameInput}
               onBlur={() => settings.update({ petName: petNameInput.trim() })}
               placeholder={t.onboarding.step6.namePlaceholder}
-              placeholderTextColor={Colors.gray}
+              placeholderTextColor={theme.textMuted}
               returnKeyType="done"
             />
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.settings.pet.type}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.settings.pet.type}</Text>
             <View style={styles.petTypeRow}>
               {PET_TYPES.map((pt) => (
                 <Pressable
                   key={pt}
-                  style={[styles.petTypeCard, settings.petType === pt && styles.petTypeCardActive]}
+                  style={[
+                    styles.petTypeCard,
+                    { backgroundColor: theme.grayLight, borderColor: 'transparent' },
+                    settings.petType === pt && { borderColor: theme.orange, backgroundColor: theme.orangeLight },
+                  ]}
                   onPress={() => settings.update({ petType: pt })}
                 >
                   <Text style={styles.petTypeEmoji}>{PET_EMOJIS[pt]}</Text>
-                  <Text style={styles.petTypeLabel}>{t.settings.pet.typeLabels[pt]}</Text>
+                  <Text style={[styles.petTypeLabel, { color: theme.text }]}>{t.settings.pet.typeLabels[pt]}</Text>
                 </Pressable>
               ))}
             </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.fieldLabel}>{t.settings.pet.colour}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.settings.pet.colour}</Text>
             <View style={styles.swatchRow}>
               {petSwatches.map((color) => (
                 <Pressable
                   key={color}
                   style={[
                     styles.petSwatch,
-                    { backgroundColor: color },
-                    settings.petColor === color && styles.petSwatchActive,
+                    { backgroundColor: color, borderColor: 'transparent' },
+                    settings.petColor === color && { borderColor: theme.text },
                   ]}
                   onPress={() => settings.update({ petColor: color })}
                 />
@@ -151,21 +158,31 @@ export default function OnboardingStep6() {
 
           <View style={styles.progress}>
             {[0, 1, 2, 3, 4, 5].map((i) => (
-              <View key={i} style={[styles.dot, i === 5 && styles.dotActive]} />
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  { backgroundColor: theme.grayLight },
+                  i === 5 && { ...styles.dotActive, backgroundColor: theme.orange },
+                ]}
+              />
             ))}
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>{t.previous}</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.doneBtn, { backgroundColor: THEMES[settings.colorTheme]?.orange ?? Colors.orange }]}
+          <Button
+            label={t.previous}
+            onPress={() => router.back()}
+            variant="ghost"
+            size="md"
+          />
+          <Button
+            label={t.finishBtn}
             onPress={finish}
-          >
-            <Text style={styles.doneBtnText}>{t.finishBtn}</Text>
-          </Pressable>
+            variant="primary"
+            size="md"
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -173,59 +190,24 @@ export default function OnboardingStep6() {
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   iconBadge: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
-  sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
+  heading: { fontSize: FontSize.xxl, fontFamily: Fonts.semibold, textAlign: 'center' },
+  sub: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 24 },
   previewWrap: { position: 'relative', height: 190, alignItems: 'center' },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-    ...Shadow.card,
-  },
-  fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
-  input: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.sm,
-    borderWidth: 2,
-    borderColor: Colors.orange,
-    padding: Spacing.md,
-    fontSize: FontSize.lg,
-    color: Colors.text,
-  },
+  card: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
+  fieldLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
+  input: { borderRadius: Radius.sm, borderWidth: 2, padding: Spacing.md, fontSize: FontSize.lg },
   petTypeRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  petTypeCard: {
-    flex: 1,
-    minWidth: 60,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.offWhite,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  petTypeCardActive: { borderColor: Colors.orange, backgroundColor: Colors.orangeLight },
+  petTypeCard: { flex: 1, minWidth: 60, alignItems: 'center', gap: 4, paddingVertical: Spacing.sm, borderRadius: Radius.sm, borderWidth: 2 },
   petTypeEmoji: { fontSize: 28 },
-  petTypeLabel: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
+  petTypeLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   swatchRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  petSwatch: { width: 40, height: 40, borderRadius: Radius.full, borderWidth: 3, borderColor: 'transparent' },
-  petSwatchActive: { borderColor: Colors.text },
+  petSwatch: { width: 40, height: 40, borderRadius: Radius.full, borderWidth: 3 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: 0 },
-  backBtn: { padding: Spacing.md },
-  backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
-  doneBtn: {
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    ...Shadow.card,
-  },
-  doneBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
+  dot: { width: 8, height: 8, borderRadius: Radius.full },
+  dotActive: { width: 20 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: Spacing.md, gap: Spacing.md },
 });

@@ -16,55 +16,69 @@
  *   - Previous navigates back to /onboarding/language.
  */
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>
+      <ScreenBackground />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.top}>
           <Text style={styles.icon}>🔒</Text>
-          <Text style={styles.headline}>{t.onboarding.privacy.headline}</Text>
+          <Text style={[styles.headline, { color: theme.text }]}>{t.onboarding.privacy.headline}</Text>
         </View>
 
-        <View style={styles.bulletCard}>
+        <View style={[styles.bulletCard, { backgroundColor: theme.white }]}>
           <View style={styles.bulletRow}>
             <Text style={styles.bullet}>📱</Text>
-            <Text style={styles.bulletText}>{t.onboarding.privacy.local}</Text>
+            <Text style={[styles.bulletText, { color: theme.text }]}>{t.onboarding.privacy.local}</Text>
           </View>
           <View style={styles.bulletRow}>
             <Text style={styles.bullet}>💚</Text>
-            <Text style={styles.bulletText}>{t.onboarding.privacy.free}</Text>
+            <Text style={[styles.bulletText, { color: theme.text }]}>{t.onboarding.privacy.free}</Text>
           </View>
         </View>
 
-        <Pressable style={styles.ctaBtn} onPress={() => router.push('/onboarding/guided')}>
-          <Text style={styles.ctaText}>{t.onboarding.privacy.cta}</Text>
-        </Pressable>
-      </View>
+        <Button
+          label={t.onboarding.privacy.cta}
+          onPress={() => router.push('/onboarding/guided')}
+          variant="primary"
+          size="md"
+        />
+      </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.backText}>{t.previous}</Text>
-        </Pressable>
+        <Button
+          label={t.previous}
+          onPress={() => router.back()}
+          variant="ghost"
+          size="md"
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
-  content: {
-    flex: 1,
+  safe: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
     padding: Spacing.xl,
     gap: Spacing.xl,
     justifyContent: 'center',
@@ -74,12 +88,10 @@ const baseStyles = StyleSheet.create({
   icon: { fontSize: 72 },
   headline: {
     fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: Fonts.semibold,
     textAlign: 'center',
   },
   bulletCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     gap: Spacing.md,
@@ -95,21 +107,7 @@ const baseStyles = StyleSheet.create({
   bulletText: {
     flex: 1,
     fontSize: FontSize.md,
-    color: Colors.text,
     lineHeight: 22,
   },
-  ctaBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.xxl,
-    paddingVertical: Spacing.md,
-    ...Shadow.card,
-  },
-  ctaText: {
-    color: Colors.white,
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-  },
-  footer: { padding: Spacing.xl, paddingTop: 0 },
-  backText: { fontSize: FontSize.md, color: Colors.textLight, fontWeight: '500' },
+  footer: { padding: Spacing.xl, paddingTop: Spacing.md },
 });

@@ -18,7 +18,6 @@ import React, { useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,18 +29,20 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function OnboardingWelcome() {
   const router = useRouter();
   const update = useSettingsStore((s) => s.update);
+  const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
   const [name, setName] = useState('');
-  const [nameFocused, setNameFocused] = useState(false);
 
   function next() {
     update({ userName: name.trim() });
@@ -50,6 +51,7 @@ export default function OnboardingWelcome() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.flex}
@@ -60,56 +62,64 @@ export default function OnboardingWelcome() {
           showsVerticalScrollIndicator={false}
         >
           {/* Name at the top — first impression */}
-          <View style={styles.card}>
-            <Text style={styles.label}>{t.whatsYourName}</Text>
+          <View style={[styles.card, { backgroundColor: theme.white }]}>
+            <Text style={[styles.label, { color: theme.textMuted }]}>{t.whatsYourName}</Text>
             <TextInput
-              style={styles.input}
-              value={nameFocused ? name : name}
+              style={[styles.input, { color: theme.text, borderColor: theme.orange, backgroundColor: theme.white }]}
+              value={name}
               onChangeText={setName}
-              placeholder={nameFocused ? '' : t.namePlaceholder}
-              placeholderTextColor={Colors.gray}
-              selectionColor={Colors.orange}
+              placeholder={t.namePlaceholder}
+              placeholderTextColor={theme.textMuted}
+              selectionColor={theme.orange}
               returnKeyType="done"
               onSubmitEditing={next}
-              onFocus={() => setNameFocused(true)}
-              onBlur={() => setNameFocused(false)}
               autoFocus={false}
             />
-            <Text style={styles.hint}>{t.nameHint}</Text>
+            <Text style={[styles.hint, { color: theme.textMuted }]}>{t.nameHint}</Text>
           </View>
 
           <View style={styles.top}>
             <View style={styles.logoShadow}>
               <Image source={require('@/assets/icon.png')} style={styles.logo} resizeMode="contain" />
             </View>
-            <Text style={styles.heading}>{t.welcomeHeading}</Text>
-            <Text style={styles.sub}>{t.welcomeSub}</Text>
+            <Text style={[styles.heading, { color: theme.text }]}>{t.welcomeHeading}</Text>
+            <Text style={[styles.sub, { color: theme.textMuted }]}>{t.welcomeSub}</Text>
           </View>
 
-          <View style={styles.featureList}>
+          <View style={[styles.featureList, { backgroundColor: theme.white }]}>
             {t.features.map((f, i) => (
               <View key={i} style={styles.featureRow}>
-                <Ionicons name={f.icon as IoniconsName} size={20} color={Colors.orange} />
-                <Text style={styles.featureText}>{f.text}</Text>
+                <Ionicons name={f.icon as IoniconsName} size={20} color={theme.orange} />
+                <Text style={[styles.featureText, { color: theme.text }]}>{f.text}</Text>
               </View>
             ))}
           </View>
 
-          <View style={[styles.noteBox, { backgroundColor: Colors.greenLight }]}>
-            <Text style={styles.noteText}>{t.onboardingSettingsNote}</Text>
+          <View style={[styles.noteBox, { backgroundColor: theme.orangeLight }]}>
+            <Text style={[styles.noteText, { color: theme.text }]}>{t.onboardingSettingsNote}</Text>
           </View>
 
           <View style={styles.progress}>
             {[0, 1, 2, 3, 4, 5].map((i) => (
-              <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  { backgroundColor: theme.grayLight },
+                  i === 0 && { ...styles.dotActive, backgroundColor: theme.orange },
+                ]}
+              />
             ))}
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable style={styles.nextBtn} onPress={next}>
-            <Text style={styles.nextBtnText}>{t.getStarted}</Text>
-          </Pressable>
+          <Button
+            label={t.getStarted}
+            onPress={next}
+            variant="primary"
+            size="lg"
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -117,7 +127,7 @@ export default function OnboardingWelcome() {
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   flex: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
@@ -125,55 +135,40 @@ const baseStyles = StyleSheet.create({
   logo: { width: 110, height: 110, borderRadius: Radius.lg, overflow: 'hidden' },
   heading: {
     fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: Fonts.semibold,
     textAlign: 'center',
   },
   sub: {
     fontSize: FontSize.md,
-    color: Colors.textLight,
     textAlign: 'center',
     lineHeight: 24,
   },
   featureList: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
     gap: Spacing.md,
     ...Shadow.card,
   },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  featureText: { flex: 1, fontSize: FontSize.md, color: Colors.text, lineHeight: 22 },
+  featureText: { flex: 1, fontSize: FontSize.md, lineHeight: 22 },
   card: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     padding: Spacing.md,
     gap: Spacing.sm,
     ...Shadow.card,
   },
-  label: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600' },
+  label: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   input: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.sm,
     borderWidth: 2,
-    borderColor: Colors.orange,
     padding: Spacing.md,
     fontSize: FontSize.lg,
-    color: Colors.text,
   },
-  hint: { fontSize: FontSize.xs, color: Colors.textLight, lineHeight: 18 },
+  hint: { fontSize: FontSize.xs, lineHeight: 18 },
   noteBox: { borderRadius: Radius.md, padding: Spacing.md },
-  noteText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20, textAlign: 'center' },
+  noteText: { fontSize: FontSize.sm, lineHeight: 20, textAlign: 'center' },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange, width: 20 },
+  dot: { width: 8, height: 8, borderRadius: Radius.full },
+  dotActive: { width: 20 },
   footer: { padding: Spacing.xl, paddingTop: Spacing.md },
-  nextBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    padding: Spacing.md,
-    alignItems: 'center',
-    ...Shadow.fab,
-  },
-  nextBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
 });

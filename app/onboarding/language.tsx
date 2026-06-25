@@ -21,8 +21,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 import type { Language } from '@/store/useSettingsStore';
 
 type LangOption = {
@@ -40,6 +42,7 @@ const OPTIONS: LangOption[] = [
 export default function LanguageScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
 
@@ -50,13 +53,14 @@ export default function LanguageScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <View style={styles.content}>
         <View style={styles.top}>
-          <View style={styles.iconBadge}>
-            <Ionicons name="globe-outline" size={36} color={Colors.orange} />
+          <View style={[styles.iconBadge, { backgroundColor: theme.grayLight }]}>
+            <Ionicons name="globe-outline" size={36} color={theme.orange} />
           </View>
-          <Text style={styles.heading}>{t.chooseLanguage}</Text>
-          <Text style={styles.sub}>{t.chooseLanguageSub}</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>{t.chooseLanguage}</Text>
+          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.chooseLanguageSub}</Text>
         </View>
 
         <View style={styles.optionsRow}>
@@ -65,16 +69,17 @@ export default function LanguageScreen() {
               key={opt.code}
               style={[
                 styles.option,
-                settings.language === opt.code && styles.optionActive,
+                { backgroundColor: theme.white, borderColor: theme.border },
+                settings.language === opt.code && { borderColor: theme.orange },
               ]}
               onPress={() => choose(opt.code)}
             >
               <Text style={styles.flag}>{opt.flag}</Text>
-              <Text style={styles.optionLabel}>{opt.label}</Text>
-              <Text style={styles.optionSub}>{opt.sublabel}</Text>
+              <Text style={[styles.optionLabel, { color: theme.text }]}>{opt.label}</Text>
+              <Text style={[styles.optionSub, { color: theme.textMuted }]}>{opt.sublabel}</Text>
               {settings.language === opt.code && (
-                <View style={styles.checkmark}>
-                  <Ionicons name="checkmark" size={14} color={Colors.white} />
+                <View style={[styles.checkmark, { backgroundColor: theme.orange }]}>
+                  <Ionicons name="checkmark" size={14} color={theme.white} />
                 </View>
               )}
             </Pressable>
@@ -86,7 +91,7 @@ export default function LanguageScreen() {
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   content: {
     flex: 1,
     padding: Spacing.xl,
@@ -96,17 +101,14 @@ const baseStyles = StyleSheet.create({
   top: { alignItems: 'center', gap: Spacing.md },
   iconBadge: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.offWhite,
   },
   heading: {
     fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: Fonts.semibold,
     textAlign: 'center',
   },
   sub: {
     fontSize: FontSize.md,
-    color: Colors.textLight,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -116,28 +118,21 @@ const baseStyles = StyleSheet.create({
   },
   option: {
     flex: 1,
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     alignItems: 'center',
     gap: Spacing.sm,
     borderWidth: 2,
-    borderColor: Colors.grayLight,
     position: 'relative',
     ...Shadow.card,
-  },
-  optionActive: {
-    borderColor: Colors.orange,
   },
   flag: { fontSize: 48 },
   optionLabel: {
     fontSize: FontSize.xl,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: Fonts.semibold,
   },
   optionSub: {
     fontSize: FontSize.sm,
-    color: Colors.textLight,
   },
   checkmark: {
     position: 'absolute',
@@ -146,7 +141,6 @@ const baseStyles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: Radius.full,
-    backgroundColor: Colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
   },
