@@ -18,7 +18,9 @@
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
  *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list. recordPurchases sets wasOnList by matching existing shopping names.
  *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt (no price is parsed there worth tracking).
- *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently updates that item's price — separate from recordPurchases' exact-match price sync on store_items.
+ *   - addToList() requires a store to be picked first (NORWEGIAN_STORES chip row) — without one it shows selectStoreFirstTitle/Body and bails before logging anything.
+ *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently raises that item's price if higher — separate from recordPurchases' exact-match price sync on store_items. Both paths only ever raise the catalog price, never lower it.
+ *   - addToList() also fuzzy-matches each scanned name against useCatalogStore's store_items to inherit that item's category ("type of item") when passing purchases to recordPurchases.
  *   - Both addToList() and addManualItem() create their shopping_items rows with status='inWeeklyList' (not the add() default of 'catalog') — scanned/manually-confirmed items represent things just bought or being bought, so they belong on the Ukeliste working list, not the permanent Katalog.
  *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite() — a plain
  *     navigation shortcut, separate from /budget's own BottomNav entry.
@@ -75,6 +77,7 @@ export default function ScanScreen() {
   const updateShoppingItem = useShoppingStore((s) => s.update);
   const shoppingItems = useShoppingStore((s) => s.items);
   const recordPurchases = useCatalogStore((s) => s.recordPurchases);
+  const catalogStoreItems = useCatalogStore((s) => s.items);
   const addReceipt = useReceiptStore((s) => s.addReceipt);
   const addSharedShopping = useSharedStore((s) => s.addSharedShopping);
   const addSharedTasks = useSharedStore((s) => s.addSharedTasks);
@@ -179,19 +182,27 @@ export default function ScanScreen() {
   }
 
   function addToList() {
+    if (!selectedStore) {
+      showAppModal(t.selectStoreFirstTitle, t.selectStoreFirstBody);
+      return;
+    }
     const selected = parsedItems.filter((i) => i.selected);
     const existingNames = new Set(shoppingItems.map((i) => i.name.toLowerCase()));
     // Catalog items (status='catalog') that fuzzy-match a scanned name get their
     // price silently updated, even when the scanned item itself isn't on the list
     // (recordPurchases below already does this for store_items; this covers the
-    // separate Katalog shopping_items rows the redesign introduced).
+    // separate Katalog shopping_items rows the redesign introduced). Only ever
+    // raises the price — a lower scanned price never overwrites a known higher one.
     const catalogItems = shoppingItems.filter((i) => i.status === 'catalog');
     const catalogNames = catalogItems.map((i) => i.name);
+    // Item-type/category lookup: inherit the category from the matching
+    // store_items catalog row (if any) so recordPurchases can record it.
+    const storeItemNames = catalogStoreItems.map((i) => i.name);
     selected.forEach((item) => {
       const match = findFuzzyMatch(item.name, catalogNames);
       if (match) {
         const catalogItem = catalogItems.find((i) => i.name === match);
-        if (catalogItem && item.price > 0 && item.price !== catalogItem.price) {
+        if (catalogItem && item.price > catalogItem.price) {
           updateShoppingItem(catalogItem.id, { price: item.price });
         }
       }
@@ -208,14 +219,23 @@ export default function ScanScreen() {
           category: 'groceries',
         }).id
       : undefined;
-    // Log the receipt as purchases and keep the catalog's prices current.
+    // Log the receipt as purchases and keep the catalog's price/store/category
+    // current. Category ("type of item") is inherited from the matching
+    // store_items catalog row when the scanned name matches one already known.
     recordPurchases(
-      selected.map((item) => ({
-        name: item.name,
-        store: selectedStore,
-        price: item.price,
-        wasOnList: existingNames.has(item.name.toLowerCase()),
-      })),
+      selected.map((item) => {
+        const storeItemMatch = findFuzzyMatch(item.name, storeItemNames);
+        const category = storeItemMatch
+          ? catalogStoreItems.find((i) => i.name === storeItemMatch)?.category
+          : undefined;
+        return {
+          name: item.name,
+          store: selectedStore,
+          price: item.price,
+          category,
+          wasOnList: existingNames.has(item.name.toLowerCase()),
+        };
+      }),
       receiptId
     );
     showAppModal(t.addedTitle, t.addedBody(selected.length), [{ text: t.ok, onPress: () => router.back() }]);

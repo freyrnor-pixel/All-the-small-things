@@ -121,6 +121,8 @@ const en = {
   scanGuideHint: 'Line the receipt up inside the frame',
   // --- end W-C additions ---
   store: 'Store',
+  selectStoreFirstTitle: 'Pick a store',
+  selectStoreFirstBody: 'Please select which store this receipt is from before adding items.',
   takePhoto: 'Take photo',
   chooseFromLibrary: 'Choose from library',
   addManually: 'Add manually',
@@ -888,6 +890,8 @@ const no: typeof en = {
   scanGuideHint: 'Plasser kvitteringen innenfor rammen',
   // --- end W-C additions ---
   store: 'Butikk',
+  selectStoreFirstTitle: 'Velg butikk',
+  selectStoreFirstBody: 'Velg hvilken butikk denne kvitteringen er fra før du legger til varer.',
   takePhoto: 'Ta bilde',
   chooseFromLibrary: 'Velg fra bibliotek',
   addManually: 'Legg til manuelt',
