@@ -1,40 +1,33 @@
 /**
- * BottomNav.tsx — bottom navigation bar for every site in the app.
+ * BottomNav.tsx — horizontal bottom navigation bar with 5 buttons.
  *
- * Box-grid of all 11 sites (wraps into 2 rows of 6 + 5), the app's only nav entry
- * point now that BubbleMenu is disabled (see app/index.tsx — BubbleMenu work is
- * deferred, see CLAUDE.md). The active tab is derived from the current route,
- * highlighted with a "pushed in" shaded box, and taps go through goToSite() so the
- * navigation stack stays shallow (back always lands on Home, not another site).
+ * Implements the design system's BottomNav pattern: left items (Shopping, Plans),
+ * centre home/menu button, right items (Health, Scan). The centre button is
+ * stylized as a gradient FAB. Active tab is highlighted with primary colour.
+ * Taps navigate via goToSite() to keep the stack shallow.
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/siteNav, lib/useAppTheme, components/PressableScale
- *   Used by → every bottom-menu site screen: app/index, app/plans, app/shopping, app/meals,
- *             app/health, app/scan, app/budget, app/shared, app/automations, app/habits, app/settings
+ *   Used by → every site screen (app/index, app/shopping, etc.)
  *   Data    → none (presentational; navigation only)
  *
  * Edit notes:
- *   - SITE_ITEMS (lib/siteNav.ts) is the single source of truth for which sites exist and
- *     their order — add new sites there, not here, so BottomNav and SiteSwipeView stay in sync.
- *   - Item width is a fixed 1/6 of the bar so 6 items fill row 1 and the remaining 5 wrap to
- *     row 2 — keep SITE_ITEMS at 11 entries or recompute this if that count changes.
- *   - BOTTOM_NAV_HEIGHT is exported so screens with their own absolutely-positioned bottom
- *     overlays (e.g. app/shopping.tsx's FAB + sticky footer) can offset above this (now taller,
- *     2-row) bar.
- *   - Active-state shading is deliberately plain (border + fill, no theme colour material) per
- *     "functional and looking ok, colour/nuance later."
+ *   - SITE_ITEMS (lib/siteNav.ts) defines the 5 items and their order (left to right).
+ *   - Centre item (index 2, home) is rendered with gradient + shadow (design system style).
+ *   - Left items (indices 0–1) and right items (indices 3–4) are simple icon buttons.
+ *   - BOTTOM_NAV_HEIGHT is exported for screens needing to offset overlays.
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useT } from '@/lib/i18n';
-import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing, Shadow } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { goToSite, SITE_ITEMS } from '@/lib/siteNav';
 import PressableScale from '@/components/PressableScale';
 
-export const BOTTOM_NAV_HEIGHT = 120;
+export const BOTTOM_NAV_HEIGHT = 72;
 
 export default function BottomNav() {
   const router = useRouter();
@@ -43,57 +36,98 @@ export default function BottomNav() {
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
 
+  const leftItems = SITE_ITEMS.slice(0, 2);
+  const centreItem = SITE_ITEMS[2];
+  const rightItems = SITE_ITEMS.slice(3, 5);
+
+  const renderItem = (item: typeof SITE_ITEMS[0], isCentre = false) => {
+    const active = pathname === item.route;
+    const iconColor = active ? theme.orange : theme.textLight;
+
+    if (isCentre) {
+      return (
+        <PressableScale
+          key={item.key}
+          scaleTo={0.92}
+          style={[styles.centreButton, { backgroundColor: theme.orange, ...Shadow.fab }]}
+          onPress={() => goToSite(router, pathname, item.route)}
+          hitSlop={8}
+        >
+          <Ionicons name={active ? item.activeIcon : item.icon} size={24} color={theme.white} />
+        </PressableScale>
+      );
+    }
+
+    return (
+      <PressableScale
+        key={item.key}
+        scaleTo={0.92}
+        style={[styles.item, active && { backgroundColor: theme.grayLight, borderRadius: Radius.sm }]}
+        onPress={() => goToSite(router, pathname, item.route)}
+        hitSlop={6}
+      >
+        <Ionicons name={active ? item.activeIcon : item.icon} size={20} color={iconColor} />
+        <Text style={[styles.label, { color: iconColor }]} numberOfLines={1}>
+          {t.nav[item.key]}
+        </Text>
+      </PressableScale>
+    );
+  };
+
   return (
-    <View style={[styles.bar, { backgroundColor: theme.white, borderTopColor: theme.grayLight }]}>
-      {SITE_ITEMS.map((item) => {
-        const active = pathname === item.route;
-        const color = active ? theme.orange : theme.textLight;
-        return (
-          <PressableScale
-            key={item.key}
-            scaleTo={0.92}
-            style={[
-              styles.item,
-              active && [styles.itemActive, { backgroundColor: theme.grayLight }],
-            ]}
-            onPress={() => goToSite(router, pathname, item.route)}
-            hitSlop={4}
-          >
-            <Ionicons name={active ? item.activeIcon : item.icon} size={20} color={color} />
-            <Text style={[styles.label, { color }]} numberOfLines={1}>
-              {t.nav[item.key]}
-            </Text>
-          </PressableScale>
-        );
-      })}
+    <View style={[styles.bar, { backgroundColor: theme.white, borderTopColor: theme.border }]}>
+      <View style={styles.leftGroup}>
+        {leftItems.map((item) => renderItem(item, false))}
+      </View>
+
+      {renderItem(centreItem, true)}
+
+      <View style={styles.rightGroup}>
+        {rightItems.map((item) => renderItem(item, false))}
+      </View>
     </View>
   );
 }
 
-const ITEM_WIDTH = `${100 / 6}%` as const;
-
 const baseStyles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderTopWidth: 1,
-    paddingTop: Spacing.xs,
+    gap: Spacing.md,
+  },
+  leftGroup: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    flex: 1,
+  },
+  rightGroup: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   item: {
-    width: ITEM_WIDTH,
+    flex: 1,
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: Spacing.xs,
     paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
   },
-  itemActive: {
-    borderRadius: Radius.sm,
-    borderWidth: 1.5,
-    borderTopColor: 'rgba(0,0,0,0.16)',
-    borderLeftColor: 'rgba(0,0,0,0.16)',
-    borderBottomColor: 'rgba(255,255,255,0.7)',
-    borderRightColor: 'rgba(255,255,255,0.7)',
-    marginHorizontal: 1,
+  centreButton: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  label: { fontSize: FontSize.xs, fontWeight: '600' },
+  label: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+  },
 });

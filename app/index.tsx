@@ -86,7 +86,7 @@ import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
 // TODO: re-enable bubble menu once redesigned
 // import BubbleMenu from '@/components/BubbleMenu';
-import BottomNav from '@/components/BottomNav';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { goToSite } from '@/lib/siteNav';
 import Pet from '@/components/Pet';
@@ -554,7 +554,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: BOTTOM_NAV_HEIGHT }} />
       </ScrollView>
       </SiteSwipeView>
 

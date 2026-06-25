@@ -48,7 +48,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
 import { showAppModal } from '@/components/AppModal';
-import BottomNav from '@/components/BottomNav';
+import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
@@ -741,7 +741,7 @@ export default function HabitsScreen() {
         {tab === 'week' && <WeekView habits={profileHabits} today={today} lang={lang} theme={theme} />}
         {tab === 'month' && <MonthView habits={profileHabits} today={today} theme={theme} />}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: BOTTOM_NAV_HEIGHT }} />
       </ScrollView>
       </SiteSwipeView>
 

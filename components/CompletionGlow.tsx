@@ -47,6 +47,7 @@ export default function CompletionGlow({ trigger, color, radius = Radius.md }: P
   const theme = useAppTheme();
   const { reducedMotion } = useAccessibility();
   const opacity = useSharedValue(0);
+  const scale = useSharedValue(1);
   const mounted = useSharedValue(false);
 
   useEffect(() => {
@@ -57,13 +58,20 @@ export default function CompletionGlow({ trigger, color, radius = Radius.md }: P
     }
     if (reducedMotion) return;
     if (!trigger) return;
+
+    // Per design spec: bloom grows from 1→1.05 over 300ms ease-out,
+    // opacity fades 1→0.7→0 over 400ms ease-out.
     opacity.value = withSequence(
-      withTiming(0.55, { duration: 180, easing: Easing.out(Easing.quad) }),
-      withTiming(0, { duration: 760, easing: Easing.in(Easing.quad) }),
+      withTiming(0.7, { duration: 300, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: 400, easing: Easing.out(Easing.quad) }),
     );
+    scale.value = withTiming(1.05, { duration: 300, easing: Easing.out(Easing.quad) });
   }, [trigger, reducedMotion]);
 
-  const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
 
   if (reducedMotion) return null;
 
