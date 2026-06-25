@@ -21,6 +21,9 @@
  *   - Added quick-action buttons for Scan (→ /scan) and Budget (→ /budget) at the top of the
  *     scroll content (both tabs). These routes are no longer in the nav bar; Shopping is their
  *     entry point. Uses t.nav.scan/t.nav.budget (already existed) rather than new i18n keys.
+ *     Uses a plain router.push() (NOT goToSite()) — goToSite() replaces the current route,
+ *     which would drop Shopping from the stack and send back/hardware-back to Home instead
+ *     of here. scan.tsx/budget.tsx's own back arrows just call router.back().
  *   - All visible strings go through useT().
  *   - Header Share button opens the /share-modal modal with params { kind: 's' }; the link icon next to it
  *     goes to /shared via goToSite() (lib/siteNav.ts), keeping the nav stack shallow; the pencil icon
@@ -339,7 +342,7 @@ export default function ShoppingScreen() {
           {/* Quick actions */}
           <View style={styles.quickActions}>
             <Pressable
-              onPress={() => goToSite(router, pathname, '/scan')}
+              onPress={() => router.push('/scan')}
               style={[styles.quickAction, { backgroundColor: theme.white }]}
               accessibilityLabel={t.nav.scan}
             >
@@ -348,7 +351,7 @@ export default function ShoppingScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => goToSite(router, pathname, '/budget')}
+              onPress={() => router.push('/budget')}
               style={[styles.quickAction, { backgroundColor: theme.white }]}
               accessibilityLabel={t.nav.budget}
             >
