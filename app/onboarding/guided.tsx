@@ -18,18 +18,21 @@
  *     the user turns it on in Settings.
  */
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 
 export default function GuidedScreen() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
 
@@ -46,48 +49,72 @@ export default function GuidedScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>
+      <ScreenBackground />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.top}>
-          <View style={styles.iconBadge}>
-            <Ionicons name="map-outline" size={36} color={Colors.orange} />
+          <View style={[styles.iconBadge, { backgroundColor: theme.grayLight }]}>
+            <Ionicons name="map-outline" size={36} color={theme.orange} />
           </View>
-          <Text style={styles.heading}>{t.guidedTitle}</Text>
-          <Text style={styles.sub}>{t.guidedSub}</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>{t.guidedTitle}</Text>
+          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.guidedSub}</Text>
         </View>
 
         <View style={styles.options}>
-          <Pressable style={[styles.option, styles.optionPrimary]} onPress={goGuided}>
-            <Ionicons name="list-outline" size={24} color={Colors.white} style={styles.optionIconView} />
-            <View style={styles.optionText}>
-              <Text style={styles.optionLabel}>{t.guidedBtn}</Text>
-              <Text style={styles.optionDesc}>{t.guidedDesc}</Text>
+          <View style={[styles.optionCard, { backgroundColor: theme.orange }]}>
+            <View style={styles.optionContent}>
+              <Ionicons name="list-outline" size={24} color={theme.white} style={styles.optionIcon} />
+              <View style={styles.optionText}>
+                <Text style={[styles.optionLabel, { color: theme.white }]}>{t.guidedBtn}</Text>
+                <Text style={styles.optionDesc}>{t.guidedDesc}</Text>
+              </View>
             </View>
-            <Text style={styles.arrow}>→</Text>
-          </Pressable>
+            <Button
+              label={t.next}
+              onPress={goGuided}
+              variant="ghost"
+              size="sm"
+              icon="arrow-forward"
+            />
+          </View>
 
-          <Pressable style={[styles.option, styles.optionSecondary]} onPress={goExplore}>
-            <View style={styles.optionText}>
-              <Text style={[styles.optionLabel, styles.optionLabelSecondary]}>{t.exploreBtn}</Text>
-              <Text style={[styles.optionDesc, { color: Colors.textLight }]}>{t.exploreDesc}</Text>
+          <View style={[styles.optionCard, { backgroundColor: theme.white, borderColor: theme.border, borderWidth: 1 }]}>
+            <View style={styles.optionContent}>
+              <View style={styles.optionText}>
+                <Text style={[styles.optionLabel, { color: theme.text }]}>{t.exploreBtn}</Text>
+                <Text style={[styles.optionDesc, { color: theme.textMuted }]}>{t.exploreDesc}</Text>
+              </View>
             </View>
-            <Text style={[styles.arrow, styles.arrowSecondary]}>→</Text>
-          </Pressable>
+            <Button
+              label={t.next}
+              onPress={goExplore}
+              variant="ghost"
+              size="sm"
+              icon="arrow-forward"
+            />
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.backText}>{t.previous}</Text>
-        </Pressable>
+        <Button
+          label={t.previous}
+          onPress={() => router.back()}
+          variant="ghost"
+          size="md"
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
-  content: {
-    flex: 1,
+  safe: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
     padding: Spacing.xl,
     gap: Spacing.xl,
     justifyContent: 'center',
@@ -95,22 +122,19 @@ const baseStyles = StyleSheet.create({
   top: { alignItems: 'center', gap: Spacing.md },
   iconBadge: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.offWhite,
   },
   heading: {
     fontSize: FontSize.xxl,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: Fonts.semibold,
     textAlign: 'center',
   },
   sub: {
     fontSize: FontSize.md,
-    color: Colors.textLight,
     textAlign: 'center',
     lineHeight: 22,
   },
   options: { gap: Spacing.md },
-  option: {
+  optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: Radius.lg,
@@ -118,40 +142,24 @@ const baseStyles = StyleSheet.create({
     gap: Spacing.md,
     ...Shadow.card,
   },
-  optionPrimary: {
-    backgroundColor: Colors.orange,
+  optionContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  optionSecondary: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.grayLight,
-  },
-  optionIconView: {},
+  optionIcon: {},
   optionText: { flex: 1, gap: 2 },
   optionLabel: {
     fontSize: FontSize.lg,
-    fontWeight: '700',
-    color: Colors.white,
+    fontFamily: Fonts.semibold,
   },
-  optionLabelSecondary: { color: Colors.text },
   optionDesc: {
     fontSize: FontSize.sm,
-    color: 'rgba(255,255,255,0.8)',
     lineHeight: 18,
   },
-  arrow: {
-    fontSize: FontSize.xl,
-    color: Colors.white,
-    fontWeight: '700',
-  },
-  arrowSecondary: { color: Colors.textLight },
   footer: {
     padding: Spacing.xl,
-    paddingTop: 0,
-  },
-  backText: {
-    fontSize: FontSize.md,
-    color: Colors.textLight,
-    fontWeight: '500',
+    paddingTop: Spacing.md,
   },
 });

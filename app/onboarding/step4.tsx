@@ -16,18 +16,21 @@
  *   - next() → router.push "/onboarding/step5"; Previous uses router.back().
  */
 import React, { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 
 export default function OnboardingStep4() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
 
@@ -43,79 +46,80 @@ export default function OnboardingStep4() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
-          <View style={styles.iconBadge}>
-            <Ionicons name="notifications-outline" size={36} color={Colors.orange} />
+          <View style={[styles.iconBadge, { backgroundColor: theme.grayLight }]}>
+            <Ionicons name="notifications-outline" size={36} color={theme.orange} />
           </View>
-          <Text style={styles.heading}>{t.notificationsOnboarding}</Text>
-          <Text style={styles.sub}>{t.notificationsSub}</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>{t.notificationsOnboarding}</Text>
+          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.notificationsSub}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.white }]}>
           <View style={styles.infoRow}>
-            <Ionicons name="checkmark-circle-outline" size={22} color={Colors.green} style={styles.infoIconView} />
-            <Text style={styles.infoText}>{t.taskNotifications} — {t.taskNotificationsHintOnboarding}</Text>
+            <Ionicons name="checkmark-circle-outline" size={22} color={theme.green} style={styles.infoIconView} />
+            <Text style={[styles.infoText, { color: theme.text }]}>{t.taskNotifications} — {t.taskNotificationsHintOnboarding}</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
           <View style={styles.infoRow}>
             <Ionicons name="cart-outline" size={22} color={FeatureColors.shop} style={styles.infoIconView} />
-            <Text style={styles.infoText}>{t.weeklyRemindersOnboarding} — {t.weeklyRemindersHint}</Text>
+            <Text style={[styles.infoText, { color: theme.text }]}>{t.weeklyRemindersOnboarding} — {t.weeklyRemindersHint}</Text>
           </View>
         </View>
 
-        <View style={[styles.noteBox, { backgroundColor: Colors.greenLight }]}>
-          <Text style={styles.noteText}>{t.onboardingSettingsNote}</Text>
+        <View style={[styles.noteBox, { backgroundColor: theme.orangeLight }]}>
+          <Text style={[styles.noteText, { color: theme.text }]}>{t.onboardingSettingsNote}</Text>
         </View>
 
         <View style={styles.progress}>
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <View key={i} style={[styles.dot, i === 3 && styles.dotActive]} />
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                { backgroundColor: theme.grayLight },
+                i === 3 && { ...styles.dotActive, backgroundColor: theme.orange },
+              ]}
+            />
           ))}
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.previous}</Text>
-        </Pressable>
-        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step5')}>
-          <Text style={styles.nextBtnText}>{t.next}</Text>
-        </Pressable>
+        <Button
+          label={t.previous}
+          onPress={() => router.back()}
+          variant="ghost"
+          size="md"
+        />
+        <Button
+          label={t.next}
+          onPress={() => router.push('/onboarding/step5')}
+          variant="primary"
+          size="md"
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  iconBadge: {
-    width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.offWhite,
-  },
-  heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
-  sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
+  iconBadge: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
+  heading: { fontSize: FontSize.xxl, fontFamily: Fonts.semibold, textAlign: 'center' },
+  sub: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 24 },
+  card: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   infoIconView: { marginTop: 1 },
-  infoText: { flex: 1, fontSize: FontSize.md, color: Colors.text, lineHeight: 22 },
-  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.xs },
+  infoText: { flex: 1, fontSize: FontSize.md, lineHeight: 22 },
+  divider: { height: 1, marginVertical: Spacing.xs },
   noteBox: { borderRadius: Radius.md, padding: Spacing.md },
-  noteText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20, textAlign: 'center' },
+  noteText: { fontSize: FontSize.sm, lineHeight: 20, textAlign: 'center' },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl },
-  backBtn: { padding: Spacing.md },
-  backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
-  nextBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    ...Shadow.fab,
-  },
-  nextBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
+  dot: { width: 8, height: 8, borderRadius: Radius.full },
+  dotActive: { width: 20 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: Spacing.md, gap: Spacing.md },
 });

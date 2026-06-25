@@ -302,7 +302,7 @@ export default function HomeScreen() {
           style={[styles.essentialsBanner, { backgroundColor: theme.orangeLight, borderBottomColor: theme.orange }]}
           onPress={() => settings.update({ essentialsModeEnabled: false })}
         >
-          <Text style={[styles.essentialsBannerText, { color: theme.brown }]}>{t.focusBanner}</Text>
+          <Text style={[styles.essentialsBannerText, { color: theme.brown, backgroundColor: 'transparent' }]}>{t.focusBanner}</Text>
         </Pressable>
       )}
 
@@ -574,17 +574,17 @@ const baseStyles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
   },
-  workBannerText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.sm },
+  workBannerText: { color: '#ffffff', fontFamily: Fonts.semibold, fontSize: FontSize.sm },
   overrideBtn: {
     backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: Radius.full,
     paddingHorizontal: Spacing.md, paddingVertical: 4,
   },
-  overrideBtnText: { color: Colors.white, fontSize: FontSize.xs, fontWeight: '700' },
+  overrideBtnText: { color: '#ffffff', fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   essentialsBanner: {
-    backgroundColor: '#FFF8E6', borderBottomWidth: 1, borderBottomColor: '#F6C344',
+    borderBottomWidth: 1,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, alignItems: 'center',
   },
-  essentialsBannerText: { fontSize: FontSize.xs, color: '#8A6A00', fontWeight: '600' },
+  essentialsBannerText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   scroll: { flex: 1 },
   content: { padding: Spacing.md },
   header: {
@@ -593,8 +593,8 @@ const baseStyles = StyleSheet.create({
   },
   // Calm greeting: rounded semibold (not heavy bold) keeps it low-weight; the
   // muted date label sits quietly beneath it.
-  greeting: { fontSize: FontSize.xl, fontFamily: Fonts.semibold },
-  dateLabel: { fontSize: FontSize.md, marginTop: 2, textTransform: 'capitalize', fontFamily: Fonts.regular },
+  greeting: { fontSize: FontSize.xxl, fontFamily: Fonts.semibold },
+  dateLabel: { fontSize: FontSize.sm, marginTop: Spacing.xs, textTransform: 'capitalize', fontFamily: Fonts.regular },
   headerRight: {
     alignItems: 'center',
     gap: Spacing.xs,
@@ -606,14 +606,14 @@ const baseStyles = StyleSheet.create({
     gap: Spacing.xs,
   },
   iconBtn: {
-    width: 34, height: 34, borderRadius: Radius.full,
+    width: 44, height: 44, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
   focusBtn: {
-    width: 'auto', paddingHorizontal: Spacing.sm, paddingVertical: 4,
-    borderRadius: Radius.full, flexDirection: 'row', gap: 3, borderWidth: 1.5,
+    width: 'auto', paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+    borderRadius: Radius.full, flexDirection: 'row', gap: Spacing.xs, borderWidth: 1.5,
   },
-  focusBtnLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  focusBtnLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   progressTrack: {
     height: 4, borderRadius: Radius.full, marginBottom: Spacing.md, overflow: 'hidden',
   },
@@ -621,42 +621,42 @@ const baseStyles = StyleSheet.create({
   section: { marginBottom: Spacing.lg },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '600' },
-  dailyOverviewHeader: { fontSize: FontSize.lg, fontFamily: Fonts.semibold },
-  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  shareBtn: { borderRadius: Radius.full, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  addBtnText: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
-  seeAll: { fontSize: FontSize.sm, fontWeight: '600' },
+  sectionTitle: { fontSize: FontSize.lg, fontFamily: Fonts.semibold },
+  dailyOverviewHeader: { fontSize: FontSize.md, fontFamily: Fonts.semibold, marginBottom: Spacing.md },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
+  shareBtn: { borderRadius: Radius.full, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, minHeight: 44 },
+  addBtnText: { color: '#ffffff', fontFamily: Fonts.bold, fontSize: FontSize.sm },
+  seeAll: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   card: { borderRadius: Radius.md, padding: Layout.cardPadding, borderWidth: 1, ...Shadow.card },
   // Empty/ahead state: generous padding so a gentle prompt never reads as cramped.
   emptyCard: { borderRadius: Radius.md, padding: Layout.cardPadding, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, fontFamily: Fonts.regular, textAlign: 'center' },
   // "•••" expand/collapse strip beneath the Plans preview — low-weight, centred,
   // toggles plansExpanded in place rather than navigating anywhere.
-  expandStrip: { paddingVertical: Spacing.xs, alignItems: 'center' },
-  expandStripText: { fontSize: FontSize.md, fontWeight: '600', letterSpacing: 2 },
-  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: Spacing.sm },
+  expandStrip: { paddingVertical: Spacing.md, alignItems: 'center' },
+  expandStripText: { fontSize: FontSize.md, fontFamily: Fonts.semibold, letterSpacing: 1 },
+  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm, minHeight: 44 },
   shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  shoppingPreviewName: { fontSize: FontSize.md, flex: 1 },
-  moreText: { fontSize: FontSize.sm, marginTop: Spacing.xs, textAlign: 'right' },
-  backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, textAlign: 'center', fontStyle: 'italic' },
-  backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  shoppingPreviewName: { fontSize: FontSize.md, flex: 1, fontFamily: Fonts.regular },
+  moreText: { fontSize: FontSize.sm, marginTop: Spacing.md, textAlign: 'right', fontFamily: Fonts.regular },
+  backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.md, textAlign: 'center', fontStyle: 'italic', fontFamily: Fonts.regular },
+  backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   backlogBadge: {
     borderRadius: Radius.full,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 6,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: Spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backlogBadgeText: { color: '#fff', fontSize: FontSize.xs, fontWeight: '700' },
-  pointsCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
-  pointsText: { fontSize: FontSize.sm, fontWeight: '500', textAlign: 'center' },
-  saveButtonSection: { paddingHorizontal: Spacing.md, marginBottom: Spacing.md },
-  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
-  saveButtonText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
-  saveButtonCount: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
+  backlogBadgeText: { color: '#ffffff', fontSize: FontSize.xs, fontFamily: Fonts.semibold },
+  pointsCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', marginBottom: Spacing.lg },
+  pointsText: { fontSize: FontSize.sm, fontFamily: Fonts.medium, textAlign: 'center' },
+  saveButtonSection: { paddingHorizontal: Spacing.md, marginBottom: Spacing.lg },
+  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.sm, minHeight: 44 },
+  saveButtonText: { color: '#ffffff', fontFamily: Fonts.bold, fontSize: FontSize.md },
+  saveButtonCount: { color: '#ffffff', fontFamily: Fonts.semibold, fontSize: FontSize.sm },
 });

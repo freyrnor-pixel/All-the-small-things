@@ -20,7 +20,6 @@ import React from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -32,8 +31,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 import TimePickerWheel from '@/components/TimePickerWheel';
 
 export default function OnboardingStep2() {
@@ -45,6 +46,7 @@ export default function OnboardingStep2() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.content}
@@ -55,46 +57,46 @@ export default function OnboardingStep2() {
           <View style={[styles.iconBadge, { backgroundColor: theme.orangeLight }]}>
             <Ionicons name="briefcase-outline" size={36} color={theme.orange} />
           </View>
-          <Text style={styles.heading}>{t.workModeOnboarding}</Text>
-          <Text style={styles.sub}>{t.workModeOnboardingSub}</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>{t.workModeOnboarding}</Text>
+          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.workModeOnboardingSub}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.white }]}>
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>{t.startWithWorkMode}</Text>
-              <Text style={styles.switchHint}>{t.canChangeAnytime}</Text>
+              <Text style={[styles.switchLabel, { color: theme.text }]}>{t.startWithWorkMode}</Text>
+              <Text style={[styles.switchHint, { color: theme.textMuted }]}>{t.canChangeAnytime}</Text>
             </View>
             <Switch
               value={settings.workModeEnabled}
               onValueChange={(v) => settings.update({ workModeEnabled: v })}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={settings.workModeEnabled ? Colors.orange : Colors.gray}
+              trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+              thumbColor={settings.workModeEnabled ? theme.orange : theme.gray}
             />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
-              <Text style={styles.switchLabel}>{t.autoActivateWorkHours}</Text>
-              <Text style={styles.switchHint}>{t.appSwitchesItself}</Text>
+              <Text style={[styles.switchLabel, { color: theme.text }]}>{t.autoActivateWorkHours}</Text>
+              <Text style={[styles.switchHint, { color: theme.textMuted }]}>{t.appSwitchesItself}</Text>
             </View>
             <Switch
               value={settings.enforceWorkHours}
               onValueChange={(v) => settings.update({ enforceWorkHours: v })}
-              trackColor={{ false: Colors.grayLight, true: Colors.orangeLight }}
-              thumbColor={settings.enforceWorkHours ? Colors.orange : Colors.gray}
+              trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+              thumbColor={settings.enforceWorkHours ? theme.orange : theme.gray}
             />
           </View>
 
           {settings.enforceWorkHours && (
             <>
-              <View style={styles.divider} />
-              <Text style={styles.fieldLabel}>{t.workHoursFormat}</Text>
+              <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.workHoursFormat}</Text>
               <View style={styles.hoursRow}>
                 <View style={styles.hourField}>
-                  <Text style={styles.hourLabel}>{t.workHoursFrom}</Text>
+                  <Text style={[styles.hourLabel, { color: theme.textMuted }]}>{t.workHoursFrom}</Text>
                   <TimePickerWheel
                     value={settings.workHoursStart || '07:00'}
                     onChange={(v) => settings.update({ workHoursStart: v })}
@@ -102,7 +104,7 @@ export default function OnboardingStep2() {
                   />
                 </View>
                 <View style={styles.hourField}>
-                  <Text style={styles.hourLabel}>{t.workHoursTo}</Text>
+                  <Text style={[styles.hourLabel, { color: theme.textMuted }]}>{t.workHoursTo}</Text>
                   <TimePickerWheel
                     value={settings.workHoursEnd || '17:00'}
                     onChange={(v) => settings.update({ workHoursEnd: v })}
@@ -114,67 +116,73 @@ export default function OnboardingStep2() {
           )}
         </View>
 
-        <View style={styles.tipBox}>
-          <Text style={styles.tipText}>{t.tipWorkMode}</Text>
+        <View style={[styles.tipBox, { backgroundColor: theme.orangeLight }]}>
+          <Text style={[styles.tipText, { color: theme.text }]}>{t.tipWorkMode}</Text>
         </View>
 
         <View style={styles.progress}>
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <View key={i} style={[styles.dot, i === 1 && styles.dotActive]} />
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                { backgroundColor: theme.grayLight },
+                i === 1 && { ...styles.dotActive, backgroundColor: theme.orange },
+              ]}
+            />
           ))}
         </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>{t.previous}</Text>
-          </Pressable>
-          <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step3')}>
-            <Text style={styles.nextBtnText}>{t.next}</Text>
-          </Pressable>
+          <Button
+            label={t.previous}
+            onPress={() => router.back()}
+            variant="ghost"
+            size="md"
+          />
+          <Button
+            label={t.next}
+            onPress={() => router.push('/onboarding/step3')}
+            variant="primary"
+            size="md"
+          />
         </View>
         {/* W-E: gentle, always-visible skip so no step feels mandatory */}
-        <Pressable style={styles.skipLink} onPress={() => router.push('/onboarding/step3')}>
-          <Text style={styles.skipLinkText}>{t.config.skipForNow}</Text>
-        </Pressable>
+        <Button
+          label={t.config.skipForNow}
+          onPress={() => router.push('/onboarding/step3')}
+          variant="ghost"
+          size="sm"
+          style={styles.skipLink}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
-  skipLink: { alignItems: 'center', paddingBottom: Spacing.lg },
-  skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
+  safe: { flex: 1 },
+  skipLink: { alignItems: 'center', paddingBottom: Spacing.lg, paddingHorizontal: Spacing.xl },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
   iconBadge: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
-  sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  card: { backgroundColor: Colors.white, borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
+  heading: { fontSize: FontSize.xxl, fontFamily: Fonts.semibold, textAlign: 'center' },
+  sub: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 24 },
+  card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLeft: { flex: 1, marginRight: Spacing.md },
-  switchLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  switchHint: { fontSize: FontSize.xs, color: Colors.textLight, marginTop: 2 },
-  divider: { height: 1, backgroundColor: Colors.grayLight, marginVertical: Spacing.md },
-  fieldLabel: { fontSize: FontSize.sm, color: Colors.textLight, fontWeight: '600', marginBottom: Spacing.sm },
+  switchLabel: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
+  switchHint: { fontSize: FontSize.xs, marginTop: 2 },
+  divider: { height: 1, marginVertical: Spacing.md },
+  fieldLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold, marginBottom: Spacing.sm },
   hoursRow: { flexDirection: 'row', gap: Spacing.md },
   hourField: { flex: 1, gap: 4 },
-  hourLabel: { fontSize: FontSize.xs, color: Colors.textLight, fontWeight: '600', textAlign: 'center' },
-  tipBox: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.md },
-  tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
+  hourLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold, textAlign: 'center' },
+  tipBox: { borderRadius: Radius.md, padding: Spacing.md },
+  tipText: { fontSize: FontSize.sm, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: 0 },
-  backBtn: { padding: Spacing.md },
-  backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
-  nextBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    ...Shadow.card,
-  },
-  nextBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
+  dot: { width: 8, height: 8, borderRadius: Radius.full },
+  dotActive: { width: 20 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: Spacing.md, gap: Spacing.md },
 });

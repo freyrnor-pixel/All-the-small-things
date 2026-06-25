@@ -25,6 +25,8 @@
  *   - Companion pet is configured during onboarding step6 by default; this section lets returning users change it later.
  *   - Automations no longer has a settings row — it's reached directly via BottomNav (app/automations.tsx).
  *   - Monthly budget (AP-06B) lives at the bottom of the Shopping List card; an empty input means "no budget set" (monthlyBudgetNok = 0), which app/budget.tsx reads as "don't show a progress bar."
+ *   - Design system pass: fontWeight string literals replaced with Fonts.* tokens; dropped
+ *     unused back/title styles (superseded by ScreenHeader).
  */
 import React, { useState } from 'react';
 import {
@@ -59,7 +61,7 @@ import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import SectionDivider from '@/components/SectionDivider';
-import { FontSize, Radius, Shadow, Spacing, THEMES, ThemeName, MATERIAL_META, MaterialName, getMaterialStyle, hueToCustomColors, hslToHex } from '@/constants/theme';
+import { FontSize, Fonts, Radius, Shadow, Spacing, THEMES, ThemeName, MATERIAL_META, MaterialName, getMaterialStyle, hueToCustomColors, hslToHex } from '@/constants/theme';
 import { DarkMode } from '@/store/useSettingsStore';
 import SwatchPicker from '@/components/SwatchPicker';
 import { RadialSwatch, ConicSwatch } from '@/components/GradientSwatch';
@@ -311,7 +313,7 @@ export default function SettingsScreen() {
                   <Text style={[
                     styles.segText,
                     { color: theme.textLight },
-                    settings.darkMode === mode && { color: theme.text, fontWeight: '600' },
+                    settings.darkMode === mode && { color: theme.text, fontFamily: Fonts.semibold },
                   ]}>
                     {mode === 'off' ? t.darkModeOff : mode === 'on' ? t.darkModeOn : t.darkModeSystem}
                   </Text>
@@ -350,7 +352,7 @@ export default function SettingsScreen() {
                   <Text style={[
                     styles.segText,
                     { color: theme.textLight },
-                    settings.fontSize === size && { color: theme.text, fontWeight: '600' },
+                    settings.fontSize === size && { color: theme.text, fontFamily: Fonts.semibold },
                   ]}>
                     {size === 'small'
                       ? t.settings.accessibility.fontSizeSmall
@@ -499,7 +501,7 @@ export default function SettingsScreen() {
                   <Text style={[
                     styles.segText,
                     { color: theme.textLight },
-                    settings.shoppingListMode === mode && { color: theme.text, fontWeight: '600' },
+                    settings.shoppingListMode === mode && { color: theme.text, fontFamily: Fonts.semibold },
                   ]}>
                     {mode === 'weekly' ? t.weekly : t.monthly}
                   </Text>
@@ -887,26 +889,24 @@ const baseStyles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: Spacing.md, borderBottomWidth: 1,
   },
-  back: { fontSize: FontSize.md, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700' },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.lg },
   section: { gap: Spacing.sm },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  sectionTitle: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
   // W-E: primary group header (Appearance · Notifications · Work Mode · Data)
-  groupHeader: { fontSize: FontSize.xl, fontWeight: '700', marginTop: Spacing.sm },
+  groupHeader: { fontSize: FontSize.xl, fontFamily: Fonts.bold, marginTop: Spacing.sm },
   // W-E: one-sentence description under a setting
   descText: { fontSize: FontSize.xs, marginTop: Spacing.sm, lineHeight: 18 },
   // W-E: Essentials Mode hero card
   essentialsCard: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 2, ...Shadow.card },
-  essentialsLabel: { fontSize: FontSize.lg, fontWeight: '700' },
+  essentialsLabel: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
   card: { borderRadius: Radius.md, padding: Spacing.md, ...Shadow.card },
-  fieldLabel: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: Spacing.xs },
+  fieldLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold, marginBottom: Spacing.xs },
   input: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
   segmented: { flexDirection: 'row', borderRadius: Radius.md, padding: 3, gap: 3 },
   seg: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
   segActive: { ...Shadow.card },
-  segText: { fontSize: FontSize.sm, fontWeight: '600' },
+  segText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   divider: { height: 1, marginVertical: Spacing.md },
   workHoursRow: { flexDirection: 'row', gap: Spacing.md },
   workHoursCol: { flex: 1 },
@@ -920,15 +920,15 @@ const baseStyles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
   },
-  dayText: { fontSize: FontSize.xs, fontWeight: '600' },
+  dayText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   paydayHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontSize: FontSize.md, fontWeight: '500' },
+  switchLabel: { fontSize: FontSize.md, fontFamily: Fonts.medium },
   switchHint: { fontSize: FontSize.xs, marginTop: 2 },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  navRowArrow: { fontSize: FontSize.xl, fontWeight: '700' },
+  navRowArrow: { fontSize: FontSize.xl, fontFamily: Fonts.bold },
   dangerBtn: { paddingVertical: Spacing.sm },
-  dangerBtnText: { fontSize: FontSize.md, fontWeight: '600' },
+  dangerBtnText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   materialSwatch: { width: '100%', height: '100%', borderRadius: Radius.full, overflow: 'hidden' },
   materialSheen: { position: 'absolute', top: 0, left: 0, right: 0, height: '40%', borderRadius: Radius.full },
   langRow: { flexDirection: 'row', gap: Spacing.md },
@@ -937,14 +937,14 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.md, borderRadius: Radius.md, justifyContent: 'center',
   },
   langFlag: { fontSize: 24 },
-  langText: { fontSize: FontSize.md, fontWeight: '600' },
+  langText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   // Privacy card
   privacyCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md,
     borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1,
   },
   privacyIcon: { fontSize: 28 },
-  privacyHeadline: { fontSize: FontSize.sm, fontWeight: '700' },
+  privacyHeadline: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
   privacyLine: { fontSize: FontSize.xs, lineHeight: 18 },
   // Pet styles
   petTypeRow: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'wrap' },
@@ -953,7 +953,7 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.xs, alignItems: 'center', gap: 2,
   },
   petTypeEmoji: { fontSize: 28 },
-  petTypeLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  petTypeLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   swatchRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   petSwatch: {
     width: 36, height: 36, borderRadius: Radius.full, borderWidth: 2,

@@ -16,18 +16,21 @@
  *   - `dateInput` is local edit state seeded from settings.monthlyResetDate.
  */
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { Colors, FeatureColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
+import ScreenBackground from '@/components/ScreenBackground';
+import Button from '@/components/Button';
 
 export default function OnboardingStep3() {
   const router = useRouter();
   const settings = useSettingsStore();
+  const theme = useAppTheme();
   const t = useT();
   const styles = useScaledStyles(baseStyles);
   const [dateInput, setDateInput] = useState(String(settings.monthlyResetDate));
@@ -40,20 +43,21 @@ export default function OnboardingStep3() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ScreenBackground />
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
-          <View style={styles.iconBadge}>
+          <View style={[styles.iconBadge, { backgroundColor: theme.grayLight }]}>
             <Ionicons name="cart-outline" size={36} color={FeatureColors.shop} />
           </View>
-          <Text style={styles.heading}>{t.shoppingOnboarding}</Text>
-          <Text style={styles.sub}>{t.shoppingOnboardingSub}</Text>
+          <Text style={[styles.heading, { color: theme.text }]}>{t.shoppingOnboarding}</Text>
+          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.shoppingOnboardingSub}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t.monthlyResetDateQuestion}</Text>
+        <View style={[styles.card, { backgroundColor: theme.white }]}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>{t.monthlyResetDateQuestion}</Text>
           <TextInput
-            style={styles.dateInput}
+            style={[styles.dateInput, { color: theme.text, borderColor: theme.orange, backgroundColor: theme.white }]}
             value={dateInput}
             onChangeText={(v) => {
               setDateInput(v);
@@ -70,102 +74,74 @@ export default function OnboardingStep3() {
             }}
             keyboardType="number-pad"
             placeholder="1–31"
-            placeholderTextColor={Colors.gray}
+            placeholderTextColor={theme.textMuted}
             maxLength={2}
             returnKeyType="done"
           />
-          <Text style={styles.hint}>{t.monthlyDateInputHint}</Text>
-          <View style={styles.tipBox}>
-            <Text style={styles.tipText}>{t.monthlyPaydayHint}</Text>
+          <Text style={[styles.hint, { color: theme.textMuted }]}>{t.monthlyDateInputHint}</Text>
+          <View style={[styles.tipBox, { backgroundColor: theme.orangeLight }]}>
+            <Text style={[styles.tipText, { color: theme.text }]}>{t.monthlyPaydayHint}</Text>
           </View>
         </View>
 
         <View style={styles.progress}>
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <View key={i} style={[styles.dot, i === 2 && styles.dotActive]} />
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                { backgroundColor: theme.grayLight },
+                i === 2 && { ...styles.dotActive, backgroundColor: theme.orange },
+              ]}
+            />
           ))}
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backBtnText}>{t.previous}</Text>
-        </Pressable>
-        <Pressable style={styles.nextBtn} onPress={() => router.push('/onboarding/step4')}>
-          <Text style={styles.nextBtnText}>{t.next}</Text>
-        </Pressable>
+        <Button
+          label={t.previous}
+          onPress={() => router.back()}
+          variant="ghost"
+          size="md"
+        />
+        <Button
+          label={t.next}
+          onPress={() => router.push('/onboarding/step4')}
+          variant="primary"
+          size="md"
+        />
       </View>
       {/* W-E: gentle, always-visible skip so no step feels mandatory */}
-      <Pressable style={styles.skipLink} onPress={() => router.push('/onboarding/step4')}>
-        <Text style={styles.skipLinkText}>{t.config.skipForNow}</Text>
-      </Pressable>
+      <Button
+        label={t.config.skipForNow}
+        onPress={() => router.push('/onboarding/step4')}
+        variant="ghost"
+        size="sm"
+        style={styles.skipLink}
+      />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.cream },
+  safe: { flex: 1 },
   flex: { flex: 1 },
-  skipLink: { alignItems: 'center', paddingBottom: Spacing.lg },
-  skipLinkText: { fontSize: FontSize.sm, color: Colors.textLight, textDecorationLine: 'underline' },
+  skipLink: { alignItems: 'center', paddingBottom: Spacing.lg, paddingHorizontal: Spacing.xl },
   content: { padding: Spacing.xl, gap: Spacing.xl, paddingBottom: Spacing.md },
   top: { alignItems: 'center', gap: Spacing.md },
-  iconBadge: {
-    width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.offWhite,
-  },
-  heading: { fontSize: FontSize.xxl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
-  sub: { fontSize: FontSize.md, color: Colors.textLight, textAlign: 'center', lineHeight: 24 },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.md,
-    ...Shadow.card,
-  },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.text },
-  dayRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  dayChip: {
-    width: 40, height: 40, borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight, alignItems: 'center', justifyContent: 'center',
-  },
-  dayChipActive: { backgroundColor: Colors.orange },
-  dayText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: '600' },
-  dayTextActive: { color: Colors.white },
-  hint: { fontSize: FontSize.sm, color: Colors.textLight, fontStyle: 'italic' },
-  dateInput: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.sm,
-    borderWidth: 2,
-    borderColor: Colors.orange,
-    padding: Spacing.md,
-    fontSize: FontSize.xl,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  dateRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-  dateChip: {
-    width: 44, height: 44, borderRadius: Radius.full,
-    backgroundColor: Colors.grayLight, alignItems: 'center', justifyContent: 'center',
-  },
-  dateChipActive: { backgroundColor: Colors.orange },
-  dateText: { fontSize: FontSize.sm, color: Colors.text, fontWeight: '600' },
-  dateTextActive: { color: Colors.white },
-  tipBox: { backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.sm },
-  tipText: { fontSize: FontSize.sm, color: Colors.text, lineHeight: 20 },
+  iconBadge: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
+  heading: { fontSize: FontSize.xxl, fontFamily: Fonts.semibold, textAlign: 'center' },
+  sub: { fontSize: FontSize.md, textAlign: 'center', lineHeight: 24 },
+  card: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.md, ...Shadow.card },
+  cardTitle: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
+  hint: { fontSize: FontSize.sm, fontStyle: 'italic' },
+  dateInput: { borderRadius: Radius.sm, borderWidth: 2, padding: Spacing.md, fontSize: FontSize.xl, textAlign: 'center' },
+  tipBox: { borderRadius: Radius.md, padding: Spacing.sm },
+  tipText: { fontSize: FontSize.sm, lineHeight: 20 },
   progress: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: Radius.full, backgroundColor: Colors.grayLight },
-  dotActive: { backgroundColor: Colors.orange, width: 20 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: 0 },
-  backBtn: { padding: Spacing.md },
-  backBtnText: { fontSize: FontSize.md, color: Colors.textLight },
-  nextBtn: {
-    backgroundColor: Colors.orange,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    ...Shadow.card,
-  },
-  nextBtnText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.lg },
+  dot: { width: 8, height: 8, borderRadius: Radius.full },
+  dotActive: { width: 20 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, paddingTop: Spacing.md, gap: Spacing.md },
 });
