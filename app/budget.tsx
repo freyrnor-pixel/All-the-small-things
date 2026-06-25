@@ -3,12 +3,14 @@
  *
  * Compares this month's scanned/manual receipt total (useReceiptStore) against
  * the optional monthly budget set in Settings, with a gentle progress bar and
- * a list of this month's receipts. Has its own BottomNav entry; also linked
- * from a small header button on app/scan.tsx.
+ * a list of this month's receipts. Reached via a quick-action button on
+ * app/shopping.tsx (router.push) or the header link on app/scan.tsx (goToSite,
+ * replacing scan) — not in BottomNav. Either way Shopping sits underneath it
+ * in the stack, so its ScreenHeader back arrow (router.back()) returns there.
  *
  * Connections:
  *   Imports → components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
- *   Used by → Expo Router route "/budget"; reached via BottomNav or app/scan.tsx (header link)
+ *   Used by → Expo Router route "/budget"; reached via app/shopping.tsx (quick action) or app/scan.tsx (header link)
  *   Data    → reads useReceiptStore (receipts table, via receiptsForMonth/totalForMonth) and useSettingsStore.monthlyBudgetNok; writes nothing
  *
  * Edit notes:

@@ -20,8 +20,10 @@
  *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt (no price is parsed there worth tracking).
  *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently updates that item's price — separate from recordPurchases' exact-match price sync on store_items.
  *   - Both addToList() and addManualItem() create their shopping_items rows with status='inWeeklyList' (not the add() default of 'catalog') — scanned/manually-confirmed items represent things just bought or being bought, so they belong on the Ukeliste working list, not the permanent Katalog.
- *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite() — a plain
- *     navigation shortcut, separate from /budget's own BottomNav entry.
+ *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite(), which
+ *     replaces this route rather than pushing — Shopping (this screen's own predecessor, see
+ *     app/shopping.tsx) stays underneath, so back()/hardware-back from Budget still lands on
+ *     Shopping, not Home. Both scan and budget were dropped from the BottomNav (see lib/siteNav.ts).
  *   - The QR scanner modal and manual-entry sheet (both <Modal>) sit outside <SiteSwipeView> —
  *     they're full-screen overlays, not the scrollable screen body.
  */
