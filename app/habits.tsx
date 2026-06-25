@@ -25,6 +25,9 @@
  *     today only — framed gently, never "skipped". computeStreak() treats a rest day as met, so
  *     resting never breaks the streak. WeekStrip shows past rest days as a solid theme.neutral dot,
  *     distinct from both a met day (build/break colour) and a missed one (empty/transparent).
+ *   - Design system pass: fontWeight string literals replaced with Fonts.* tokens; addBtnText/
+ *     donePillText/adjBtnPlusText now take theme.white inline (were silently relying on static
+ *     Colors.white before); dropped unused back/title styles (superseded by ScreenHeader).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -53,7 +56,7 @@ import SiteSwipeView from '@/components/SiteSwipeView';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
-import { AppColors, Colors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
+import { AppColors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -185,7 +188,7 @@ function WeekStrip({
         const isToday = date === today;
         return (
           <View key={date} style={styles.dayCol}>
-            <Text style={[styles.dayAbbr, { color: theme.textLight }, isToday && { color: theme.orange, fontWeight: '700' }]}>{abbr[i]}</Text>
+            <Text style={[styles.dayAbbr, { color: theme.textLight }, isToday && { color: theme.orange, fontFamily: Fonts.bold }]}>{abbr[i]}</Text>
             <View
               style={[
                 styles.weekDot,
@@ -291,7 +294,7 @@ function HabitCard({
               <StreakBadge streak={streak} color={accent} theme={theme} />
               {isDone && (
                 <View style={[styles.donePill, { backgroundColor: accent }]}>
-                  <Text style={styles.donePillText}>{t.habits.doneToday}</Text>
+                  <Text style={[styles.donePillText, { color: theme.white }]}>{t.habits.doneToday}</Text>
                 </View>
               )}
             </View>
@@ -309,7 +312,7 @@ function HabitCard({
             onPress={() => increment(habit.id, today)}
             hitSlop={8}
           >
-            <Text style={styles.adjBtnPlusText}>+</Text>
+            <Text style={[styles.adjBtnPlusText, { color: theme.white }]}>+</Text>
           </Pressable>
         </View>
 
@@ -389,10 +392,10 @@ function WeekView({
         <View style={styles.weekGridLabel} />
         {weekDates.map((date, i) => (
           <View key={date} style={styles.weekGridCell}>
-            <Text style={[styles.weekGridDayAbbr, { color: theme.textLight }, date === today && { color: theme.orange, fontWeight: '700' }]}>
+            <Text style={[styles.weekGridDayAbbr, { color: theme.textLight }, date === today && { color: theme.orange, fontFamily: Fonts.bold }]}>
               {abbr[i]}
             </Text>
-            <Text style={[styles.weekGridDate, { color: theme.textLight }, date === today && { fontWeight: '700' }]}>
+            <Text style={[styles.weekGridDate, { color: theme.textLight }, date === today && { fontFamily: Fonts.bold }]}>
               {date.slice(8)}
             </Text>
           </View>
@@ -590,7 +593,7 @@ export default function HabitsScreen() {
               params: selectedProfile ? { childName: selectedProfile } : {},
             })}
           >
-            <Text style={styles.addBtnText}>+</Text>
+            <Text style={[styles.addBtnText, { color: theme.white }]}>+</Text>
           </Pressable>
         }
       />
@@ -740,13 +743,11 @@ const baseStyles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: Spacing.md,
   },
-  back: { fontSize: FontSize.md, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700' },
   addBtn: {
     width: 36, height: 36, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
   },
-  addBtnText: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '300', lineHeight: 36 },
+  addBtnText: { fontSize: FontSize.xl, fontFamily: Fonts.regular, lineHeight: 36 },
   profileRow: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.sm,
@@ -757,15 +758,15 @@ const baseStyles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
   },
-  profileChipText: { fontSize: FontSize.sm, fontWeight: '600' },
+  profileChipText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   addChildRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   addChildInput: { fontSize: FontSize.sm, minWidth: 80 },
-  addChildConfirm: { fontSize: FontSize.lg, fontWeight: '700' },
+  addChildConfirm: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
   addChildBtn: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xs,
   },
-  addChildBtnText: { fontSize: FontSize.xs, fontWeight: '500' },
+  addChildBtnText: { fontSize: FontSize.xs, fontFamily: Fonts.medium },
   tabs: {
     flexDirection: 'row',
     marginHorizontal: Spacing.md,
@@ -775,11 +776,11 @@ const baseStyles = StyleSheet.create({
     gap: 3,
   },
   tab: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center' },
-  tabText: { fontSize: FontSize.sm, fontWeight: '600' },
+  tabText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
   section: { gap: Spacing.sm },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  sectionTitle: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center' },
   summaryChip: {
@@ -789,7 +790,7 @@ const baseStyles = StyleSheet.create({
     alignSelf: 'center',
     ...Shadow.card,
   },
-  summaryChipText: { fontSize: FontSize.sm, fontWeight: '700' },
+  summaryChipText: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
   dashedAdd: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
@@ -797,7 +798,7 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.md,
     alignItems: 'center',
   },
-  dashedAddText: { fontSize: FontSize.sm, fontWeight: '500' },
+  dashedAddText: { fontSize: FontSize.sm, fontFamily: Fonts.medium },
 
   // Habit card
   habitCard: {
@@ -816,13 +817,13 @@ const baseStyles = StyleSheet.create({
   },
   habitIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
   habitTitleWrap: { flex: 1 },
-  habitTitle: { fontSize: FontSize.md, fontWeight: '600' },
-  doneLabel: { fontSize: FontSize.xs, fontWeight: '600', marginTop: 1 },
+  habitTitle: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
+  doneLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold, marginTop: 1 },
   // W-D: streak indicator (prominent number + mini dots) + done pill.
   titleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 2, flexWrap: 'wrap' },
   streakWrap: { gap: 2 },
   streakHead: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  streakNum: { fontSize: FontSize.lg, fontFamily: Fonts.extrabold, fontWeight: '800' },
+  streakNum: { fontSize: FontSize.lg, fontFamily: Fonts.extrabold, fontFamily: Fonts.extrabold },
   streakLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   streakDots: { flexDirection: 'row', gap: 3 },
   streakDot: { width: 6, height: 6, borderRadius: Radius.full },
@@ -831,7 +832,7 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
-  donePillText: { fontSize: FontSize.xs, color: Colors.white, fontFamily: Fonts.bold, fontWeight: '700' },
+  donePillText: { fontSize: FontSize.xs, fontFamily: Fonts.bold },
   dots: { flexDirection: 'row', gap: 3 },
   dot: {
     width: 9, height: 9,
@@ -846,7 +847,7 @@ const baseStyles = StyleSheet.create({
   },
   adjBtnText: { fontSize: FontSize.lg, lineHeight: 30 },
   adjBtnPlus: {},
-  adjBtnPlusText: { fontSize: FontSize.lg, color: Colors.white, fontWeight: '700', lineHeight: 30 },
+  adjBtnPlusText: { fontSize: FontSize.lg, fontFamily: Fonts.bold, lineHeight: 30 },
 
   // Expanded content
   expanded: { marginTop: Spacing.sm, gap: Spacing.xs },
@@ -858,7 +859,7 @@ const baseStyles = StyleSheet.create({
   },
   stepLabel: {
     fontSize: FontSize.xs,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     width: 70,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -882,11 +883,11 @@ const baseStyles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
   },
-  restDayText: { fontSize: FontSize.xs, fontWeight: '600' },
+  restDayText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   restDayHint: { fontSize: FontSize.xs, fontStyle: 'italic', textAlign: 'center', marginTop: 4 },
   dayCol: { alignItems: 'center', gap: 3 },
-  dayAbbr: { fontSize: 9, fontWeight: '600' },
-  dayAbbrToday: { fontWeight: '700' },
+  dayAbbr: { fontSize: 9, fontFamily: Fonts.semibold },
+  dayAbbrToday: { fontFamily: Fonts.bold },
   weekDot: {
     width: 12, height: 12, borderRadius: Radius.full, borderWidth: 1.5,
   },
@@ -898,7 +899,7 @@ const baseStyles = StyleSheet.create({
   weekGridLabel: {
     width: 110, flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: Spacing.xs,
   },
-  weekGridTitle: { flex: 1, fontSize: FontSize.xs, fontWeight: '500' },
+  weekGridTitle: { flex: 1, fontSize: FontSize.xs, fontFamily: Fonts.medium },
   weekGridCell: { flex: 1, alignItems: 'center', gap: 2 },
   weekGridDayAbbr: { fontSize: 9 },
   weekGridDate: { fontSize: 9 },
@@ -913,15 +914,15 @@ const baseStyles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   monthNavBtn: { padding: Spacing.sm },
-  monthNavText: { fontSize: FontSize.xl, fontWeight: '700' },
-  monthLabel: { fontSize: FontSize.md, fontWeight: '700' },
+  monthNavText: { fontSize: FontSize.xl, fontFamily: Fonts.bold },
+  monthLabel: { fontSize: FontSize.md, fontFamily: Fonts.bold },
   monthRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
   },
   monthRowLabel: { width: 90, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  monthRowTitle: { flex: 1, fontSize: FontSize.xs, fontWeight: '500' },
+  monthRowTitle: { flex: 1, fontSize: FontSize.xs, fontFamily: Fonts.medium },
   monthDots: { flexDirection: 'row', gap: 3, paddingHorizontal: Spacing.xs },
   monthDotWrap: { alignItems: 'center', gap: 2 },
   monthDotDate: { fontSize: 7 },
