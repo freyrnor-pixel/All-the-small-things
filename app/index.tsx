@@ -7,17 +7,17 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/DayTimeline, components/EnergyCheckIn, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useEnergyStore, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AppModal, components/BottomNav, components/DayTimeline, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useEnergyStore (today's energy level); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
  *   - Added ⚙ gear icon (header right) → /settings.
  *   - "Today's Plans" title row is now pressable → /plans (chevron affordance).
  *   - BubbleMenu mount remains commented out — do not remove.
- *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard right
- *     below it is purely the ⭐ focus-mode instruction (t.hints.home.text) — keep these
- *     two separate, don't recombine them into one string.
+ *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard below it
+ *     is the focus-mode instruction (t.hints.home.text) shown conditionally when
+ *     essentialsModeEnabled is true.
  *   - The update-ready banner mirrors the work-mode banner's look (theme.green
  *     pill) and calls Updates.reloadAsync() directly on tap — app/_layout.tsx
  *     only sets the updateReady flag, never auto-reloads or pops an Alert.
@@ -40,18 +40,10 @@
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
  *   - Pet companion is shown when settings.petEnabled (set during onboarding step6 or via Settings).
- *   - InboxSection (AP-02) sits right under the home HintCard, above EnergyCheckIn —
+ *   - InboxSection (AP-02) sits right under the home HintCard —
  *     lists whatever's currently captured via app/capture.tsx and renders nothing
  *     when the inbox is empty (mirrors the Backlog section's hide-when-empty pattern
  *     further down, since capture is incidental/optional, not a permanent fixture).
- *   - EnergyCheckIn sits above the Plans section; on a 'low' energy day, visibleTodayTasks
- *     is narrowed further to priority === 'high' tasks, strictly on top of the essentials
- *     filter (never as a replacement for it).
- *   - NextTaskCard (AP-04) sits between EnergyCheckIn and the Plans section, fed by
- *     suggestNextTask() (lib/taskSuggestion.ts) — a separate "single best next thing"
- *     ranking from rankTodayTasks()'s whole-list ordering used by the Plans widget below;
- *     mounted unconditionally — it shows its own "caught up" empty state when there's
- *     no suggestion, rather than disappearing.
  *   - `tasks` is selected directly from useTaskStore (not just the tasksForDate/backlogTasks/completedCount
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
@@ -76,12 +68,10 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
-import { useEnergyStore } from '@/store/useEnergyStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
 import { rankTodayTasks } from '@/lib/taskOrder';
-import { suggestNextTask } from '@/lib/taskSuggestion';
 import TaskItem from '@/components/TaskItem';
 import DayTimeline from '@/components/DayTimeline';
 // TODO: re-enable bubble menu once redesigned
@@ -92,8 +82,6 @@ import { goToSite } from '@/lib/siteNav';
 import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
 import HintCard from '@/components/HintCard';
-import EnergyCheckIn from '@/components/EnergyCheckIn';
-import NextTaskCard from '@/components/NextTaskCard';
 import InboxSection from '@/components/InboxSection';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import Surface from '@/components/Surface';
@@ -140,7 +128,6 @@ export default function HomeScreen() {
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
-  const energyLevels = useEnergyStore((s) => s.levels);
   const updateReady = useUpdateStore((s) => s.updateReady);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
@@ -177,22 +164,9 @@ export default function HomeScreen() {
     [tasks, tasksForDate, today]
   );
 
-  const essentialsFilteredTasks = settings.essentialsModeEnabled
+  const visibleTodayTasks = settings.essentialsModeEnabled
     ? allTodayTasks.filter((task) => task.importance === 'essential')
     : allTodayTasks;
-  // Low-energy day: narrow further to must-dos only, on top of (never instead
-  // of) the essentials/work-mode filter above.
-  const todayEnergyLevel = energyLevels[today] ?? null;
-  const visibleTodayTasks = todayEnergyLevel === 'low'
-    ? essentialsFilteredTasks.filter((task) => task.priority === 'high')
-    : essentialsFilteredTasks;
-
-  // The single "best next thing" — separate ranking from the Plans list above,
-  // folding in priority + today's energy level (see lib/taskSuggestion.ts).
-  const nextTask = useMemo(
-    () => suggestNextTask(tasksForDate(today), today, todayEnergyLevel, isWorkModeActive),
-    [tasks, tasksForDate, today, todayEnergyLevel, isWorkModeActive]
-  );
 
   // Plans widget: a short 3-item preview by default, expandable in place to the
   // full day via the "•••" strip — no separate cap/overflow-nudge mechanism.
@@ -205,6 +179,13 @@ export default function HomeScreen() {
   const doneTodayTasks = useMemo(
     () => allTodayTasks.filter((t) => t.done),
     [allTodayTasks]
+  );
+  const [doneTasksExpanded, setDoneTasksExpanded] = useState(false);
+
+  // Get the first undone task for "Neste på tur" section
+  const nextUndoneTodayTask = useMemo(
+    () => visibleTodayTasks.find((t) => !t.done) || null,
+    [visibleTodayTasks]
   );
 
   // Progress: completed vs. total tasks for today (including done ones)
@@ -364,81 +345,143 @@ export default function HomeScreen() {
         )}
 
         <Text style={[styles.dailyOverviewHeader, { color: theme.text }]}>{t.dailyOverview}</Text>
-        <HintCard text={t.hints.home.text} example={t.hints.home.example} />
+        {settings.essentialsModeEnabled && <HintCard text={t.hints.home.text} example={t.hints.home.example} />}
 
         <InboxSection />
 
         <SharedRequestsSection kind="task" />
 
-        <EnergyCheckIn />
-
-        <NextTaskCard task={nextTask} />
-
-        {/* Plans — unified preview of today's agenda; tap the title for the full /plans screen */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Pressable
-              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
-              onPress={() => goToSite(router, pathname, '/plans')}
-              accessibilityRole="button"
-              accessibilityLabel={t.home.seeAllPlans}
-            >
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {settings.essentialsModeEnabled ? t.essentialPlansTitle : t.plansTitle}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-            </Pressable>
-            <View style={styles.sectionActions}>
-              <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
-                <Ionicons name="link-outline" size={16} color={theme.textLight} />
-              </Pressable>
-              <Pressable
-                style={styles.shareBtn}
-                onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
-                accessibilityLabel={t.shareBtnLabel}
-              >
-                <Ionicons name="share-outline" size={14} color={theme.orange} />
-              </Pressable>
-              <Pressable
-                style={[styles.addBtn, { backgroundColor: theme.orange }]}
-                onPress={() => router.push('/task-form')}
-              >
-                <Text style={styles.addBtnText}>{t.addNew}</Text>
-              </Pressable>
-            </View>
-          </View>
-          {plansTasks.length === 0 ? (
+        {/* Unified Plans card: Neste på tur + Dagens planer + Ferdig i dag */}
+        {plansTasks.length === 0 && doneTodayTasks.length === 0 ? (
+          <View style={styles.section}>
             <Surface tint={theme.offWhite} style={styles.emptyCard}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>
                 {settings.essentialsModeEnabled ? t.noEssentialPlansToday : t.noPlansToday}
               </Text>
             </Surface>
-          ) : (
+          </View>
+        ) : (
+          <View style={styles.section}>
             <Surface style={styles.card}>
-              <DayTimeline
-                tasks={plansTasks}
-                onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
-                onToggle={(task) => handleToggleTask(task.id)}
-              />
+              {/* Section A: Neste på tur (next upcoming task) */}
+              {nextUndoneTodayTask && (
+                <View>
+                  <View style={styles.nextTaskSection}>
+                    <View>
+                      <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.nextTaskLabel}</Text>
+                      <Text style={[styles.nextTaskTitle, { color: theme.text }]}>{nextUndoneTodayTask.title}</Text>
+                      {nextUndoneTodayTask.time && (
+                        <Text style={[styles.nextTaskTime, { color: theme.textLight }]}>{nextUndoneTodayTask.time}</Text>
+                      )}
+                    </View>
+                    <Pressable
+                      style={[styles.markDoneBtn, { backgroundColor: theme.green }]}
+                      onPress={() => handleToggleTask(nextUndoneTodayTask.id)}
+                    >
+                      <Text style={styles.markDoneBtnText}>✓ {t.done}</Text>
+                    </Pressable>
+                  </View>
+                  <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                </View>
+              )}
+
+              {/* Section B: Dagens planer (timeline) */}
+              <View>
+                <View style={styles.plansHeader}>
+                  <Pressable
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+                    onPress={() => goToSite(router, pathname, '/plans')}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.home.seeAllPlans}
+                  >
+                    <Text style={[styles.sectionLabel, { color: theme.text }]}>{t.currentPlansLabel}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                  </Pressable>
+                  <View style={styles.plansActions}>
+                    <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
+                      <Ionicons name="link-outline" size={14} color={theme.textLight} />
+                    </Pressable>
+                    <Pressable
+                      style={styles.shareBtnSmall}
+                      onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
+                      accessibilityLabel={t.shareBtnLabel}
+                    >
+                      <Ionicons name="share-outline" size={12} color={theme.orange} />
+                    </Pressable>
+                    <Pressable
+                      style={[styles.addBtnSmall, { backgroundColor: theme.orange }]}
+                      onPress={() => router.push('/task-form')}
+                    >
+                      <Text style={styles.addBtnSmallText}>{t.addNew}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                {plansTasks.length > 0 && (
+                  <View style={styles.timelineContainer}>
+                    <DayTimeline
+                      tasks={plansTasks}
+                      onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
+                      onToggle={(task) => handleToggleTask(task.id)}
+                    />
+                  </View>
+                )}
+                <Pressable
+                  style={styles.seeWeekBtn}
+                  onPress={() => goToSite(router, pathname, '/plans')}
+                >
+                  <Text style={[styles.seeWeekBtnText, { color: theme.orange }]}>{t.seeAllWeekPlans}</Text>
+                </Pressable>
+              </View>
+
+              {/* Section C: Ferdig i dag (completed, collapsible) */}
+              {doneTodayTasks.length > 0 && (
+                <>
+                  <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                  <Pressable
+                    style={styles.doneHeaderToggle}
+                    onPress={() => setDoneTasksExpanded(!doneTasksExpanded)}
+                  >
+                    <Ionicons
+                      name={doneTasksExpanded ? 'chevron-down' : 'chevron-forward'}
+                      size={18}
+                      color={theme.text}
+                    />
+                    <Text style={[styles.sectionLabel, { color: theme.text }]}>
+                      {t.doneTasksLabel} ({doneTodayTasks.length})
+                    </Text>
+                  </Pressable>
+                  {doneTasksExpanded && (
+                    <View style={styles.doneTasksList}>
+                      {doneTodayTasks.map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          task={task}
+                          onToggle={() => handleToggleTask(task.id)}
+                          onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
             </Surface>
-          )}
-          {/* Expand/collapse strip — only shown when there's more than the 3-item
-              preview to reveal; toggles plansExpanded in place (no navigation). */}
-          {visibleTodayTasks.length > planPreviewCount && (
-            <Pressable onPress={() => setPlansExpanded((v) => !v)} style={styles.expandStrip}>
-              <Text style={[styles.expandStripText, { color: theme.textLight }]}>
-                {plansExpanded ? t.plansCollapse : '•••'}
-              </Text>
-            </Pressable>
-          )}
-          {settings.essentialsModeEnabled && allTodayTasks.length > visibleTodayTasks.length && (
-            <Pressable onPress={() => settings.update({ essentialsModeEnabled: false })}>
-              <Text style={[styles.seeAll, { color: theme.orange }]}>
-                {t.plansEssentialsHidden(allTodayTasks.length - visibleTodayTasks.length)}
-              </Text>
-            </Pressable>
-          )}
-        </View>
+            {/* Expand/collapse strip for preview → full day */}
+            {visibleTodayTasks.length > planPreviewCount && (
+              <Pressable onPress={() => setPlansExpanded((v) => !v)} style={styles.expandStrip}>
+                <Text style={[styles.expandStripText, { color: theme.textLight }]}>
+                  {plansExpanded ? t.plansCollapse : '•••'}
+                </Text>
+              </Pressable>
+            )}
+            {settings.essentialsModeEnabled && allTodayTasks.length > visibleTodayTasks.length && (
+              <Pressable onPress={() => settings.update({ essentialsModeEnabled: false })}>
+                <Text style={[styles.seeAll, { color: theme.orange }]}>
+                  {t.plansEssentialsHidden(allTodayTasks.length - visibleTodayTasks.length)}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
 
         {/* Backlog — "waiting for you" phrasing, neutral colour (no red/overdue framing) */}
         {backlog.length > 0 && (
@@ -463,25 +506,6 @@ export default function HomeScreen() {
               ))}
             </Surface>
             <Text style={[styles.backlogHint, { color: theme.textLight }]}>{t.backlogHint}</Text>
-          </View>
-        )}
-
-        {/* Done/Finished tasks for today */}
-        {doneTodayTasks.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.doneTasksSection}</Text>
-            </View>
-            <Surface style={styles.card}>
-              {doneTodayTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggle={() => handleToggleTask(task.id)}
-                  onPress={() => router.push({ pathname: '/task-form', params: { id: task.id } })}
-                />
-              ))}
-            </Surface>
           </View>
         )}
 
@@ -656,6 +680,24 @@ const baseStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   backlogBadgeText: { color: '#ffffff', fontSize: FontSize.xs, fontFamily: Fonts.semibold },
+  // Merged Dagens planer card sections
+  sectionLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  nextTaskSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: Spacing.md },
+  nextTaskTitle: { fontSize: FontSize.md, fontFamily: Fonts.semibold, marginVertical: Spacing.xs },
+  nextTaskTime: { fontSize: FontSize.sm, fontFamily: Fonts.regular },
+  markDoneBtn: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, minHeight: 40 },
+  markDoneBtnText: { color: '#ffffff', fontFamily: Fonts.semibold, fontSize: FontSize.sm },
+  divider: { height: 1, marginVertical: Spacing.md },
+  plansHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md, paddingVertical: Spacing.sm },
+  plansActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  shareBtnSmall: { borderRadius: Radius.full, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  addBtnSmall: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, minHeight: 36 },
+  addBtnSmallText: { color: '#ffffff', fontFamily: Fonts.semibold, fontSize: FontSize.xs },
+  timelineContainer: { marginVertical: Spacing.md },
+  seeWeekBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
+  seeWeekBtnText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
+  doneHeaderToggle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.md },
+  doneTasksList: { marginTop: Spacing.sm },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', marginBottom: Spacing.lg },
   pointsText: { fontSize: FontSize.sm, fontFamily: Fonts.medium, textAlign: 'center' },
   saveButtonSection: { paddingHorizontal: Spacing.md, marginBottom: Spacing.lg },
