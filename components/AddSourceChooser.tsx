@@ -1,15 +1,13 @@
 /**
  * AddSourceChooser.tsx — "+" menu source picker for the Ukeliste (weekly) tab.
  *
- * The weekly list's "+" button can add an item from three sources: an existing
- * Katalog (inventory) item, the product catalog/price database (useCatalogStore,
- * via AddItemSheet's autocomplete), or a free-typed manual entry. This sheet
- * presents that choice; picking "Fra katalog" or "Skriv inn manuelt" both hand
- * off to AddItemSheet (which already searches the catalog live as you type, so
- * there's nothing left to differentiate downstream — the distinction here is
- * purely about user intent/framing). "Fra inventar" instead shows a second,
- * in-sheet step listing current Katalog items: tapping one selects it (with a
- * qty stepper), and a sticky "Save" button commits every selection at once.
+ * The weekly list's "+" button can add an item from two sources: an existing
+ * Katalog (inventory) item, or a new item (searched from the product catalog
+ * via AddItemSheet's autocomplete, or typed manually). "Fra inventar" shows a
+ * second in-sheet step listing current Katalog items: tapping one selects it
+ * (with a qty stepper), and a sticky "Save" button commits every selection at
+ * once. "Søk eller skriv inn" opens AddItemSheet, which handles both search and
+ * free-text entry in one flow.
  *
  * The Katalog/Inventory screen does NOT use this chooser — it only has one
  * source (the product catalog), so its "+" opens AddItemSheet directly.
@@ -131,14 +129,7 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
               <View style={[styles.optionIcon, { backgroundColor: theme.orangeLight }]}>
                 <Ionicons name="search-outline" size={20} color={theme.orange} />
               </View>
-              <Text style={[styles.optionText, { color: theme.text }]}>{t.addFromCatalogueOption}</Text>
-            </Pressable>
-
-            <Pressable style={styles.optionRow} onPress={handleOpenAddSheet}>
-              <View style={[styles.optionIcon, { backgroundColor: theme.grayLight }]}>
-                <Ionicons name="create-outline" size={20} color={theme.textLight} />
-              </View>
-              <Text style={[styles.optionText, { color: theme.text }]}>{t.addFreeEntryOption}</Text>
+              <Text style={[styles.optionText, { color: theme.text }]}>{t.searchOrTypeOption}</Text>
             </Pressable>
 
             <Pressable style={styles.cancelRow} onPress={onClose}>

@@ -9,8 +9,8 @@
  * tab is the working list — check items off into the cart, optionally tick them
  * "collected" while shopping, then "Handlingen fullført" marks everything
  * purchased, creates a shopping_trips row, and clears the list. The weekly tab's
- * "+" opens AddSourceChooser (inventory / catalogue / free entry); the Katalog
- * tab's "+" opens AddItemSheet directly (its only source is the product catalog).
+ * "+" opens AddSourceChooser (inventory / catalogue / free entry); Katalog
+ * additions are reached only via the pencil icon → /inventory-edit.
  *
  * Connections:
  *   Imports → components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
@@ -97,7 +97,7 @@ import { todayStr, dateStr } from '@/lib/date';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 
-type Tab = 'weekly' | 'monthly';
+type Tab = 'weekly' | 'catalog';
 
 export default function ShoppingScreen() {
   const router = useRouter();
@@ -129,6 +129,8 @@ export default function ShoppingScreen() {
   const updateSettings = useSettingsStore((s) => s.update);
   const dishes = useMealStore((s) => s.dishes);
   const t = useT();
+
+  const DONE_SHOPPING_FOOTER_HEIGHT = 64; // minHeight 44 + paddingVertical Spacing.md + paddingTop Spacing.sm ≈ 44 + 12 + 6
 
   // Fire the 'shopping_opened' automation trigger once per screen visit.
   useEffect(() => {
@@ -230,7 +232,7 @@ export default function ShoppingScreen() {
   }
 
   function handleAddItem(input: { name: string; price: number; targetQuantity: number; isTemporary: boolean; alsoAddToCatalog: boolean }) {
-    if (tab === 'monthly') {
+    if (tab === 'catalog') {
       add({
         name: input.name,
         amount: '1',
@@ -273,7 +275,7 @@ export default function ShoppingScreen() {
     }
     setShowAddSheet(false);
     success();
-    setConfirm(t.itemAddedToList(input.name));
+    setConfirm(tab === 'catalog' ? t.itemAddedToInventory(input.name) : t.itemAddedToList(input.name));
   }
 
   const tabAccent = tab === 'weekly' ? theme.green : theme.orange;
@@ -289,7 +291,7 @@ export default function ShoppingScreen() {
         bordered
         right={
           <View style={styles.headerActions}>
-            {tab === 'monthly' && (
+            {tab === 'catalog' && (
               <Pressable onPress={() => router.push('/inventory-edit')} hitSlop={8}>
                 <Ionicons name="create-outline" size={20} color={theme.textLight} />
               </Pressable>
@@ -309,7 +311,7 @@ export default function ShoppingScreen() {
 
       {/* Tabs */}
       <View style={[styles.tabsContainer, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
-        {(['weekly', 'monthly'] as Tab[]).map((tabOption) => {
+        {(['weekly', 'catalog'] as Tab[]).map((tabOption) => {
           const isActive = tab === tabOption;
           const accent = tabOption === 'weekly' ? theme.green : theme.orange;
           const count = tabOption === 'weekly' ? ukelisteBadge : katalogBadge;
@@ -367,7 +369,7 @@ export default function ShoppingScreen() {
           <SharedRequestsSection kind="shopping" />
 
           {/* ----- KATALOG TAB ----- */}
-          {tab === 'monthly' && (
+          {tab === 'catalog' && (
             <>
               <View style={[styles.banner, { backgroundColor: theme.orangeLight }]}>
                 <Text style={[styles.bannerText, { color: theme.orange }]}>
@@ -461,15 +463,15 @@ export default function ShoppingScreen() {
           {tab === 'weekly' && (
             <>
               {dishGroups.length === 0 && ungroupedWeeklyUnchecked.length === 0 && weeklyChecked.length === 0 && (
-                <EmptyState text={t.weeklyEmptyTitle} />
-              )}
-              {dishGroups.length === 0 && ungroupedWeeklyUnchecked.length === 0 && weeklyChecked.length === 0 && (
-                <View style={styles.weeklyEmptyExtra}>
-                  <Text style={[styles.weeklyEmptySubtitle, { color: theme.textLight }]}>{t.weeklyEmptySubtitle}</Text>
-                  <Pressable onPress={() => setTab('monthly')}>
-                    <Text style={[styles.goToCatalogText, { color: theme.orange }]}>{t.goToCatalogBtn}</Text>
-                  </Pressable>
-                </View>
+                <>
+                  <EmptyState text={t.weeklyEmptyTitle} />
+                  <View style={styles.weeklyEmptyExtra}>
+                    <Text style={[styles.weeklyEmptySubtitle, { color: theme.textLight }]}>{t.weeklyEmptySubtitle}</Text>
+                    <Pressable onPress={() => setTab('catalog')}>
+                      <Text style={[styles.goToCatalogText, { color: theme.orange }]}>{t.goToCatalogBtn}</Text>
+                    </Pressable>
+                  </View>
+                </>
               )}
 
               {dishGroups.length > 0 && (
@@ -584,13 +586,15 @@ export default function ShoppingScreen() {
         </View>
       )}
 
-      {/* FAB */}
-      <Pressable
-        style={[styles.fab, { backgroundColor: tabAccent, bottom: (tab === 'weekly' ? Spacing.xl + 64 : Spacing.xl) + BOTTOM_NAV_HEIGHT }]}
-        onPress={() => (tab === 'weekly' ? setShowAddSourceChooser(true) : setShowAddSheet(true))}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      {/* FAB — Ukeliste tab only; Katalog additions via pencil icon → /inventory-edit */}
+      {tab === 'weekly' && (
+        <Pressable
+          style={[styles.fab, { backgroundColor: tabAccent, bottom: (Spacing.xl + DONE_SHOPPING_FOOTER_HEIGHT) + BOTTOM_NAV_HEIGHT }]}
+          onPress={() => setShowAddSourceChooser(true)}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </Pressable>
+      )}
 
       <AddItemSheet
         visible={showAddSheet}

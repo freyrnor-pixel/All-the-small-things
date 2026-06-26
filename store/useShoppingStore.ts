@@ -75,7 +75,7 @@ import {
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
-export type ShoppingStatus = 'catalog' | 'staged' | 'inWeeklyList' | 'purchased';
+export type ShoppingStatus = 'catalog' | 'staged' /* vestigial: never written by new code; kept for old row compatibility */ | 'inWeeklyList' | 'purchased';
 
 export type ShoppingItem = {
   id: string;

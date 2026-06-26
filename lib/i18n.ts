@@ -269,6 +269,7 @@ const en = {
   weeklyResetsOnShort: (day: string) => `Resets ${day}`,
   clearCheckedItems: (n: number) => `Clear ${n} checked ${n === 1 ? 'item' : 'items'}`,
   itemAddedToList: (name: string) => `${name} added ✓`,
+  itemAddedToInventory: (name: string) => `${name} added to inventory ✓`,
   itemsAddedToList: (n: number) => `${n} items added ✓`,
   itemPutBackToInventory: (name: string) => `${name} put back in inventory`,
   // --- end W-C additions ---
@@ -310,8 +311,7 @@ const en = {
   // Weekly "+" source chooser (Katalog/Ukeliste redesign)
   addSourceChooserTitle: 'Add item',
   addFromInventoryOption: 'From inventory',
-  addFromCatalogueOption: 'From catalogue',
-  addFreeEntryOption: 'Type it in',
+  searchOrTypeOption: 'Search or type',
   addSourceChooserInventoryEmpty: 'No matching items in your catalog.',
   inventoryPickerTitle: 'Pick from inventory',
   inventoryPickerSearchPlaceholder: 'Search catalog…',
@@ -1052,6 +1052,7 @@ const no: typeof en = {
   weeklyResetsOnShort: (day: string) => `Nullstilles ${day}`,
   clearCheckedItems: (n: number) => `Fjern ${n} avkrysset${n === 1 ? '' : 'e'}`,
   itemAddedToList: (name: string) => `${name} lagt til ✓`,
+  itemAddedToInventory: (name: string) => `${name} lagt til inventar ✓`,
   itemsAddedToList: (n: number) => `${n} varer lagt til ✓`,
   itemPutBackToInventory: (name: string) => `${name} lagt tilbake i inventar`,
   // --- end W-C additions ---
@@ -1093,8 +1094,7 @@ const no: typeof en = {
   // Ukeliste "+"-kilde-velger (Katalog/Ukeliste-redesign)
   addSourceChooserTitle: 'Legg til vare',
   addFromInventoryOption: 'Fra inventar',
-  addFromCatalogueOption: 'Fra katalog',
-  addFreeEntryOption: 'Skriv inn manuelt',
+  searchOrTypeOption: 'Søk eller skriv inn',
   addSourceChooserInventoryEmpty: 'Ingen treff i katalogen din.',
   inventoryPickerTitle: 'Velg fra inventar',
   inventoryPickerSearchPlaceholder: 'Søk i katalog…',
