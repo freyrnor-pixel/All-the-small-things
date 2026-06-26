@@ -113,9 +113,9 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
             style={[
               styles.title,
               { color: theme.text },
-              muted && { color: theme.gray, fontWeight: '400' },
-              task.done && { color: theme.gray, textDecorationLine: 'line-through' },
-              isPending && { color: theme.gray, textDecorationLine: 'line-through', opacity: 0.5 },
+              muted && { color: theme.textLight, fontWeight: '400' },
+              task.done && { color: theme.textLight, textDecorationLine: 'line-through' },
+              isPending && { color: theme.textLight, textDecorationLine: 'line-through', opacity: 0.5 },
             ]}
           >
             {task.title}

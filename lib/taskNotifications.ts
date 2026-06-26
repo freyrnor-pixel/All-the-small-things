@@ -81,7 +81,12 @@ export function syncTaskNotification(task: Task, s: TaskNotifSettings): void {
   }
   const [hour, minute] = parsed;
   const t = getTranslations(s.language);
-  const dur = task.durationMinutes ?? 30;
+
+  // Option C: Minimal notification — title is task name only, body is queue status only
+  const minimalContent = {
+    title: task.title,
+    body: t.notif.overviewNothingElse,
+  };
 
   if (task.recurring === 'weekly') {
     if (task.recurringDays.length === 0) {
@@ -96,17 +101,17 @@ export function syncTaskNotification(task: Task, s: TaskNotifSettings): void {
           weekday: toExpoWeekday(day),
           hour,
           minute,
-          content: { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
+          content: minimalContent,
         });
         // The end reminder may land later the same day or roll into the next.
-        const endTotal = hour * 60 + minute + dur;
+        const endTotal = hour * 60 + minute + (task.durationMinutes ?? 30);
         const endDay = (day + Math.floor(endTotal / 1440)) % 7;
         occurrences.push({
           suffix: `e${day}`,
           weekday: toExpoWeekday(endDay),
           hour: Math.floor((endTotal % 1440) / 60),
           minute: endTotal % 60,
-          content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) },
+          content: minimalContent,
         });
       } else {
         occurrences.push({
@@ -114,7 +119,7 @@ export function syncTaskNotification(task: Task, s: TaskNotifSettings): void {
           weekday: toExpoWeekday(day),
           hour,
           minute,
-          content: { title: t.notif.taskStartTitle(task.title), body: t.notif.taskStartBody },
+          content: minimalContent,
         });
       }
     }
@@ -136,17 +141,15 @@ export function syncTaskNotification(task: Task, s: TaskNotifSettings): void {
     return;
   }
   if (task.taskType === 'time-box') {
+    const dur = task.durationMinutes ?? 30;
     const end = new Date(start.getTime() + dur * 60 * 1000);
     void scheduleTaskNotification(
       task.id,
       deferPastQuietHours(start, s),
-      { title: t.notif.taskBoxTitle(task.title), body: t.notif.taskBoxBody(dur) },
-      { date: deferPastQuietHours(end, s), content: { title: t.notif.taskEndTitle(task.title), body: t.notif.taskEndBody(dur) } }
+      minimalContent,
+      { date: deferPastQuietHours(end, s), content: minimalContent }
     );
   } else {
-    void scheduleTaskNotification(task.id, deferPastQuietHours(start, s), {
-      title: t.notif.taskStartTitle(task.title),
-      body: t.notif.taskStartBody,
-    });
+    void scheduleTaskNotification(task.id, deferPastQuietHours(start, s), minimalContent);
   }
 }
