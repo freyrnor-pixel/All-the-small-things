@@ -7,13 +7,16 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
  *   Used by → Expo Router route "/automations", reached via BottomNav
  *   Data    → useAutomationStore (ifttt_rules table)
  *
  * Edit notes:
  *   - Trigger/action picker is two rows of chips, not a dropdown — only two options each today.
  *   - Saving is disabled until the action's required field (message / item name) is non-empty.
+ *   - "New automation" is a floating AddFAB (bottom-right, above BottomNav) toggling
+ *     showForm — ScreenHeader's right slot is unused here. NewRuleForm's own Cancel/Save
+ *     footer stays put (it's a quick inline form, not worth lifting to the header).
  */
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
@@ -28,6 +31,7 @@ import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { showAppModal } from '@/components/AppModal';
+import AddFAB from '@/components/AddFAB';
 import { useT } from '@/lib/i18n';
 import { warning, heavy } from '@/lib/haptics';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -200,18 +204,7 @@ export default function AutomationsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <ScreenHeader
-        title={t.automations.title}
-        onBack={() => router.back()}
-        right={
-          <Pressable
-            style={[styles.addBtn, { backgroundColor: theme.orange }]}
-            onPress={() => setShowForm((v) => !v)}
-          >
-            <Text style={styles.addBtnText}>+</Text>
-          </Pressable>
-        }
-      />
+      <ScreenHeader title={t.automations.title} onBack={() => router.back()} />
 
       <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -231,6 +224,7 @@ export default function AutomationsScreen() {
       </ScrollView>
       </SiteSwipeView>
 
+      <AddFAB onPress={() => setShowForm((v) => !v)} />
       <BottomNav />
     </SafeAreaView>
   );
@@ -238,19 +232,6 @@ export default function AutomationsScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  back: { fontSize: FontSize.md, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700' },
-  addBtn: {
-    width: 36, height: 36, borderRadius: Radius.full,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  addBtnText: { color: '#fff', fontSize: FontSize.xl, fontWeight: '300', lineHeight: 36 },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.sm },
   empty: { fontSize: FontSize.sm, textAlign: 'center', paddingVertical: Spacing.lg },

@@ -146,7 +146,7 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
           </Pressable>
           <Text style={[styles.qtyText, { color: theme.text }]}>{targetQty}</Text>
           <Pressable
-            style={[styles.stepBtn, { backgroundColor: origin === 'catalog' ? theme.orange : theme.green }]}
+            style={[styles.stepBtn, { backgroundColor: theme.orange }]}
             onPress={() => setTargetQty((q) => q + 1)}
             hitSlop={6}
           >

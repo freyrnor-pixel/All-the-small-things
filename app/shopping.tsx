@@ -13,7 +13,7 @@
  * additions are reached only via the pencil icon → /inventory-edit.
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddFAB, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -88,6 +88,7 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
+import AddFAB from '@/components/AddFAB';
 import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { success, heavy } from '@/lib/haptics';
@@ -588,12 +589,10 @@ export default function ShoppingScreen() {
 
       {/* FAB — Ukeliste tab only; Katalog additions via pencil icon → /inventory-edit */}
       {tab === 'weekly' && (
-        <Pressable
-          style={[styles.fab, { backgroundColor: tabAccent, bottom: (Spacing.xl + DONE_SHOPPING_FOOTER_HEIGHT) + BOTTOM_NAV_HEIGHT }]}
+        <AddFAB
           onPress={() => setShowAddSourceChooser(true)}
-        >
-          <Text style={styles.fabText}>+</Text>
-        </Pressable>
+          bottom={(Spacing.xl + DONE_SHOPPING_FOOTER_HEIGHT) + BOTTOM_NAV_HEIGHT}
+        />
       )}
 
       <AddItemSheet
@@ -715,20 +714,4 @@ const baseStyles = StyleSheet.create({
   },
   doneShoppingBtn: { borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', minHeight: 44, ...Shadow.fab },
   doneShoppingText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
-
-  fab: {
-    position: 'absolute',
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fabText: { color: '#fff', fontSize: 28, fontFamily: Fonts.bold, lineHeight: 32 },
 });

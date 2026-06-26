@@ -6,7 +6,7 @@
  * done; press opens the task. Fully theme-aware via useAppTheme.
  *
  * Connections:
- *   Imports → components/CompletionGlow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/CompletionGlow, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore (Task type only)
  *   Used by → app/index.tsx
  *   Data    → consumes the Task type from useTaskStore; toggle/open handled by parent callbacks; reads reducedMotion + scaled fontSize via useAccessibility()/useScaledStyles()
  *
@@ -21,7 +21,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Task, useTaskStore } from '@/store/useTaskStore';
+import { Task } from '@/store/useTaskStore';
 // OLD: import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 //      Colors was used for hardcoded warm-theme values that ignored the user's
 //      chosen colour theme and broke dark mode (dark text on dark backgrounds).
@@ -47,7 +47,6 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const t = useT();
   const { reducedMotion } = useAccessibility();
   const styles = useScaledStyles(baseStyles);
-  const isPending = useTaskStore((s) => s.pending.has(task.id));
   const isTimebox = task.taskType === 'time-box';
   const isEssential = task.importance === 'essential';
   const checkScale = useRef(new Animated.Value(1)).current;
@@ -83,10 +82,10 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
   const checkBorderColor = muted ? theme.gray : theme.orange;
 
   return (
-    <View style={[styles.wrap, isPending && { opacity: 0.6 }]}>
+    <View style={styles.wrap}>
       <CompletionGlow trigger={task.done} color={theme.green} radius={Radius.md} />
       <View style={styles.row}>
-      <View style={[styles.stripe, { backgroundColor: stripeColor, opacity: isPending ? 0.5 : 1 }]} />
+      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
       <Animated.View style={{ transform: [{ scale: checkScale }] }}>
         <Pressable
@@ -115,12 +114,11 @@ export default function TaskItem({ task, onToggle, onPress, muted }: Props) {
               { color: theme.text },
               muted && { color: theme.textLight, fontWeight: '400' },
               task.done && { color: theme.textLight, textDecorationLine: 'line-through' },
-              isPending && { color: theme.textLight, textDecorationLine: 'line-through', opacity: 0.5 },
             ]}
           >
             {task.title}
           </Text>
-          {isEssential && !task.done && !isPending && (
+          {isEssential && !task.done && (
             <Ionicons name="star" size={14} color={theme.orange} />
           )}
         </View>

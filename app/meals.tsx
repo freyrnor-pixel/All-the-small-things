@@ -6,7 +6,7 @@
  * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
@@ -17,6 +17,9 @@
  *   - pushDishToShopping always adds ingredients as listType 'weekly', tags them with dishName so app/shopping.tsx can group by dish, and surfaces a ConfirmationBanner.
  *   - estimatedPriceNok on a dish is optional (defaults to 0, hidden from the subtitle when 0).
  *   - Design system pass: fontWeight string literals replaced with Fonts.* tokens.
+ *   - "Ny rett" is a floating AddFAB (plain theme.orange, no per-category tint) →
+ *     openModal(activeCategory). The new-dish sheet's Cancel/Save live in a header row
+ *     at the top (matching app/task-form.tsx's pattern) instead of a bottom footer.
  */
 import React, { useState } from 'react';
 import {
@@ -47,6 +50,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
+import AddFAB from '@/components/AddFAB';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
@@ -288,15 +292,13 @@ export default function MealsScreen() {
               </ExpandableCard>
             ))}
 
-            <Pressable style={[styles.addTrigger, { borderColor: activeMeta?.color ?? theme.green }]} onPress={() => openModal(activeCategory)}>
-              <Text style={[styles.addTriggerText, { color: activeMeta?.color ?? theme.green }]}>{t.newDishTrigger}</Text>
-            </Pressable>
-
-            <View style={{ height: 40 }} />
+            <View style={{ height: 96 }} />
           </ScrollView>
         </KeyboardAvoidingView>
         </SiteSwipeView>
       )}
+
+      {activeCategory && <AddFAB onPress={() => openModal(activeCategory)} />}
 
       {/* New dish modal */}
       <Modal visible={modalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setModalVisible(false)}>
@@ -305,7 +307,15 @@ export default function MealsScreen() {
           <View style={[styles.sheet, { backgroundColor: theme.white }]}>
             <View style={styles.sheetHandle} />
 
-            <Text style={[styles.sheetTitle, { color: theme.text }]}>{t.newDishTrigger}</Text>
+            <View style={[styles.sheetHeader, { borderBottomColor: theme.grayLight }]}>
+              <Pressable onPress={() => setModalVisible(false)}>
+                <Text style={[styles.sheetCancel, { color: theme.textLight }]}>{t.cancel}</Text>
+              </Pressable>
+              <Text style={[styles.sheetHeaderTitle, { color: theme.text }]}>{t.newDishTrigger}</Text>
+              <Pressable onPress={saveDish} disabled={!dishName.trim()}>
+                <Text style={[styles.sheetSave, { color: theme.orange }, !dishName.trim() && { opacity: 0.4 }]}>{t.save}</Text>
+              </Pressable>
+            </View>
 
             {/* Meal type picker */}
             <View style={styles.typeRow}>
@@ -413,20 +423,6 @@ export default function MealsScreen() {
                 )}
               />
             )}
-
-            {/* Sheet footer */}
-            <View style={styles.sheetFooter}>
-              <Pressable style={[styles.cancelSheetBtn, { borderColor: theme.grayLight }]} onPress={() => setModalVisible(false)}>
-                <Text style={[styles.cancelSheetText, { color: theme.textLight }]}>{t.cancel}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.saveBtn, { backgroundColor: theme.orange }, !dishName.trim() && { opacity: 0.4 }]}
-                onPress={saveDish}
-                disabled={!dishName.trim()}
-              >
-                <Text style={[styles.saveBtnText, { color: '#fff' }]}>{t.save}</Text>
-              </Pressable>
-            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -438,14 +434,6 @@ export default function MealsScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  back: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
-  title: { fontSize: FontSize.xl, fontFamily: Fonts.bold },
   randomBtn: {
     width: 40, height: 40, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center',
@@ -482,14 +470,6 @@ const baseStyles = StyleSheet.create({
   ingFooter: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: Spacing.sm },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   deleteText: { fontSize: FontSize.sm },
-  addTrigger: {
-    borderWidth: 2, borderStyle: 'dashed',
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-  },
-  addTriggerText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   emptyState: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm, ...Shadow.card },
   emptyEmoji: { marginBottom: 2 },
   emptyTitle: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
@@ -508,7 +488,16 @@ const baseStyles = StyleSheet.create({
     ...Shadow.card,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc', alignSelf: 'center', marginBottom: 4 },
-  sheetTitle: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  sheetHeaderTitle: { fontSize: FontSize.lg, fontFamily: Fonts.bold },
+  sheetCancel: { fontSize: FontSize.md },
+  sheetSave: { fontSize: FontSize.md, fontFamily: Fonts.bold },
   typeRow: { flexDirection: 'row', gap: Spacing.xs },
   typePill: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.sm, alignItems: 'center', gap: 2 },
   typePillIconView: {},
@@ -533,9 +522,4 @@ const baseStyles = StyleSheet.create({
   suggestRow: { padding: Spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between' },
   suggestText: { fontSize: FontSize.sm },
   suggestMeta: { fontSize: FontSize.xs },
-  sheetFooter: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
-  cancelSheetBtn: { flex: 1, borderWidth: 1, borderRadius: Radius.full, padding: Spacing.md, alignItems: 'center' },
-  cancelSheetText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
-  saveBtn: { flex: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', ...Shadow.card },
-  saveBtnText: { fontSize: FontSize.md, fontFamily: Fonts.bold },
 });

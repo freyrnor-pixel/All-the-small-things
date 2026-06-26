@@ -17,8 +17,9 @@
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
  *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
  *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
- *   - confirmPending() fires the 'task_completed' automation trigger only on the rising edge for each task transitioning from not-done → done.
- *   - completeDirect() writes done=true straight to SQLite without going through pending/confirmPending — used by the notification "Done" action, which has no Save step to trigger a confirm.
+ *   - toggle() auto-saves immediately (writes through update()) and fires the 'task_completed'
+ *     automation trigger on the rising edge (not-done → done) — there is no separate save/confirm step.
+ *   - completeDirect() writes done=true straight to SQLite — used by the notification "Done" action.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -62,20 +63,17 @@ export type Task = {
 
 type TaskStore = {
   tasks: Task[];
-  pending: Set<string>;
   load: () => void;
   add: (t: Omit<Task, 'id'>) => Task;
   update: (id: string, patch: Partial<Omit<Task, 'id'>>) => void;
   toggle: (id: string) => void;
-  confirmPending: () => void;
-  /** Mark a task done immediately, bypassing the pending/confirm flow. */
+  /** Mark a task done immediately — same write path as toggle(), kept distinct for callers with no toggle state. */
   completeDirect: (id: string) => void;
   remove: (id: string) => void;
   clearAll: () => void;
   tasksForDate: (date: string) => Task[];
   backlogTasks: (today: string) => Task[];
   completedCount: () => number;
-  getPendingCount: () => number;
   /** First pending task for the focus view, respecting work-mode filter. */
   focusTask: (date: string, workModeActive: boolean) => Task | null;
   /** Re-schedule every task's reminder (after a settings/language change). */
@@ -120,7 +118,6 @@ const TASK_COLUMNS: FieldMap<Task> = {
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
-  pending: new Set(),
 
   load() {
     set({ tasks: loadAll('tasks', rowToTask, { orderBy: 'task_date, task_time' }) });
@@ -161,21 +158,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     useAutomationStore.getState().fireTrigger('task_completed');
   },
 
-  confirmPending() {
-    const { pending } = get();
-    if (pending.size === 0) return;
-
-    for (const id of pending) {
-      const task = get().tasks.find((t) => t.id === id);
-      if (!task) continue;
-      const wasDone = task.done;
-      get().update(id, { done: !task.done });
-      if (!wasDone) useAutomationStore.getState().fireTrigger('task_completed');
-    }
-
-    set({ pending: new Set() });
-  },
-
   remove(id) {
     db.runSync('DELETE FROM tasks WHERE id = ?', [id]);
     void cancelTaskNotification(id);
@@ -208,10 +190,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   completedCount() {
     return get().tasks.filter((t) => t.done).length;
-  },
-
-  getPendingCount() {
-    return get().pending.size;
   },
 
   focusTask(date, workModeActive) {

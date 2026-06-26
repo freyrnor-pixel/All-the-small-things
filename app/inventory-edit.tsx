@@ -9,7 +9,7 @@
  * it never shows the weekly-only "also add to catalog" toggle).
  *
  * Connections:
- *   Imports → components/AddItemSheet, components/EmptyState, components/MonthlyTableRow, components/ScreenBackground, components/ScreenHeader, components/UpdateSheet, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useShoppingStore
+ *   Imports → components/AddFAB, components/AddItemSheet, components/EmptyState, components/MonthlyTableRow, components/ScreenBackground, components/ScreenHeader, components/UpdateSheet, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useShoppingStore
  *   Used by → Expo Router route "/inventory-edit"; app/shopping.tsx (Katalog tab header button)
  *   Data    → useShoppingStore (shopping_items, status === 'catalog' rows only)
  *
@@ -21,7 +21,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShoppingStore, ShoppingItem } from '@/store/useShoppingStore';
 import MonthlyTableRow from '@/components/MonthlyTableRow';
@@ -30,10 +29,11 @@ import AddItemSheet from '@/components/AddItemSheet';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
+import AddFAB from '@/components/AddFAB';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import { Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Radius, Shadow, Spacing } from '@/constants/theme';
 
 export default function InventoryEditScreen() {
   const router = useRouter();
@@ -115,9 +115,7 @@ export default function InventoryEditScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <Pressable style={[styles.fab, { backgroundColor: theme.orange }]} onPress={() => setShowAddSheet(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
+      <AddFAB onPress={() => setShowAddSheet(true)} bottom={Spacing.xl} />
 
       <AddItemSheet
         visible={showAddSheet}
@@ -145,20 +143,4 @@ const baseStyles = StyleSheet.create({
   content: { padding: Spacing.md },
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md, ...Shadow.card },
   rowDivider: { height: 1 },
-  fab: {
-    position: 'absolute',
-    right: Spacing.xl,
-    bottom: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fabText: { color: '#fff', fontSize: 28, fontFamily: Fonts.bold, lineHeight: 32 },
 });

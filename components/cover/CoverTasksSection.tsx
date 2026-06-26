@@ -6,15 +6,17 @@
  * Galaxy Z Flip cover display — fixed layout, no scroll.
  *
  * Connections:
- *   Imports → react-native, constants/theme, lib/i18n, store/useTaskStore
+ *   Imports → react-native, constants/theme, lib/i18n, store/useTaskStore (Task type only)
  *   Used by → components/cover/CoverScreen
- *   Data    → receives tasks + callbacks as props; scaled fontSize via useScaledStyles()
+ *   Data    → receives tasks + callbacks as props (totalPendingCount is a live "undone tasks
+ *             today" badge count, unrelated to any toggle-staging mechanism); scaled fontSize
+ *             via useScaledStyles()
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
-import { Task, useTaskStore } from '@/store/useTaskStore';
+import { Task } from '@/store/useTaskStore';
 import { useScaledStyles } from '@/lib/useAppTheme';
 
 type Props = {
@@ -71,11 +73,10 @@ export default function CoverTasksSection({
 
 function CoverTaskRow({ task, onToggle, theme }: { task: Task; onToggle: (id: string) => void; theme: AppColors }) {
   const styles = useScaledStyles(baseStyles);
-  const isPending = useTaskStore((s) => s.pending.has(task.id));
 
   return (
     <Pressable
-      style={[styles.taskRow, isPending && { opacity: 0.6 }]}
+      style={styles.taskRow}
       onPress={() => onToggle(task.id)}
       accessibilityLabel={task.title}
       accessibilityRole="checkbox"
@@ -88,7 +89,6 @@ function CoverTaskRow({ task, onToggle, theme }: { task: Task; onToggle: (id: st
           styles.taskTitle,
           { color: theme.text },
           task.done && { color: theme.textLight },
-          isPending && { color: theme.textLight, textDecorationLine: 'line-through', opacity: 0.7 },
         ]}
         numberOfLines={1}
       >

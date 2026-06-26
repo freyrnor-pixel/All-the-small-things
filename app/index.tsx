@@ -7,7 +7,7 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/DayTimeline, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -50,8 +50,10 @@
  *     it looks unused; it's a re-render trigger + a useMemo dep.
  *   - Shopping preview shows weekly items unchecked-first then checked/in-cart, capped at
  *     PREVIEW_LIMIT total. Tapping a row calls toggleCheck directly — it flips `checked`
- *     immediately (no staging/Save step), same as app/shopping.tsx. The "Save changes" pill
- *     near the bottom of this screen only ever reflects task pending count now.
+ *     immediately (no staging/Save step), same as app/shopping.tsx.
+ *   - Tasks also auto-save on toggle (useTaskStore.toggle()) — no Save button for tasks.
+ *     The Plans-preview header's "+" is an inline AddFAB (size="sm") → /task-form, the
+ *     only "add new" control on this screen.
  */
 import React, { useMemo, useState, useEffect } from 'react';
 import {
@@ -96,8 +98,9 @@ import { useCoverScreen } from '@/lib/useCoverScreen';
 import { todayStr, dayOfWeekMon0 } from '@/lib/date';
 import { isWeekendOrHoliday } from '@/lib/holidays';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
+import { FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
 import { useAppTheme, useIsDark, useScaledStyles } from '@/lib/useAppTheme';
+import AddFAB from '@/components/AddFAB';
 import { StatusBar } from 'expo-status-bar';
 
 // Enable LayoutAnimation on Android for smooth task row animations
@@ -130,8 +133,6 @@ export default function HomeScreen() {
   const backlogTasksFn = useTaskStore((s) => s.backlogTasks);
   const completedCountFn = useTaskStore((s) => s.completedCount);
   const toggleTask = useTaskStore((s) => s.toggle);
-  const taskPendingCount = useTaskStore((s) => s.getPendingCount());
-  const confirmTasksPending = useTaskStore((s) => s.confirmPending);
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const habits = useHabitStore((s) => s.habits);
@@ -266,14 +267,6 @@ export default function HomeScreen() {
       { text: t.switchModeConfirm, onPress: () => settings.setWorkModeSessionOverride(true) },
     ]);
   }
-
-  function handleSaveChanges() {
-    if (taskPendingCount > 0) {
-      confirmTasksPending();
-    }
-  }
-
-  const totalPendingCount = taskPendingCount;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -426,12 +419,7 @@ export default function HomeScreen() {
                     >
                       <Ionicons name="share-outline" size={12} color={theme.orange} />
                     </Pressable>
-                    <Pressable
-                      style={[styles.addBtnSmall, { backgroundColor: theme.orange }]}
-                      onPress={() => router.push('/task-form')}
-                    >
-                      <Text style={styles.addBtnSmallText}>{t.addNew}</Text>
-                    </Pressable>
+                    <AddFAB size="sm" onPress={() => router.push('/task-form')} />
                   </View>
                 </View>
                 {plansTasks.length > 0 && (
@@ -585,20 +573,6 @@ export default function HomeScreen() {
           </Surface>
         )}
 
-        {totalPendingCount > 0 && (
-          <View style={styles.saveButtonSection}>
-            <Pressable
-              style={[styles.saveButton, { backgroundColor: theme.green }]}
-              onPress={handleSaveChanges}
-            >
-              <Text style={styles.saveButtonText}>{t.save}</Text>
-              {totalPendingCount > 0 && (
-                <Text style={styles.saveButtonCount}>({totalPendingCount})</Text>
-              )}
-            </Pressable>
-          </View>
-        )}
-
         <View style={{ height: BOTTOM_NAV_HEIGHT }} />
       </ScrollView>
       </SiteSwipeView>
@@ -672,8 +646,6 @@ const baseStyles = StyleSheet.create({
   dailyOverviewHeader: { fontSize: FontSize.md, fontFamily: Fonts.semibold, marginBottom: Spacing.md },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
   shareBtn: { borderRadius: Radius.full, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  addBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, minHeight: 44 },
-  addBtnText: { color: '#ffffff', fontFamily: Fonts.bold, fontSize: FontSize.sm },
   seeAll: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   card: { borderRadius: Radius.md, padding: Layout.cardPadding, borderWidth: 1, ...Shadow.card },
   // Empty/ahead state: generous padding so a gentle prompt never reads as cramped.
@@ -709,8 +681,6 @@ const baseStyles = StyleSheet.create({
   plansHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md, paddingVertical: Spacing.sm },
   plansActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   shareBtnSmall: { borderRadius: Radius.full, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  addBtnSmall: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, minHeight: 36 },
-  addBtnSmallText: { color: '#ffffff', fontFamily: Fonts.semibold, fontSize: FontSize.xs },
   timelineContainer: { marginVertical: Spacing.md },
   seeWeekBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
   seeWeekBtnText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
@@ -718,8 +688,4 @@ const baseStyles = StyleSheet.create({
   doneTasksList: { marginTop: Spacing.sm },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', marginBottom: Spacing.lg },
   pointsText: { fontSize: FontSize.sm, fontFamily: Fonts.medium, textAlign: 'center' },
-  saveButtonSection: { paddingHorizontal: Spacing.md, marginBottom: Spacing.lg },
-  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.sm, minHeight: 44 },
-  saveButtonText: { color: '#ffffff', fontFamily: Fonts.bold, fontSize: FontSize.md },
-  saveButtonCount: { color: '#ffffff', fontFamily: Fonts.semibold, fontSize: FontSize.sm },
 });

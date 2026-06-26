@@ -6,7 +6,7 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/BottomNav, components/ConfirmationBanner, components/HintCard, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
+ *   Imports → components/AddFAB, components/BottomNav, components/ConfirmationBanner, components/HintCard, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
  *
@@ -26,6 +26,8 @@
  *     already applied inline everywhere except saveBtnText/adjBtnPlusText, now fixed);
  *     fontWeight string literals replaced with Fonts.* tokens; dropped unused back/title
  *     styles (superseded by ScreenHeader).
+ *   - "Log symptom" trigger is a floating AddFAB → setAdding(true), hidden while the add
+ *     form is open. The form's own Cancel/Save footer stays put (right under its fields).
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -52,6 +54,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
+import AddFAB from '@/components/AddFAB';
 import { useT } from '@/lib/i18n';
 import { todayStr, getWeekDates } from '@/lib/date';
 import { FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
@@ -190,7 +193,7 @@ export default function HealthScreen() {
         )}
 
         {/* Add form */}
-        {adding ? (
+        {adding && (
           <Surface style={styles.addCard}>
             <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.dateLabel}</Text>
             <TextInput
@@ -251,10 +254,6 @@ export default function HealthScreen() {
               </Pressable>
             </View>
           </Surface>
-        ) : (
-          <Pressable style={styles.addTrigger} onPress={() => setAdding(true)}>
-            <Text style={[styles.addTriggerText, { color: theme.orange }]}>{t.logSymptomTrigger}</Text>
-          </Pressable>
         )}
 
         {/* W-D: low-weight, affirming self-care note below the log form. */}
@@ -348,6 +347,7 @@ export default function HealthScreen() {
       </KeyboardAvoidingView>
       </SiteSwipeView>
 
+      {!adding && <AddFAB onPress={() => setAdding(true)} />}
       <BottomNav />
     </SafeAreaView>
   );
@@ -389,13 +389,6 @@ const baseStyles = StyleSheet.create({
   },
   overviewFill: { height: 8, borderRadius: Radius.full },
   overviewCount: { fontSize: FontSize.xs, width: 28, textAlign: 'right' },
-  addTrigger: {
-    padding: Spacing.md,
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  addTriggerText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   addCard: {
     borderRadius: Radius.md,
     padding: Spacing.md,
