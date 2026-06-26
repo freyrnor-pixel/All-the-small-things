@@ -3,11 +3,10 @@
  *
  * The expanded counterpart to the home screen's Plans widget: shows every plan
  * for today (no 3-item cap) via the same DayTimeline component, with a header
- * matching habits.tsx/health.tsx (back + title + in-header add button) and a
- * Share button that opens /share-modal for the day's plans.
+ * (back + title + Share) and a floating AddFAB for adding a new task.
  *
  * Connections:
- *   Imports → components/BottomNav, components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useEnergyStore, store/useTaskStore
+ *   Imports → components/AddFAB, components/BottomNav, components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useEnergyStore, store/useTaskStore
  *   Used by → Expo Router route "/plans", reached via BottomNav or a swipe/push from app/index.tsx's Plans widget title
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *
@@ -23,10 +22,8 @@
  *     filter (narrow to priority='high' on a 'low' energy day) IS applied here,
  *     matching app/index.tsx's visibleTodayTasks, so this screen shows the same
  *     task set the home screen's Plans preview is drawn from.
- *   - DayTimeline's onToggle stages a check via toggle() (same pending-set flow as
- *     app/index.tsx's Backlog TaskItem rows); a "Save changes" pill appears once
- *     anything is pending, mirroring the home screen so checking off tasks here
- *     behaves the same as checking them off there.
+ *   - DayTimeline's onToggle calls toggle() directly — tasks auto-save immediately,
+ *     no separate save step.
  */
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -40,11 +37,12 @@ import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
+import AddFAB from '@/components/AddFAB';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 export default function PlansScreen() {
@@ -57,8 +55,6 @@ export default function PlansScreen() {
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const tasks = useTaskStore((s) => s.tasks); // re-render trigger, see app/index.tsx edit notes
   const toggleTask = useTaskStore((s) => s.toggle);
-  const pendingCount = useTaskStore((s) => s.pending.size);
-  const confirmTasksPending = useTaskStore((s) => s.confirmPending);
   const energyLevels = useEnergyStore((s) => s.levels);
   const todayEnergyLevel = energyLevels[today] ?? null;
 
@@ -74,21 +70,13 @@ export default function PlansScreen() {
         title={t.plansTitle}
         onBack={() => router.back()}
         right={
-          <View style={styles.headerActions}>
-            <Pressable
-              style={styles.shareBtn}
-              onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
-              accessibilityLabel={t.shareBtnLabel}
-            >
-              <Text style={[styles.shareBtnIcon, { color: theme.orange }]}>⤴</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.addBtn, { backgroundColor: theme.orange }]}
-              onPress={() => router.push('/task-form')}
-            >
-              <Text style={styles.addBtnText}>+</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={styles.shareBtn}
+            onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
+            accessibilityLabel={t.shareBtnLabel}
+          >
+            <Text style={[styles.shareBtnIcon, { color: theme.orange }]}>⤴</Text>
+          </Pressable>
         }
       />
 
@@ -109,19 +97,10 @@ export default function PlansScreen() {
             />
           </Surface>
         )}
-
-        {pendingCount > 0 && (
-          <Pressable
-            style={[styles.saveButton, { backgroundColor: theme.green }]}
-            onPress={confirmTasksPending}
-          >
-            <Text style={styles.saveButtonText}>{t.save}</Text>
-            <Text style={styles.saveButtonCount}>({pendingCount})</Text>
-          </Pressable>
-        )}
       </View>
       </SiteSwipeView>
 
+      <AddFAB onPress={() => router.push('/task-form')} />
       <BottomNav />
     </SafeAreaView>
   );
@@ -129,27 +108,10 @@ export default function PlansScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  back: { fontSize: FontSize.md, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   shareBtn: { borderRadius: Radius.full, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   shareBtnIcon: { fontSize: 14 },
-  addBtn: {
-    width: 36, height: 36, borderRadius: Radius.full,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  addBtnText: { color: Colors.white, fontSize: FontSize.xl, fontWeight: '300', lineHeight: 36 },
   content: { flex: 1, padding: Spacing.md, gap: Spacing.md },
   card: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1 },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center' },
-  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
-  saveButtonText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
-  saveButtonCount: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
 });

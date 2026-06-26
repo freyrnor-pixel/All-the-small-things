@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -25,9 +25,11 @@
  *     today only — framed gently, never "skipped". computeStreak() treats a rest day as met, so
  *     resting never breaks the streak. WeekStrip shows past rest days as a solid theme.neutral dot,
  *     distinct from both a met day (build/break colour) and a missed one (empty/transparent).
- *   - Design system pass: fontWeight string literals replaced with Fonts.* tokens; addBtnText/
- *     donePillText/adjBtnPlusText now take theme.white inline (were silently relying on static
- *     Colors.white before); dropped unused back/title styles (superseded by ScreenHeader).
+ *   - Design system pass: fontWeight string literals replaced with Fonts.* tokens; donePillText/
+ *     adjBtnPlusText now take theme.white inline (were silently relying on static Colors.white
+ *     before); dropped unused back/title styles (superseded by ScreenHeader).
+ *   - "Add habit" is a floating AddFAB (bottom-right, above BottomNav) → /habit-form, not a
+ *     header button — ScreenHeader's `right` slot is unused here (defaults to its spacer).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -53,6 +55,7 @@ import EmptyState from '@/components/EmptyState';
 import { showAppModal } from '@/components/AppModal';
 import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
+import AddFAB from '@/components/AddFAB';
 import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
@@ -634,21 +637,7 @@ export default function HabitsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <ScreenHeader
-        title={t.habitsTitle}
-        onBack={() => router.back()}
-        right={
-          <Pressable
-            style={[styles.addBtn, { backgroundColor: theme.orange }]}
-            onPress={() => router.push({
-              pathname: '/habit-form',
-              params: selectedProfile ? { childName: selectedProfile } : {},
-            })}
-          >
-            <Text style={[styles.addBtnText, { color: theme.white }]}>+</Text>
-          </Pressable>
-        }
-      />
+      <ScreenHeader title={t.habitsTitle} onBack={() => router.back()} />
 
       {/* Profile selector */}
       {showProfiles && (
@@ -782,6 +771,12 @@ export default function HabitsScreen() {
       </ScrollView>
       </SiteSwipeView>
 
+      <AddFAB
+        onPress={() => router.push({
+          pathname: '/habit-form',
+          params: selectedProfile ? { childName: selectedProfile } : {},
+        })}
+      />
       <BottomNav />
     </SafeAreaView>
   );
@@ -789,17 +784,6 @@ export default function HabitsScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  addBtn: {
-    width: 36, height: 36, borderRadius: Radius.full,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  addBtnText: { fontSize: FontSize.xl, fontFamily: Fonts.regular, lineHeight: 36 },
   profileRow: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.sm,

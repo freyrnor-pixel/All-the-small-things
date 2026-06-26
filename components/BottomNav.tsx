@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/siteNav, lib/useAppTheme, components/PressableScale
- *   Used by → every site screen (app/index, app/shopping, etc.)
+ *   Used by → every site screen (app/index, app/shopping, etc.); components/AddFAB (BOTTOM_NAV_HEIGHT only)
  *   Data    → none (presentational; navigation only)
  *
  * Edit notes:

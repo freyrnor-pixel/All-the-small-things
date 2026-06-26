@@ -19,6 +19,9 @@
  *   - Per-store breakdown (Per butikk section) sums receipts by store for the selected month, sorted by amount descending.
  *   - Over-budget uses FeatureColors.scan (burnt amber), never theme.danger/red — no-shame color rule (see AGENTS.md).
  *   - Budget progress bar always compares against the live monthlyBudgetNok, even when viewing past months.
+ *   - No AddFAB on this screen — a budget is a single value to edit, not a list of entities.
+ *     The budget-editor sheet's Cancel/Save live in a header row at the top (matching
+ *     app/task-form.tsx's pattern) instead of a bottom footer.
  */
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
@@ -62,6 +65,12 @@ export default function BudgetScreen() {
   const overBudget = hasBudget && spent > monthlyBudgetNok;
   const pct = hasBudget ? Math.min(100, (spent / monthlyBudgetNok) * 100) : 0;
   const barColor = overBudget ? FeatureColors.scan : theme.green;
+
+  function saveBudget() {
+    const newBudget = parseFloat(budgetInput.replace(',', '.')) || 0;
+    updateSettings({ monthlyBudgetNok: newBudget });
+    setBudgetEditorVisible(false);
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -176,7 +185,15 @@ export default function BudgetScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.kvWrapper}>
           <View style={[styles.budgetSheet, { backgroundColor: theme.white }]}>
             <View style={[styles.sheetHandle, { backgroundColor: theme.grayLight }]} />
-            <Text style={[styles.sheetTitle, { color: theme.text }]}>Sett budsjett</Text>
+            <View style={[styles.sheetHeader, { borderBottomColor: theme.grayLight }]}>
+              <Pressable onPress={() => setBudgetEditorVisible(false)}>
+                <Text style={[styles.sheetCancel, { color: theme.textLight }]}>Avbryt</Text>
+              </Pressable>
+              <Text style={[styles.sheetHeaderTitle, { color: theme.text }]}>Sett budsjett</Text>
+              <Pressable onPress={saveBudget}>
+                <Text style={[styles.sheetSave, { color: theme.orange }]}>Lagre</Text>
+              </Pressable>
+            </View>
             <Text style={[styles.sheetLabel, { color: theme.textLight }]}>Månedlig budsjett (NOK)</Text>
             <TextInput
               style={[styles.sheetInput, { color: theme.text, backgroundColor: theme.offWhite }]}
@@ -186,28 +203,9 @@ export default function BudgetScreen() {
               onChangeText={setBudgetInput}
               keyboardType="decimal-pad"
               returnKeyType="done"
-              onSubmitEditing={() => {
-                const newBudget = parseFloat(budgetInput.replace(',', '.')) || 0;
-                updateSettings({ monthlyBudgetNok: newBudget });
-                setBudgetEditorVisible(false);
-              }}
+              onSubmitEditing={saveBudget}
               autoFocus
             />
-            <View style={styles.sheetButtons}>
-              <Pressable style={[styles.sheetCancelBtn, { borderColor: theme.grayLight }]} onPress={() => setBudgetEditorVisible(false)}>
-                <Text style={[styles.sheetCancelText, { color: theme.textLight }]}>Avbryt</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.sheetAddBtn, { backgroundColor: theme.orange }]}
-                onPress={() => {
-                  const newBudget = parseFloat(budgetInput.replace(',', '.')) || 0;
-                  updateSettings({ monthlyBudgetNok: newBudget });
-                  setBudgetEditorVisible(false);
-                }}
-              >
-                <Text style={styles.sheetAddText}>Lagre</Text>
-              </Pressable>
-            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -217,15 +215,6 @@ export default function BudgetScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderBottomWidth: 1,
-  },
-  back: { fontSize: FontSize.md, fontWeight: '600' },
-  title: { fontSize: FontSize.xl, fontWeight: '700' },
   scroll: { flex: 1 },
   content: { padding: Spacing.md, gap: Spacing.md },
   card: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.sm, ...Shadow.card },
@@ -258,15 +247,16 @@ const baseStyles = StyleSheet.create({
     gap: Spacing.md,
   },
   sheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: Radius.full },
-  sheetTitle: { fontSize: FontSize.xl, fontWeight: '700' },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  sheetHeaderTitle: { fontSize: FontSize.lg, fontWeight: '700' },
+  sheetCancel: { fontSize: FontSize.md },
+  sheetSave: { fontSize: FontSize.md, fontWeight: '700' },
   sheetLabel: { fontSize: FontSize.sm, fontWeight: '600', marginTop: Spacing.xs },
   sheetInput: { borderRadius: Radius.md, padding: Spacing.md, fontSize: FontSize.lg },
-  sheetButtons: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
-  sheetCancelBtn: {
-    flex: 1, borderRadius: Radius.md, padding: Spacing.md,
-    alignItems: 'center', borderWidth: 1,
-  },
-  sheetCancelText: { fontWeight: '600', fontSize: FontSize.md },
-  sheetAddBtn: { flex: 2, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
-  sheetAddText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
 });
