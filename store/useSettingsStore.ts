@@ -173,7 +173,7 @@ function rowToSettings(row: Row): Settings {
     bubbleSpringIntensity: readReal(row, 'bubble_spring_intensity', 50),
     bubbleAnimSpeed: readReal(row, 'bubble_anim_speed', 50),
     lastMonthlyReset: readStr(row, 'last_monthly_reset'),
-    habitNotificationsEnabled: readBool(row, 'habit_notifications_enabled', true),
+    habitNotificationsEnabled: readBool(row, 'habit_notifications_enabled'),
     locationEnabled: readBool(row, 'location_enabled'),
     backgroundLocationEnabled: readBool(row, 'background_location_enabled'),
     calendarSyncEnabled: readBool(row, 'calendar_sync_enabled'),

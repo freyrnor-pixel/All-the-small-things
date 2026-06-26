@@ -60,7 +60,7 @@ export default function LanguageScreen() {
             <Ionicons name="globe-outline" size={36} color={theme.orange} />
           </View>
           <Text style={[styles.heading, { color: theme.text }]}>{t.chooseLanguage}</Text>
-          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.chooseLanguageSub}</Text>
+          <Text style={[styles.sub, { color: theme.textLight }]}>{t.chooseLanguageSub}</Text>
         </View>
 
         <View style={styles.optionsRow}>
@@ -76,7 +76,7 @@ export default function LanguageScreen() {
             >
               <Text style={styles.flag}>{opt.flag}</Text>
               <Text style={[styles.optionLabel, { color: theme.text }]}>{opt.label}</Text>
-              <Text style={[styles.optionSub, { color: theme.textMuted }]}>{opt.sublabel}</Text>
+              <Text style={[styles.optionSub, { color: theme.textLight }]}>{opt.sublabel}</Text>
               {settings.language === opt.code && (
                 <View style={[styles.checkmark, { backgroundColor: theme.orange }]}>
                   <Ionicons name="checkmark" size={14} color={theme.white} />

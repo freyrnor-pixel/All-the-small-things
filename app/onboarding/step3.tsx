@@ -51,7 +51,7 @@ export default function OnboardingStep3() {
             <Ionicons name="cart-outline" size={36} color={FeatureColors.shop} />
           </View>
           <Text style={[styles.heading, { color: theme.text }]}>{t.shoppingOnboarding}</Text>
-          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.shoppingOnboardingSub}</Text>
+          <Text style={[styles.sub, { color: theme.textLight }]}>{t.shoppingOnboardingSub}</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.white }]}>
@@ -74,11 +74,11 @@ export default function OnboardingStep3() {
             }}
             keyboardType="number-pad"
             placeholder="1–31"
-            placeholderTextColor={theme.textMuted}
+            placeholderTextColor={theme.textLight}
             maxLength={2}
             returnKeyType="done"
           />
-          <Text style={[styles.hint, { color: theme.textMuted }]}>{t.monthlyDateInputHint}</Text>
+          <Text style={[styles.hint, { color: theme.textLight }]}>{t.monthlyDateInputHint}</Text>
           <View style={[styles.tipBox, { backgroundColor: theme.orangeLight }]}>
             <Text style={[styles.tipText, { color: theme.text }]}>{t.monthlyPaydayHint}</Text>
           </View>

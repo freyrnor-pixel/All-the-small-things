@@ -63,19 +63,19 @@ export default function OnboardingWelcome() {
         >
           {/* Name at the top — first impression */}
           <View style={[styles.card, { backgroundColor: theme.white }]}>
-            <Text style={[styles.label, { color: theme.textMuted }]}>{t.whatsYourName}</Text>
+            <Text style={[styles.label, { color: theme.textLight }]}>{t.whatsYourName}</Text>
             <TextInput
               style={[styles.input, { color: theme.text, borderColor: theme.orange, backgroundColor: theme.white }]}
               value={name}
               onChangeText={setName}
               placeholder={t.namePlaceholder}
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor={theme.textLight}
               selectionColor={theme.orange}
               returnKeyType="done"
               onSubmitEditing={next}
               autoFocus={false}
             />
-            <Text style={[styles.hint, { color: theme.textMuted }]}>{t.nameHint}</Text>
+            <Text style={[styles.hint, { color: theme.textLight }]}>{t.nameHint}</Text>
           </View>
 
           <View style={styles.top}>
@@ -83,7 +83,7 @@ export default function OnboardingWelcome() {
               <Image source={require('@/assets/icon.png')} style={styles.logo} resizeMode="contain" />
             </View>
             <Text style={[styles.heading, { color: theme.text }]}>{t.welcomeHeading}</Text>
-            <Text style={[styles.sub, { color: theme.textMuted }]}>{t.welcomeSub}</Text>
+            <Text style={[styles.sub, { color: theme.textLight }]}>{t.welcomeSub}</Text>
           </View>
 
           <View style={[styles.featureList, { backgroundColor: theme.white }]}>

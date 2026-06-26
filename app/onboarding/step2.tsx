@@ -58,14 +58,14 @@ export default function OnboardingStep2() {
             <Ionicons name="briefcase-outline" size={36} color={theme.orange} />
           </View>
           <Text style={[styles.heading, { color: theme.text }]}>{t.workModeOnboarding}</Text>
-          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.workModeOnboardingSub}</Text>
+          <Text style={[styles.sub, { color: theme.textLight }]}>{t.workModeOnboardingSub}</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.white }]}>
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
               <Text style={[styles.switchLabel, { color: theme.text }]}>{t.startWithWorkMode}</Text>
-              <Text style={[styles.switchHint, { color: theme.textMuted }]}>{t.canChangeAnytime}</Text>
+              <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.canChangeAnytime}</Text>
             </View>
             <Switch
               value={settings.workModeEnabled}
@@ -80,7 +80,7 @@ export default function OnboardingStep2() {
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
               <Text style={[styles.switchLabel, { color: theme.text }]}>{t.autoActivateWorkHours}</Text>
-              <Text style={[styles.switchHint, { color: theme.textMuted }]}>{t.appSwitchesItself}</Text>
+              <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.appSwitchesItself}</Text>
             </View>
             <Switch
               value={settings.enforceWorkHours}
@@ -93,10 +93,10 @@ export default function OnboardingStep2() {
           {settings.enforceWorkHours && (
             <>
               <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
-              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.workHoursFormat}</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workHoursFormat}</Text>
               <View style={styles.hoursRow}>
                 <View style={styles.hourField}>
-                  <Text style={[styles.hourLabel, { color: theme.textMuted }]}>{t.workHoursFrom}</Text>
+                  <Text style={[styles.hourLabel, { color: theme.textLight }]}>{t.workHoursFrom}</Text>
                   <TimePickerWheel
                     value={settings.workHoursStart || '07:00'}
                     onChange={(v) => settings.update({ workHoursStart: v })}
@@ -104,7 +104,7 @@ export default function OnboardingStep2() {
                   />
                 </View>
                 <View style={styles.hourField}>
-                  <Text style={[styles.hourLabel, { color: theme.textMuted }]}>{t.workHoursTo}</Text>
+                  <Text style={[styles.hourLabel, { color: theme.textLight }]}>{t.workHoursTo}</Text>
                   <TimePickerWheel
                     value={settings.workHoursEnd || '17:00'}
                     onChange={(v) => settings.update({ workHoursEnd: v })}

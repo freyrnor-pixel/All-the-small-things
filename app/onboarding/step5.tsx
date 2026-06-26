@@ -50,7 +50,7 @@ export default function OnboardingStep5() {
             <Ionicons name="color-palette-outline" size={36} color={theme.orange} />
           </View>
           <Text style={[styles.heading, { color: theme.text }]}>{t.themeOnboarding}</Text>
-          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.themeSub}</Text>
+          <Text style={[styles.sub, { color: theme.textLight }]}>{t.themeSub}</Text>
         </View>
 
         <SwatchPicker
@@ -73,7 +73,7 @@ export default function OnboardingStep5() {
           <View style={styles.switchRow}>
             <View style={{ flex: 1, marginRight: Spacing.md }}>
               <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.accessibility.leftHanded}</Text>
-              <Text style={[styles.switchHint, { color: theme.textMuted }]}>{t.settings.accessibility.leftHandedHint}</Text>
+              <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.settings.accessibility.leftHandedHint}</Text>
             </View>
             <Switch
               value={settings.leftHanded}

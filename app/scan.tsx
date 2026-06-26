@@ -422,7 +422,6 @@ export default function ScanScreen() {
             <Pressable
               style={[styles.primaryButton, { backgroundColor: theme.orange, shadowColor: theme.orange }]}
               onPress={takePhoto}
-              activeOpacity={0.99}
             >
               <Ionicons name="camera-outline" size={46} color={Colors.white} />
               <Text style={styles.primaryButtonText}>{t.takePhoto}</Text>
@@ -580,7 +579,7 @@ export default function ScanScreen() {
                       onChangeText={(v) => updateName(i, v)}
                     />
                     <Text style={[styles.itemQty, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
-                      {item.qty || '1'} stk
+                      1 stk
                     </Text>
                     <Text style={[styles.itemPrice, { color: theme.textLight }, !item.selected && { opacity: 0.42 }]}>
                       {item.price.toFixed(2)} kr
