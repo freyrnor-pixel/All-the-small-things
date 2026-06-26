@@ -111,6 +111,5 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: Fonts.bold,
-    lineHeight: 1.1,
   },
 });
