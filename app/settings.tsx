@@ -19,7 +19,7 @@
  *
  * Edit notes:
  *   - All visible strings go through useT(); this screen uses useAppTheme() (not the static Colors palette) so theme/dark-mode apply — keep new colours theme-derived.
- *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly. Quiet-hours keys re-sync task notifications (so existing reminders honour the new window); a language change also re-registers the interactive notification action button labels via syncNotificationCategories.
+ *   - applyAndSync() is the single write path: it updates settings AND fires the right notification re-sync based on which keys changed — route changes through it, not settings.update() directly. Quiet-hours keys re-sync task notifications (so existing reminders honour the new window); language or habitNotificationsEnabled changes re-sync habit reminders; a language change also re-registers the interactive notification action button labels via syncNotificationCategories.
  *   - Order top-to-bottom: Essentials toggle → Profile → Language → Appearance group (colour theme, bubble material, dark mode) → Accessibility → Motivation → Companion Pet → Shopping List → Notifications group (reminders, task notifications, persistent overview, quiet hours, holidays) → Work Mode group → Data group (debug mode toggle first, then test data, then destructive resets last). The debug mode panel itself (annotate-mode pins + bubble-wheel tuning) lives in components/DebugOverlay.tsx, not here.
  *   - Privacy HintCard at the top mirrors the onboarding/privacy trust screen for returning users.
  *   - Companion pet is configured during onboarding step6 by default; this section lets returning users change it later.
@@ -104,10 +104,12 @@ export default function SettingsScreen() {
     if (keys.some((k) => ['taskNotificationsEnabled', 'language', 'quietHoursEnabled', 'quietHoursStart', 'quietHoursEnd'].includes(k))) {
       syncTaskNotifs();
     }
-    if (keys.includes('language')) {
+    if (keys.includes('language') || keys.includes('habitNotificationsEnabled')) {
       syncHabitNotifs();
-      const tNew = getTranslations(useSettingsStore.getState().language);
-      void syncNotificationCategories(tNew.notif.actionDone, tNew.notif.actionRemindLater);
+      if (keys.includes('language')) {
+        const tNew = getTranslations(useSettingsStore.getState().language);
+        void syncNotificationCategories(tNew.notif.actionDone, tNew.notif.actionRemindLater);
+      }
     }
   }
 
@@ -635,6 +637,19 @@ export default function SettingsScreen() {
                 onValueChange={(v) => applyAndSync({ taskNotificationsEnabled: v })}
                 trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
                 thumbColor={settings.taskNotificationsEnabled ? theme.orange : theme.gray}
+              />
+            </View>
+            <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1, marginRight: Spacing.md }}>
+                <Text style={[styles.switchLabel, { color: theme.text }]}>{t.habitNotifications}</Text>
+                <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.habitNotificationsHint}</Text>
+              </View>
+              <Switch
+                value={settings.habitNotificationsEnabled}
+                onValueChange={(v) => applyAndSync({ habitNotificationsEnabled: v })}
+                trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                thumbColor={settings.habitNotificationsEnabled ? theme.orange : theme.gray}
               />
             </View>
             <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />

@@ -32,10 +32,10 @@ export async function cancelHabitReminders(habitId: string): Promise<void> {
   }
 }
 
-/** Schedule (or cancel) a habit's daily reminders, honouring the given language. */
-export function syncHabitReminder(habit: Habit, language: Language): void {
+/** Schedule (or cancel) a habit's daily reminders, honouring the given language and global setting. */
+export function syncHabitReminder(habit: Habit, language: Language, habitNotificationsEnabled: boolean): void {
   void cancelHabitReminders(habit.id);
-  if (!habit.notificationEnabled || !habit.active) return;
+  if (!habitNotificationsEnabled || !habit.notificationEnabled || !habit.active) return;
 
   // Prefer the explicit list; fall back to the single legacy time for old habits.
   const times = habit.notificationTimes.length
