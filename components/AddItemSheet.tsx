@@ -29,7 +29,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppColors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { AppColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { useCatalogStore } from '@/store/useCatalogStore';
@@ -56,7 +56,7 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [targetQty, setTargetQty] = useState(1);
-  const [temporary, setTemporary] = useState(true);
+  const [temporary, setTemporary] = useState(origin !== 'catalog');
   const [alsoAddToCatalog, setAlsoAddToCatalog] = useState(false);
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
 
@@ -65,11 +65,11 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
       setName('');
       setPrice('');
       setTargetQty(1);
-      setTemporary(true);
+      setTemporary(origin !== 'catalog');
       setAlsoAddToCatalog(false);
       setSuggestionsDismissed(false);
     }
-  }, [visible]);
+  }, [visible, origin]);
 
   const suggestions = useMemo(
     () => (suggestionsDismissed ? [] : catalogSuggest(name, 5)),
@@ -148,7 +148,7 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
           </Pressable>
           <Text style={[styles.qtyText, { color: theme.text }]}>{targetQty}</Text>
           <Pressable
-            style={[styles.stepBtn, { backgroundColor: theme.orange }]}
+            style={[styles.stepBtn, { backgroundColor: origin === 'catalog' ? theme.orange : theme.green }]}
             onPress={() => setTargetQty((q) => q + 1)}
             hitSlop={6}
           >
@@ -207,8 +207,8 @@ const baseStyles = StyleSheet.create({
     ...Shadow.fab,
   },
   handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: Radius.full, marginBottom: Spacing.sm },
-  title: { fontSize: FontSize.lg, fontWeight: '700', marginBottom: Spacing.sm },
-  label: { fontSize: FontSize.xs, fontWeight: '600', marginTop: Spacing.sm, marginBottom: 4 },
+  title: { fontSize: FontSize.lg, fontFamily: Fonts.bold, marginBottom: Spacing.sm },
+  label: { fontSize: FontSize.xs, fontFamily: Fonts.semibold, marginTop: Spacing.sm, marginBottom: 4 },
   input: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
   suggestionsBox: { borderRadius: Radius.sm, borderWidth: 1, marginTop: 4, overflow: 'hidden' },
   suggestionsScroll: { maxHeight: 160 },
@@ -217,12 +217,12 @@ const baseStyles = StyleSheet.create({
   suggestionPrice: { fontSize: FontSize.xs },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   stepBtn: { width: 34, height: 34, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
-  stepText: { fontSize: FontSize.lg, fontWeight: '700', lineHeight: 22 },
-  qtyText: { fontSize: FontSize.md, fontWeight: '700', minWidth: 28, textAlign: 'center' },
+  stepText: { fontSize: FontSize.lg, fontFamily: Fonts.bold, lineHeight: 22 },
+  qtyText: { fontSize: FontSize.md, fontFamily: Fonts.bold, minWidth: 28, textAlign: 'center' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.sm },
   actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg, marginBottom: Spacing.sm },
   ghostBtn: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.md },
-  ghostBtnText: { fontSize: FontSize.md, fontWeight: '600' },
+  ghostBtnText: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   primaryBtn: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Radius.md },
-  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: FontSize.md },
+  primaryBtnText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
 });

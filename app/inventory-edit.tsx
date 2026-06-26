@@ -33,7 +33,7 @@ import EmptyState from '@/components/EmptyState';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import { Radius, Shadow, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 
 export default function InventoryEditScreen() {
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function InventoryEditScreen() {
     [items]
   );
 
-  function handleAddItem(input: { name: string; price: number; targetQuantity: number; isTemporary: boolean }) {
+  function handleAddItem(input: { name: string; price: number; targetQuantity: number; isTemporary: boolean; alsoAddToCatalog: boolean }) {
     add({
       name: input.name,
       amount: '1',
@@ -160,5 +160,5 @@ const baseStyles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  fabText: { color: '#fff', fontSize: 28, fontWeight: '700', lineHeight: 32 },
+  fabText: { color: '#fff', fontSize: 28, fontFamily: Fonts.bold, lineHeight: 32 },
 });
