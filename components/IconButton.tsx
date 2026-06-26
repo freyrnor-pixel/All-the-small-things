@@ -58,7 +58,7 @@ export default function IconButton({
       disabled={disabled}
       accessibilityLabel={label}
       accessibilityRole="button"
-      accessibilityState={{ disabled, pressed: active }}
+      accessibilityState={{ disabled, selected: active }}
       style={[
         styles.hit,
         { width: hitTarget, height: hitTarget, opacity: disabled ? 0.45 : 1 },

@@ -6,7 +6,7 @@
  * section to verify permissions round-trip correctly after native build.
  *
  * Connections:
- *   Imports → expo-av, expo-location, expo-calendar, expo-contacts, expo-sensors, expo-media-library
+ *   Imports → expo-audio, expo-location, expo-calendar, expo-contacts, expo-sensors, expo-media-library
  *   Used by → none currently — the debug-mode test buttons in app/settings.tsx were
  *     reverted because this file imports native modules (expo-audio, expo-location,
  *     expo-calendar, expo-contacts, expo-sensors, expo-media-library) that aren't
@@ -19,17 +19,16 @@
  *   - Each function requests its permission and returns true if granted, false otherwise.
  *   - These are fire-and-forget test calls — not meant to be integrated into real flows yet.
  */
-import * as FileSystem from 'expo-file-system';
-import { Audio } from 'expo-audio';
+import { requestRecordingPermissionsAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 import * as Calendar from 'expo-calendar';
 import * as Contacts from 'expo-contacts';
-import { getDeviceMotionAsync } from 'expo-sensors';
+import { DeviceMotion } from 'expo-sensors';
 import * as MediaLibrary from 'expo-media-library';
 
 export async function testMicrophonePermission(): Promise<boolean> {
   try {
-    const { status } = await Audio.requestPermissionsAsync();
+    const { status } = await requestRecordingPermissionsAsync();
     return status === 'granted';
   } catch (e) {
     console.error('Microphone permission test failed:', e);
@@ -79,11 +78,8 @@ export async function testContactsPermission(): Promise<boolean> {
 
 export async function testActivityRecognitionPermission(): Promise<boolean> {
   try {
-    // Pedometer from expo-sensors uses native activity recognition on Android.
-    // There's no explicit permission request API; it's requested via Android permissions
-    // declared in app.json. This just tries to access the data to verify it's available.
-    const data = await getDeviceMotionAsync();
-    return !!data;
+    const { status } = await DeviceMotion.requestPermissionsAsync();
+    return status === 'granted';
   } catch (e) {
     console.error('Activity recognition test failed:', e);
     return false;

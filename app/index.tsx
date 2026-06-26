@@ -413,7 +413,7 @@ export default function HomeScreen() {
                     accessibilityLabel={t.home.seeAllPlans}
                   >
                     <Text style={[styles.sectionLabel, { color: theme.text }]}>{t.currentPlansLabel}</Text>
-                    <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                    <Ionicons name="chevron-forward" size={14} color={theme.textLight} />
                   </Pressable>
                   <View style={styles.plansActions}>
                     <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>

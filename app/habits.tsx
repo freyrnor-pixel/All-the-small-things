@@ -875,7 +875,7 @@ const baseStyles = StyleSheet.create({
   titleMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 2, flexWrap: 'wrap' },
   streakWrap: { gap: 2 },
   streakHead: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  streakNum: { fontSize: FontSize.lg, fontFamily: Fonts.extrabold, fontFamily: Fonts.extrabold },
+  streakNum: { fontSize: FontSize.lg, fontFamily: Fonts.extrabold },
   streakLabel: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   streakDots: { flexDirection: 'row', gap: 3 },
   streakDot: { width: 6, height: 6, borderRadius: Radius.full },

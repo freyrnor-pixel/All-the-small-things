@@ -99,7 +99,7 @@ export default function OnboardingStep6() {
               <Ionicons name="paw-outline" size={36} color={theme.orange} />
             </View>
             <Text style={[styles.heading, { color: theme.text }]}>{t.onboarding.step6.title}</Text>
-            <Text style={[styles.sub, { color: theme.textMuted }]}>{t.onboarding.step6.subtitle}</Text>
+            <Text style={[styles.sub, { color: theme.textLight }]}>{t.onboarding.step6.subtitle}</Text>
           </View>
 
           <View style={styles.previewWrap}>
@@ -107,20 +107,20 @@ export default function OnboardingStep6() {
           </View>
 
           <View style={[styles.card, { backgroundColor: theme.white }]}>
-            <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.settings.pet.name}</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.name}</Text>
             <TextInput
               style={[styles.input, { color: theme.text, borderColor: theme.orange, backgroundColor: theme.white }]}
               value={petNameInput}
               onChangeText={setPetNameInput}
               onBlur={() => settings.update({ petName: petNameInput.trim() })}
               placeholder={t.onboarding.step6.namePlaceholder}
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor={theme.textLight}
               returnKeyType="done"
             />
           </View>
 
           <View style={[styles.card, { backgroundColor: theme.white }]}>
-            <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.settings.pet.type}</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.type}</Text>
             <View style={styles.petTypeRow}>
               {PET_TYPES.map((pt) => (
                 <Pressable
@@ -140,7 +140,7 @@ export default function OnboardingStep6() {
           </View>
 
           <View style={[styles.card, { backgroundColor: theme.white }]}>
-            <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>{t.settings.pet.colour}</Text>
+            <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.pet.colour}</Text>
             <View style={styles.swatchRow}>
               {petSwatches.map((color) => (
                 <Pressable

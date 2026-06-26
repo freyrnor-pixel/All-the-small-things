@@ -60,7 +60,7 @@ export default function GuidedScreen() {
             <Ionicons name="map-outline" size={36} color={theme.orange} />
           </View>
           <Text style={[styles.heading, { color: theme.text }]}>{t.guidedTitle}</Text>
-          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.guidedSub}</Text>
+          <Text style={[styles.sub, { color: theme.textLight }]}>{t.guidedSub}</Text>
         </View>
 
         <View style={styles.options}>
@@ -85,7 +85,7 @@ export default function GuidedScreen() {
             <View style={styles.optionContent}>
               <View style={styles.optionText}>
                 <Text style={[styles.optionLabel, { color: theme.text }]}>{t.exploreBtn}</Text>
-                <Text style={[styles.optionDesc, { color: theme.textMuted }]}>{t.exploreDesc}</Text>
+                <Text style={[styles.optionDesc, { color: theme.textLight }]}>{t.exploreDesc}</Text>
               </View>
             </View>
             <Button

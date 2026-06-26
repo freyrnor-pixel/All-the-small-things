@@ -53,7 +53,7 @@ export default function OnboardingStep4() {
             <Ionicons name="notifications-outline" size={36} color={theme.orange} />
           </View>
           <Text style={[styles.heading, { color: theme.text }]}>{t.notificationsOnboarding}</Text>
-          <Text style={[styles.sub, { color: theme.textMuted }]}>{t.notificationsSub}</Text>
+          <Text style={[styles.sub, { color: theme.textLight }]}>{t.notificationsSub}</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.white }]}>
