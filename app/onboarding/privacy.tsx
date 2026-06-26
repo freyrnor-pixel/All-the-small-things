@@ -2,8 +2,7 @@
  * privacy.tsx — Local-only trust screen (onboarding step between language and guided)
  *
  * Reassures the user that no data leaves the device and the app is always free.
- * Shown once during onboarding; the same content also appears as a HintCard in
- * app/settings.tsx for returning users.
+ * Shown once during onboarding.
  *
  * Connections:
  *   Imports → @/lib/i18n, @/constants/theme

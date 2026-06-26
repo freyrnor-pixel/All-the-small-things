@@ -13,7 +13,7 @@
  * additions are reached only via the pencil icon → /inventory-edit.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/HintCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddFAB, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -53,8 +53,10 @@
  *     before committing — onConfirmInventoryPicks receives the whole batch at once and this
  *     screen loops it through addToWeeklyFromCatalog(id, quantity), showing a combined toast
  *     for >1 item (itemsAddedToList) vs. the singular one (itemAddedToList).
- *   - The FAB and the "Handlingen fullført" sticky footer are offset above BOTTOM_NAV_HEIGHT
- *     (from components/BottomNav.tsx) so they don't overlap the bottom nav bar.
+ *   - The FAB sits at AddFAB's shared default position (same as every other site); the
+ *     "Handlingen fullført" sticky footer stacks directly above it via AddFAB's exported
+ *     FAB_DEFAULT_BOTTOM/FAB_LG_SIZE constants (+ Spacing.sm gap) rather than a locally
+ *     guessed height, so the two never overlap.
  *   - Design system pass: all fontWeight string literals replaced with Fonts.* tokens;
  *     tab/quickAction/tray-confirm/done-shopping touch targets bumped to minHeight 44.
  */
@@ -80,7 +82,6 @@ import AddItemSheet from '@/components/AddItemSheet';
 import AddSourceChooser from '@/components/AddSourceChooser';
 import MonthlyResetSummaryModal from '@/components/MonthlyResetSummaryModal';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
-import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
@@ -88,8 +89,8 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
-import AddFAB from '@/components/AddFAB';
-import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
+import AddFAB, { FAB_DEFAULT_BOTTOM, FAB_LG_SIZE } from '@/components/AddFAB';
+import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
@@ -130,8 +131,6 @@ export default function ShoppingScreen() {
   const updateSettings = useSettingsStore((s) => s.update);
   const dishes = useMealStore((s) => s.dishes);
   const t = useT();
-
-  const DONE_SHOPPING_FOOTER_HEIGHT = 64; // minHeight 44 + paddingVertical Spacing.md + paddingTop Spacing.sm ≈ 44 + 12 + 6
 
   // Fire the 'shopping_opened' automation trigger once per screen visit.
   useEffect(() => {
@@ -365,8 +364,6 @@ export default function ShoppingScreen() {
             </Pressable>
           </View>
 
-          <HintCard text={t.hints.shopping.text} example={t.hints.shopping.example} />
-
           <SharedRequestsSection kind="shopping" />
 
           {/* ----- KATALOG TAB ----- */}
@@ -571,7 +568,7 @@ export default function ShoppingScreen() {
 
       {/* Sticky "Handlingen fullført" button — Ukeliste tab only, always rendered; dimmed + non-interactive when the cart is empty */}
       {tab === 'weekly' && (
-        <View style={[styles.stickyFooter, { bottom: BOTTOM_NAV_HEIGHT, paddingBottom: Spacing.md }]}>
+        <View style={[styles.stickyFooter, { bottom: FAB_DEFAULT_BOTTOM + FAB_LG_SIZE + Spacing.sm, paddingBottom: Spacing.md }]}>
           <PressableScale
             style={[
               styles.doneShoppingBtn,
@@ -589,10 +586,7 @@ export default function ShoppingScreen() {
 
       {/* FAB — Ukeliste tab only; Katalog additions via pencil icon → /inventory-edit */}
       {tab === 'weekly' && (
-        <AddFAB
-          onPress={() => setShowAddSourceChooser(true)}
-          bottom={(Spacing.xl + DONE_SHOPPING_FOOTER_HEIGHT) + BOTTOM_NAV_HEIGHT}
-        />
+        <AddFAB onPress={() => setShowAddSourceChooser(true)} />
       )}
 
       <AddItemSheet

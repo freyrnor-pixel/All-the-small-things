@@ -6,7 +6,7 @@
  * (back + title + Share) and a floating AddFAB for adding a new task.
  *
  * Connections:
- *   Imports → components/AddFAB, components/BottomNav, components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useEnergyStore, store/useTaskStore
+ *   Imports → components/AddFAB, components/BottomNav, components/DayTimeline, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useEnergyStore, store/useTaskStore
  *   Used by → Expo Router route "/plans", reached via BottomNav or a swipe/push from app/index.tsx's Plans widget title
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *
@@ -33,7 +33,6 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useEnergyStore } from '@/store/useEnergyStore';
 import { useT } from '@/lib/i18n';
 import DayTimeline from '@/components/DayTimeline';
-import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -42,7 +41,7 @@ import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
-import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 export default function PlansScreen() {
@@ -71,19 +70,17 @@ export default function PlansScreen() {
         onBack={() => router.back()}
         right={
           <Pressable
-            style={styles.shareBtn}
+            style={[styles.shareBtn, { backgroundColor: theme.orangeLight }]}
             onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
             accessibilityLabel={t.shareBtnLabel}
           >
-            <Text style={[styles.shareBtnIcon, { color: theme.orange }]}>⤴</Text>
+            <Text style={[styles.shareBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
           </Pressable>
         }
       />
 
       <SiteSwipeView>
       <View style={styles.content}>
-        <HintCard text={t.hints.plans.text} example={t.hints.plans.example} />
-
         {todayTasks.length === 0 ? (
           <Surface tint={theme.offWhite} style={styles.emptyCard}>
             <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noPlansToday}</Text>
@@ -108,8 +105,8 @@ export default function PlansScreen() {
 
 const baseStyles = StyleSheet.create({
   safe: { flex: 1 },
-  shareBtn: { borderRadius: Radius.full, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  shareBtnIcon: { fontSize: 14 },
+  shareBtn: { borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+  shareBtnText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   content: { flex: 1, padding: Spacing.md, gap: Spacing.md },
   card: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1 },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },

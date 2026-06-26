@@ -405,8 +405,6 @@ export default function ScanScreen() {
 
         <SiteSwipeView>
           <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-            <HintCard text={t.hints.scan.text} example={t.hints.scan.example} />
-
             <Pressable style={styles.typeInsteadLink} onPress={() => setMode('manual')} hitSlop={6}>
               <Ionicons name="pencil-outline" size={16} color={theme.orange} />
               <Text style={[styles.typeInsteadText, { color: theme.orange }]}>{t.typeItInInstead}</Text>

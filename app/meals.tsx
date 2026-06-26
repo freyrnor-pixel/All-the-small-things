@@ -6,7 +6,7 @@
  * ingredient rows and catalog autocomplete.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HintCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useMealStore, store/useShoppingStore, store/useCatalogStore
  *   Used by → Expo Router route "/meals"
  *   Data    → useMealStore (dishes + ingredients tables); writes to useShoppingStore when pushing a dish to shopping; scaled fontSize via useScaledStyles()
  *
@@ -41,7 +41,6 @@ import { useMealStore, MealType, Dish } from '@/store/useMealStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useCatalogStore, StoreItem } from '@/store/useCatalogStore';
 import ExpandableCard from '@/components/ExpandableCard';
-import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
@@ -197,8 +196,6 @@ export default function MealsScreen() {
       {!activeCategory && (
         <SiteSwipeView>
         <ScrollView contentContainerStyle={styles.tileGrid} showsVerticalScrollIndicator={false}>
-          <HintCard text={t.hints.meals.text} example={t.hints.meals.example} />
-
           <PressableScale
             style={[styles.surpriseBtn, { backgroundColor: theme.green }]}
             onPress={() => pickRandom()}

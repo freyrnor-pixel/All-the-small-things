@@ -28,6 +28,10 @@
  *   - Wrapped in a KeyboardAvoidingView because RN's <Modal> renders outside the
  *     screen's own KeyboardAvoidingView subtree — without this, the keyboard covers
  *     the search input on short screens (same fix as AddItemSheet.tsx).
+ *   - The two steps render in visually distinct containers within one <Modal>: 'choose'
+ *     keeps the bottom-sheet look (`sheet`/`handle`, `animationType="slide"`); 'inventory'
+ *     is a centered card (`centerWrap`/`pickerCard`, `animationType="fade"`, no `handle`,
+ *     no `autoFocus` on the search input — keyboard stays down until the user taps it).
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -108,36 +112,37 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={step === 'choose' ? 'slide' : 'fade'} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexFill}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: theme.white }]}>
-        <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
 
-        {step === 'choose' ? (
-          <>
-            <Text style={[styles.title, { color: theme.text }]}>{t.addSourceChooserTitle}</Text>
+      {step === 'choose' ? (
+        <View style={[styles.sheet, { backgroundColor: theme.white }]}>
+          <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
 
-            <Pressable style={styles.optionRow} onPress={() => setStep('inventory')}>
-              <View style={[styles.optionIcon, { backgroundColor: theme.greenLight }]}>
-                <Ionicons name="cube-outline" size={20} color={theme.green} />
-              </View>
-              <Text style={[styles.optionText, { color: theme.text }]}>{t.addFromInventoryOption}</Text>
-            </Pressable>
+          <Text style={[styles.title, { color: theme.text }]}>{t.addSourceChooserTitle}</Text>
 
-            <Pressable style={styles.optionRow} onPress={handleOpenAddSheet}>
-              <View style={[styles.optionIcon, { backgroundColor: theme.orangeLight }]}>
-                <Ionicons name="search-outline" size={20} color={theme.orange} />
-              </View>
-              <Text style={[styles.optionText, { color: theme.text }]}>{t.searchOrTypeOption}</Text>
-            </Pressable>
+          <Pressable style={styles.optionRow} onPress={() => setStep('inventory')}>
+            <View style={[styles.optionIcon, { backgroundColor: theme.greenLight }]}>
+              <Ionicons name="cube-outline" size={20} color={theme.green} />
+            </View>
+            <Text style={[styles.optionText, { color: theme.text }]}>{t.addFromInventoryOption}</Text>
+          </Pressable>
 
-            <Pressable style={styles.cancelRow} onPress={onClose}>
-              <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancelBtn}</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
+          <Pressable style={styles.optionRow} onPress={handleOpenAddSheet}>
+            <View style={[styles.optionIcon, { backgroundColor: theme.orangeLight }]}>
+              <Ionicons name="search-outline" size={20} color={theme.orange} />
+            </View>
+            <Text style={[styles.optionText, { color: theme.text }]}>{t.searchOrTypeOption}</Text>
+          </Pressable>
+
+          <Pressable style={styles.cancelRow} onPress={onClose}>
+            <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancelBtn}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.centerWrap}>
+          <View style={[styles.pickerCard, { backgroundColor: theme.white }]}>
             <View style={styles.pickerHeader}>
               <Pressable onPress={handleBackToChoose} hitSlop={8}>
                 <Ionicons name="chevron-back" size={22} color={theme.textLight} />
@@ -151,7 +156,6 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
               onChangeText={setFilter}
               placeholder={t.inventoryPickerSearchPlaceholder}
               placeholderTextColor={theme.gray}
-              autoFocus
             />
 
             {filteredCatalogItems.length === 0 ? (
@@ -208,9 +212,9 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
                 <Text style={styles.pickerSaveBtnCount}>({pickCount})</Text>
               </Pressable>
             )}
-          </>
-        )}
-      </View>
+          </View>
+        </View>
+      )}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -232,6 +236,18 @@ const baseStyles = StyleSheet.create({
     ...Shadow.fab,
   },
   handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: Radius.full, marginBottom: Spacing.sm },
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
+  pickerCard: {
+    width: '100%',
+    maxWidth: 460,
+    maxHeight: '80%',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
+    gap: Spacing.xs,
+    ...Shadow.fab,
+  },
   title: { fontSize: FontSize.lg, fontWeight: '700', marginBottom: Spacing.sm },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
   optionIcon: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },

@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/HintCard, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -46,7 +46,6 @@ import { useRouter } from 'expo-router';
 import { useHabitStore, Habit, HabitKind, HabitLog } from '@/store/useHabitStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import HintCard from '@/components/HintCard';
 import CompletionGlow from '@/components/CompletionGlow';
 import HabitIcon from '@/components/HabitIcon';
 import ScreenBackground from '@/components/ScreenBackground';
@@ -716,8 +715,6 @@ export default function HabitsScreen() {
 
       <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <HintCard text={t.hints.habits.text} example={t.hints.habits.example} />
-
         {tab === 'today' && (
           <>
             {visibleHabits.length > 0 && (

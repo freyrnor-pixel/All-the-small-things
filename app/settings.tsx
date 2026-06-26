@@ -23,7 +23,7 @@
  * scheduled reminders.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/AppModal, components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, components/TimePickerWheel, constants/theme, lib/i18n, lib/notifications, lib/reminders, lib/seedTestData, lib/useAppTheme, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/settings"
  *   Data    → useSettingsStore (settings table; incl. essentialsModeEnabled, quietHours*, monthlyBudgetNok); reset actions touch useShoppingStore (shopping_items) + useTaskStore (tasks); re-syncs notifications via syncReminders / syncAllTaskNotifications / syncAllHabitReminders / syncNotificationCategories; scaled fontSize via useScaledStyles()
  *
@@ -70,7 +70,6 @@ import { useT, getTranslations } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { selection, warning, heavy } from '@/lib/haptics'; // W-E: haptic tick on the Essentials toggle
 import { showAppModal } from '@/components/AppModal';
-import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -213,7 +212,6 @@ export default function SettingsScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
         <Toast visible={toastVisible} message={toastMessage} onDismiss={() => setToastVisible(false)} theme={theme} />
-        <HintCard text={t.hints.settings.text} example={t.hints.settings.example} />
 
         {tab === 'generelt' && (
           <>

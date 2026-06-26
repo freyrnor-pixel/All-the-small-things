@@ -7,7 +7,7 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/HintCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -15,9 +15,7 @@
  *   - Added ⚙ gear icon (header right) → /settings.
  *   - "Today's Plans" title row is now pressable → /plans (chevron affordance).
  *   - BubbleMenu mount remains commented out — do not remove.
- *   - "Daily overview" is a plain section header (t.dailyOverview); the HintCard below it
- *     is the focus-mode instruction (t.hints.home.text) shown conditionally when
- *     essentialsModeEnabled is true.
+ *   - "Daily overview" is a plain section header (t.dailyOverview).
  *   - The update-ready banner mirrors the work-mode banner's look (theme.green
  *     pill) and calls Updates.reloadAsync() directly on tap — app/_layout.tsx
  *     only sets the updateReady flag, never auto-reloads or pops an Alert.
@@ -40,7 +38,7 @@
  *   - When useCoverScreen() returns true (Galaxy Z Flip cover display), CoverScreen is rendered instead of the full home UI.
  *   - Backlog section uses theme.neutral (not danger/red) — no shame framing.
  *   - Pet companion is shown when settings.petEnabled (set during onboarding step6 or via Settings).
- *   - InboxSection (AP-02) sits right under the home HintCard —
+ *   - InboxSection (AP-02) sits right under the "Daily overview" header —
  *     lists whatever's currently captured via app/capture.tsx and renders nothing
  *     when the inbox is empty (mirrors the Backlog section's hide-when-empty pattern
  *     further down, since capture is incidental/optional, not a permanent fixture).
@@ -86,7 +84,6 @@ import SiteSwipeView from '@/components/SiteSwipeView';
 import { goToSite } from '@/lib/siteNav';
 import Pet from '@/components/Pet';
 import QuickAddSheet from '@/components/QuickAddSheet';
-import HintCard from '@/components/HintCard';
 import InboxSection from '@/components/InboxSection';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import Surface from '@/components/Surface';
@@ -356,7 +353,6 @@ export default function HomeScreen() {
         )}
 
         <Text style={[styles.dailyOverviewHeader, { color: theme.text }]}>{t.dailyOverview}</Text>
-        {settings.essentialsModeEnabled && <HintCard text={t.hints.home.text} example={t.hints.home.example} />}
 
         <InboxSection />
 
@@ -413,11 +409,11 @@ export default function HomeScreen() {
                       <Ionicons name="link-outline" size={14} color={theme.textLight} />
                     </Pressable>
                     <Pressable
-                      style={styles.shareBtnSmall}
+                      style={[styles.shareBtnSmall, { backgroundColor: theme.orangeLight }]}
                       onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
                       accessibilityLabel={t.shareBtnLabel}
                     >
-                      <Ionicons name="share-outline" size={12} color={theme.orange} />
+                      <Text style={[styles.shareBtnSmallText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
                     </Pressable>
                     <AddFAB size="sm" onPress={() => router.push('/task-form')} />
                   </View>
@@ -645,7 +641,6 @@ const baseStyles = StyleSheet.create({
   sectionTitle: { fontSize: FontSize.lg, fontFamily: Fonts.semibold },
   dailyOverviewHeader: { fontSize: FontSize.md, fontFamily: Fonts.semibold, marginBottom: Spacing.md },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
-  shareBtn: { borderRadius: Radius.full, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   seeAll: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   card: { borderRadius: Radius.md, padding: Layout.cardPadding, borderWidth: 1, ...Shadow.card },
   // Empty/ahead state: generous padding so a gentle prompt never reads as cramped.
@@ -680,7 +675,8 @@ const baseStyles = StyleSheet.create({
   divider: { height: 1, marginVertical: Spacing.md },
   plansHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md, paddingVertical: Spacing.sm },
   plansActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  shareBtnSmall: { borderRadius: Radius.full, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  shareBtnSmall: { borderRadius: Radius.full, paddingHorizontal: Spacing.xs, paddingVertical: 4 },
+  shareBtnSmallText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   timelineContainer: { marginVertical: Spacing.md },
   seeWeekBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
   seeWeekBtnText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },

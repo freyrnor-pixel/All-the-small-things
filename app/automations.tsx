@@ -7,7 +7,7 @@
  * action types to pick from — no need for a multi-step wizard.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore
  *   Used by → Expo Router route "/automations", reached via BottomNav
  *   Data    → useAutomationStore (ifttt_rules table)
  *
@@ -24,7 +24,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAutomationStore, AutomationRule, TriggerType, ActionType } from '@/store/useAutomationStore';
-import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -208,8 +207,6 @@ export default function AutomationsScreen() {
 
       <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <HintCard text={t.hints.automations.text} example={t.hints.automations.example} />
-
         {showForm && <NewRuleForm onSave={save} onCancel={() => setShowForm(false)} />}
 
         {rules.length === 0 ? (
