@@ -276,7 +276,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
   trips: [],
 
   load() {
-    const items = loadAll('shopping_items', rowToItem, { orderBy: 'list_type, checked, name' });
+    const items = loadAll('shopping_items', rowToItem, { orderBy: 'status, name' });
     set({
       items: mergeDuplicateItems(items),
       trips: loadAll('shopping_trips', rowToTrip, { orderBy: 'completed_at DESC' }),
@@ -412,13 +412,17 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
 
     db.runSync("DELETE FROM shopping_items WHERE list_type = 'weekly'");
     set((s) => {
-      const sourceIds = new Set(weeklyWithSource.map((w) => w.monthlySourceId!));
+      const deductMap = new Map<string, number>();
+      for (const w of weeklyWithSource) {
+        const qty = parseInt(w.amount, 10) || 1;
+        deductMap.set(w.monthlySourceId!, (deductMap.get(w.monthlySourceId!) ?? 0) + qty);
+      }
       return {
         items: s.items
           .filter((i) => i.listType !== 'weekly')
           .map((i) =>
-            sourceIds.has(i.id)
-              ? { ...i, monthlyAllocated: Math.max(0, i.monthlyAllocated - (weeklyWithSource.find((w) => w.monthlySourceId === i.id) ? parseInt(weeklyWithSource.find((w) => w.monthlySourceId === i.id)!.amount, 10) || 1 : 0)) }
+            deductMap.has(i.id)
+              ? { ...i, monthlyAllocated: Math.max(0, i.monthlyAllocated - deductMap.get(i.id)!) }
               : i
           ),
       };

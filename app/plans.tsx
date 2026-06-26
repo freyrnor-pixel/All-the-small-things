@@ -7,7 +7,7 @@
  * Share button that opens /share-modal for the day's plans.
  *
  * Connections:
- *   Imports → components/BottomNav, components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/BottomNav, components/DayTimeline, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useEnergyStore, store/useTaskStore
  *   Used by → Expo Router route "/plans", reached via BottomNav or a swipe/push from app/index.tsx's Plans widget title
  *   Data    → reads useTaskStore (tasks) via tasksForDate(today)
  *
@@ -19,13 +19,21 @@
  *     is a full screen you navigate to, not a transient sheet.
  *   - Essentials-mode filtering is intentionally NOT applied here — this is the
  *     "see everything" expansion of the home preview, distinct from the
- *     essentials-only toggle which lives on the home screen itself.
+ *     essentials-only toggle which lives on the home screen itself. The energy-level
+ *     filter (narrow to priority='high' on a 'low' energy day) IS applied here,
+ *     matching app/index.tsx's visibleTodayTasks, so this screen shows the same
+ *     task set the home screen's Plans preview is drawn from.
+ *   - DayTimeline's onToggle stages a check via toggle() (same pending-set flow as
+ *     app/index.tsx's Backlog TaskItem rows); a "Save changes" pill appears once
+ *     anything is pending, mirroring the home screen so checking off tasks here
+ *     behaves the same as checking them off there.
  */
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTaskStore } from '@/store/useTaskStore';
+import { useEnergyStore } from '@/store/useEnergyStore';
 import { useT } from '@/lib/i18n';
 import DayTimeline from '@/components/DayTimeline';
 import HintCard from '@/components/HintCard';
@@ -48,11 +56,16 @@ export default function PlansScreen() {
 
   const tasksForDate = useTaskStore((s) => s.tasksForDate);
   const tasks = useTaskStore((s) => s.tasks); // re-render trigger, see app/index.tsx edit notes
+  const toggleTask = useTaskStore((s) => s.toggle);
+  const pendingCount = useTaskStore((s) => s.pending.size);
+  const confirmTasksPending = useTaskStore((s) => s.confirmPending);
+  const energyLevels = useEnergyStore((s) => s.levels);
+  const todayEnergyLevel = energyLevels[today] ?? null;
 
-  const todayTasks = useMemo(
-    () => rankTodayTasks(tasksForDate(today)),
-    [tasks, tasksForDate, today]
-  );
+  const todayTasks = useMemo(() => {
+    const ranked = rankTodayTasks(tasksForDate(today));
+    return todayEnergyLevel === 'low' ? ranked.filter((task) => task.priority === 'high') : ranked;
+  }, [tasks, tasksForDate, today, todayEnergyLevel]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -92,8 +105,19 @@ export default function PlansScreen() {
             <DayTimeline
               tasks={todayTasks}
               onPress={(task) => router.push({ pathname: '/task-form', params: { id: task.id } })}
+              onToggle={(task) => toggleTask(task.id)}
             />
           </Surface>
+        )}
+
+        {pendingCount > 0 && (
+          <Pressable
+            style={[styles.saveButton, { backgroundColor: theme.green }]}
+            onPress={confirmTasksPending}
+          >
+            <Text style={styles.saveButtonText}>{t.save}</Text>
+            <Text style={styles.saveButtonCount}>({pendingCount})</Text>
+          </Pressable>
         )}
       </View>
       </SiteSwipeView>
@@ -125,4 +149,7 @@ const baseStyles = StyleSheet.create({
   card: { borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1 },
   emptyCard: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
   emptyText: { fontSize: FontSize.sm, textAlign: 'center' },
+  saveButton: { borderRadius: Radius.md, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: Spacing.xs },
+  saveButtonText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  saveButtonCount: { color: Colors.white, fontWeight: '600', fontSize: FontSize.sm },
 });

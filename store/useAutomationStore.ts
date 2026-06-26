@@ -74,14 +74,16 @@ function executeAction(rule: AutomationRule) {
   } else if (rule.actionType === 'add_shopping_item') {
     const name = rule.actionParams.name?.trim();
     if (!name) return;
+    const listType = rule.actionParams.listType === 'monthly' ? 'monthly' : 'weekly';
     useShoppingStore.getState().add({
       name,
       amount: '1',
       unit: '',
-      listType: rule.actionParams.listType === 'monthly' ? 'monthly' : 'weekly',
+      listType,
       store: '',
       price: 0,
       inventoryQty: 0,
+      status: listType === 'monthly' ? 'catalog' : 'inWeeklyList',
     });
   }
 }

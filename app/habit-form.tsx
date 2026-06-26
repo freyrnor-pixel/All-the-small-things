@@ -220,11 +220,12 @@ export default function HabitForm() {
     );
   }
 
+  // weekly/monthly/one-time aren't enforced anywhere (no filtering by recurrence
+  // when deciding which habits to show on a given day, and recurrenceDays is
+  // always saved as [] from this form) — only offer 'daily', the one option that
+  // actually behaves as labelled, until the others are implemented.
   const recurrenceOptions: { key: HabitRecurrence; label: string }[] = [
     { key: 'daily', label: t.habitRecurrenceDaily },
-    { key: 'weekly', label: t.habitRecurrenceWeekly },
-    { key: 'monthly', label: t.habitRecurrenceMonthly },
-    { key: 'one-time', label: t.habitRecurrenceOnce },
   ];
 
   const categoryKeys = ['physical', 'mental', 'health', 'nutrition', 'sleep', 'work', 'wellbeing', 'other'] as HabitCategory[];

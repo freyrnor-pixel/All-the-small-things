@@ -17,7 +17,8 @@
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
  *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
  *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
- *   - toggle() fires the 'task_completed' automation trigger only on the rising edge (not-done → done), not on uncheck.
+ *   - confirmPending() fires the 'task_completed' automation trigger only on the rising edge for each task transitioning from not-done → done.
+ *   - completeDirect() writes done=true straight to SQLite without going through pending/confirmPending — used by the notification "Done" action, which has no Save step to trigger a confirm.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -34,6 +35,7 @@ import {
   readJson,
 } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
+import { dayOfWeekMon0 } from '@/lib/date';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { cancelTaskNotification } from '@/lib/notifications';
@@ -66,6 +68,8 @@ type TaskStore = {
   update: (id: string, patch: Partial<Omit<Task, 'id'>>) => void;
   toggle: (id: string) => void;
   confirmPending: () => void;
+  /** Mark a task done immediately, bypassing the pending/confirm flow. */
+  completeDirect: (id: string) => void;
   remove: (id: string) => void;
   clearAll: () => void;
   tasksForDate: (date: string) => Task[];
@@ -154,6 +158,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     });
   },
 
+  completeDirect(id) {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task || task.done) return;
+    get().update(id, { done: true });
+    useAutomationStore.getState().fireTrigger('task_completed');
+  },
+
   confirmPending() {
     const { pending } = get();
     if (pending.size === 0) return;
@@ -184,8 +195,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   tasksForDate(date) {
     const { tasks } = get();
-    const dayOfWeek = new Date(date).getDay(); // 0=Sun, convert to 0=Mon
-    const mon0 = (dayOfWeek + 6) % 7;
+    const mon0 = dayOfWeekMon0(new Date(date + 'T12:00:00'));
     return tasks.filter((t) => {
       if (t.date === date) return true;
       if (t.recurring === 'weekly' && t.recurringDays.includes(mon0)) return true;
