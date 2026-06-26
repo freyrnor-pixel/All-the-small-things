@@ -461,6 +461,7 @@ const en = {
     overviewTitle: "Today's overview",
     overviewBodyNoTasks: 'No tasks left today',
     overviewNothingElse: 'Nothing else queued today',
+    overviewUpcomingCount: (count: number) => `+${count} more today`,
     // AP-05 — interactive notification action buttons + snooze follow-up
     actionDone: 'Done',
     actionRemindLater: 'Remind me later',
@@ -1397,6 +1398,7 @@ const no: typeof en = {
     overviewTitle: 'Dagens oversikt',
     overviewBodyNoTasks: 'Ingen oppgaver igjen i dag',
     overviewNothingElse: 'Ingenting mer i kø i dag',
+    overviewUpcomingCount: (count: number) => `+${count} flere i dag`,
     // AP-05 — interaktive varselknapper + utsettelse-påminnelse
     actionDone: 'Ferdig',
     actionRemindLater: 'Påminn meg senere',

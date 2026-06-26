@@ -216,9 +216,9 @@ export default function RootLayout() {
 
   // Keep the persistent "today's overview" notification in sync with today's
   // pending tasks, refreshing it in place (same identifier) on every relevant
-  // data change. Shows the next task (collapsed) with the look mirrored from
-  // TaskItem.tsx via lib/taskVisual.ts, and the 2 after it on expand (body text),
-  // both ordered the same way as the home screen via lib/taskOrder.ts.
+  // data change. Shows the next task (title only, minimal format matching
+  // notification redesign Option C) with a queue-status body, ordered the
+  // same way as the home screen via lib/taskOrder.ts.
   useEffect(() => {
     if (!loaded) return;
     if (!persistentNotifEnabled) {
@@ -237,9 +237,13 @@ export default function RootLayout() {
       });
       return;
     }
+    // Build minimal body: queue status or count of remaining tasks
+    const bodyText = upcoming.length > 0
+      ? t.notif.overviewUpcomingCount(upcoming.length)
+      : t.notif.overviewNothingElse;
     void refreshPersistentNotification({
-      title: describeTask(next, t),
-      body: upcoming.slice(0, 2).map((task) => describeTask(task, t)).join('\n') || t.notif.overviewNothingElse,
+      title: next.title,
+      body: bodyText,
       color: taskAccentColor(next, theme),
     });
   }, [loaded, persistentNotifEnabled, language, tasks, theme]);
