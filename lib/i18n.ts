@@ -170,7 +170,7 @@ const en = {
   persistentNotifLabel: "Today's overview notification",
   persistentNotifHint: "Keeps one notification up to date with today's remaining tasks and shopping items",
   habitNotifications: 'Habit reminders',
-  habitNotificationsHint: 'Reminder when it's time for a habit',
+  habitNotificationsHint: "Reminder when it's time for a habit",
   sectionColorTheme: 'Colour theme',
   sectionBubbleMaterial: 'Material',
   workModeDesc: 'Work mode hides personal plans so you can focus.',
