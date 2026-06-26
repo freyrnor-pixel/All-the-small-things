@@ -10,7 +10,7 @@
  * toggle (defaults to true on both screens — most free-adds are one-off needs).
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore
+ *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore, components/BottomSheet
  *   Used by → app/shopping.tsx
  *   Data    → none directly — creation flows out via onAdd; the parent calls useShoppingStore.add(). Reads useCatalogStore.suggest() (read-only) for the name-field autocomplete.
  *
@@ -18,21 +18,20 @@
  *   - `origin` controls whether the "Legg også til i katalog" toggle renders at all
  *     (only meaningful when adding from the weekly/Ukeliste screen).
  *   - Resets all fields on close via the useEffect keyed on `visible`.
- *   - Wrapped in a KeyboardAvoidingView because RN's <Modal> renders outside the
- *     screen's own KeyboardAvoidingView subtree — without this, the keyboard covers
- *     the name input on short screens.
+ *   - Now uses BottomSheet component which handles keyboard anchoring and drag-to-dismiss
+ *     automatically (no KeyboardAvoidingView needed).
  *   - Suggestions come from useCatalogStore.suggest(name), which already does
  *     case-insensitive substring matching with startsWith-priority ordering — don't
  *     duplicate that logic here, just render its result. Dismissed once a suggestion
  *     is picked or the name is cleared.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { AppColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
-import { useScaledStyles } from '@/lib/useAppTheme';
+import { useScaledStyles, useAppTheme } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import { BottomSheet } from '@/components/BottomSheet';
 
 type Props = {
   visible: boolean;
@@ -49,7 +48,6 @@ type Props = {
 };
 
 export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }: Props) {
-  const { bottom: bottomInset } = useSafeAreaInsets();
   const styles = useScaledStyles(baseStyles);
   const t = useT();
   const catalogSuggest = useCatalogStore((s) => s.suggest);
@@ -94,13 +92,13 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexFill}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
-        <View style={[styles.handle, { backgroundColor: theme.grayLight }]} />
-        <Text style={[styles.title, { color: theme.text }]}>{t.addSheetTitle}</Text>
-
+    <BottomSheet
+      open={visible}
+      onClose={onClose}
+      title={t.addSheetTitle}
+      theme={theme}
+    >
+      <ScrollView keyboardShouldPersistTaps="handled" style={styles.scrollView}>
         <Text style={[styles.label, { color: theme.textLight }]}>{t.varenavnLabel}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
@@ -186,28 +184,13 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
             <Text style={styles.primaryBtnText}>{t.addItemBtn}</Text>
           </Pressable>
         </View>
-      </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  flexFill: { flex: 1 },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    maxHeight: '85%',
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    gap: Spacing.xs,
-    ...Shadow.fab,
-  },
-  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: Radius.full, marginBottom: Spacing.sm },
-  title: { fontSize: FontSize.lg, fontFamily: Fonts.bold, marginBottom: Spacing.sm },
+  scrollView: { flex: 1 },
   label: { fontSize: FontSize.xs, fontFamily: Fonts.semibold, marginTop: Spacing.sm, marginBottom: 4 },
   input: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
   suggestionsBox: { borderRadius: Radius.sm, borderWidth: 1, marginTop: 4, overflow: 'hidden' },
