@@ -6,7 +6,7 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/AddFAB, components/BottomNav, components/ConfirmationBanner, components/HintCard, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
+ *   Imports → components/AddFAB, components/BottomNav, components/ConfirmationBanner, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
  *   Used by → Expo Router route "/health"
  *   Data    → useHealthStore (health_logs table); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
  *
@@ -45,7 +45,6 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useHealthStore } from '@/store/useHealthStore';
 import { useHabitStore } from '@/store/useHabitStore';
-import HintCard from '@/components/HintCard';
 import HabitIcon from '@/components/HabitIcon';
 import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
@@ -144,7 +143,6 @@ export default function HealthScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-        <HintCard text={t.hints.health.text} example={t.hints.health.example} />
         {/* Overview */}
         {topAilments.length > 0 && (
           <Surface style={styles.overviewCard}>

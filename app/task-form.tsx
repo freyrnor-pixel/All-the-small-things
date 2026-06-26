@@ -7,7 +7,7 @@
  * Presence of an `id` route param switches it into edit mode (with a delete action).
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/HintCard, components/ScreenBackground, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/ScreenBackground, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useTaskStore (tasks table) via add/update/remove; scaled fontSize via useScaledStyles()
  *
@@ -42,7 +42,6 @@ import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr, dayOfWeekMon0 } from '@/lib/date';
 import { tap } from '@/lib/haptics';
-import HintCard from '@/components/HintCard';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import TimePickerWheel from '@/components/TimePickerWheel';
@@ -178,8 +177,6 @@ export default function TaskFormScreen() {
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
         >
-          <HintCard text={t.hints.taskForm.text} example={t.hints.taskForm.example} />
-
           {/* Title */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.textLight }]}>{t.taskTitleLabel}</Text>

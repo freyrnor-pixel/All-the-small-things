@@ -18,6 +18,9 @@
  *     button uses — instead of each screen hand-rolling its own weaker shadow.
  *   - `bottom` only applies to the 'lg' floating variant; pass it when a screen has
  *     extra sticky footer content above BottomNav (see app/shopping.tsx).
+ *   - Exports FAB_LG_SIZE/FAB_DEFAULT_BOTTOM so a screen with extra footer content
+ *     can stack it directly above the FAB's default position without hardcoding/
+ *     duplicating these numbers (see app/shopping.tsx's stickyFooter).
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, ViewStyle, StyleProp } from 'react-native';
@@ -37,6 +40,9 @@ type Props = {
 const DIMENSION = { lg: 56, sm: 32 };
 const PLUS_SIZE = { lg: 28, sm: 18 };
 const DEFAULT_BOTTOM = Spacing.xl + BOTTOM_NAV_HEIGHT;
+
+export const FAB_LG_SIZE = DIMENSION.lg;
+export const FAB_DEFAULT_BOTTOM = DEFAULT_BOTTOM;
 
 export default function AddFAB({ onPress, size = 'lg', bottom, style }: Props) {
   const theme = useAppTheme();

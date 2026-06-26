@@ -6,7 +6,7 @@
  * linked source task/shopping item when one exists (sourceTaskId / sourceItemId).
  *
  * Connections:
- *   Imports → components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/shared"
  *   Data    → useSharedStore (shared_tasks + shared_shopping_items tables); mirrors actions to useTaskStore (tasks) / useShoppingStore (shopping_items) via the source ids; scaled fontSize via useScaledStyles()
  *
@@ -29,7 +29,6 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
@@ -108,8 +107,6 @@ export default function SharedScreen() {
 
       <SiteSwipeView>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <HintCard text={t.hints.shared.text} example={t.hints.shared.example} />
-
         {tab === 'shopping' ? (
           <>
             {sharedShopping.length === 0 ? (
