@@ -2,12 +2,13 @@
  * useSettingsStore.ts — single-row app settings / preferences
  *
  * Zustand store mirroring the one settings row: user name, language, theme,
- * dark mode, reminder/notification toggles (including quiet hours), reset cadence,
+ * dark mode, reminder/notification toggles (including quiet hours, task/habit notification toggles), reset cadence,
  * work/essentials modes, onboarding state, accessibility flags, companion pet
  * settings, monthly grocery budget (monthlyBudgetNok), and the debug overlay's
  * enable flag + bubble-wheel tuning values.
  * persistentNotifEnabled toggles the always-current "today's overview" notification
  * (refreshed by app/_layout.tsx, see lib/notifications.ts's refreshPersistentNotification).
+ * habitNotificationsEnabled gates all habit reminders.
  *
  * Connections:
  *   Imports → lib/dataAccess
@@ -97,6 +98,8 @@ export type Settings = {
   bubbleAnimSpeed: number;
   // Last payday-boundary monthly reset, as YYYY-MM-DD; drives the automatic reset check in app/shopping.tsx
   lastMonthlyReset: string;
+  // Habit reminders toggle
+  habitNotificationsEnabled: boolean;
   // Permission toggles (permission pre-bake)
   locationEnabled: boolean;
   backgroundLocationEnabled: boolean;
@@ -170,6 +173,7 @@ function rowToSettings(row: Row): Settings {
     bubbleSpringIntensity: readReal(row, 'bubble_spring_intensity', 50),
     bubbleAnimSpeed: readReal(row, 'bubble_anim_speed', 50),
     lastMonthlyReset: readStr(row, 'last_monthly_reset'),
+    habitNotificationsEnabled: readBool(row, 'habit_notifications_enabled', true),
     locationEnabled: readBool(row, 'location_enabled'),
     backgroundLocationEnabled: readBool(row, 'background_location_enabled'),
     calendarSyncEnabled: readBool(row, 'calendar_sync_enabled'),
@@ -223,6 +227,7 @@ const SETTINGS_COLUMNS: FieldMap<Settings> = {
   bubbleSpringIntensity: { col: 'bubble_spring_intensity' },
   bubbleAnimSpeed: { col: 'bubble_anim_speed' },
   lastMonthlyReset: { col: 'last_monthly_reset' },
+  habitNotificationsEnabled: { col: 'habit_notifications_enabled', to: bool },
   locationEnabled: { col: 'location_enabled', to: bool },
   backgroundLocationEnabled: { col: 'background_location_enabled', to: bool },
   calendarSyncEnabled: { col: 'calendar_sync_enabled', to: bool },
@@ -273,6 +278,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   bubbleSpringIntensity: 50,
   bubbleAnimSpeed: 50,
   lastMonthlyReset: '',
+  habitNotificationsEnabled: true,
   locationEnabled: false,
   backgroundLocationEnabled: false,
   calendarSyncEnabled: false,

@@ -19,11 +19,17 @@
  *   - On OCR failure/empty result, mode:manual opens automatically.
  *   - Categories are pre-populated via early fuzzy match against store_items and shown as tappable chips in result mode; the user can override via the category picker modal.
  *   - parseReceiptText skips total/sum/MVA/etc. lines and only keeps lines matching a NN[.,]NN price; tune skipPatterns/pricePattern there.
- *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list plus "Annen butikk…" for custom entry.
- *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend.
+ *   - All visible strings go through useT(); NORWEGIAN_STORES is a hardcoded store list plus "Annen butikk…" for custom entry. recordPurchases sets wasOnList by matching existing shopping names.
+ *   - addToList() (AP-06B) creates a receipt (date/store/total of the selected items) via useReceiptStore BEFORE recordPurchases, then threads receipt.id into every recordPurchases entry so app/budget.tsx can total this month's spend; the manual-entry sheet's addManualItem() does NOT create a receipt unless a price is entered (see below).
  *   - addToList() requires a store to be picked first (NORWEGIAN_STORES chip row, or custom store) — without one it shows selectStoreFirstTitle/Body and bails before logging anything.
+ *   - addToList() also fuzzy-matches each scanned name (lib/receipt.ts findFuzzyMatch) against Katalog shopping_items (status='catalog') and silently raises that item's price if higher — separate from recordPurchases' exact-match price sync on store_items. Both paths only ever raise the catalog price, never lower it.
+ *   - addToList() also fuzzy-matches each scanned name against useCatalogStore's store_items to inherit that item's category ("type of item") when passing purchases to recordPurchases.
+ *   - Both addToList() and addManualItem() create their shopping_items rows with status='inWeeklyList' (not the add() default of 'catalog') — scanned/manually-confirmed items represent things just bought or being bought, so they belong on the Ukeliste working list, not the permanent Katalog.
  *   - Manual entry supports multiple items per line (newline-delimited text), counted live. An optional price field applies only when exactly one line is entered; with a store selected and price > 0, it creates a receipt and logs the purchase like addToList does.
- *   - QR scanner and category picker modals sit outside the screen content — full-screen overlays.
+ *   - Header's right-side link (reusing t.budget.title) goes to /budget via goToSite() — a plain
+ *     navigation shortcut, separate from /budget's own BottomNav entry.
+ *   - The QR scanner modal, manual-entry sheet, and category picker modal (all <Modal>) sit outside <SiteSwipeView> —
+ *     they're full-screen overlays, not the scrollable screen body.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated } from 'react-native';
@@ -238,6 +244,11 @@ export default function ScanScreen() {
     }
     const selected = parsedItems.filter((i) => i.selected);
     const existingNames = new Set(shoppingItems.map((i) => i.name.toLowerCase()));
+    // Catalog items (status='catalog') that fuzzy-match a scanned name get their
+    // price silently updated, even when the scanned item itself isn't on the list
+    // (recordPurchases below already does this for store_items; this covers the
+    // separate Katalog shopping_items rows the redesign introduced). Only ever
+    // raises the price — a lower scanned price never overwrites a known higher one.
     const catalogItems = shoppingItems.filter((i) => i.status === 'catalog');
     const catalogNames = catalogItems.map((i) => i.name);
 

@@ -351,6 +351,8 @@ export function initDb() {
     // Heuristic fix: a weekly/purchased row whose name matches a still-standing catalog
     // row almost certainly originated from that same catalog item, so attribute it now.
     "UPDATE shopping_items SET from_catalog = 1 WHERE from_catalog = 0 AND status IN ('inWeeklyList', 'purchased') AND name IN (SELECT name FROM shopping_items WHERE status = 'catalog')",
+    // Habit notifications toggle — master switch for all habit reminders
+    "ALTER TABLE settings ADD COLUMN habit_notifications_enabled INTEGER DEFAULT 1",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

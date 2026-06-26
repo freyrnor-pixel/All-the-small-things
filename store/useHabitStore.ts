@@ -92,9 +92,10 @@ type HabitStore = {
   syncAllHabitReminders: () => void;
 };
 
-/** Schedule (or cancel) a habit's daily reminder using the current language. */
+/** Schedule (or cancel) a habit's daily reminder using the current language and settings. */
 function syncHabitReminder(habit: Habit): void {
-  scheduleHabitReminder(habit, useSettingsStore.getState().language);
+  const s = useSettingsStore.getState();
+  scheduleHabitReminder(habit, s.language, s.habitNotificationsEnabled);
 }
 
 function rowToHabit(row: Row): Habit {
