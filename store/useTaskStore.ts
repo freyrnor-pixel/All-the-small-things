@@ -147,15 +147,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   toggle(id) {
     const task = get().tasks.find((t) => t.id === id);
     if (!task) return;
-    set((s) => {
-      const newPending = new Set(s.pending);
-      if (newPending.has(id)) {
-        newPending.delete(id);
-      } else {
-        newPending.add(id);
-      }
-      return { pending: newPending };
-    });
+    const willBeDone = !task.done;
+    get().update(id, { done: willBeDone });
+    if (willBeDone) {
+      useAutomationStore.getState().fireTrigger('task_completed');
+    }
   },
 
   completeDirect(id) {
