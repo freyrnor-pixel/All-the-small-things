@@ -11,6 +11,17 @@
   - Verify the merge succeeds and CI passes.
 - After every new update, double-check that everything works as intended: quick-check for bugs, and see if anything old can/should be deleted.
 
+## Automatic OTA Updates
+
+- **Merge to main automatically deploys**: The GitHub workflow `.github/workflows/update.yml` triggers on every push to `main` and runs `eas update --branch preview --message "..."` to publish the update to the Preview runtime.
+- **To deploy a feature or fix**: 
+  1. Commit and push changes to your branch (e.g., `claude/feature-name`)
+  2. Create a PR with a clear description of what changed and why
+  3. Merge the PR to `main` — this automatically triggers the OTA update
+  4. No further action needed; the update deploys to Preview within 1–2 minutes
+- **Do NOT push directly to main** — always use a PR so CI can verify and the merge is recorded.
+- Runtime version is locked to `1.0.0` (targets APK build 148977ec); do not change it without a new APK build.
+
 ## Current deployment state
 
 - App version used at this time is Runtime 1.0.0, In Preview.
