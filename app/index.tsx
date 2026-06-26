@@ -53,7 +53,7 @@
  *     immediately (no staging/Save step), same as app/shopping.tsx. The "Save changes" pill
  *     near the bottom of this screen only ever reflects task pending count now.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -61,6 +61,9 @@ import {
   Text,
   View,
   useWindowDimensions,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
@@ -96,6 +99,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Shadow, Spacing, Layout, Fonts } from '@/constants/theme';
 import { useAppTheme, useIsDark, useScaledStyles } from '@/lib/useAppTheme';
 import { StatusBar } from 'expo-status-bar';
+
+// Enable LayoutAnimation on Android for smooth task row animations
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 function isWithinWorkHours(start: string, end: string): boolean {
   const now = new Date();
@@ -239,6 +247,16 @@ export default function HomeScreen() {
   })();
 
   function handleToggleTask(id: string) {
+    // Get the current task to check if it's being marked as done
+    const task = tasks.find((t) => t.id === id);
+    const isMarkingDone = task && !task.done;
+
+    // When marking a task as done, animate the list change smoothly
+    // The glow animation (400ms) + row exit (250ms) = 650ms total
+    if (isMarkingDone) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+
     toggleTask(id);
   }
 
