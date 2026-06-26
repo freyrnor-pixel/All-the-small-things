@@ -35,6 +35,8 @@ const en = {
   cancel: 'Cancel',
   close: 'Close', // home overhaul: BubbleMenu FAB close affordance label
   save: 'Save',
+  undoBtn: 'Undo',
+  unsavedDaysLabel: 'Days not saved',
   next: 'Next →',
   previous: '← Back',
   done: "Let's go! 🌿",
@@ -656,9 +658,9 @@ const en = {
   config: {
     // Top-level skip affordance for non-essential onboarding steps
     skipForNow: "I'll set this later",
-    // Essentials Mode (settings + onboarding "start simple" choice)
+    // Focus mode (settings + onboarding "start simple" choice) — formerly "Essentials Mode"
     essentials: {
-      label: 'Start simple',
+      label: 'Focus mode',
       hint: 'Show only essential plans. Turn off any time to see everything.',
       onboardingTitle: 'Want to start simple?',
       onboardingSub: 'See only the essentials at first. You can switch to the full view whenever you like.',
@@ -673,6 +675,13 @@ const en = {
       notifications: 'Notifications',
       workMode: 'Work Mode',
       data: 'Data',
+    },
+    // Settings screen top-level tab labels
+    tabs: {
+      general: 'General',
+      lists: 'Lists',
+      notifications: 'Notifications',
+      appearance: 'Appearance',
     },
     // One-sentence descriptions under each setting
     desc: {
@@ -838,6 +847,8 @@ const no: typeof en = {
   cancel: 'Avbryt',
   close: 'Lukk', // home overhaul: BubbleMenu FAB close affordance label
   save: 'Lagre',
+  undoBtn: 'Angre',
+  unsavedDaysLabel: 'Dagene er ikke lagret',
   next: 'Neste →',
   previous: '← Tilbake',
   done: 'Kom i gang! 🌿',
@@ -1238,7 +1249,7 @@ const no: typeof en = {
   config: {
     skipForNow: 'Jeg ordner dette senere',
     essentials: {
-      label: 'Start enkelt',
+      label: 'Fokus-modus',
       hint: 'Vis bare viktige planer. Skru av når som helst for å se alt.',
       onboardingTitle: 'Vil du starte enkelt?',
       onboardingSub: 'Se bare det viktigste til å begynne med. Du kan bytte til full visning når du vil.',
@@ -1252,6 +1263,12 @@ const no: typeof en = {
       notifications: 'Varsler',
       workMode: 'Jobb-modus',
       data: 'Data',
+    },
+    tabs: {
+      general: 'Generelt',
+      lists: 'Lister',
+      notifications: 'Varsler',
+      appearance: 'Utseende',
     },
     desc: {
       language: 'Velg språk for alt i appen.',

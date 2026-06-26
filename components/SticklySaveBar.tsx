@@ -2,8 +2,8 @@
  * SticklySaveBar.tsx — Sticky bottom save bar for day-pill groups.
  *
  * Animates up from the bottom (translateY 100%→0) over 200ms when any pill in a group
- * is toggled. Contains a label ("Dagene er ikke lagret"), an "Angre" button to revert
- * changes, and a "Lagre" button to confirm. Position is sticky within a scroll container.
+ * is toggled. Contains a label, an undo button to revert changes, and a save button to
+ * confirm. Position is sticky within a scroll container.
  *
  * Connections:
  *   Imports → react-native-reanimated, constants/theme
@@ -14,7 +14,10 @@
  *   - Uses react-native-reanimated v4 (withTiming for translateY + opacity)
  *   - Appears at bottom of scrollable content (parent handles positioning)
  *   - Label text is muted (secondary color)
- *   - "Angre" is ghost button (no background); "Lagre" is accent-filled
+ *   - `label`/`saveLabel`/`undoLabel` are required — caller passes i18n strings (no
+ *     hardcoded Norwegian fallback text); colors fall back to light-mode hex only when
+ *     `theme` isn't passed.
+ *   - Undo is a ghost button (no background); Save is accent-filled
  */
 
 import React, { useEffect } from 'react';
@@ -31,7 +34,9 @@ export interface StickySaveBarProps {
   visible: boolean;
   onSave: () => void;
   onRevert: () => void;
-  label?: string;
+  label: string;
+  saveLabel: string;
+  undoLabel: string;
   theme?: AppColors;
 }
 
@@ -43,7 +48,9 @@ export function SticklySaveBar({
   visible,
   onSave,
   onRevert,
-  label = 'Dagene er ikke lagret',
+  label,
+  saveLabel,
+  undoLabel,
   theme,
 }: StickySaveBarProps) {
   const translateY = useSharedValue(100);
@@ -83,7 +90,7 @@ export function SticklySaveBar({
       style={[
         styles.bar,
         animatedStyle,
-        { backgroundColor: theme?.offWhite ?? '#F5F5F5' },
+        { backgroundColor: theme?.offWhite ?? '#F5F5F5', borderTopColor: theme?.grayLight ?? '#E5E0D8' },
       ]}
       pointerEvents={visible ? 'auto' : 'none'}
     >
@@ -101,7 +108,7 @@ export function SticklySaveBar({
         hitSlop={6}
       >
         <Text style={[styles.ghostText, { color: theme?.textLight ?? '#999999' }]}>
-          Angre
+          {undoLabel}
         </Text>
       </Pressable>
       <Pressable
@@ -112,7 +119,7 @@ export function SticklySaveBar({
         onPress={onSave}
         hitSlop={6}
       >
-        <Text style={styles.primaryText}>Lagre</Text>
+        <Text style={styles.primaryText}>{saveLabel}</Text>
       </Pressable>
     </AnimatedView>
   );
@@ -126,7 +133,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 0.5,
-    borderTopColor: '#E5E0D8',
   },
   label: {
     flex: 1,
