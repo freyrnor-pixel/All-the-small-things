@@ -5,7 +5,10 @@
 - Always create a dedicated branch for new work.
 - Group related fixes or features into the same branch rather than splitting into many small branches.
 - Before starting new work, check for stale or unmerged branches and flag them.
-- Always end the session by opening a pull request with a clear description of what changed and why.
+- **Always create a PR and merge to main** (do not push directly to main):
+  - Create a pull request with a clear description of what changed and why.
+  - Merge the PR to main once changes are complete.
+  - Verify the merge succeeds and CI passes.
 - After every new update, double-check that everything works as intended: quick-check for bugs, and see if anything old can/should be deleted.
 
 ## Current deployment state
