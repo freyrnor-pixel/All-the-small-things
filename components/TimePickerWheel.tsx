@@ -45,6 +45,10 @@
  *     ScrollView (task-form, settings, habit-form, onboarding), and without it Android
  *     intercepts the touch for the outer scroller instead of letting the wheel scroll
  *     independently.
+ *   - itemText/itemTextActive/colon/textInput pick fontFamily via Fonts.* (not a raw
+ *     fontWeight) — Nunito's weights are separate font files, so fontWeight alone triggers
+ *     OS-synthesized fake bold with mismatched glyph metrics, which made the active digit
+ *     visibly drift off-center while scrolling.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -56,7 +60,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { AppColors, FontSize, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 
 const VISIBLE = 3; // must be odd
@@ -315,7 +319,7 @@ function buildStyles(itemH: number, itemFont: number, itemFontActive: number, co
       borderRadius: Radius.sm,
       borderWidth: 1,
       fontSize: FontSize.lg,
-      fontWeight: '600',
+      fontFamily: Fonts.semibold,
       marginBottom: Spacing.sm,
       letterSpacing: 1,
     },
@@ -354,7 +358,7 @@ function buildStyles(itemH: number, itemFont: number, itemFontActive: number, co
     },
     colon: {
       fontSize: colonFont,
-      fontWeight: '700',
+      fontFamily: Fonts.bold,
       marginTop: -4,
     },
     item: {
@@ -362,13 +366,17 @@ function buildStyles(itemH: number, itemFont: number, itemFontActive: number, co
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // Nunito's weights are separate loaded font files, not one variable family — using
+    // fontWeight here (instead of the matching Fonts.* family) makes the OS synthesize a
+    // fake bold for the active digit, which has different glyph metrics than the real bold
+    // file and visibly shifts the number off-center as it becomes active while scrolling.
     itemText: {
       fontSize: itemFont,
-      fontWeight: '400',
+      fontFamily: Fonts.regular,
     },
     itemTextActive: {
       fontSize: itemFontActive,
-      fontWeight: '700',
+      fontFamily: Fonts.bold,
     },
   });
 }

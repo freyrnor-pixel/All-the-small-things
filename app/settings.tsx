@@ -349,7 +349,7 @@ export default function SettingsScreen() {
                 )}
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.workDaysLabel}</Text>
-                <View style={styles.dayRow}>
+                <View style={[styles.dayRow, styles.workDayRow]}>
                   {DAY_LABELS.map((label, i) => {
                     const active = workDaysTemp.includes(i);
                     return (
@@ -357,6 +357,7 @@ export default function SettingsScreen() {
                         key={i}
                         style={[
                           styles.dayChip,
+                          styles.workDayChip,
                           { backgroundColor: theme.grayLight },
                           active && { backgroundColor: theme.orange },
                         ]}
@@ -657,27 +658,6 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={[styles.tabSectionLabel, { color: theme.textLight }]}>{t.sectionShopping}</Text>
             <Surface style={styles.card}>
-              <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.defaultListType}</Text>
-              <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-                {(['weekly', 'monthly'] as const).map((mode) => (
-                  <Pressable
-                    key={mode}
-                    style={[styles.seg, settings.shoppingListMode === mode && [styles.segActive, { backgroundColor: theme.white }]]}
-                    onPress={() => settings.update({ shoppingListMode: mode })}
-                  >
-                    <Text style={[
-                      styles.segText,
-                      { color: theme.textLight },
-                      settings.shoppingListMode === mode && { color: theme.text, fontFamily: Fonts.semibold },
-                    ]}>
-                      {mode === 'weekly' ? t.weekly : t.monthly}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
-
               <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.weeklyResetDay}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.xs }}>
                 <View style={styles.dayRow}>
@@ -1062,6 +1042,10 @@ const baseStyles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
   },
+  // Work-days picker: all 7 days must fit on one row, so it overrides dayRow/dayChip's
+  // wrap + fixed minWidth with an evenly-split, non-wrapping layout.
+  workDayRow: { flexWrap: 'nowrap' },
+  workDayChip: { flex: 1, minWidth: 0, minHeight: 40, paddingHorizontal: Spacing.xs },
   dayText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   paydayHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
