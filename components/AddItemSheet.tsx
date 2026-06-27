@@ -106,7 +106,6 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
           onChangeText={(v) => { setName(v); setSuggestionsDismissed(false); }}
           placeholder={t.shoppingItemPlaceholder}
           placeholderTextColor={theme.gray}
-          autoFocus
           returnKeyType="done"
           onSubmitEditing={handleAdd}
         />
