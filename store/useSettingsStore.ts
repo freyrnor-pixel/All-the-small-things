@@ -47,7 +47,6 @@ export type Settings = {
   userName: string;
   weeklyResetDay: number;
   monthlyResetDate: number;
-  shoppingListMode: 'weekly' | 'monthly';
   remindersEnabled: boolean;
   reminderTime: string;
   taskNotificationsEnabled: boolean;
@@ -133,7 +132,6 @@ function rowToSettings(row: Row): Settings {
     userName: readStr(row, 'user_name'),
     weeklyResetDay: readInt(row, 'weekly_reset_day', 1),
     monthlyResetDate: readInt(row, 'monthly_reset_date', 1),
-    shoppingListMode: readStr(row, 'shopping_list_mode', 'weekly') as 'weekly' | 'monthly',
     remindersEnabled: readBool(row, 'reminders_enabled'),
     reminderTime: readStr(row, 'reminder_time', '08:00'),
     taskNotificationsEnabled: readBool(row, 'task_notifications_enabled'),
@@ -187,7 +185,6 @@ const SETTINGS_COLUMNS: FieldMap<Settings> = {
   userName: { col: 'user_name' },
   weeklyResetDay: { col: 'weekly_reset_day' },
   monthlyResetDate: { col: 'monthly_reset_date' },
-  shoppingListMode: { col: 'shopping_list_mode' },
   remindersEnabled: { col: 'reminders_enabled', to: bool },
   reminderTime: { col: 'reminder_time' },
   taskNotificationsEnabled: { col: 'task_notifications_enabled', to: bool },
@@ -238,7 +235,6 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   userName: '',
   weeklyResetDay: 1,
   monthlyResetDate: 1,
-  shoppingListMode: 'weekly',
   remindersEnabled: true,
   reminderTime: '08:00',
   taskNotificationsEnabled: true,

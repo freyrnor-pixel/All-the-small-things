@@ -41,6 +41,10 @@
  *   - Also passes taskAccentColor(next, theme) as the notification's `color`, so Android
  *     tints the small notification icon to match the task's in-app accent (essential/
  *     time-box/start-at) — the one real non-text visual cue OTA-only JS can produce.
+ *   - Stack's contentStyle/StatusBar background and the root view both use theme.cream
+ *     (useAppTheme()), not the static Colors.cream — the static palette is always the light
+ *     default, so using it here showed as a light flash under the fade transition whenever
+ *     dark mode was on. StatusBar's style also follows isDark so its icons stay visible.
  */
 import { useEffect, Component } from 'react';
 import React from 'react';
@@ -71,7 +75,7 @@ import { getTranslations } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
 import { describeTask, taskAccentColor } from '@/lib/taskVisual';
-import { useAppTheme } from '@/lib/useAppTheme';
+import { useAppTheme, useIsDark } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
@@ -86,7 +90,7 @@ import { useReceiptStore } from '@/store/useReceiptStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import { useFeedbackStore } from '@/store/useFeedbackStore';
-import { Colors, Fonts } from '@/constants/theme';
+import { Fonts } from '@/constants/theme';
 import DebugOverlay from '@/components/DebugOverlay';
 import AppModalHost from '@/components/AppModal';
 
@@ -165,6 +169,7 @@ export default function RootLayout() {
   const language = useSettingsStore((s) => s.language);
   const tasks = useTaskStore((s) => s.tasks);
   const theme = useAppTheme();
+  const isDark = useIsDark();
 
   useEffect(() => {
     try { initDb(); } catch { /* DB init failed — proceed anyway */ }
@@ -281,15 +286,15 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView style={[styles.root, { backgroundColor: theme.cream }]}>
       {/* backgroundColor is an Android-only runtime prop not in expo-status-bar types */}
       {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
       {/* @ts-expect-error */}
-      <StatusBar style="dark" backgroundColor={Colors.cream} />
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: Colors.cream },
+          contentStyle: { backgroundColor: theme.cream },
           // Bottom-menu sites are switched far more often than they're "drilled into" —
           // a quick fade reads as a tab switch, not a push (see ANIMATION_GUIDELINES.md §1's
           // "Tab switch: 150–200ms" row vs. the default stack-push transition). Modal screens
@@ -336,5 +341,5 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.cream },
+  root: { flex: 1 },
 });
