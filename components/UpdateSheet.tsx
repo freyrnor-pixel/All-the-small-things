@@ -74,7 +74,7 @@ export default function UpdateSheet({ visible, item, theme, onClose, onSave, onD
     }
   }
 
-  if (!item) return null;
+  if (!item || !visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
