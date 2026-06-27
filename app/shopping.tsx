@@ -35,6 +35,13 @@
  *   - "Kjøpt denne måneden" groups purchased items by shoppingTripId (shopping_trips row), most-recent trip expanded by default.
  *   - The automatic payday-boundary reset (once per month, when today's day-of-month >= monthlyResetDate) calls buildMonthlyResetSummary() FIRST (captured into state and shown via MonthlyResetSummaryModal), then monthlyReset() — there is no carry-over prompt any more (CarryOverPromptModal was removed; isTemporary items are always purged on reset, per the redesign's simpler model).
  *   - The 'shopping_opened' trigger fires once per mount ([] deps).
+ *   - showAddSheet/showAddSourceChooser are reset on every focus transition (useFocusEffect,
+ *     both the on-focus body and the on-blur cleanup), not just on mount — Scan/Budget/
+ *     inventory-edit/share-modal bypass goToSite() with a plain push (see below), which
+ *     leaves this exact screen instance mounted-but-buried underneath them. A mount-only
+ *     reset can't catch a sheet left open before navigating to one of those, since the
+ *     buried instance never remounts, only re-buries/re-surfaces; don't revert this to a
+ *     plain useEffect(fn, []).
  *   - Add sheet (components/AddItemSheet.tsx) supports an "also add to catalog" toggle only when opened from the Ukeliste tab — interpreted as: the new item is created directly with status='inWeeklyList', and when the toggle is on, a SECOND permanent catalog row (status='catalog', pendingRestock=false) is also created with the same name/price/targetQuantity, so it persists for future weeks without being purchased=true this trip.
  *   - Checking a weekly-tab row (toggle -> toggleCheck) flips `checked` immediately — there
  *     is no separate staging/confirm step; the row moves straight into the cart section.
@@ -60,7 +67,7 @@
  *   - Design system pass: all fontWeight string literals replaced with Fonts.* tokens;
  *     tab/quickAction/tray-confirm/done-shopping touch targets bumped to minHeight 44.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -71,7 +78,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, useFocusEffect } from 'expo-router';
 import { useShoppingStore, ShoppingItem, MonthlyResetSummary } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
@@ -133,12 +140,26 @@ export default function ShoppingScreen() {
   const t = useT();
 
   // Fire the 'shopping_opened' automation trigger once per screen visit.
-  // Also ensure sheets are closed on mount to prevent state from persisting across navigations
   useEffect(() => {
-    setShowAddSheet(false);
-    setShowAddSourceChooser(false);
     useAutomationStore.getState().fireTrigger('shopping_opened');
   }, []);
+
+  // Close both add sheets on every focus transition (gaining OR losing focus), not
+  // just mount: Scan/Budget/inventory-edit/share-modal intentionally bypass goToSite()
+  // with a plain router.push() so their own back arrow returns straight to this exact
+  // screen instance — it stays mounted, buried, underneath them. A mount-only reset
+  // never re-runs for an already-mounted instance that merely regains focus, so a
+  // sheet left open before navigating to one of those screens could resurface later.
+  useFocusEffect(
+    useCallback(() => {
+      setShowAddSheet(false);
+      setShowAddSourceChooser(false);
+      return () => {
+        setShowAddSheet(false);
+        setShowAddSourceChooser(false);
+      };
+    }, [])
+  );
 
   // Automatic payday-boundary reset: once per period, when today's day-of-month
   // has reached monthlyResetDate and we haven't already reset for this period.
