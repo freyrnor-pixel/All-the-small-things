@@ -51,7 +51,7 @@ export default function PageTransition({
   const { reducedMotion } = useAccessibility();
   const [screens, setScreens] = useState<ScreenState[]>([]);
   const prevKeyRef = useRef(screenKey);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     if (prevKeyRef.current === screenKey) {
