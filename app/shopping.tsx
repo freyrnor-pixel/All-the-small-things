@@ -457,12 +457,6 @@ export default function ShoppingScreen() {
           {/* ----- KATALOG TAB ----- */}
           {tab === 'catalog' && (
             <>
-              <View style={[styles.banner, { backgroundColor: theme.orangeLight }]}>
-                <Text style={[styles.bannerText, { color: theme.orange }]}>
-                  {t.catalogResetBanner(String(monthlyResetDate))}
-                </Text>
-              </View>
-
               {stagedItems.length > 0 && (
                 <View style={[styles.trayCard, { backgroundColor: theme.white, borderColor: theme.orange }]}>
                   <Text style={[styles.trayHeader, { color: theme.orange }]}>
@@ -803,9 +797,6 @@ const baseStyles = StyleSheet.create({
     ...Shadow.card,
   },
   quickActionLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
-
-  banner: { borderRadius: Radius.md, padding: Spacing.sm },
-  bannerText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
 
   trayCard: { borderRadius: Radius.md, borderWidth: 2, padding: Spacing.md, gap: Spacing.xs },
   trayHeader: { fontSize: FontSize.sm, fontFamily: Fonts.bold, marginBottom: Spacing.xs },
