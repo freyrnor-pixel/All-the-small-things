@@ -698,16 +698,6 @@ const en = {
       hints: 'Short explanations on each screen.',
       dataNote: 'These reset things. They cannot be undone.',
     },
-    // Save feedback messages (toasts and inline buttons)
-    save: {
-      saved: 'Saved',
-      nameSaved: 'Name saved',
-      themeSaved: 'Theme saved',
-      materialSaved: 'Material saved',
-      dateSaved: 'Date saved',
-      budgetSaved: 'Budget saved',
-      daysSaved: 'Days saved',
-    },
   },
   // --- end W-E Config additions ---
   // Toggle on/off labels
@@ -1280,16 +1270,6 @@ const no: typeof en = {
       points: 'Tell hver fullførte plan — små ting teller.',
       hints: 'Korte forklaringer på hvert skjermbilde.',
       dataNote: 'Disse nullstiller ting. Det kan ikke angres.',
-    },
-    // Save feedback messages (toasts and inline buttons)
-    save: {
-      saved: 'Lagret',
-      nameSaved: 'Navn lagret',
-      themeSaved: 'Tema lagret',
-      materialSaved: 'Materiale lagret',
-      dateSaved: 'Dato lagret',
-      budgetSaved: 'Budsjett lagret',
-      daysSaved: 'Dager lagret',
     },
   },
   // --- end W-E Config additions ---

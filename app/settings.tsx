@@ -82,7 +82,6 @@ import { DarkMode } from '@/store/useSettingsStore';
 import SwatchPicker from '@/components/SwatchPicker';
 import { RadialSwatch, ConicSwatch } from '@/components/GradientSwatch';
 import HuePicker from '@/components/HuePicker';
-import { Toast } from '@/components/Toast';
 import { SaveButton } from '@/components/SaveButton';
 import { SticklySaveBar } from '@/components/SticklySaveBar';
 
@@ -107,9 +106,7 @@ export default function SettingsScreen() {
     settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : ''
   );
 
-  // Save feedback state
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  // Form dirty state
   const [dirtyName, setDirtyName] = useState(false);
   const [dirtyMonthlyDate, setDirtyMonthlyDate] = useState(false);
   const [dirtyMonthlyBudget, setDirtyMonthlyBudget] = useState(false);
@@ -134,15 +131,8 @@ export default function SettingsScreen() {
     theme.orange, theme.green, '#A78BFA', '#F472B6', '#60A5FA', '#34D399',
   ];
 
-  // Helper to show toast with message
-  function showToast(message: string) {
-    setToastMessage(message);
-    setToastVisible(true);
-  }
-
-  function applyAndSync(patch: Partial<Settings>, toastMsg?: string) {
+  function applyAndSync(patch: Partial<Settings>) {
     settings.update(patch);
-    if (toastMsg) showToast(toastMsg);
     const keys = Object.keys(patch);
     if (keys.some((k) => ['remindersEnabled', 'reminderTime', 'weeklyResetDay', 'monthlyResetDate', 'language'].includes(k))) {
       void syncReminders();
@@ -211,8 +201,6 @@ export default function SettingsScreen() {
       <SiteSwipeView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-        <Toast visible={toastVisible} message={toastMessage} onDismiss={() => setToastVisible(false)} theme={theme} />
-
         {tab === 'generelt' && (
           <>
             {/* Focus mode — formerly "Essentials Mode" */}
@@ -228,7 +216,6 @@ export default function SettingsScreen() {
                     onValueChange={(v) => {
                       selection();
                       settings.update({ essentialsModeEnabled: v });
-                      showToast(v ? t.config.essentials.label + ' ' + t.on : t.config.essentials.label + ' ' + t.off);
                     }}
                     trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
                     thumbColor={settings.essentialsModeEnabled ? theme.orange : theme.gray}
@@ -257,7 +244,7 @@ export default function SettingsScreen() {
                   <SaveButton
                     visible={dirtyName}
                     onPress={() => {
-                      applyAndSync({ userName: name }, t.config.save.nameSaved);
+                      applyAndSync({ userName: name });
                       setDirtyName(false);
                     }}
                     theme={theme}
@@ -277,7 +264,7 @@ export default function SettingsScreen() {
                         { backgroundColor: theme.grayLight },
                         settings.language === lang && { backgroundColor: theme.orange },
                       ]}
-                      onPress={() => applyAndSync({ language: lang }, t.config.save.saved)}
+                      onPress={() => applyAndSync({ language: lang })}
                     >
                       <Text style={styles.langFlag}>{lang === 'no' ? '🇳🇴' : '🇬🇧'}</Text>
                       <Text style={[
@@ -399,7 +386,7 @@ export default function SettingsScreen() {
               <SticklySaveBar
                 visible={dirtyWorkDays}
                 onSave={() => {
-                  applyAndSync({ workDays: workDaysTemp }, t.config.save.daysSaved);
+                  applyAndSync({ workDays: workDaysTemp });
                   setDirtyWorkDays(false);
                 }}
                 onRevert={() => {
@@ -689,7 +676,7 @@ export default function SettingsScreen() {
               <SticklySaveBar
                 visible={dirtyWeeklyReset}
                 onSave={() => {
-                  applyAndSync({ weeklyResetDay: weeklyResetTemp }, t.config.save.daysSaved);
+                  applyAndSync({ weeklyResetDay: weeklyResetTemp });
                   setDirtyWeeklyReset(false);
                 }}
                 onRevert={() => {
@@ -731,7 +718,7 @@ export default function SettingsScreen() {
                   onPress={() => {
                     const n = parseInt(monthlyDateInput, 10);
                     if (!isNaN(n) && n >= 1 && n <= 31) {
-                      applyAndSync({ monthlyResetDate: n }, t.config.save.dateSaved);
+                      applyAndSync({ monthlyResetDate: n });
                       setDirtyMonthlyDate(false);
                     }
                   }}
@@ -768,11 +755,11 @@ export default function SettingsScreen() {
                   visible={dirtyMonthlyBudget}
                   onPress={() => {
                     if (monthlyBudgetInput.trim() === '') {
-                      applyAndSync({ monthlyBudgetNok: 0 }, t.config.save.budgetSaved);
+                      applyAndSync({ monthlyBudgetNok: 0 });
                     } else {
                       const n = parseFloat(monthlyBudgetInput.replace(',', '.'));
                       if (!isNaN(n) && n >= 0) {
-                        applyAndSync({ monthlyBudgetNok: n }, t.config.save.budgetSaved);
+                        applyAndSync({ monthlyBudgetNok: n });
                       }
                     }
                     setDirtyMonthlyBudget(false);
@@ -892,7 +879,6 @@ export default function SettingsScreen() {
                   value={settings.colorTheme}
                   onChange={(key) => {
                     settings.update({ colorTheme: key as ThemeName });
-                    showToast(t.config.save.themeSaved);
                   }}
                   renderSwatch={(key) => {
                     const th = THEMES[key as ThemeName];
@@ -936,7 +922,6 @@ export default function SettingsScreen() {
                   value={settings.bubbleMaterial}
                   onChange={(key) => {
                     settings.update({ bubbleMaterial: key as MaterialName });
-                    showToast(t.config.save.materialSaved);
                   }}
                   renderSwatch={(key) => {
                     const preview = getMaterialStyle(theme.orange, key as MaterialName);
@@ -976,7 +961,6 @@ export default function SettingsScreen() {
                       style={[styles.seg, settings.darkMode === mode && [styles.segActive, { backgroundColor: theme.white }]]}
                       onPress={() => {
                         settings.update({ darkMode: mode });
-                        showToast(t.config.save.saved);
                       }}
                     >
                       <Text style={[
