@@ -66,17 +66,20 @@ function seedCatalog(): void {
     const stableId = 'cat_' + s.name.toLowerCase().replace(/\s+/g, '_');
     try {
       db.runSync(
-        `INSERT OR IGNORE INTO store_items (id, name, category, store, price, last_updated)
-         VALUES (?, ?, ?, '', ?, ?)`,
+        `INSERT OR IGNORE INTO store_items (id, name, category, store, price, price_source, last_updated)
+         VALUES (?, ?, ?, '', ?, 'seed', ?)`,
         [stableId, s.name, s.category, s.price, now]
       );
       // Keep seed-sourced prices in sync with lib/catalogSeed.ts on every load.
       // Stops touching the row once a real purchase marks it price_source = 'purchase'.
       db.runSync(
-        `UPDATE store_items SET price = ? WHERE id = ? AND price_source = 'seed'`,
+        `UPDATE store_items SET price = ?, price_source = 'seed' WHERE id = ? AND price_source = 'seed'`,
         [s.price, stableId]
       );
-    } catch { /* ignore */ }
+    } catch (err) {
+      // Log errors for debugging, but still continue seeding other items.
+      console.error(`Failed to seed item ${s.name}:`, err);
+    }
   }
 }
 
