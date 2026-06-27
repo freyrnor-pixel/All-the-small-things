@@ -28,18 +28,6 @@ import Animated, {
 import { useAccessibility } from '@/lib/useAppTheme';
 
 const DURATION = 340;
-const CUBIC_EASING = (t: number) => {
-  // cubic-bezier(0.4, 0, 0.2, 1) approximation
-  const p0 = 0;
-  const p1 = 0.4;
-  const p2 = 0.2;
-  const p3 = 1;
-  return (
-    3 * Math.pow(1 - t, 2) * t * p1 +
-    3 * (1 - t) * Math.pow(t, 2) * p2 +
-    Math.pow(t, 3) * p3
-  );
-};
 
 type Direction = 'left' | 'right';
 
@@ -152,16 +140,10 @@ function ScreenWrapper({
       translateX.value = direction === 'left' ? 100 : -100;
     } else if (phase === 'entering') {
       // Animate to center
-      translateX.value = withTiming(0, {
-        duration,
-        easing: CUBIC_EASING,
-      });
+      translateX.value = withTiming(0, { duration });
     } else if (phase === 'exit') {
       // Animate out
-      translateX.value = withTiming(direction === 'left' ? -100 : 100, {
-        duration,
-        easing: CUBIC_EASING,
-      });
+      translateX.value = withTiming(direction === 'left' ? -100 : 100, { duration });
     } else if (phase === 'stable') {
       translateX.value = 0;
     }
@@ -189,11 +171,11 @@ function ScreenWrapper({
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   screen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-start',
   },
 });
