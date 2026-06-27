@@ -23,7 +23,9 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { useIsDark } from '@/lib/useAppTheme';
 
-type DotSpec = { size: number; left: string; bottom: string; duration: number; delay: number };
+type Percent = `${number}%`;
+
+type DotSpec = { size: number; left: Percent; bottom: Percent; duration: number; delay: number };
 
 const DOTS: DotSpec[] = [
   { size: 4, left: '26%', bottom: '42%', duration: 7000, delay: 0 },
@@ -101,7 +103,7 @@ function PulseRing({ delay }: { delay: number }) {
 }
 
 function FlowSweep({ rotate, width, strokeWidth, color, opacity, top }: {
-  rotate: string; width: number; strokeWidth: number; color: string; opacity: number; top: string;
+  rotate: string; width: number; strokeWidth: number; color: string; opacity: number; top: Percent;
 }) {
   return (
     <View
