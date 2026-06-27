@@ -17,7 +17,7 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/AppModal, components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
  *
@@ -25,7 +25,9 @@
  *   - task-form, habit-form, share-modal and capture are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - screenOptions sets a 150ms fade as the default transition (tab-switch feel for the
  *     bottom-menu sites — see lib/siteNav.ts + components/BottomNav.tsx); modal screens
- *     override it per-screen with slide_from_bottom.
+ *     override it per-screen with slide_from_bottom. A PageTransition component is available
+ *     in components/motion/PageTransition.tsx (340ms spring easing, directional slides) for
+ *     custom screen transitions if needed.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
  *   - The notification-action effect (AP-05) is separate from the startup effect and mounted once too — onNotificationAction's handler always reads fresh store state via .getState() rather than closing over stale props, so it doesn't need deps.
  *   - DebugOverlay is gated on `loaded && debugModeEnabled` so it never flashes before settings load and is fully absent for users who haven't enabled it in Settings.
