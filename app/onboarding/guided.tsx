@@ -5,7 +5,7 @@
  * straight to the home screen, marking setup complete. Both enable showHints.
  *
  * Connections:
- *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme
+ *   Imports → @/store/useSettingsStore, @/lib/i18n, @/constants/theme, @/components/Surface
  *   Used by → Expo Router route "/onboarding/guided"
  *   Data    → useSettingsStore (writes `showHints`; Explore also writes `setupComplete`)
  *
@@ -24,10 +24,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
-import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { FontSize, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import ScreenBackground from '@/components/ScreenBackground';
 import Button from '@/components/Button';
+import Surface from '@/components/Surface';
 
 export default function GuidedScreen() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function GuidedScreen() {
         </View>
 
         <View style={styles.options}>
-          <View style={[styles.optionCard, { backgroundColor: theme.orange }]}>
+          <Surface tint={theme.orange} style={styles.optionCard}>
             <View style={styles.optionContent}>
               <Ionicons name="list-outline" size={24} color={theme.white} style={styles.optionIcon} />
               <View style={styles.optionText}>
@@ -79,9 +80,9 @@ export default function GuidedScreen() {
               size="sm"
               icon="arrow-forward"
             />
-          </View>
+          </Surface>
 
-          <View style={[styles.optionCard, { backgroundColor: theme.white, borderColor: theme.border, borderWidth: 1 }]}>
+          <Surface style={styles.optionCard}>
             <View style={styles.optionContent}>
               <View style={styles.optionText}>
                 <Text style={[styles.optionLabel, { color: theme.text }]}>{t.exploreBtn}</Text>
@@ -95,7 +96,7 @@ export default function GuidedScreen() {
               size="sm"
               icon="arrow-forward"
             />
-          </View>
+          </Surface>
         </View>
       </ScrollView>
 
@@ -140,7 +141,6 @@ const baseStyles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     gap: Spacing.md,
-    ...Shadow.card,
   },
   optionContent: {
     flex: 1,

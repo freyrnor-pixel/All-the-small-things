@@ -8,7 +8,7 @@
  * (opens SavedListsModal — templates + "save as template").
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useShoppingListStore (ShoppingList type only)
+ *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useShoppingListStore (ShoppingList type only), components/Surface
  *   Used by → app/shopping.tsx
  *   Data    → none directly — list/selection state and callbacks are owned by the parent
  *
@@ -22,9 +22,10 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingList } from '@/store/useShoppingListStore';
-import { AppColors, Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
+import Surface from '@/components/Surface';
 
 type Props = {
   theme: AppColors;
@@ -69,7 +70,7 @@ export default function ListSwitcherHeader({
   }
 
   return (
-    <View style={[styles.row, { backgroundColor: theme.white }]}>
+    <Surface style={styles.row}>
       <Pressable
         onPress={() => canPrev && onSelectList(sorted[idx - 1].id)}
         disabled={!canPrev}
@@ -118,7 +119,7 @@ export default function ListSwitcherHeader({
       <Pressable onPress={onOpenSavedLists} hitSlop={8} style={styles.iconBtn}>
         <Ionicons name="bookmark-outline" size={20} color={theme.textLight} />
       </Pressable>
-    </View>
+    </Surface>
   );
 }
 
@@ -130,7 +131,6 @@ const baseStyles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.sm,
-    ...Shadow.card,
   },
   nameWrap: { flex: 1, minWidth: 0 },
   nameTapTarget: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32, justifyContent: 'center' },

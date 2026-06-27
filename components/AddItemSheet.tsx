@@ -13,7 +13,7 @@
  * sheet) — see Edit notes.
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore, react-native-reanimated
+ *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useCatalogStore, react-native-reanimated, components/Surface
  *   Used by → app/shopping.tsx, app/inventory-edit.tsx
  *   Data    → none directly — creation flows out via onAdd; the parent calls useShoppingStore.add(). Reads useCatalogStore.suggest() (read-only) for the name-field autocomplete.
  *
@@ -47,6 +47,7 @@ import { AppColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants
 import { useScaledStyles, useAppTheme, useAccessibility } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { useCatalogStore } from '@/store/useCatalogStore';
+import Surface from '@/components/Surface';
 
 type Props = {
   visible: boolean;
@@ -159,7 +160,7 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
               onSubmitEditing={handleAdd}
             />
             {suggestions.length > 0 && (
-              <View style={[styles.suggestionsBox, { backgroundColor: theme.offWhite, borderColor: theme.grayLight }]}>
+              <Surface tint={theme.offWhite} style={styles.suggestionsBox}>
                 <ScrollView keyboardShouldPersistTaps="handled" style={styles.suggestionsScroll}>
                   {suggestions.map((s) => (
                     <Pressable key={s.id} style={styles.suggestionRow} onPress={() => handlePickSuggestion(s)}>
@@ -170,7 +171,7 @@ export default function AddItemSheet({ visible, origin, theme, onClose, onAdd }:
                     </Pressable>
                   ))}
                 </ScrollView>
-              </View>
+              </Surface>
             )}
 
             <Text style={[styles.label, { color: theme.textLight }]}>{t.estimertPrisLabel}</Text>
@@ -247,7 +248,7 @@ const baseStyles = StyleSheet.create({
   scrollView: { flex: 1 },
   label: { fontSize: FontSize.xs, fontFamily: Fonts.semibold, marginTop: Spacing.sm, marginBottom: 4 },
   input: { borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.md },
-  suggestionsBox: { borderRadius: Radius.sm, borderWidth: 1, marginTop: 4, overflow: 'hidden' },
+  suggestionsBox: { borderRadius: Radius.sm, marginTop: 4 },
   suggestionsScroll: { maxHeight: 160 },
   suggestionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.sm },
   suggestionName: { flex: 1, fontSize: FontSize.sm },
