@@ -56,9 +56,9 @@ export default function Button({
 
   // Variant colors
   const variantColors = {
-    primary: { bg: theme.orange, text: '#ffffff' },
+    primary: { bg: theme.orange, text: theme.white },
     secondary: { bg: theme.orangeLight, text: theme.brown },
-    danger: { bg: theme.danger, text: '#ffffff' },
+    danger: { bg: theme.danger, text: theme.white },
     ghost: { bg: 'transparent', text: theme.orange },
   };
   const colors = variantColors[variant];

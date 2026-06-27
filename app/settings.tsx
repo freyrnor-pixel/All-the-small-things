@@ -270,7 +270,7 @@ export default function SettingsScreen() {
                       <Text style={[
                         styles.langText,
                         { color: theme.text },
-                        settings.language === lang && { color: '#FFFFFF' },
+                        settings.language === lang && { color: theme.white },
                       ]}>
                         {lang === 'no' ? t.norwegian : t.english}
                       </Text>
@@ -359,7 +359,7 @@ export default function SettingsScreen() {
                         <Text style={[
                           styles.dayText,
                           { color: theme.text },
-                          active && { color: '#FFFFFF' },
+                          active && { color: theme.white },
                         ]}>
                           {label.slice(0, 3)}
                         </Text>
@@ -548,7 +548,7 @@ export default function SettingsScreen() {
                         style={[
                           styles.petSwatch,
                           { backgroundColor: color },
-                          settings.petColor === color && styles.petSwatchActive,
+                          settings.petColor === color && [styles.petSwatchActive, { borderColor: theme.text }],
                         ]}
                         onPress={() => settings.update({ petColor: color })}
                       />
@@ -1074,5 +1074,5 @@ const baseStyles = StyleSheet.create({
     width: 36, height: 36, borderRadius: Radius.full, borderWidth: 2,
     borderColor: 'transparent',
   },
-  petSwatchActive: { borderColor: '#333', borderWidth: 3 },
+  petSwatchActive: { borderWidth: 3 },
 });

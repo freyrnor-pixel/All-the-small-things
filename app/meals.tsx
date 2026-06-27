@@ -52,15 +52,15 @@ import SiteSwipeView from '@/components/SiteSwipeView';
 import AddFAB from '@/components/AddFAB';
 import { success } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
+import { FontSize, Fonts, MealColors, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
 const MEAL_TYPES: { value: MealType; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-  { value: 'breakfast', icon: 'sunny-outline', color: '#F6C344' },
-  { value: 'lunch', icon: 'fast-food-outline', color: '#6BAA75' },
-  { value: 'dinner', icon: 'restaurant-outline', color: '#F4A261' },
-  { value: 'snack', icon: 'nutrition-outline', color: '#7BC8A4' },
-  { value: 'kveldsmat', icon: 'moon-outline', color: '#9B8EC4' },
+  { value: 'breakfast', icon: 'sunny-outline', color: MealColors.breakfast },
+  { value: 'lunch', icon: 'fast-food-outline', color: MealColors.lunch },
+  { value: 'dinner', icon: 'restaurant-outline', color: MealColors.dinner },
+  { value: 'snack', icon: 'nutrition-outline', color: MealColors.snack },
+  { value: 'kveldsmat', icon: 'moon-outline', color: MealColors.kveldsmat },
 ];
 
 type DraftIngredient = { name: string; amount: string; unit: string };

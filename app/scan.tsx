@@ -454,16 +454,16 @@ export default function ScanScreen() {
 
         {/* QR scanner modal */}
         <Modal visible={qrScanVisible} animationType="slide" onRequestClose={() => setQrScanVisible(false)}>
-          <View style={styles.qrModal}>
+          <View style={[styles.qrModal, { backgroundColor: theme.black }]}>
             <SafeAreaView style={styles.qrSafeArea}>
               <View style={styles.qrHeader}>
                 <Pressable onPress={() => setQrScanVisible(false)}>
                   <Text style={[styles.backLink, { color: theme.orange }]}>{t.cancel}</Text>
                 </Pressable>
-                <Text style={[styles.qrTitle, { color: Colors.white }]}>{t.qrScanMode}</Text>
+                <Text style={[styles.qrTitle, { color: theme.white }]}>{t.qrScanMode}</Text>
                 <View style={{ width: 60 }} />
               </View>
-              <Text style={styles.qrHint}>{t.qrScanInstructions}</Text>
+              <Text style={[styles.qrHint, { color: theme.gray }]}>{t.qrScanInstructions}</Text>
               {qrScanVisible && (
                 <CameraView
                   style={styles.qrCamera}
@@ -473,7 +473,7 @@ export default function ScanScreen() {
                 />
               )}
               <View style={styles.qrOverlay} pointerEvents="none">
-                <View style={styles.qrFrame} />
+                <View style={[styles.qrFrame, { borderColor: theme.white }]} />
               </View>
             </SafeAreaView>
           </View>
@@ -889,7 +889,7 @@ const baseStyles = StyleSheet.create({
   sheetAddText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
 
   // QR SCANNER
-  qrModal: { flex: 1, backgroundColor: '#000' },
+  qrModal: { flex: 1 },
   qrSafeArea: { flex: 1 },
   qrHeader: {
     flexDirection: 'row',
@@ -898,14 +898,13 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.md,
   },
   qrTitle: { fontSize: FontSize.xl, fontWeight: '700' },
-  qrHint: { color: '#ccc', textAlign: 'center', fontSize: FontSize.sm, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md },
+  qrHint: { textAlign: 'center', fontSize: FontSize.sm, paddingHorizontal: Spacing.lg, marginBottom: Spacing.md },
   qrCamera: { flex: 1 },
   qrOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   qrFrame: {
     width: 220,
     height: 220,
     borderWidth: 2,
-    borderColor: '#fff',
     borderRadius: Radius.md,
     backgroundColor: 'transparent',
   },

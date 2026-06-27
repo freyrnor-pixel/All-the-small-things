@@ -6,9 +6,11 @@
 - Group related fixes or features into the same branch rather than splitting into many small branches.
 - Before starting new work, check for stale or unmerged branches and flag them.
 - **Always create a PR and merge to main** (do not push directly to main):
+  - Every commit to a feature branch MUST go through a PR before reaching main.
   - Create a pull request with a clear description of what changed and why.
-  - Merge the PR to main once changes are complete.
-  - Verify the merge succeeds and CI passes.
+  - Merge the PR to main once changes are complete and CI passes.
+  - Verify the merge succeeds and the OTA workflow triggers (watch `.github/workflows/update.yml` to confirm deploy to Preview within 1–2 minutes).
+- After every merge, verify the OTA deployment succeeded and the app is live in Preview.
 - After every new update, double-check that everything works as intended: quick-check for bugs, and see if anything old can/should be deleted.
 
 ## Automatic OTA Updates
