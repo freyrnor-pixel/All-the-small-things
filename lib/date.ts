@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → —
- *   Used by → app/budget.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/plans.tsx, app/scan.tsx, app/share-modal.tsx, app/task-form.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/db.ts, lib/holidays.ts, store/useReceiptStore.ts
+ *   Used by → app/budget.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/plans.tsx, app/scan.tsx, app/share-modal.tsx, app/shopping.tsx, app/task-form.tsx, components/ListSwitcherHeader.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/db.ts, lib/holidays.ts, store/useReceiptStore.ts, store/useShoppingListStore.ts
  *   Data    → none (pure functions)
  *
  * Edit notes:
@@ -57,4 +57,40 @@ export function getMonthDates(year: number, month: number): string[] {
     const d = i + 1;
     return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   });
+}
+
+/**
+ * The Mon–Sun calendar week of the currently-active weekly shopping list period.
+ * `weeklyResetDay` (0 = Mon … 6 = Sun) is the weekday the list rolls over on — until
+ * that weekday arrives, the active period is still last week's, even though `today`
+ * has already crossed into a new Mon–Sun week. E.g. resetDay = Tuesday: on a Monday
+ * the active period is still the previous Mon–Sun week; from Tuesday on, it's the
+ * current one — named by its own Mon–Sun span regardless of which day resets it
+ * (a Tuesday-the-20th reset still names the list "19–25").
+ */
+export function getWeekRangeContaining(today: string, weeklyResetDay: number): { startDate: string; endDate: string } {
+  const d = new Date(today + 'T12:00:00');
+  const daysSinceReset = (dayOfWeekMon0(d) - weeklyResetDay + 7) % 7;
+  d.setDate(d.getDate() - daysSinceReset);
+  const week = getWeekDates(dateStr(d));
+  return { startDate: week[0], endDate: week[6] };
+}
+
+/**
+ * Formats a `[startDate, endDate]` pair as a short, locale-aware range label,
+ * e.g. "May 1 – 7" / "1.–7. mai" (same month) or "Apr 29 – May 5" / "29. apr–5. mai"
+ * (crossing a month boundary). `monthsShort` is the caller's `t.monthsShort` array.
+ */
+export function formatDateRange(startDate: string, endDate: string, monthsShort: string[], lang: 'en' | 'no'): string {
+  const s = new Date(startDate + 'T12:00:00');
+  const e = new Date(endDate + 'T12:00:00');
+  const sDay = s.getDate();
+  const eDay = e.getDate();
+  const sMonth = monthsShort[s.getMonth()];
+  const eMonth = monthsShort[e.getMonth()];
+  const sameMonth = s.getMonth() === e.getMonth();
+  if (lang === 'no') {
+    return sameMonth ? `${sDay}.–${eDay}. ${sMonth}` : `${sDay}. ${sMonth}–${eDay}. ${eMonth}`;
+  }
+  return sameMonth ? `${sMonth} ${sDay} – ${eDay}` : `${sMonth} ${sDay} – ${eMonth} ${eDay}`;
 }

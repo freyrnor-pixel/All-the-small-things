@@ -9,7 +9,7 @@
  * Connections:
  *   Imports → lib/date
  *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useInboxStore.ts, store/useMealStore.ts, store/useReceiptStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, shopping_lists, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
@@ -353,6 +353,26 @@ export function initDb() {
     "UPDATE shopping_items SET from_catalog = 1 WHERE from_catalog = 0 AND status IN ('inWeeklyList', 'purchased') AND name IN (SELECT name FROM shopping_items WHERE status = 'catalog')",
     // Habit notifications toggle — master switch for all habit reminders
     "ALTER TABLE settings ADD COLUMN habit_notifications_enabled INTEGER DEFAULT 1",
+    // Multiple, named, recurring shopping lists — see store/useShoppingListStore.ts.
+    // The Katalog (status='catalog') stays one global standing inventory: list_id is
+    // only meaningful for status='inWeeklyList' rows and is NULL for everything else.
+    `CREATE TABLE IF NOT EXISTS shopping_lists (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      is_recurring INTEGER DEFAULT 0,
+      recurrence_interval_weeks INTEGER DEFAULT 1,
+      is_custom_name INTEGER DEFAULT 0,
+      is_template INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_shopping_lists_dates ON shopping_lists(start_date, end_date)",
+    "ALTER TABLE shopping_items ADD COLUMN list_id TEXT DEFAULT NULL",
+    "ALTER TABLE shopping_items ADD COLUMN order_index INTEGER DEFAULT 0",
+    "CREATE INDEX IF NOT EXISTS idx_shopping_items_list ON shopping_items(list_id)",
+    "ALTER TABLE shopping_trips ADD COLUMN list_id TEXT DEFAULT NULL",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

@@ -5,11 +5,16 @@
  * (unit / store / price), and a remove button. All actions are bubbled up via callbacks.
  *
  * Connections:
- *   Imports → constants/theme, store/useShoppingStore
+ *   Imports → constants/theme, lib/i18n, store/useShoppingStore
  *   Used by → app/shopping.tsx
- *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onCollect/onRemove; scaled fontSize via useScaledStyles()
+ *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onCollect/onRemove/onMoveUp/onMoveDown; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
+ *   - onMoveUp/onMoveDown are optional and only rendered (as a small chevron-pair)
+ *     when at least one is passed — Katalog/cart/purchased call sites never pass them,
+ *     so they stay untouched. The weekly-list call site passes them per-row with
+ *     reorder(id, 'up'|'down') from useShoppingStore, undefined on the first/last row
+ *     of that list (renders that one chevron disabled rather than hiding the column).
  *   - `variant` drives the leading button: 'planned' shows a checkbox — unchecked is an
  *     outlined "+" (calls onToggle, which flips item.checked immediately via
  *     useShoppingStore.toggleCheck — no separate confirm step); once checked it renders
@@ -43,6 +48,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '@/store/useShoppingStore';
 import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
+import { useT } from '@/lib/i18n';
 import InventoryIcon from '@/components/InventoryIcon';
 
 type Variant = 'planned' | 'cart' | 'purchased';
@@ -57,11 +63,14 @@ type Props = {
   onToggle: () => void;
   onCollect?: () => void;
   onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   inStockLabel?: string;
 };
 
-export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, inStockLabel }: Props) {
+export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, onMoveUp, onMoveDown, inStockLabel }: Props) {
   const styles = useScaledStyles(baseStyles);
+  const t = useT();
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
   const dimmed = variant === 'purchased' || (variant === 'cart' && item.collected) || (variant === 'planned' && item.checked);
@@ -114,6 +123,29 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
         )}
       </View>
 
+      {(onMoveUp || onMoveDown) && (
+        <View style={styles.moveCol}>
+          <Pressable
+            style={styles.moveBtn}
+            onPress={onMoveUp}
+            disabled={!onMoveUp}
+            hitSlop={4}
+            accessibilityLabel={t.moveItemUp}
+          >
+            <Ionicons name="chevron-up" size={14} color={onMoveUp ? theme.textLight : theme.grayLight} />
+          </Pressable>
+          <Pressable
+            style={styles.moveBtn}
+            onPress={onMoveDown}
+            disabled={!onMoveDown}
+            hitSlop={4}
+            accessibilityLabel={t.moveItemDown}
+          >
+            <Ionicons name="chevron-down" size={14} color={onMoveDown ? theme.textLight : theme.grayLight} />
+          </Pressable>
+        </View>
+      )}
+
       {variant === 'cart' && (
         <Pressable style={styles.undo} onPress={onToggle} hitSlop={8}>
           <Ionicons name="arrow-undo" size={18} color={theme.gray} />
@@ -151,6 +183,8 @@ const baseStyles = StyleSheet.create({
   name: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
   meta: { fontSize: FontSize.xs },
+  moveCol: { justifyContent: 'center', gap: 2 },
+  moveBtn: { width: 22, height: 18, alignItems: 'center', justifyContent: 'center' },
   undo: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   remove: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   removeText: { fontSize: 20, lineHeight: 22 },
