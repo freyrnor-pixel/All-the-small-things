@@ -58,6 +58,12 @@
  *     list/cart, since that single row IS the user's permanent Katalog entry (deleting it
  *     would lose it from inventory forever). addToWeeklyFromCatalog's optional `quantity`
  *     sets the new weekly row's `amount` (defaults to 1, matching the old no-arg behaviour).
+ *   - listId/orderIndex (see store/useShoppingListStore.ts) let multiple inWeeklyList
+ *     items coexist across different dated lists. doneShopping(listId, ...) and add()'s
+ *     dedup match both scope by listId — without that, purchasing or adding to one list
+ *     would affect/merge with same-named items sitting in another list. reorder(id, dir)
+ *     mirrors useHabitStore.reorder's adjacent-swap pattern, scoped to items sharing the
+ *     same listId. Items never carry listId once status='catalog'.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -100,6 +106,10 @@ export type ShoppingItem = {
   shoppingTripId?: string;
   collected: boolean;
   fromCatalog: boolean;
+  /** Owning shopping_lists row — only meaningful while status='inWeeklyList'; NULL for catalog/purchased rows. */
+  listId?: string;
+  /** Manual sort position within a list, scoped per listId; used by reorder(). */
+  orderIndex?: number;
 };
 
 export type ShoppingTrip = {
@@ -107,6 +117,8 @@ export type ShoppingTrip = {
   completedAt: string;
   label: string;
   monthResetDate: number;
+  /** The shopping_lists row this trip's purchases came from. */
+  listId?: string;
 };
 
 export type MonthlyResetSummaryItem = {
@@ -144,18 +156,20 @@ type ShoppingStore = {
   remove: (id: string) => void;
   removeWithSource: (id: string) => void;
   adjustAmount: (id: string, delta: number) => void;
+  /** Swaps orderIndex with the adjacent item sharing the same listId (mirrors useHabitStore.reorder). */
+  reorder: (id: string, direction: 'up' | 'down') => void;
   resetWeekly: () => void;
   // New katalog/ukeliste pipeline actions
   setPendingRestock: (id: string, pending: boolean) => void;
   confirmStagingTray: () => void;
-  doneShopping: (label: string, monthResetDate: number) => string;
+  doneShopping: (listId: string, label: string, monthResetDate: number) => string;
   monthlyReset: () => void;
   // Cart "collected" checkbox (distinct from "checked" = moved to cart)
   toggleCollected: (id: string) => void;
   // "+" menu's "From Inventory" option — flips an existing catalog row straight
   // into the weekly list, bypassing the staging tray. `quantity` sets the
-  // weekly row's amount (defaults to 1).
-  addToWeeklyFromCatalog: (id: string, quantity?: number) => void;
+  // weekly row's amount (defaults to 1); `listId` attaches it to the active list.
+  addToWeeklyFromCatalog: (id: string, quantity?: number, listId?: string) => void;
   // Reverts a row back to status='catalog' — used when a fromCatalog item is
   // removed from the weekly list/cart instead of deleting it outright.
   putBackToInventory: (id: string) => void;
@@ -186,6 +200,8 @@ function rowToItem(row: Row): ShoppingItem {
     shoppingTripId: readStr(row, 'shopping_trip_id') || undefined,
     collected: readBool(row, 'collected'),
     fromCatalog: readBool(row, 'from_catalog'),
+    listId: readStr(row, 'list_id') || undefined,
+    orderIndex: readInt(row, 'order_index'),
   };
 }
 
@@ -195,6 +211,7 @@ function rowToTrip(row: Row): ShoppingTrip {
     completedAt: readStr(row, 'completed_at'),
     label: readStr(row, 'label'),
     monthResetDate: readInt(row, 'month_reset_date', 1),
+    listId: readStr(row, 'list_id') || undefined,
   };
 }
 
@@ -222,6 +239,8 @@ const ITEM_COLUMNS: FieldMap<ShoppingItem> = {
   shoppingTripId: { col: 'shopping_trip_id', to: (v) => v ?? null },
   collected: { col: 'collected', to: (v) => (v ? 1 : 0) },
   fromCatalog: { col: 'from_catalog', to: (v) => (v ? 1 : 0) },
+  listId: { col: 'list_id', to: (v) => v ?? null },
+  orderIndex: { col: 'order_index', to: (v) => v ?? 0 },
 };
 
 /**
@@ -294,6 +313,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     const existing = get().items.find(
       (i) =>
         i.status === status &&
+        i.listId === item.listId &&
         i.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
         (i.dishName ?? undefined) === (item.dishName ?? undefined)
     );
@@ -311,6 +331,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     const category = item.category ?? 'other';
     const isTemporary = item.isTemporary ?? false;
     const fromCatalog = item.fromCatalog ?? status === 'catalog';
+    const orderIndex = item.orderIndex ?? get().items.filter((i) => i.listId === item.listId).length;
     const newItem: ShoppingItem = {
       ...item,
       id,
@@ -329,6 +350,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       shoppingTripId: undefined,
       collected: false,
       fromCatalog,
+      orderIndex,
     };
     insertRow('shopping_items', rowValues(newItem, ITEM_COLUMNS));
     set((s) => ({ items: [...s.items, newItem] }));
@@ -395,6 +417,31 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     }
   },
 
+  reorder(id, direction) {
+    const item = get().items.find((i) => i.id === id);
+    if (!item) return;
+    const sameList = get().items
+      .filter((i) => i.listId === item.listId)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    const idx = sameList.findIndex((i) => i.id === id);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sameList.length) return;
+    const a = sameList[idx];
+    const b = sameList[swapIdx];
+    const aOrder = a.orderIndex ?? 0;
+    const bOrder = b.orderIndex ?? 0;
+    updateRow('shopping_items', { order_index: bOrder }, 'id = ?', [a.id]);
+    updateRow('shopping_items', { order_index: aOrder }, 'id = ?', [b.id]);
+    set((s) => ({
+      items: s.items.map((i) => {
+        if (i.id === a.id) return { ...i, orderIndex: bOrder };
+        if (i.id === b.id) return { ...i, orderIndex: aOrder };
+        return i;
+      }),
+    }));
+  },
+
   resetWeekly() {
     // Release any monthly allocations before deleting weekly items
     const weeklyWithSource = get().items.filter(
@@ -450,8 +497,8 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     }));
   },
 
-  /** "Handlingen fullført" — creates a shopping_trips row and marks every inWeeklyList item purchased. */
-  doneShopping(label, monthResetDate) {
+  /** "Handlingen fullført" — creates a shopping_trips row and marks every inWeeklyList item in `listId` purchased. */
+  doneShopping(listId, label, monthResetDate) {
     const tripId = generateId();
     const now = new Date().toISOString();
     insertRow('shopping_trips', {
@@ -459,16 +506,17 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       completed_at: now,
       label,
       month_reset_date: monthResetDate,
+      list_id: listId,
     });
     db.runSync(
-      "UPDATE shopping_items SET status = 'purchased', purchased_at = ?, shopping_trip_id = ?, checked = 0, collected = 0 WHERE status = 'inWeeklyList'",
-      [now, tripId]
+      "UPDATE shopping_items SET status = 'purchased', purchased_at = ?, shopping_trip_id = ?, checked = 0, collected = 0 WHERE status = 'inWeeklyList' AND list_id = ?",
+      [now, tripId, listId]
     );
-    const trip: ShoppingTrip = { id: tripId, completedAt: now, label, monthResetDate };
+    const trip: ShoppingTrip = { id: tripId, completedAt: now, label, monthResetDate, listId };
     set((s) => ({
       trips: [trip, ...s.trips],
       items: s.items.map((i) =>
-        i.status === 'inWeeklyList'
+        i.status === 'inWeeklyList' && i.listId === listId
           ? { ...i, status: 'purchased' as const, purchasedAt: now, shoppingTripId: tripId, checked: false, collected: false }
           : i
       ),
@@ -514,10 +562,10 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     get().update(id, { collected: !item.collected });
   },
 
-  addToWeeklyFromCatalog(id, quantity = 1) {
+  addToWeeklyFromCatalog(id, quantity = 1, listId) {
     const item = get().items.find((i) => i.id === id && i.status === 'catalog');
     if (!item) return;
-    get().update(id, { status: 'inWeeklyList', pendingRestock: false, amount: String(Math.max(1, quantity)) });
+    get().update(id, { status: 'inWeeklyList', pendingRestock: false, amount: String(Math.max(1, quantity)), listId });
   },
 
   putBackToInventory(id) {

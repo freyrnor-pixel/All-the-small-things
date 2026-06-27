@@ -13,9 +13,9 @@
  * additions are reached only via the pencil icon → /inventory-edit.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingStore
+ *   Imports → components/AddFAB, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/EmptyState, components/ListSettingsSheet, components/ListSwitcherHeader, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/siteNav, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
+ *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table — the Ukeliste tab's selected list, switcher, settings sheet and saved-templates popup) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Added quick-action buttons for Scan (→ /scan) and Budget (→ /budget) at the top of the
@@ -66,6 +66,28 @@
  *     guessed height, so the two never overlap.
  *   - Design system pass: all fontWeight string literals replaced with Fonts.* tokens;
  *     tab/quickAction/tray-confirm/done-shopping touch targets bumped to minHeight 44.
+ *   - Multiple named/recurring lists (Ukeliste tab only): `selectedList` is either the
+ *     list the user explicitly stepped to (selectedListId, via ListSwitcherHeader's
+ *     chevrons) or useShoppingListStore.currentList(todayStr()) by default.
+ *     weeklyUnchecked/weeklyChecked/ungroupedWeeklyUnchecked all additionally filter on
+ *     `item.listId === selectedList?.id` — every inWeeklyList item now belongs to exactly
+ *     one shopping_lists row. ungroupedWeeklyUnchecked sorts by orderIndex (not name, unlike
+ *     weeklyUnchecked/dishGroups) since that's the section wired to ShoppingRow's
+ *     onMoveUp/onMoveDown (useShoppingStore.reorder); dish-grouped items are never
+ *     manually reordered, so dishGroups keeps inheriting weeklyUnchecked's alphabetical sort.
+ *   - addToWeeklyFromCatalog (the inventory-picker path in AddSourceChooser's
+ *     onConfirmInventoryPicks) and handleAddItem's weekly-tab add() both pass
+ *     selectedList?.id as listId — every way of getting an item into the Ukeliste tab
+ *     must attach it to the active list, or it silently wouldn't render under the
+ *     now-list-scoped filters above.
+ *   - advanceRecurringLists(todayStr()) runs on every mount (cheap no-op once a
+ *     recurring list is already current) — it writes shopping_items rows directly via
+ *     useShoppingListStore, not through useShoppingStore's own actions, so this screen
+ *     explicitly calls useShoppingStore.getState().load() right after to pick up any
+ *     rows it just inserted.
+ *   - ListSettingsSheet/SavedListsModal are mounted unconditionally (gated by their own
+ *     `visible` prop) like every other modal here, not wrapped in `tab === 'weekly'` —
+ *     they're only opened from ListSwitcherHeader, which itself only renders on that tab.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -80,6 +102,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
 import { useShoppingStore, ShoppingItem, MonthlyResetSummary } from '@/store/useShoppingStore';
+import { useShoppingListStore } from '@/store/useShoppingListStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useMealStore } from '@/store/useMealStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
@@ -99,6 +122,9 @@ import EmptyState from '@/components/EmptyState';
 import AddFAB, { FAB_DEFAULT_BOTTOM, FAB_LG_SIZE } from '@/components/AddFAB';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
+import ListSwitcherHeader from '@/components/ListSwitcherHeader';
+import ListSettingsSheet from '@/components/ListSettingsSheet';
+import SavedListsModal from '@/components/SavedListsModal';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { goToSite } from '@/lib/siteNav';
@@ -119,6 +145,9 @@ export default function ShoppingScreen() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [purchasedExpanded, setPurchasedExpanded] = useState<string | null>(null);
   const [resetSummary, setResetSummary] = useState<MonthlyResetSummary | null>(null);
+  const [selectedListId, setSelectedListId] = useState<string | undefined>(undefined);
+  const [showListSettings, setShowListSettings] = useState(false);
+  const [showSavedLists, setShowSavedLists] = useState(false);
 
   const items = useShoppingStore((s) => s.items);
   const trips = useShoppingStore((s) => s.trips);
@@ -138,6 +167,21 @@ export default function ShoppingScreen() {
   const updateSettings = useSettingsStore((s) => s.update);
   const dishes = useMealStore((s) => s.dishes);
   const t = useT();
+
+  const lists = useShoppingListStore((s) => s.lists);
+  const currentList = useShoppingListStore((s) => s.currentList);
+  const renameList = useShoppingListStore((s) => s.rename);
+  const setListRecurring = useShoppingListStore((s) => s.setRecurring);
+  const advanceRecurringLists = useShoppingListStore((s) => s.advanceRecurringLists);
+  const saveListAsTemplate = useShoppingListStore((s) => s.saveAsTemplate);
+  const instantiateTemplate = useShoppingListStore((s) => s.instantiateTemplate);
+  const reorderItem = useShoppingStore((s) => s.reorder);
+
+  const nonTemplateLists = useMemo(() => lists.filter((l) => !l.isTemplate), [lists]);
+  const templateLists = useMemo(() => lists.filter((l) => l.isTemplate), [lists]);
+  const selectedList = selectedListId
+    ? nonTemplateLists.find((l) => l.id === selectedListId)
+    : currentList(todayStr());
 
   // Fire the 'shopping_opened' automation trigger once per screen visit.
   // Also ensure sheets are closed on mount to prevent state from persisting across navigations
@@ -177,6 +221,17 @@ export default function ShoppingScreen() {
     updateSettings({ lastMonthlyReset: today });
   }, [lastMonthlyReset, monthlyResetDate, monthlyReset, updateSettings, buildMonthlyResetSummary]);
 
+  // Rolls any overdue recurring list forward to the period containing today. A
+  // no-op once every recurring list is already current, so it's safe to run on
+  // every mount rather than gating it behind a once-per-period flag like the
+  // monthly reset above. advanceRecurringLists() writes shopping_items rows
+  // directly via useShoppingListStore, not through useShoppingStore, so its
+  // items need an explicit refresh here.
+  useEffect(() => {
+    advanceRecurringLists(todayStr());
+    useShoppingStore.getState().load();
+  }, [advanceRecurringLists]);
+
   const catalogItems = useMemo(
     () => items.filter((i) => i.status === 'catalog').sort((a, b) => a.name.localeCompare(b.name)),
     [items]
@@ -185,12 +240,12 @@ export default function ShoppingScreen() {
   const restItems = useMemo(() => catalogItems.filter((i) => !i.pendingRestock), [catalogItems]);
 
   const weeklyUnchecked = useMemo(
-    () => items.filter((i) => i.status === 'inWeeklyList' && !i.checked).sort((a, b) => a.name.localeCompare(b.name)),
-    [items]
+    () => items.filter((i) => i.status === 'inWeeklyList' && !i.checked && i.listId === selectedList?.id).sort((a, b) => a.name.localeCompare(b.name)),
+    [items, selectedList]
   );
   const weeklyChecked = useMemo(
-    () => items.filter((i) => i.status === 'inWeeklyList' && i.checked).sort((a, b) => a.name.localeCompare(b.name)),
-    [items]
+    () => items.filter((i) => i.status === 'inWeeklyList' && i.checked && i.listId === selectedList?.id).sort((a, b) => a.name.localeCompare(b.name)),
+    [items, selectedList]
   );
 
   const purchasedByTrip = useMemo(() => {
@@ -215,9 +270,14 @@ export default function ShoppingScreen() {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [weeklyUnchecked]);
 
+  // Sorted by orderIndex (not name, unlike weeklyUnchecked) so reorder() via the
+  // ShoppingRow move buttons below actually changes the visible order.
   const ungroupedWeeklyUnchecked = useMemo(
-    () => weeklyUnchecked.filter((i) => !i.dishName),
-    [weeklyUnchecked]
+    () =>
+      items
+        .filter((i) => i.status === 'inWeeklyList' && !i.checked && !i.dishName && i.listId === selectedList?.id)
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
+    [items, selectedList]
   );
 
   function handleConfirmTray() {
@@ -240,7 +300,7 @@ export default function ShoppingScreen() {
   }
 
   function handleDoneShopping() {
-    if (weeklyChecked.length === 0) return;
+    if (weeklyChecked.length === 0 || !selectedList) return;
     showAppModal(
       t.doneShoppingDialogTitle,
       t.doneShoppingDialogBody,
@@ -249,7 +309,7 @@ export default function ShoppingScreen() {
         {
           text: t.doneShoppingConfirmBtn,
           onPress: () => {
-            doneShopping(t.tripLabel(dateStr(new Date())), monthlyResetDate);
+            doneShopping(selectedList.id, t.tripLabel(dateStr(new Date())), monthlyResetDate);
             heavy();
             setConfirm(t.doneShoppingSuccessText);
           },
@@ -284,6 +344,7 @@ export default function ShoppingScreen() {
         isTemporary: input.isTemporary,
         targetQuantity: input.targetQuantity,
         status: 'inWeeklyList',
+        listId: selectedList?.id,
       });
       if (input.alsoAddToCatalog) {
         add({
@@ -487,6 +548,16 @@ export default function ShoppingScreen() {
           {/* ----- UKELISTE TAB ----- */}
           {tab === 'weekly' && (
             <>
+              <ListSwitcherHeader
+                theme={theme}
+                lists={nonTemplateLists}
+                selectedList={selectedList}
+                onSelectList={setSelectedListId}
+                onRename={(name) => selectedList && renameList(selectedList.id, name)}
+                onOpenSettings={() => setShowListSettings(true)}
+                onOpenSavedLists={() => setShowSavedLists(true)}
+              />
+
               {dishGroups.length === 0 && ungroupedWeeklyUnchecked.length === 0 && weeklyChecked.length === 0 && (
                 <>
                   <EmptyState text={t.weeklyEmptyTitle} />
@@ -552,6 +623,8 @@ export default function ShoppingScreen() {
                           variant="planned"
                           onToggle={() => toggle(item.id)}
                           onRemove={() => handleRemoveWeeklyItem(item)}
+                          onMoveUp={idx > 0 ? () => reorderItem(item.id, 'up') : undefined}
+                          onMoveDown={idx < ungroupedWeeklyUnchecked.length - 1 ? () => reorderItem(item.id, 'down') : undefined}
                           inStockLabel={t.inStockLabel}
                         />
                         {idx < ungroupedWeeklyUnchecked.length - 1 && (
@@ -637,7 +710,7 @@ export default function ShoppingScreen() {
           });
 
           for (const pick of picks) {
-            addToWeeklyFromCatalog(pick.id, pick.quantity);
+            addToWeeklyFromCatalog(pick.id, pick.quantity, selectedList?.id);
           }
           success();
           if (picks.length === 1 && pickNames[0]) {
@@ -654,6 +727,38 @@ export default function ShoppingScreen() {
         summary={resetSummary}
         theme={theme}
         onClose={() => setResetSummary(null)}
+      />
+
+      <ListSettingsSheet
+        visible={showListSettings}
+        theme={theme}
+        list={selectedList}
+        onClose={() => setShowListSettings(false)}
+        onSetRecurring={(isRecurring, intervalWeeks) =>
+          selectedList && setListRecurring(selectedList.id, isRecurring, intervalWeeks)
+        }
+      />
+
+      <SavedListsModal
+        visible={showSavedLists}
+        theme={theme}
+        templates={templateLists}
+        onClose={() => setShowSavedLists(false)}
+        onSelectTemplate={(id) => {
+          const newId = instantiateTemplate(id, todayStr());
+          if (newId) {
+            useShoppingStore.getState().load();
+            setSelectedListId(newId);
+            success();
+            setConfirm(t.templateAppliedToast);
+          }
+        }}
+        onSaveCurrentAsTemplate={() => {
+          if (!selectedList) return;
+          saveListAsTemplate(selectedList.id);
+          success();
+          setConfirm(t.listSavedAsTemplateToast);
+        }}
       />
 
       <BottomNav />
