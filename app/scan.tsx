@@ -109,7 +109,6 @@ export default function ScanScreen() {
   const [categoryPickerIndex, setCategoryPickerIndex] = useState(-1);
   const manualInputRef = useRef<TextInput>(null);
   const customStoreRef = useRef<TextInput>(null);
-  const cameraLaunched = useRef(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Setup pulsing animation for scanning state
@@ -133,14 +132,6 @@ export default function ScanScreen() {
     }
   }, [mode]);
 
-  // Open camera automatically on first load
-  useEffect(() => {
-    if (!cameraLaunched.current) {
-      cameraLaunched.current = true;
-      // Small delay so screen transition completes first
-      setTimeout(() => takePhoto(), 400);
-    }
-  }, []);
 
   async function takePhoto() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -413,8 +404,6 @@ export default function ScanScreen() {
             <View style={[styles.tipBox, { backgroundColor: theme.greenLight }]}>
               <Text style={[styles.tipText, { color: theme.text }]}>{t.scanHintBanner}</Text>
             </View>
-
-            {renderStoreSelector()}
 
             {/* Primary camera button */}
             <Pressable
