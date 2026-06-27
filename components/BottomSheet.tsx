@@ -11,7 +11,8 @@
  *
  * Connections:
  *   Imports → react-native-reanimated, lib/haptics, lib/useAppTheme
- *   Used by → (add consumers here as they adopt BottomSheet)
+ *   Used by → components/AddItemSheet.tsx (rendered unconditionally by app/shopping.tsx
+ *             and app/inventory-edit.tsx, controlled via its own `open` prop)
  *   Data    → controlled via `open` + `onClose`; renders `children`
  *
  * Edit notes:
@@ -20,6 +21,13 @@
  *     offset to stay above the keyboard using the keyboard height from KeyboardEvent.
  *   - Drag-to-dismiss uses PanResponder for cross-platform gesture handling.
  *   - Respects reducedMotion — skips spring easing and snaps instantly when set.
+ *   - translateY/scrimOpacity MUST initialize from `open`, not be hardcoded to the open
+ *     position (0/0): since consumers render this component unconditionally and only toggle
+ *     `open`, a hardcoded-open initial value paints the sheet fully visible for one frame on
+ *     every mount (before the close effect can react), then animates it closed — i.e. a
+ *     guaranteed "pops open, then closes itself" flash on every screen navigation, not just
+ *     a stale-state edge case. This was the real cause of a bug three earlier fixes (all
+ *     aimed at consumer-side boolean/focus-lifecycle state) failed to touch.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -82,9 +90,11 @@ export function BottomSheet({
   const { reducedMotion } = useAccessibility();
   const { height: screenHeight } = useWindowDimensions();
 
-  // Shared animation values
-  const translateY = useSharedValue(0);
-  const scrimOpacity = useSharedValue(0);
+  // Shared animation values — initialized from `open` so a mount with open=false
+  // (the normal case, since consumers render this unconditionally) paints already
+  // closed instead of flashing open for one frame before the close effect catches up.
+  const translateY = useSharedValue(open ? 0 : screenHeight);
+  const scrimOpacity = useSharedValue(open ? 1 : 0);
   const keyboardOffset = useSharedValue(0);
 
   // Local state for keyboard tracking
