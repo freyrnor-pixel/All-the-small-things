@@ -260,10 +260,9 @@ export default function TimePickerWheel({ value, onChange, theme, size = 'defaul
                   <Text
                     style={[
                       styles.itemText,
-                      { color: active ? theme.text : theme.gray },
+                      { color: active ? theme.text : theme.gray, includeFontPadding: false },
                       active && styles.itemTextActive,
                     ]}
-                    includeFontPadding={false}
                   >
                     {pad(item.value)}
                   </Text>
@@ -299,10 +298,9 @@ export default function TimePickerWheel({ value, onChange, theme, size = 'defaul
                   <Text
                     style={[
                       styles.itemText,
-                      { color: active ? theme.text : theme.gray },
+                      { color: active ? theme.text : theme.gray, includeFontPadding: false },
                       active && styles.itemTextActive,
                     ]}
-                    includeFontPadding={false}
                   >
                     {pad(item.value)}
                   </Text>
