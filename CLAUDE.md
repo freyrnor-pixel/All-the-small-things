@@ -1,44 +1,54 @@
 @AGENTS.md
 
-## Git workflow
+> **Token optimization**: This file is a hygiene checklist only. AGENTS.md is the canonical reference for git workflow, deployment, builds, architecture, and cookbook tasks. Read it first.
 
-- Always create a dedicated branch for new work.
-- Group related fixes or features into the same branch rather than splitting into many small branches.
-- Before starting new work, check for stale or unmerged branches and flag them.
-- **Always create a PR and merge to main** (do not push directly to main):
-  - Every commit to a feature branch MUST go through a PR before reaching main.
-  - Create a pull request with a clear description of what changed and why.
-  - Merge the PR to main once changes are complete and CI passes.
-  - Verify the merge succeeds and the OTA workflow triggers (watch `.github/workflows/update.yml` to confirm deploy to Preview within 1–2 minutes).
-- After every merge, verify the OTA deployment succeeded and the app is live in Preview.
-- After every new update, double-check that everything works as intended: quick-check for bugs, and see if anything old can/should be deleted.
+## Before Starting
 
-## Automatic OTA Updates
+- **Read file headers first.** Every `.ts`/`.tsx` file starts with a JSDoc block listing imports, callers, data touches, and gotchas. This is the fastest way to understand a file's purpose — no need to read the whole thing.
+- **Trust AGENTS.md's hand-maintained dependency maps.** Don't grep the repo to re-derive what's already written in the `Connections:` blocks in file headers. If a header looks stale, update it as you go — cheap now, expensive later.
 
-- **Merge to main automatically deploys**: The GitHub workflow `.github/workflows/update.yml` triggers on every push to `main` and runs `eas update --branch preview --message "..."` to publish the update to the Preview runtime.
-- **To deploy a feature or fix**: 
-  1. Commit and push changes to your branch (e.g., `claude/feature-name`)
-  2. Create a PR with a clear description of what changed and why
-  3. Merge the PR to `main` — this automatically triggers the OTA update
-  4. No further action needed; the update deploys to Preview within 1–2 minutes
-- **Do NOT push directly to main** — always use a PR so CI can verify and the merge is recorded.
-- Runtime version is locked to `1.0.0` (targets APK build 148977ec); do not change it without a new APK build.
+## Quick Checklist
 
-## Current deployment state
+### Before Each Task
+- [ ] Open the file header (or `AGENTS.md`) to see what imports/uses this file
+- [ ] Check `AGENTS.md` for cookbook tasks (add screen, add i18n, add migration, add setting) — follow the numbered steps exactly
+- [ ] For git/deployment questions → `AGENTS.md` "Builds and updates" section
+- [ ] For architecture questions → `AGENTS.md` "Architecture at a glance" + key invariants table
+- [ ] For known gotchas → `AGENTS.md` "Known gotchas" section
 
-- App version used at this time is Runtime 1.0.0, In Preview.
+### Key Rules (Don't Break These)
+| Rule | Why |
+|---|---|
+| `slug` in `app.json` MUST stay `all-the-small-things` | EAS project registration |
+| All UI text through `useT()` from `lib/i18n.ts` | Bilingual (EN/NO) |
+| Date format always `YYYY-MM-DD` | Used as keys throughout stores |
+| SQLite file: `unfocus.db` (in `lib/db.ts`) | Fixed name for device storage |
+| New DB columns: `ALTER TABLE … ADD COLUMN` in migrations | Runs once; never drop/recreate |
+| Stores use `lib/dataAccess.ts` | 13 of 14 stores rely on this pattern |
+| Runtime version locked to `1.0.0` | Targets APK build 148977ec; do NOT change without new build |
 
-## Testing policy
+### Navigation State
+- **BottomNav** (`components/BottomNav.tsx`) — current, only entry point; no redesign needed
+- **BubbleMenu** (radial FAB) — explicitly **deferred**; do NOT touch unless asked
 
-- No testing needed until further notice (no Jest runs, no live-app/browser verification).
-- Still always do regular checking: manual read-through for bugs/dead code. (TypeScript typecheck via `npx tsc --noEmit` is not available in the remote environment since `node_modules` is not pre-installed.)
+### Testing
+- **No Jest required** until further notice (no test runs, no live-app verification)
+- Manual code review only: read through for bugs and dead code
+- TypeScript typecheck (`npx tsc --noEmit`) is local-only; not available in remote environment
 
-## Navigation: BottomNav is current, BubbleMenu is deferred
+## During Work
 
-- `BottomNav` (`components/BottomNav.tsx`) is the app's current, only nav entry point — a box-grid of
-  all 11 sites (2 rows: 6 + 5), sourced from `lib/siteNav.ts`'s `SITE_ITEMS`. All sites must stay
-  listed there.
-- `BubbleMenu` is explicitly **deferred** — do not redesign or fix it unless asked; its known issues
-  (see `AGENTS.md`'s merge-risk note) are not being worked on right now.
-- Per-site screen swipe navigation (`components/SiteSwipeView.tsx`) and the active-tab "pushed in"
-  shading on `BottomNav` are functional-only for now — no colour/material polish yet; that's a later pass.
+- **Don't re-read docs already fetched this session.** Reuse SDK/API context from earlier turns instead of re-fetching.
+- **Update headers as you go.** When you change a file's imports or callers, fix the `Connections:` block in the same edit. This keeps the next session's context current and saves token re-derivation later.
+- **Open only what the task touches.** For cookbook tasks, read just the files named in that task's steps — not the whole `app/`, `store/`, or `lib/` directory.
+- **Skip multi-agent delegation.** This is a single-branch, single-dev codebase; coordinate overhead has no payoff at this scale.
+
+## After Completing a Cookbook Task
+
+- Run `npx tsc --noEmit` locally to typecheck
+- Verify file headers are accurate
+- `/clear` before starting an unrelated task — but carry forward which files changed and any new i18n keys/migration lines, so the next step doesn't need to re-read what was just written
+
+---
+
+**AGENTS.md is ~13.5 KB.** Read it once at the start of a session. Everything else is reference.
