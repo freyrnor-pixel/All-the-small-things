@@ -82,8 +82,6 @@ import { DarkMode } from '@/store/useSettingsStore';
 import SwatchPicker from '@/components/SwatchPicker';
 import { RadialSwatch, ConicSwatch } from '@/components/GradientSwatch';
 import HuePicker from '@/components/HuePicker';
-import { SaveButton } from '@/components/SaveButton';
-import { SticklySaveBar } from '@/components/SticklySaveBar';
 
 const PET_TYPES: PetType[] = ['cat', 'dog', 'bird', 'fox', 'bunny'];
 const PET_EMOJIS: Record<PetType, string> = { cat: '🐱', dog: '🐶', bird: '🐦', fox: '🦊', bunny: '🐰' };
@@ -172,10 +170,75 @@ export default function SettingsScreen() {
     habitStore.habits.forEach((h) => habitStore.remove(h.id));
   }
 
+  const isDirty = dirtyName || dirtyMonthlyDate || dirtyMonthlyBudget || dirtyWorkDays || dirtyWeeklyReset;
+
+  function handleSave() {
+    if (dirtyName) {
+      applyAndSync({ userName: name });
+      setDirtyName(false);
+    }
+    if (dirtyMonthlyDate) {
+      const n = parseInt(monthlyDateInput, 10);
+      if (!isNaN(n) && n >= 1 && n <= 31) {
+        applyAndSync({ monthlyResetDate: n });
+        setDirtyMonthlyDate(false);
+      }
+    }
+    if (dirtyMonthlyBudget) {
+      if (monthlyBudgetInput.trim() === '') {
+        applyAndSync({ monthlyBudgetNok: 0 });
+      } else {
+        const n = parseFloat(monthlyBudgetInput.replace(',', '.'));
+        if (!isNaN(n) && n >= 0) {
+          applyAndSync({ monthlyBudgetNok: n });
+        }
+      }
+      setDirtyMonthlyBudget(false);
+    }
+    if (dirtyWorkDays) {
+      applyAndSync({ workDays: workDaysTemp });
+      setDirtyWorkDays(false);
+    }
+    if (dirtyWeeklyReset) {
+      applyAndSync({ weeklyResetDay: weeklyResetTemp });
+      setDirtyWeeklyReset(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
-      <ScreenHeader title={t.settingsTitle} onBack={() => router.back()} bordered />
+      <ScreenHeader
+        title={t.settingsTitle}
+        onBack={() => router.back()}
+        bordered
+        right={
+          isDirty ? (
+            <Pressable
+              onPress={handleSave}
+              style={[
+                styles.savePill,
+                { backgroundColor: theme.orange, borderColor: theme.orange },
+              ]}
+            >
+              <Text style={[styles.savePillText, { color: theme.white }]}>
+                {t.save}
+              </Text>
+            </Pressable>
+          ) : (
+            <View
+              style={[
+                styles.savePill,
+                { backgroundColor: theme.orange, borderColor: theme.orange, opacity: 0.5 },
+              ]}
+            >
+              <Text style={[styles.savePillText, { color: theme.white }]}>
+                {t.save}
+              </Text>
+            </View>
+          )
+        }
+      />
 
       <View style={[styles.tabsRow, { borderBottomColor: theme.grayLight }]}>
         {TABS.map((tb) => {
@@ -229,27 +292,17 @@ export default function SettingsScreen() {
               <Text style={[styles.tabSectionLabel, { color: theme.textLight }]}>{t.sectionProfile}</Text>
               <Surface style={styles.card}>
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.yourName}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text, flex: 1 }]}
-                    value={name}
-                    onChangeText={(v) => {
-                      setName(v);
-                      setDirtyName(v !== settings.userName);
-                    }}
-                    placeholder={t.namePlaceholder}
-                    placeholderTextColor={theme.gray}
-                    returnKeyType="done"
-                  />
-                  <SaveButton
-                    visible={dirtyName}
-                    onPress={() => {
-                      applyAndSync({ userName: name });
-                      setDirtyName(false);
-                    }}
-                    theme={theme}
-                  />
-                </View>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+                  value={name}
+                  onChangeText={(v) => {
+                    setName(v);
+                    setDirtyName(v !== settings.userName);
+                  }}
+                  placeholder={t.namePlaceholder}
+                  placeholderTextColor={theme.gray}
+                  returnKeyType="done"
+                />
                 <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.name}</Text>
 
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
@@ -382,22 +435,6 @@ export default function SettingsScreen() {
                   />
                 </View>
               </Surface>
-
-              <SticklySaveBar
-                visible={dirtyWorkDays}
-                onSave={() => {
-                  applyAndSync({ workDays: workDaysTemp });
-                  setDirtyWorkDays(false);
-                }}
-                onRevert={() => {
-                  setWorkDaysTemp(settings.workDays);
-                  setDirtyWorkDays(false);
-                }}
-                label={t.unsavedDaysLabel}
-                saveLabel={t.save}
-                undoLabel={t.undoBtn}
-                theme={theme}
-              />
             </View>
 
             {/* TILGJENGELIGHET */}
@@ -673,100 +710,54 @@ export default function SettingsScreen() {
                 </View>
               </ScrollView>
 
-              <SticklySaveBar
-                visible={dirtyWeeklyReset}
-                onSave={() => {
-                  applyAndSync({ weeklyResetDay: weeklyResetTemp });
-                  setDirtyWeeklyReset(false);
-                }}
-                onRevert={() => {
-                  setWeeklyResetTemp(settings.weeklyResetDay);
-                  setDirtyWeeklyReset(false);
-                }}
-                label={t.unsavedDaysLabel}
-                saveLabel={t.save}
-                undoLabel={t.undoBtn}
-                theme={theme}
-              />
-
               <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
               <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.monthlyResetDate}</Text>
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text, flex: 1 }]}
-                  value={monthlyDateInput}
-                  onChangeText={(v) => {
-                    setMonthlyDateInput(v);
-                    const n = parseInt(v, 10);
-                    setDirtyMonthlyDate(v !== String(settings.monthlyResetDate) && !isNaN(n) && n >= 1 && n <= 31);
-                  }}
-                  onBlur={() => {
-                    const n = parseInt(monthlyDateInput, 10);
-                    if (isNaN(n) || n < 1 || n > 31) {
-                      setMonthlyDateInput(String(settings.monthlyResetDate));
-                      setDirtyMonthlyDate(false);
-                    }
-                  }}
-                  keyboardType="number-pad"
-                  placeholder="1–31"
-                  placeholderTextColor={theme.gray}
-                  maxLength={2}
-                />
-                <SaveButton
-                  visible={dirtyMonthlyDate}
-                  onPress={() => {
-                    const n = parseInt(monthlyDateInput, 10);
-                    if (!isNaN(n) && n >= 1 && n <= 31) {
-                      applyAndSync({ monthlyResetDate: n });
-                      setDirtyMonthlyDate(false);
-                    }
-                  }}
-                  theme={theme}
-                />
-              </View>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+                value={monthlyDateInput}
+                onChangeText={(v) => {
+                  setMonthlyDateInput(v);
+                  const n = parseInt(v, 10);
+                  setDirtyMonthlyDate(v !== String(settings.monthlyResetDate) && !isNaN(n) && n >= 1 && n <= 31);
+                }}
+                onBlur={() => {
+                  const n = parseInt(monthlyDateInput, 10);
+                  if (isNaN(n) || n < 1 || n > 31) {
+                    setMonthlyDateInput(String(settings.monthlyResetDate));
+                    setDirtyMonthlyDate(false);
+                  }
+                }}
+                keyboardType="number-pad"
+                placeholder="1–31"
+                placeholderTextColor={theme.gray}
+                maxLength={2}
+              />
               <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.monthlyDateInputHint}</Text>
 
               <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
 
               <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.monthlyBudget.label}</Text>
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text, flex: 1 }]}
-                  value={monthlyBudgetInput}
-                  onChangeText={(v) => {
-                    setMonthlyBudgetInput(v);
-                    const isDirty = v !== (settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : '');
-                    setDirtyMonthlyBudget(isDirty);
-                  }}
-                  onBlur={() => {
-                    const n = parseFloat(monthlyBudgetInput.replace(',', '.'));
-                    if (monthlyBudgetInput.trim() !== '' && (isNaN(n) || n < 0)) {
-                      setMonthlyBudgetInput(settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : '');
-                      setDirtyMonthlyBudget(false);
-                    }
-                  }}
-                  keyboardType="number-pad"
-                  placeholder={t.settings.monthlyBudget.placeholder}
-                  placeholderTextColor={theme.gray}
-                  maxLength={6}
-                />
-                <SaveButton
-                  visible={dirtyMonthlyBudget}
-                  onPress={() => {
-                    if (monthlyBudgetInput.trim() === '') {
-                      applyAndSync({ monthlyBudgetNok: 0 });
-                    } else {
-                      const n = parseFloat(monthlyBudgetInput.replace(',', '.'));
-                      if (!isNaN(n) && n >= 0) {
-                        applyAndSync({ monthlyBudgetNok: n });
-                      }
-                    }
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+                value={monthlyBudgetInput}
+                onChangeText={(v) => {
+                  setMonthlyBudgetInput(v);
+                  const isDirty = v !== (settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : '');
+                  setDirtyMonthlyBudget(isDirty);
+                }}
+                onBlur={() => {
+                  const n = parseFloat(monthlyBudgetInput.replace(',', '.'));
+                  if (monthlyBudgetInput.trim() !== '' && (isNaN(n) || n < 0)) {
+                    setMonthlyBudgetInput(settings.monthlyBudgetNok > 0 ? String(settings.monthlyBudgetNok) : '');
                     setDirtyMonthlyBudget(false);
-                  }}
-                  theme={theme}
-                />
-              </View>
+                  }
+                }}
+                keyboardType="number-pad"
+                placeholder={t.settings.monthlyBudget.placeholder}
+                placeholderTextColor={theme.gray}
+                maxLength={6}
+              />
               <Text style={[styles.paydayHint, { color: theme.textLight }]}>{t.settings.monthlyBudget.hint}</Text>
             </Surface>
           </View>
@@ -908,8 +899,6 @@ export default function SettingsScreen() {
                     />
                   </>
                 )}
-
-                <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.theme}</Text>
               </Surface>
             </View>
 
@@ -946,13 +935,12 @@ export default function SettingsScreen() {
                     );
                   }}
                 />
-                <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.material}</Text>
               </Surface>
             </View>
 
-            {/* MØRK MODUS */}
+            {/* LIGHT/DARK MODE */}
             <View style={styles.section}>
-              <Text style={[styles.tabSectionLabel, { color: theme.textLight }]}>{t.darkModeLabel}</Text>
+              <Text style={[styles.tabSectionLabel, { color: theme.textLight }]}>{t.lightDarkModeLabel}</Text>
               <Surface style={styles.card}>
                 <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
                   {(['off', 'system', 'on'] as DarkMode[]).map((mode) => (
@@ -973,7 +961,6 @@ export default function SettingsScreen() {
                     </Pressable>
                   ))}
                 </View>
-                <Text style={[styles.descText, { color: theme.textLight }]}>{t.config.desc.darkMode}</Text>
               </Surface>
             </View>
           </>
@@ -1016,20 +1003,20 @@ const baseStyles = StyleSheet.create({
   divider: { height: 1, marginVertical: Spacing.md },
   workHoursRow: { flexDirection: 'row', gap: Spacing.md },
   workHoursCol: { flex: 1 },
-  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   dayChip: {
     minWidth: 44,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     borderRadius: Radius.full,
   },
   // Work-days picker: all 7 days must fit on one row, so it overrides dayRow/dayChip's
   // wrap + fixed minWidth with an evenly-split, non-wrapping layout.
-  workDayRow: { flexWrap: 'nowrap' },
-  workDayChip: { flex: 1, minWidth: 0, minHeight: 40, paddingHorizontal: Spacing.xs },
+  workDayRow: { flexWrap: 'nowrap', gap: 2 },
+  workDayChip: { flex: 1, minWidth: 0, minHeight: 36, paddingHorizontal: 2 },
   dayText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   paydayHint: { fontSize: FontSize.xs, marginTop: Spacing.xs, fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -1075,4 +1062,14 @@ const baseStyles = StyleSheet.create({
     borderColor: 'transparent',
   },
   petSwatchActive: { borderWidth: 3 },
+  savePill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  savePillText: {
+    fontSize: FontSize.sm,
+    fontFamily: Fonts.semibold,
+  },
 });
