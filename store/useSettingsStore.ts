@@ -147,7 +147,7 @@ function rowToSettings(row: Row): Settings {
     showHints: readInt(row, 'show_hints', 1) !== 0,
     language: readStr(row, 'language', 'no') as Language,
     holidaysEnabled: readInt(row, 'holidays_enabled', 1) !== 0,
-    darkMode: readStr(row, 'dark_mode', 'system') as DarkMode,
+    darkMode: readStr(row, 'dark_mode', 'off') as DarkMode,
     childProfiles: readJson<string[]>(row, 'child_profiles', []),
     reducedMotion: readBool(row, 'reduced_motion'),
     fontSize: readStr(row, 'font_size', 'default') as FontSizePref,

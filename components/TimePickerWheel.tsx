@@ -257,11 +257,14 @@ export default function TimePickerWheel({ value, onChange, theme, size = 'defaul
               const active = item.idx === activeHourIdx;
               return (
                 <View style={styles.item}>
-                  <Text style={[
-                    styles.itemText,
-                    { color: active ? theme.text : theme.gray },
-                    active && styles.itemTextActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.itemText,
+                      { color: active ? theme.text : theme.gray },
+                      active && styles.itemTextActive,
+                    ]}
+                    includeFontPadding={false}
+                  >
                     {pad(item.value)}
                   </Text>
                 </View>
@@ -293,11 +296,14 @@ export default function TimePickerWheel({ value, onChange, theme, size = 'defaul
               const active = item.idx === activeMinIdx;
               return (
                 <View style={styles.item}>
-                  <Text style={[
-                    styles.itemText,
-                    { color: active ? theme.text : theme.gray },
-                    active && styles.itemTextActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.itemText,
+                      { color: active ? theme.text : theme.gray },
+                      active && styles.itemTextActive,
+                    ]}
+                    includeFontPadding={false}
+                  >
                     {pad(item.value)}
                   </Text>
                 </View>
