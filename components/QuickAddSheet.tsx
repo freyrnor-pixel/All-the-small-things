@@ -18,8 +18,6 @@
  *   - All visible strings via useT(); placeholders like "HH:MM" are format hints, not user copy.
  *   - save() shows a ConfirmationBanner and delays onClose() by 300ms (mirrors task-form.tsx) so there's
  *     always positive proof the task was saved, even if it sorts past the home screen's visible cap.
- *   - Returns null when `visible` is false to prevent lingering animation state from displaying the modal
- *     briefly when navigating between sites.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -113,8 +111,6 @@ export default function QuickAddSheet({ visible, onClose }: Props) {
     // Let the confirmation land before the sheet closes — mirrors task-form.tsx.
     setTimeout(onClose, 300);
   }
-
-  if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>

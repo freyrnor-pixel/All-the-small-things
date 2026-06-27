@@ -18,8 +18,6 @@
  *     purchasedAt (oldest first) from the store — don't re-sort here.
  *   - purchasedAt is a full ISO datetime (doneShopping stamps it via `new Date().toISOString()`),
  *     so this only ever renders its first 10 chars (the YYYY-MM-DD date portion).
- *   - Returns null when `visible` is false to prevent lingering animation state from displaying
- *     the modal briefly when navigating between sites.
  */
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -39,7 +37,7 @@ export default function MonthlyResetSummaryModal({ visible, summary, theme, onCl
   const styles = useScaledStyles(baseStyles);
   const t = useT();
 
-  if (!summary || !visible) return null;
+  if (!summary) return null;
   const isEmpty = summary.inventoryItems.length === 0 && summary.adHocItems.length === 0;
 
   return (

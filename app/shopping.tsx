@@ -133,7 +133,10 @@ export default function ShoppingScreen() {
   const t = useT();
 
   // Fire the 'shopping_opened' automation trigger once per screen visit.
+  // Also ensure sheets are closed on mount to prevent state from persisting across navigations
   useEffect(() => {
+    setShowAddSheet(false);
+    setShowAddSourceChooser(false);
     useAutomationStore.getState().fireTrigger('shopping_opened');
   }, []);
 

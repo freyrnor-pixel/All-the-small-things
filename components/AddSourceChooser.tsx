@@ -28,8 +28,6 @@
  *   - Wrapped in a KeyboardAvoidingView because RN's <Modal> renders outside the
  *     screen's own KeyboardAvoidingView subtree — without this, the keyboard covers
  *     the search input on short screens (same fix as AddItemSheet.tsx).
- *   - Returns null when `visible` is false to prevent lingering animation state from
- *     displaying the modal briefly when navigating back to the shopping site.
  *   - The two steps render in visually distinct containers within one <Modal>: 'choose'
  *     keeps the bottom-sheet look (`sheet`/`handle`, `animationType="slide"`); 'inventory'
  *     is a centered card (`centerWrap`/`pickerCard`, `animationType="fade"`, no `handle`,
@@ -112,8 +110,6 @@ export default function AddSourceChooser({ visible, theme, catalogItems, onClose
     onOpenAddSheet();
     onClose();
   }
-
-  if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType={step === 'choose' ? 'slide' : 'fade'} onRequestClose={onClose}>
