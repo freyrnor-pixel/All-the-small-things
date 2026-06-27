@@ -78,13 +78,13 @@ export function SaveButton({
       style={[
         styles.button,
         animatedStyle,
-        { backgroundColor: theme?.orange ?? '#FF6B35' },
+        { backgroundColor: theme?.orange ?? '#3A78E4' },
       ]}
       onPress={onPress}
       disabled={!visible}
       hitSlop={6}
     >
-      <Text style={styles.text}>{label}</Text>
+      <Text style={[styles.text, { color: theme?.white ?? '#FFFFFF' }]}>{label}</Text>
     </AnimatedPressable>
   );
 }
@@ -100,6 +100,5 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#FFFFFF',
   },
 });

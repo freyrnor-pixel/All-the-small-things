@@ -53,6 +53,7 @@ export interface AppColors {
   offWhite: string;
   gray: string;
   grayLight: string;
+  black: string;
   text: string;
   textLight: string;
   danger: string;
@@ -160,6 +161,7 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
       offWhite: '#0A0A12',
       gray: '#7A7A98',
       grayLight: '#161628',
+      black: '#000000',
       text: '#EEEEF8',
       textLight: '#9A9AB8',
       danger: '#F87171',
@@ -186,6 +188,7 @@ function buildCustomTheme(primary: string, secondary: string, isDark: boolean): 
     offWhite: lighten(primary, 0.85),
     gray: '#8A8A9A',
     grayLight: lighten(primary, 0.88),
+    black: '#000000',
     text: darken(primary, 0.6),
     textLight: darken(primary, 0.3),
     danger: '#E05050',
@@ -215,6 +218,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#E8F2FE',
     gray: '#94A3B8',
     grayLight: '#DCEEFC',
+    black: '#000000',
     text: '#142545',
     textLight: '#5C7299',
     danger: '#EF4444',
@@ -239,6 +243,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#E8F1FB',
     gray: '#6B8090',
     grayLight: '#D8E8F5',
+    black: '#000000',
     text: '#0C1A28',
     textLight: '#4A6070',
     danger: '#F43F5E',
@@ -263,6 +268,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#F0EAFF',
     gray: '#7C6A9E',
     grayLight: '#EAE5F8',
+    black: '#000000',
     text: '#200E40',
     textLight: '#6B5A8A',
     danger: '#E11D48',
@@ -287,6 +293,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#E8F5EC',
     gray: '#7A9E84',
     grayLight: '#D8EEE0',
+    black: '#000000',
     text: '#0D3018',
     textLight: '#4A7A58',
     danger: '#DC2626',
@@ -311,6 +318,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#FCE7F3',
     gray: '#C2839F',
     grayLight: '#F8DCE8',
+    black: '#000000',
     text: '#4A0E2E',
     textLight: '#9D5B7D',
     danger: '#DC2626',
@@ -335,6 +343,7 @@ export const THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#F0F0F8',
     gray: '#8A8A9A',
     grayLight: '#E8E8F0',
+    black: '#000000',
     text: '#1A1A2E',
     textLight: '#6A6A80',
     danger: '#E05050',
@@ -375,6 +384,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#060914',
     gray: '#57789A',
     grayLight: '#131E30',
+    black: '#000000',
     text: '#DDE9FB',
     textLight: '#7A9FC6',
     danger: '#F87171',
@@ -399,6 +409,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#080D14',
     gray: '#4A7590',
     grayLight: '#0F1E30',
+    black: '#000000',
     text: '#D0E8F8',
     textLight: '#6AB5D8',
     danger: '#FB7185',
@@ -423,6 +434,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#0E0812',
     gray: '#8A6BA8',
     grayLight: '#1E1728',
+    black: '#000000',
     text: '#F3E8FF',
     textLight: '#C4A0E8',
     danger: '#F472B6',
@@ -446,6 +458,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#080D0A',
     gray: '#5A8064',
     grayLight: '#10201A',
+    black: '#000000',
     text: '#D0F0D8',
     textLight: '#6AB87A',
     danger: '#F87171',
@@ -470,6 +483,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#140809',
     gray: '#A88898',
     grayLight: '#1F1018',
+    black: '#000000',
     text: '#FCE7F3',
     textLight: '#E0A0C0',
     danger: '#FB7185',
@@ -494,6 +508,7 @@ export const DARK_THEMES: Record<ThemeName, AppColors> = {
     offWhite: '#0A0A12',
     gray: '#7A7A98',
     grayLight: '#161628',
+    black: '#000000',
     text: '#EEEEF8',
     textLight: '#9A9AB8',
     danger: '#F87171',
@@ -569,6 +584,15 @@ export const FeatureColors = {
   shared:  '#8260D2', // violet        — connection
   focus:   '#E83A17', // red-orange    — energy / urgency (was a stray inline hex in BubbleMenu)
   capture: '#D6399C', // magenta-pink  — quick jot-it-down spark (AP-02), distinct from every hue above
+} as const;
+
+/** Meal type colors for the meals screen. */
+export const MealColors = {
+  breakfast: '#F6C344', // golden yellow
+  lunch: '#6BAA75',     // leaf green
+  dinner: '#F4A261',    // warm orange
+  snack: '#7BC8A4',     // mint green
+  kveldsmat: '#9B8EC4', // soft purple
 } as const;
 
 export const Spacing = {

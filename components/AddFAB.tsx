@@ -58,7 +58,7 @@ export default function AddFAB({ onPress, size = 'lg', bottom, style }: Props) {
         style,
       ]}
     >
-      <Text style={[styles.plus, { fontSize: PLUS_SIZE[size] }]}>+</Text>
+      <Text style={[styles.plus, { fontSize: PLUS_SIZE[size], color: theme.white }]}>+</Text>
     </Pressable>
   );
 }
@@ -75,7 +75,6 @@ const styles = StyleSheet.create({
     right: Spacing.xl,
   },
   plus: {
-    color: '#fff',
     fontFamily: Fonts.bold,
   },
 });
