@@ -17,7 +17,6 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
-<<<<<<< HEAD
  *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
