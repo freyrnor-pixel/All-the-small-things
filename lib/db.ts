@@ -373,6 +373,8 @@ export function initDb() {
     "ALTER TABLE shopping_items ADD COLUMN order_index INTEGER DEFAULT 0",
     "CREATE INDEX IF NOT EXISTS idx_shopping_items_list ON shopping_items(list_id)",
     "ALTER TABLE shopping_trips ADD COLUMN list_id TEXT DEFAULT NULL",
+    // Padlock-gated Containers — Week list edit lock state (see store/useShoppingListStore.ts)
+    "ALTER TABLE shopping_lists ADD COLUMN locked INTEGER DEFAULT 0",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

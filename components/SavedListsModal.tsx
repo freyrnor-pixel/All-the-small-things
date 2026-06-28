@@ -1,7 +1,7 @@
 /**
  * SavedListsModal.tsx — saved/template shopping lists popup.
  *
- * Opened from ListSwitcherHeader's bookmark icon (Ukeliste tab). Lists every
+ * Opened from WeekListCard's bookmark icon (Ukeliste tab). Lists every
  * isTemplate=true shopping_lists row; tapping one instantiates it as a fresh
  * live list for the current week (useShoppingListStore.instantiateTemplate).
  * A bottom row lets the user save the list currently being viewed as a new

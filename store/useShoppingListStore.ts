@@ -9,7 +9,7 @@
  *
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/id, lib/date, lib/i18n, store/useSettingsStore
- *   Used by → app/shopping.tsx, components/ListSwitcherHeader.tsx, components/ListSettingsSheet.tsx, components/SavedListsModal.tsx
+ *   Used by → app/shopping.tsx, components/WeekListCard.tsx, components/ListSettingsSheet.tsx, components/SavedListsModal.tsx
  *   Data    → defines a Zustand store; owns SQLite table shopping_lists; also writes
  *             shopping_items rows directly (list_id backfill + recurrence/template item copies)
  *
@@ -30,6 +30,11 @@
  *   - Calling code must refresh useShoppingStore's `items` (re-run its load()) after
  *     advanceRecurringLists()/instantiateTemplate(), since those write shopping_items
  *     rows directly via this store rather than through useShoppingStore.
+ *   - `locked` is the padlock state for this list's Container (components/Container.tsx)
+ *     in app/shopping.tsx — gates add/remove/edit only, never the checkmark. Every
+ *     constructor of a ShoppingList (add/advanceRecurringLists/saveAsTemplate/
+ *     instantiateTemplate/backfillOrphanedItems) defaults it to false (unlocked) so a
+ *     freshly created list is immediately editable.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -61,6 +66,8 @@ export type ShoppingList = {
   isCustomName: boolean;
   /** Saved-for-later list, accessed via the "saved lists" popup — never the active list. */
   isTemplate: boolean;
+  /** Padlock state for this list's Container — locked gates add/remove/edit (not the checkmark). */
+  locked: boolean;
   sortOrder: number;
   createdAt: string;
 };
@@ -84,6 +91,7 @@ type ShoppingListStore = {
   remove: (id: string) => void;
   rename: (id: string, name: string) => void;
   setRecurring: (id: string, isRecurring: boolean, intervalWeeks?: number) => void;
+  toggleLocked: (id: string) => void;
   /** The active (non-template) list whose [startDate, endDate] contains `today`. */
   currentList: (today: string) => ShoppingList | undefined;
   /** Rolls every overdue recurring list forward to the period containing `today`. */
@@ -103,6 +111,7 @@ function rowToList(row: Row): ShoppingList {
     recurrenceIntervalWeeks: readInt(row, 'recurrence_interval_weeks', 1),
     isCustomName: readBool(row, 'is_custom_name'),
     isTemplate: readBool(row, 'is_template'),
+    locked: readBool(row, 'locked'),
     sortOrder: readInt(row, 'sort_order'),
     createdAt: readStr(row, 'created_at'),
   };
@@ -117,6 +126,7 @@ const LIST_COLUMNS: FieldMap<ShoppingList> = {
   recurrenceIntervalWeeks: { col: 'recurrence_interval_weeks' },
   isCustomName: { col: 'is_custom_name', to: (v) => (v ? 1 : 0) },
   isTemplate: { col: 'is_template', to: (v) => (v ? 1 : 0) },
+  locked: { col: 'locked', to: (v) => (v ? 1 : 0) },
   sortOrder: { col: 'sort_order' },
   createdAt: { col: 'created_at' },
 };
@@ -177,6 +187,7 @@ function backfillOrphanedItems(lists: ShoppingList[]): ShoppingList[] {
     recurrenceIntervalWeeks: 1,
     isCustomName: false,
     isTemplate: false,
+    locked: false,
     sortOrder: lists.length,
     createdAt: new Date().toISOString(),
   };
@@ -204,6 +215,7 @@ export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
       recurrenceIntervalWeeks: input.recurrenceIntervalWeeks ?? 1,
       isCustomName: input.isCustomName ?? !!input.name,
       isTemplate: input.isTemplate ?? false,
+      locked: false,
       sortOrder: input.sortOrder ?? get().lists.length,
       createdAt: new Date().toISOString(),
     };
@@ -236,6 +248,12 @@ export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
       isRecurring,
       recurrenceIntervalWeeks: intervalWeeks ?? list.recurrenceIntervalWeeks,
     });
+  },
+
+  toggleLocked(id) {
+    const list = get().lists.find((l) => l.id === id);
+    if (!list) return;
+    get().update(id, { locked: !list.locked });
   },
 
   currentList(today) {
@@ -272,6 +290,7 @@ export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
         recurrenceIntervalWeeks: old.recurrenceIntervalWeeks,
         isCustomName: old.isCustomName,
         isTemplate: false,
+        locked: false,
         sortOrder: old.sortOrder,
         createdAt: new Date().toISOString(),
       };
@@ -291,6 +310,7 @@ export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
       isTemplate: true,
       isRecurring: false,
       isCustomName: true,
+      locked: false,
       createdAt: new Date().toISOString(),
     };
     insertRow('shopping_lists', rowValues(template, LIST_COLUMNS));
@@ -313,6 +333,7 @@ export const useShoppingListStore = create<ShoppingListStore>((set, get) => ({
       recurrenceIntervalWeeks: 1,
       isCustomName: template.isCustomName,
       isTemplate: false,
+      locked: false,
       sortOrder: get().lists.filter((l) => !l.isTemplate).length,
       createdAt: new Date().toISOString(),
     };

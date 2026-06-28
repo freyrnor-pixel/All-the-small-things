@@ -41,6 +41,10 @@
  *     dead code — no caller in app/shopping.tsx ever passed them.
  *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just move-button + name + remove.
  *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels are passed in pre-formatted/localized.
+ *   - `locked` (from the parent Container's padlock, components/Container.tsx) dims and
+ *     disables remove/move-up/move-down at opacity 0.45 — the checkmark/collect button
+ *     (onToggle/onCollect) and the cart "undo" arrow stay fully interactive regardless,
+ *     since locking only gates add/remove/edit, never the done/undo action.
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -66,9 +70,10 @@ type Props = {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   inStockLabel?: string;
+  locked?: boolean;
 };
 
-export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, onMoveUp, onMoveDown, inStockLabel }: Props) {
+export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, onMoveUp, onMoveDown, inStockLabel, locked }: Props) {
   const styles = useScaledStyles(baseStyles);
   const t = useT();
   const qty = parseInt(item.amount, 10);
@@ -124,11 +129,11 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
       </View>
 
       {(onMoveUp || onMoveDown) && (
-        <View style={styles.moveCol}>
+        <View style={[styles.moveCol, locked && styles.gated]}>
           <Pressable
             style={styles.moveBtn}
             onPress={onMoveUp}
-            disabled={!onMoveUp}
+            disabled={!onMoveUp || locked}
             hitSlop={4}
             accessibilityLabel={t.moveItemUp}
           >
@@ -137,7 +142,7 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
           <Pressable
             style={styles.moveBtn}
             onPress={onMoveDown}
-            disabled={!onMoveDown}
+            disabled={!onMoveDown || locked}
             hitSlop={4}
             accessibilityLabel={t.moveItemDown}
           >
@@ -152,7 +157,7 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
         </Pressable>
       )}
 
-      <Pressable style={styles.remove} onPress={onRemove} hitSlop={8}>
+      <Pressable style={[styles.remove, locked && styles.gated]} onPress={onRemove} disabled={locked} hitSlop={8}>
         {item.fromCatalog && variant !== 'purchased' ? (
           <InventoryIcon size={18} color={theme.danger} />
         ) : (
@@ -171,6 +176,7 @@ const baseStyles = StyleSheet.create({
     gap: Spacing.sm,
   },
   rowChecked: { opacity: CHECKED_OPACITY },
+  gated: { opacity: 0.45 },
   check: {
     width: 26,
     height: 26,

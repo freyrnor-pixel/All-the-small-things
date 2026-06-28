@@ -1,12 +1,10 @@
 /**
  * ScreenHeader.tsx — the standard screen top bar (back link + title + right slot).
  *
- * Replaces the back/title/spacer header markup that was copy-pasted across every
- * non-modal screen. Reproduces the exact previous tree and styling: a "back"
- * link (theme.orange), a centred-by-space-between title (theme.text), and a right
- * slot that defaults to a 60px spacer so the title stays optically centred.
- * Pass `right` for header actions, and `bordered` for the white/grayLight bottom
- * border that the shopping/settings/scan/budget/share screens use.
+ * Renders a left-aligned group (a "back" link in theme.orange, immediately followed
+ * by the title in theme.text) against a right slot for header actions. Pass `right`
+ * for header actions, and `bordered` for the white/grayLight bottom border that the
+ * shopping/settings/scan/budget/share screens use.
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/useAppTheme
@@ -27,7 +25,7 @@ import { useAppTheme } from '@/lib/useAppTheme';
 type Props = {
   title: string;
   onBack: () => void;
-  /** Right-hand element (header actions). Defaults to a spacer that balances the back link. */
+  /** Right-hand element (header actions). */
   right?: React.ReactNode;
   /** Override the back link label (defaults to the localised "back"). */
   backLabel?: string;
@@ -47,11 +45,13 @@ export default function ScreenHeader({ title, onBack, right, backLabel, bordered
         style,
       ]}
     >
-      <Pressable onPress={onBack}>
-        <Text style={[styles.back, { color: theme.orange }]}>{backLabel ?? t.back}</Text>
-      </Pressable>
-      <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-      {right ?? <View style={styles.spacer} />}
+      <View style={styles.leftGroup}>
+        <Pressable onPress={onBack}>
+          <Text style={[styles.back, { color: theme.orange }]}>{backLabel ?? t.back}</Text>
+        </Pressable>
+        <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+      </View>
+      {right}
     </View>
   );
 }
@@ -63,7 +63,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: Spacing.md,
   },
+  leftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   back: { fontSize: FontSize.md, fontWeight: '600' },
   title: { fontSize: FontSize.xl, fontWeight: '700' },
-  spacer: { width: 60 },
 });
