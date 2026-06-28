@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → —
- *   Used by → app/budget.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/plans.tsx, app/scan.tsx, app/share-modal.tsx, app/shopping.tsx, app/task-form.tsx, components/ListSwitcherHeader.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/db.ts, lib/holidays.ts, store/useReceiptStore.ts, store/useShoppingListStore.ts
+ *   Used by → app/budget.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/plans.tsx, app/scan.tsx, app/share-modal.tsx, app/shopping.tsx, app/task-form.tsx, components/WeekListCard.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/db.ts, lib/holidays.ts, store/useReceiptStore.ts, store/useShoppingListStore.ts
  *   Data    → none (pure functions)
  *
  * Edit notes:

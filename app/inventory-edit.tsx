@@ -1,16 +1,18 @@
 /**
- * inventory-edit.tsx — the ONLY place Katalog (inventory) items get added, removed, or
- * have their target quantity/price/name/temporary flag changed.
+ * inventory-edit.tsx — standalone Katalog (inventory) add/edit/remove screen.
  *
- * The Katalog tab in app/shopping.tsx is read-mostly: rows there only flag
- * pendingRestock via their leading checkbox and aren't tappable. This screen is the
- * "Edit inventory" entry point that opens from that tab's header — every catalog row
- * here opens UpdateSheet on tap, and the FAB opens AddItemSheet (origin='catalog', so
- * it never shows the weekly-only "also add to catalog" toggle).
+ * ORPHANED as of the padlock-Container redesign: app/shopping.tsx's Monthly list
+ * Container now folds this same add/edit/remove logic in-place (unlock the Container —
+ * rows become tappable into UpdateSheet, plus an inline "+" — instead of navigating
+ * here). The header pencil icon that used to open this screen was removed from
+ * shopping.tsx. This file is intentionally NOT deleted yet — flagged for a deliberate
+ * follow-up removal (plus its `<Stack.Screen name="inventory-edit" />` entry in
+ * app/_layout.tsx) once the Monthly Container fold-in is confirmed to fully cover its
+ * functionality. Reachable only via a direct `/inventory-edit` URL until then.
  *
  * Connections:
  *   Imports → components/AddFAB, components/AddItemSheet, components/EmptyState, components/MonthlyTableRow, components/ScreenBackground, components/ScreenHeader, components/UpdateSheet, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useShoppingStore
- *   Used by → Expo Router route "/inventory-edit"; app/shopping.tsx (Katalog tab header button)
+ *   Used by → Expo Router route "/inventory-edit" (no remaining in-app entry point)
  *   Data    → useShoppingStore (shopping_items, status === 'catalog' rows only)
  *
  * Edit notes:

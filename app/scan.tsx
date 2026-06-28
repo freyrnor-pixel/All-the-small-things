@@ -49,7 +49,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, useLocalSearchParams } from 'expo-router';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSharedStore } from '@/store/useSharedStore';
 import { useCatalogStore } from '@/store/useCatalogStore';
@@ -81,6 +81,7 @@ type ScreenMode = 'idle' | 'scanning' | 'result' | 'manual';
 export default function ScanScreen() {
   const router = useRouter();
   const pathname = usePathname();
+  const { autoCapture } = useLocalSearchParams<{ autoCapture?: 'camera' | 'library' }>();
   const addShopping = useShoppingStore((s) => s.add);
   const updateShoppingItem = useShoppingStore((s) => s.update);
   const shoppingItems = useShoppingStore((s) => s.items);
@@ -110,6 +111,17 @@ export default function ScanScreen() {
   const manualInputRef = useRef<TextInput>(null);
   const customStoreRef = useRef<TextInput>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const autoCaptureFired = useRef(false);
+
+  // Shopping's post-trip receipt pop-up routes here with autoCapture to skip the idle
+  // screen's manual tap and go straight into the camera/library picker — guarded so a
+  // remount (e.g. back-navigation) never re-fires the same auto-capture.
+  useEffect(() => {
+    if (autoCaptureFired.current || !autoCapture) return;
+    autoCaptureFired.current = true;
+    if (autoCapture === 'camera') takePhoto();
+    else if (autoCapture === 'library') pickImage();
+  }, [autoCapture]);
 
   // Setup pulsing animation for scanning state
   useEffect(() => {
