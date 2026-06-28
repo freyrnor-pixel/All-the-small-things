@@ -44,6 +44,9 @@
  *   - No dedicated empty state: the inline "+" is always visible as a stable anchor, same
  *     simplification app/shopping.tsx made for an empty-but-unlocked Week list. t.noPlansToday
  *     stays defined for app/index.tsx's widget.
+ *   - PlanTaskCard's Steps section (steps/onAddStep/onToggleStep/onRemoveStep/onReorderStep) is
+ *     wired straight to useTaskStore's step actions, not through `edits`/the draft system —
+ *     steps persist immediately on every tap, with no save pill involved.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -115,6 +118,10 @@ export default function PlansScreen() {
   const addTask = useTaskStore((s) => s.add);
   const updateTask = useTaskStore((s) => s.update);
   const removeTask = useTaskStore((s) => s.remove);
+  const addStep = useTaskStore((s) => s.addStep);
+  const removeStep = useTaskStore((s) => s.removeStep);
+  const toggleStep = useTaskStore((s) => s.toggleStep);
+  const reorderStep = useTaskStore((s) => s.reorderStep);
   const energyLevels = useEnergyStore((s) => s.levels);
   const todayEnergyLevel = energyLevels[today] ?? null;
 
@@ -321,6 +328,11 @@ export default function PlansScreen() {
                 onToggleDone={() => toggleTask(task.id)}
                 onSave={() => handleSave(task.id)}
                 onDelete={() => handleDelete(task.id)}
+                steps={task.steps}
+                onAddStep={(title) => addStep(task.id, title)}
+                onToggleStep={toggleStep}
+                onRemoveStep={removeStep}
+                onReorderStep={reorderStep}
               />
             </React.Fragment>
           ))}
@@ -339,6 +351,11 @@ export default function PlansScreen() {
                 onToggleDone={() => toggleTask(task.id)}
                 onSave={() => handleSave(task.id)}
                 onDelete={() => handleDelete(task.id)}
+                steps={task.steps}
+                onAddStep={(title) => addStep(task.id, title)}
+                onToggleStep={toggleStep}
+                onRemoveStep={removeStep}
+                onReorderStep={reorderStep}
               />
             </React.Fragment>
           ))}
