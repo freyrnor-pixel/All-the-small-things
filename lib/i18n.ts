@@ -116,6 +116,8 @@ const en = {
   priorityMedium: 'Medium',
   priorityLow: 'Low',
   repeatWeekly: 'Repeat weekly',
+  stepsLabel: 'Steps',
+  stepPlaceholder: 'Add a step',
   deleteTask: 'Delete plan',
   // Task form — save confirmation (W-B). `day` is a localized reference (Today / Tomorrow / Monday…).
   taskSavedSimple: 'Saved ✓',
@@ -961,6 +963,8 @@ const no: typeof en = {
   priorityMedium: 'Middels',
   priorityLow: 'Lav',
   repeatWeekly: 'Gjentas ukentlig',
+  stepsLabel: 'Steg',
+  stepPlaceholder: 'Legg til et steg',
   deleteTask: 'Slett plan',
   // Task form — lagringsbekreftelse (W-B). `day` er en lokalisert referanse (I dag / Imorgen / Mandag…).
   taskSavedSimple: 'Lagret ✓',
