@@ -8,7 +8,7 @@
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/id, lib/date, lib/time, lib/notifications, lib/taskNotifications, store/useAutomationStore, store/useSettingsStore
  *   Used by → app/_layout.tsx, app/index.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/task-form.tsx, components/DayTimeline.tsx (Task type only), components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/TaskItem.tsx, store/useInboxStore.ts (add() only, for promoteToTask)
- *   Data    → defines a Zustand store; owns SQLite table tasks; schedules per-task notifications; fires the 'task_completed' automation trigger
+ *   Data    → defines a Zustand store; owns SQLite tables tasks and task_steps; schedules per-task notifications; fires the 'task_completed' automation trigger
  *
  * Edit notes:
  *   - Per-task notification scheduling lives here (syncTaskNotification); add/update auto-reschedule. Call syncAllTaskNotifications() after a settings/language change since notification copy is baked in at schedule time.
@@ -20,6 +20,10 @@
  *   - toggle() auto-saves immediately (writes through update()) and fires the 'task_completed'
  *     automation trigger on the rising edge (not-done → done) — there is no separate save/confirm step.
  *   - completeDirect() writes done=true straight to SQLite — used by the notification "Done" action.
+ *   - task.steps persist straight to SQLite on every change (addStep/removeStep/toggleStep/reorderStep) —
+ *     no draft/save gate, unlike the task fields above which route through useTaskDraftStore. load()
+ *     loads all task_steps in one query and groups them onto their owning task in JS, same
+ *     one-query-then-group approach as useMealStore.ts's dishes/ingredients.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
@@ -47,6 +51,8 @@ export type Recurring = 'none' | 'weekly';
 export type Importance = 'regular' | 'essential';
 export type Priority = 'high' | 'medium' | 'low';
 
+export type TaskStep = { id: string; taskId: string; title: string; done: boolean; orderIndex: number };
+
 export type Task = {
   id: string;
   title: string;
@@ -59,12 +65,13 @@ export type Task = {
   recurringDays: number[]; // 0=Mon … 6=Sun
   importance: Importance;
   priority: Priority;
+  steps: TaskStep[];
 };
 
 type TaskStore = {
   tasks: Task[];
   load: () => void;
-  add: (t: Omit<Task, 'id'>) => Task;
+  add: (t: Omit<Task, 'id' | 'steps'>) => Task;
   update: (id: string, patch: Partial<Omit<Task, 'id'>>) => void;
   toggle: (id: string) => void;
   /** Mark a task done immediately — same write path as toggle(), kept distinct for callers with no toggle state. */
@@ -78,6 +85,11 @@ type TaskStore = {
   focusTask: (date: string, workModeActive: boolean) => Task | null;
   /** Re-schedule every task's reminder (after a settings/language change). */
   syncAllTaskNotifications: () => void;
+  /** Steps persist straight to SQLite on every change — no draft/save gate. */
+  addStep: (taskId: string, title: string) => TaskStep;
+  removeStep: (id: string) => void;
+  toggleStep: (id: string) => void;
+  reorderStep: (id: string, direction: 'up' | 'down') => void;
 };
 
 /** Schedule (or cancel) a single task's reminder using the current settings. */
@@ -116,16 +128,45 @@ const TASK_COLUMNS: FieldMap<Task> = {
   priority: { col: 'priority', to: (v) => v ?? 'medium' },
 };
 
+function rowToTaskStep(row: Row): TaskStep {
+  return {
+    id: readStr(row, 'id'),
+    taskId: readStr(row, 'task_id'),
+    title: readStr(row, 'title'),
+    done: readBool(row, 'done'),
+    orderIndex: readInt(row, 'order_index'),
+  };
+}
+
+/** Field → column mapping for task steps. */
+const TASK_STEP_COLUMNS: FieldMap<TaskStep> = {
+  id: { col: 'id' },
+  taskId: { col: 'task_id' },
+  title: { col: 'title' },
+  done: { col: 'done', to: (v) => (v ? 1 : 0) },
+  orderIndex: { col: 'order_index' },
+};
+
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
 
   load() {
-    set({ tasks: loadAll('tasks', rowToTask, { orderBy: 'task_date, task_time' }) });
+    const tasks = loadAll('tasks', rowToTask, { orderBy: 'task_date, task_time' });
+
+    // Group steps onto their owning task in a single pass (one query, not N+1).
+    const byTask = new Map<string, TaskStep[]>();
+    for (const step of loadAll('task_steps', rowToTaskStep, { orderBy: 'order_index' })) {
+      const list = byTask.get(step.taskId);
+      if (list) list.push(step);
+      else byTask.set(step.taskId, [step]);
+    }
+
+    set({ tasks: tasks.map((t) => ({ ...t, steps: byTask.get(t.id) ?? [] })) });
   },
 
   add(t) {
     const id = generateId();
-    const task: Task = { ...t, id, done: false };
+    const task: Task = { ...t, id, done: false, steps: [] };
     insertRow('tasks', rowValues(task, TASK_COLUMNS));
     set((s) => ({ tasks: [...s.tasks, task] }));
     syncTaskNotification(task);
@@ -162,6 +203,65 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     db.runSync('DELETE FROM tasks WHERE id = ?', [id]);
     void cancelTaskNotification(id);
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+  },
+
+  addStep(taskId, title) {
+    const existingSteps = get().tasks.find((t) => t.id === taskId)?.steps ?? [];
+    const orderIndex = existingSteps.length === 0 ? 0 : Math.max(...existingSteps.map((s) => s.orderIndex)) + 1;
+    const step: TaskStep = { id: generateId(), taskId, title, done: false, orderIndex };
+    insertRow('task_steps', rowValues(step, TASK_STEP_COLUMNS));
+    set((s) => ({
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, steps: [...t.steps, step] } : t)),
+    }));
+    return step;
+  },
+
+  removeStep(id) {
+    db.runSync('DELETE FROM task_steps WHERE id = ?', [id]);
+    set((s) => ({
+      tasks: s.tasks.map((t) => ({ ...t, steps: t.steps.filter((step) => step.id !== id) })),
+    }));
+  },
+
+  toggleStep(id) {
+    const owner = get().tasks.find((t) => t.steps.some((step) => step.id === id));
+    const step = owner?.steps.find((s) => s.id === id);
+    if (!owner || !step) return;
+    const done = !step.done;
+    updateRow('task_steps', { done: done ? 1 : 0 }, 'id = ?', [id]);
+    set((s) => ({
+      tasks: s.tasks.map((t) =>
+        t.id === owner.id ? { ...t, steps: t.steps.map((st) => (st.id === id ? { ...st, done } : st)) } : t
+      ),
+    }));
+  },
+
+  reorderStep(id, direction) {
+    const owner = get().tasks.find((t) => t.steps.some((step) => step.id === id));
+    if (!owner) return;
+    const sorted = [...owner.steps].sort((a, b) => a.orderIndex - b.orderIndex);
+    const idx = sorted.findIndex((s) => s.id === id);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx];
+    const b = sorted[swapIdx];
+    updateRow('task_steps', { order_index: b.orderIndex }, 'id = ?', [a.id]);
+    updateRow('task_steps', { order_index: a.orderIndex }, 'id = ?', [b.id]);
+    set((s) => ({
+      tasks: s.tasks.map((t) =>
+        t.id === owner.id
+          ? {
+              ...t,
+              steps: t.steps.map((step) => {
+                if (step.id === a.id) return { ...step, orderIndex: b.orderIndex };
+                if (step.id === b.id) return { ...step, orderIndex: a.orderIndex };
+                return step;
+              }),
+            }
+          : t
+      ),
+    }));
   },
 
   clearAll() {

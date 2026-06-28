@@ -33,7 +33,7 @@ type InboxStore = {
   add: (text: string) => InboxItem;
   update: (id: string, text: string) => void;
   remove: (id: string) => void;
-  promoteToTask: (id: string, taskFields: Omit<Task, 'id'>) => void;
+  promoteToTask: (id: string, taskFields: Omit<Task, 'id' | 'steps'>) => void;
 };
 
 function rowToItem(row: Row): InboxItem {
