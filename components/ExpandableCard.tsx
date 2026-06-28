@@ -7,7 +7,7 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme
- *   Used by → app/meals.tsx
+ *   Used by → app/meals.tsx (uncontrolled), components/PlanTaskCard.tsx (controlled)
  *   Data    → driven by props; reads reducedMotion + scaled fontSize via useAccessibility()/useScaledStyles()
  *
  * Edit notes:
@@ -17,8 +17,15 @@
  *     the user's chosen bubbleMaterial setting (pass it explicitly to override). The outer view
  *     carries border/shadow, the inner overflow:hidden mask carries the fill + sheen (mirrors
  *     BubbleMenu's two-layer pattern).
+ *   - Optional controlled mode: pass both `open` and `onToggle` to let the parent own the
+ *     open/closed state (needed when a screen must aggregate state across many instances, e.g.
+ *     Plans' per-task dirty tracking). Omit both and it behaves exactly as before (internal
+ *     useState) — meals.tsx's uncontrolled usage is unaffected.
+ *   - `rightAction` is wrapped in its own Pressable that calls `e.stopPropagation()` so taps on
+ *     a checkbox/save-pill passed as rightAction don't also toggle the header (same fix as
+ *     DayTimeline.tsx's nested dot-button-inside-row Pressable).
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -45,6 +52,8 @@ type Props = {
   children: React.ReactNode;
   rightAction?: React.ReactNode;
   defaultOpen?: boolean;
+  open?: boolean;
+  onToggle?: () => void;
   accentColor?: string;
   material?: MaterialName;
 };
@@ -56,11 +65,16 @@ export default function ExpandableCard({
   children,
   rightAction,
   defaultOpen = false,
+  open: controlledOpen,
+  onToggle,
   accentColor,
   material,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
-  const rotate = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
+  const isControlled = controlledOpen !== undefined;
+  const [openState, setOpenState] = useState(defaultOpen);
+  const open = isControlled ? controlledOpen : openState;
+  const rotate = useRef(new Animated.Value(open ? 1 : 0)).current;
+  const mountedRef = useRef(false);
   const theme = useAppTheme();
   const settingsMaterial = useSettingsStore((s) => s.bubbleMaterial);
   const finish = material ?? settingsMaterial;
@@ -68,18 +82,37 @@ export default function ExpandableCard({
   const styles = useScaledStyles(baseStyles);
   const mat = getMaterialStyle(accentColor ?? theme.orange, finish);
 
-  function toggle() {
+  function animateTo(next: boolean) {
     if (reducedMotion) {
-      rotate.setValue(open ? 0 : 1);
+      rotate.setValue(next ? 1 : 0);
     } else {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       Animated.timing(rotate, {
-        toValue: open ? 0 : 1,
+        toValue: next ? 1 : 0,
         duration: 200,
         useNativeDriver: true,
       }).start();
     }
-    setOpen((v) => !v);
+  }
+
+  // In controlled mode, the parent owns `open` — react to it changing externally
+  // (e.g. another Container's "close all" action) instead of animating on mount.
+  useEffect(() => {
+    if (!isControlled) return;
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    animateTo(open);
+  }, [open, isControlled]);
+
+  function toggle() {
+    if (isControlled) {
+      onToggle?.();
+      return;
+    }
+    animateTo(!openState);
+    setOpenState((v) => !v);
   }
 
   const arrow = rotate.interpolate({
@@ -118,7 +151,9 @@ export default function ExpandableCard({
                   <Text style={[styles.badgeText, { color: theme.brown }]}>{badge}</Text>
                 </View>
               ) : null}
-              {rightAction}
+              {rightAction ? (
+                <Pressable onPress={(e) => e.stopPropagation()}>{rightAction}</Pressable>
+              ) : null}
               <Animated.View style={{ transform: [{ rotate: arrow }] }}>
                 <Ionicons name="chevron-down" size={16} color={theme.textLight} />
               </Animated.View>

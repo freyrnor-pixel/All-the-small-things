@@ -10,7 +10,7 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/useAppTheme, store/useTaskStore (Task type only)
- *   Used by → app/index.tsx (3-item preview), app/plans.tsx (full day)
+ *   Used by → app/index.tsx (3-item preview)
  *   Data    → pure presentational component; reads no stores directly; scaled fontSize via useScaledStyles()
  *
  * Edit notes:

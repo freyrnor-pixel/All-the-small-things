@@ -17,7 +17,8 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+<<<<<<< HEAD
+ *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
  *
@@ -80,6 +81,7 @@ import { describeTask, taskAccentColor } from '@/lib/taskVisual';
 import { useAppTheme, useIsDark } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
+import { useTaskDraftStore } from '@/store/useTaskDraftStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useShoppingListStore } from '@/store/useShoppingListStore';
 import { useMealStore } from '@/store/useMealStore';
@@ -156,6 +158,7 @@ export default function RootLayout() {
   const setupComplete = useSettingsStore((s) => s.setupComplete);
   const loaded = useSettingsStore((s) => s.loaded);
   const loadTasks = useTaskStore((s) => s.load);
+  const loadTaskDrafts = useTaskDraftStore((s) => s.load);
   const loadShopping = useShoppingStore((s) => s.load);
   const loadShoppingLists = useShoppingListStore((s) => s.load);
   const loadMeals = useMealStore((s) => s.load);
@@ -180,6 +183,7 @@ export default function RootLayout() {
     try { pruneOldData(); } catch { /* keep going if cleanup fails */ }
     loadSettings();
     loadTasks();
+    loadTaskDrafts();
     loadShopping();
     loadShoppingLists();
     loadMeals();
