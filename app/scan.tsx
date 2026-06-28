@@ -397,7 +397,6 @@ export default function ScanScreen() {
         <ScreenBackground />
         <ScreenHeader
           title={t.scanReceipt}
-          onBack={() => router.back()}
           bordered
           right={
             <Pressable onPress={() => goToSite(router, pathname, '/budget')} hitSlop={6}>
@@ -408,11 +407,6 @@ export default function ScanScreen() {
 
         <SiteSwipeView>
           <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-            <Pressable style={styles.typeInsteadLink} onPress={() => setMode('manual')} hitSlop={6}>
-              <Ionicons name="pencil-outline" size={16} color={theme.orange} />
-              <Text style={[styles.typeInsteadText, { color: theme.orange }]}>{t.typeItInInstead}</Text>
-            </Pressable>
-
             <View style={[styles.tipBox, { backgroundColor: theme.greenLight }]}>
               <Text style={[styles.tipText, { color: theme.text }]}>{t.scanHintBanner}</Text>
             </View>
@@ -553,11 +547,6 @@ export default function ScanScreen() {
         <ScreenBackground />
         <ScreenHeader
           title={t.foundOnReceipt}
-          onBack={() => {
-            setMode('idle');
-            setImageUri(null);
-            setParsedItems([]);
-          }}
           bordered
         />
 
@@ -653,13 +642,6 @@ export default function ScanScreen() {
         <ScreenBackground />
         <ScreenHeader
           title={t.manualEntryTitle}
-          onBack={() => {
-            setMode('idle');
-            setManualText('');
-            setManualPrice('');
-            setImageUri(null);
-            setParsedItems([]);
-          }}
           bordered
         />
 

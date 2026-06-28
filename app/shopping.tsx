@@ -398,7 +398,6 @@ export default function ShoppingScreen() {
       {/* Header */}
       <ScreenHeader
         title={t.shoppingTitle}
-        onBack={() => router.back()}
         bordered
         right={
           <Pressable
