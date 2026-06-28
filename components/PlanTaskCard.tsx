@@ -10,7 +10,10 @@
  * ported inline with every `setX(...)` replaced by `onFieldChange('field', value)` —
  * field values and dirty-tracking live in the screen's lifted `edits` map, not here,
  * so a screen-level "save all" can act on every open task at once. Same dumb-component-
- * wraps-shared-primitive divide as components/WeekListCard.tsx wrapping Container.
+ * wraps-shared-primitive divide as components/WeekListCard.tsx wrapping Container. Also
+ * renders a Steps checklist (checkbox + reorder + remove + inline add) between the
+ * Recurring field and Delete — unlike the rest of the card, steps persist immediately
+ * (see Edit notes).
  *
  * Connections:
  *   Imports → components/AppModal, components/ExpandableCard, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, store/useTaskStore (types only)
@@ -30,6 +33,11 @@
  *     task-entry points) and these are small, self-contained lookups.
  *   - `fieldsFromTask`/`fieldsToTaskPayload` are the only place the Task <-> form-field shape
  *     conversion happens — app/plans.tsx uses them to seed `edits` and to build the save payload.
+ *   - `steps`/`onAddStep`/`onToggleStep`/`onRemoveStep`/`onReorderStep` are NOT part of the
+ *     `fields`/`dirty` lifted-edit-state system above — they're immediate-persist, like
+ *     app/meals.tsx's ingredient list. The parent (app/plans.tsx) calls the matching
+ *     useTaskStore action directly on every tap; there's no save step for steps. Only
+ *     `newStepTitle` (the transient add-row input) is local state here.
  */
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
@@ -38,7 +46,7 @@ import ExpandableCard from '@/components/ExpandableCard';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import TimePickerWheel from '@/components/TimePickerWheel';
 import { showAppModal } from '@/components/AppModal';
-import { Task, TaskType, Importance, Priority, Recurring } from '@/store/useTaskStore';
+import { Task, TaskType, Importance, Priority, Recurring, TaskStep } from '@/store/useTaskStore';
 import { AppColors, Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
@@ -112,6 +120,11 @@ type Props = {
   onToggleDone: () => void;
   onSave: () => void;
   onDelete: () => void;
+  steps: TaskStep[];
+  onAddStep: (title: string) => void;
+  onToggleStep: (id: string) => void;
+  onRemoveStep: (id: string) => void;
+  onReorderStep: (id: string, direction: 'up' | 'down') => void;
 };
 
 export default function PlanTaskCard({
@@ -125,11 +138,18 @@ export default function PlanTaskCard({
   onToggleDone,
   onSave,
   onDelete,
+  steps,
+  onAddStep,
+  onToggleStep,
+  onRemoveStep,
+  onReorderStep,
 }: Props) {
   const styles = useScaledStyles(baseStyles);
   const t = useT();
   const [calExpanded, setCalExpanded] = useState(false);
+  const [newStepTitle, setNewStepTitle] = useState('');
   const { dayLabels, months } = t;
+  const sortedSteps = [...steps].sort((a, b) => a.orderIndex - b.orderIndex);
 
   const weekDays = useMemo(() => {
     const today = new Date();
@@ -154,6 +174,13 @@ export default function PlanTaskCard({
       { text: t.cancel, style: 'cancel' },
       { text: t.deleteConfirmBtn, style: 'destructive', onPress: onDelete },
     ]);
+  }
+
+  function handleAddStep() {
+    const title = newStepTitle.trim();
+    if (!title) return;
+    onAddStep(title);
+    setNewStepTitle('');
   }
 
   return (
@@ -431,6 +458,76 @@ export default function PlanTaskCard({
           )}
         </View>
 
+        {/* Steps — immediate-persist checklist, mirrors app/meals.tsx's ingredient list */}
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: theme.textLight }]}>{t.stepsLabel}</Text>
+          {sortedSteps.map((step, i) => (
+            <View
+              key={step.id}
+              style={[
+                styles.stepRow,
+                i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.grayLight },
+              ]}
+            >
+              <Pressable
+                style={[
+                  styles.stepCheck,
+                  { borderColor: theme.orange },
+                  step.done && { backgroundColor: theme.orange, borderColor: theme.orange },
+                ]}
+                onPress={() => onToggleStep(step.id)}
+                hitSlop={8}
+              >
+                {step.done && <Ionicons name="checkmark" size={10} color="#FFFFFF" />}
+              </Pressable>
+              <Text
+                style={[
+                  styles.stepText,
+                  { color: theme.text },
+                  step.done && [styles.stepTextDone, { color: theme.textLight }],
+                ]}
+              >
+                {step.title}
+              </Text>
+              <View style={styles.stepActions}>
+                <Pressable
+                  onPress={() => onReorderStep(step.id, 'up')}
+                  disabled={i === 0}
+                  hitSlop={8}
+                  style={i === 0 && { opacity: 0.3 }}
+                >
+                  <Ionicons name="chevron-up" size={16} color={theme.gray} />
+                </Pressable>
+                <Pressable
+                  onPress={() => onReorderStep(step.id, 'down')}
+                  disabled={i === sortedSteps.length - 1}
+                  hitSlop={8}
+                  style={i === sortedSteps.length - 1 && { opacity: 0.3 }}
+                >
+                  <Ionicons name="chevron-down" size={16} color={theme.gray} />
+                </Pressable>
+                <Pressable onPress={() => onRemoveStep(step.id)} hitSlop={8}>
+                  <Text style={{ fontSize: FontSize.lg, color: theme.gray }}>−</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+          <View style={styles.addStepRow}>
+            <TextInput
+              style={[styles.addStepInput, { backgroundColor: theme.white, color: theme.text }]}
+              value={newStepTitle}
+              onChangeText={setNewStepTitle}
+              placeholder={t.stepPlaceholder}
+              placeholderTextColor={theme.gray}
+              returnKeyType="done"
+              onSubmitEditing={handleAddStep}
+            />
+            <Pressable style={[styles.addStepBtn, { backgroundColor: theme.orange }]} onPress={handleAddStep}>
+              <Text style={{ color: theme.white, fontSize: FontSize.lg, fontFamily: Fonts.bold }}>+</Text>
+            </Pressable>
+          </View>
+        </View>
+
         <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={confirmDelete}>
           <Text style={[styles.deleteBtnText, { color: theme.danger }]}>{t.deleteTask}</Text>
         </Pressable>
@@ -497,4 +594,19 @@ const baseStyles = StyleSheet.create({
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
   deleteBtnText: { fontWeight: '700', fontSize: FontSize.md },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.xs },
+  stepCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.medium },
+  stepTextDone: { textDecorationLine: 'line-through' },
+  stepActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  addStepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
+  addStepInput: { flex: 1, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
+  addStepBtn: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
 });
