@@ -13,9 +13,8 @@
  *
  * Edit notes:
  *   - Render as a direct child of SafeAreaView, after <ScreenBackground />.
- *   - `onBack` is optional — pass it to show the back link (e.g. meals'
- *     "drill back out of a category"); omit it on screens with no back nav
- *     (Shopping, Health, Scan).
+ *   - `onBack` is optional; if not provided, no back button is rendered.
+ *   - Pass `onBack` to override default back navigation (e.g. meals' "drill back out of a category").
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
