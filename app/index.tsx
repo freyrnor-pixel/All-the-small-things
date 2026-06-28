@@ -13,7 +13,9 @@
  *
  * Edit notes:
  *   - Added ⚙ gear icon (header right) → /settings.
- *   - "Today's Plans" title row is now pressable → /plans (chevron affordance).
+ *   - The Plans section header is a plain title + a right-aligned "See everything"
+ *     link (t.seeEverythingLink) → /plans, matching the Shopping preview section's
+ *     title+link layout — replaces the old pressable-title/chevron + bottom link.
  *   - BubbleMenu mount remains commented out — do not remove.
  *   - "Daily overview" is a plain section header (t.dailyOverview).
  *   - The update-ready banner mirrors the work-mode banner's look (theme.green
@@ -23,14 +25,14 @@
  *     time-anchored (time-box/time) earliest, then essentials. The Plans widget
  *     shows a 3-item preview (planPreviewCount) via DayTimeline; tapping the
  *     "•••" strip toggles plansExpanded to show the full day in place. Tapping
- *     the section title navigates to the full /plans screen (same ranking logic
- *     duplicated there by design — see app/plans.tsx).
+ *     the "See everything" link navigates to the full /plans screen (same ranking
+ *     logic duplicated there by design — see app/plans.tsx).
  *   - Greeting is intentionally low-weight (Fonts.semibold, FontSize.xl); cards use
  *     Layout.cardPadding for a consistent calm rhythm.
  *   - All visible strings go through useT(); today is todayStr() (YYYY-MM-DD).
  *   - Work mode auto-activates only within work hours and not on weekends/holidays (isWeekendOrHoliday); session override disables it.
  *   - The Share button navigates to the /share-modal modal with params { kind: 't' }; the link icon next to it goes to /shared (full sent/received history). DayTimeline rows push /task-form (also a modal).
- *   - Cross-site links (settings gear, plans title, shared link, shopping "see all") go through
+ *   - Cross-site links (settings gear, plans "see everything" link, shared link, shopping "see all") go through
  *     goToSite() (lib/siteNav.ts), not router.push, so the nav stack stays shallow and hardware/
  *     gesture "back" from any site returns straight to Home. The ScrollView is wrapped in
  *     SiteSwipeView so swiping left/right also moves between sites (vertical scroll still native).
@@ -395,28 +397,27 @@ export default function HomeScreen() {
               {/* Section B: Dagens planer (timeline) */}
               <View>
                 <View style={styles.plansHeader}>
+                  <Text style={[styles.sectionLabel, { color: theme.text }]}>{t.currentPlansLabel}</Text>
                   <Pressable
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
                     onPress={() => goToSite(router, pathname, '/plans')}
                     accessibilityRole="button"
                     accessibilityLabel={t.home.seeAllPlans}
                   >
-                    <Text style={[styles.sectionLabel, { color: theme.text }]}>{t.currentPlansLabel}</Text>
-                    <Ionicons name="chevron-forward" size={14} color={theme.textLight} />
+                    <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeEverythingLink}</Text>
                   </Pressable>
-                  <View style={styles.plansActions}>
-                    <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
-                      <Ionicons name="link-outline" size={14} color={theme.textLight} />
-                    </Pressable>
-                    <Pressable
-                      style={[styles.shareBtnSmall, { backgroundColor: theme.orangeLight }]}
-                      onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
-                      accessibilityLabel={t.shareBtnLabel}
-                    >
-                      <Text style={[styles.shareBtnSmallText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
-                    </Pressable>
-                    <AddFAB size="sm" onPress={() => router.push('/task-form')} />
-                  </View>
+                </View>
+                <View style={styles.plansActions}>
+                  <Pressable onPress={() => goToSite(router, pathname, '/shared')} hitSlop={8}>
+                    <Ionicons name="link-outline" size={14} color={theme.textLight} />
+                  </Pressable>
+                  <Pressable
+                    style={[styles.shareBtnSmall, { backgroundColor: theme.orangeLight }]}
+                    onPress={() => router.push({ pathname: '/share-modal', params: { kind: 't' } })}
+                    accessibilityLabel={t.shareBtnLabel}
+                  >
+                    <Text style={[styles.shareBtnSmallText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
+                  </Pressable>
+                  <AddFAB size="sm" onPress={() => router.push('/task-form')} />
                 </View>
                 {plansTasks.length > 0 && (
                   <View style={styles.timelineContainer}>
@@ -427,12 +428,6 @@ export default function HomeScreen() {
                     />
                   </View>
                 )}
-                <Pressable
-                  style={styles.seeWeekBtn}
-                  onPress={() => goToSite(router, pathname, '/plans')}
-                >
-                  <Text style={[styles.seeWeekBtnText, { color: theme.orange }]}>{t.seeAllWeekPlans}</Text>
-                </Pressable>
               </View>
 
               {/* Section C: Ferdig i dag (completed, collapsible) */}
@@ -678,8 +673,6 @@ const baseStyles = StyleSheet.create({
   shareBtnSmall: { borderRadius: Radius.full, paddingHorizontal: Spacing.xs, paddingVertical: 4 },
   shareBtnSmallText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
   timelineContainer: { marginVertical: Spacing.md },
-  seeWeekBtn: { paddingVertical: Spacing.md, alignItems: 'center' },
-  seeWeekBtnText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   doneHeaderToggle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.md },
   doneTasksList: { marginTop: Spacing.sm },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', marginBottom: Spacing.lg },

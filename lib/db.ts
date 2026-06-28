@@ -8,8 +8,8 @@
  *
  * Connections:
  *   Imports → lib/date
- *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useInboxStore.ts, store/useMealStore.ts, store/useReceiptStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, shopping_lists, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts
+ *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useInboxStore.ts, store/useMealStore.ts, store/useReceiptStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts, store/useTaskDraftStore.ts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, shopping_lists, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts, task_drafts
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
@@ -375,6 +375,22 @@ export function initDb() {
     "ALTER TABLE shopping_trips ADD COLUMN list_id TEXT DEFAULT NULL",
     // Padlock-gated Containers — Week list edit lock state (see store/useShoppingListStore.ts)
     "ALTER TABLE shopping_lists ADD COLUMN locked INTEGER DEFAULT 0",
+    // Plans: durable "Unsaved" drafts for open/dirty task Containers (see store/useTaskDraftStore.ts)
+    `CREATE TABLE IF NOT EXISTS task_drafts (
+      task_id TEXT PRIMARY KEY,
+      title TEXT,
+      date TEXT,
+      time TEXT,
+      time_enabled INTEGER,
+      task_type TEXT,
+      duration_minutes INTEGER,
+      recurring TEXT,
+      recurring_days TEXT,
+      importance TEXT,
+      priority TEXT,
+      dirty_fields TEXT DEFAULT '[]',
+      updated_at TEXT
+    )`,
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
