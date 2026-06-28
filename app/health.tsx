@@ -134,7 +134,7 @@ export default function HealthScreen() {
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
-      <ScreenHeader title={t.healthTitle} onBack={() => router.back()} />
+      <ScreenHeader title={t.healthTitle} />
 
       <SiteSwipeView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
