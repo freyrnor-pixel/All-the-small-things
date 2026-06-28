@@ -7,7 +7,7 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/ScreenBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/HomeHeroBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -89,7 +89,7 @@ import QuickAddSheet from '@/components/QuickAddSheet';
 import InboxSection from '@/components/InboxSection';
 import SharedRequestsSection from '@/components/SharedRequestsSection';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
+import HomeHeroBackground from '@/components/HomeHeroBackground';
 import { showAppModal } from '@/components/AppModal';
 import TreeWatermark from '@/components/TreeWatermark';
 import CoverScreen from '@/components/cover/CoverScreen';
@@ -269,9 +269,9 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
+      <HomeHeroBackground />
       <View style={styles.watermarkWrap} pointerEvents="none">
-        <TreeWatermark size={Math.min(width, height) * 0.7} opacity={0.08} absolute={false} />
+        <TreeWatermark size={Math.min(width, height) * 0.7} opacity={0.18} absolute={false} />
       </View>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {updateReady && (

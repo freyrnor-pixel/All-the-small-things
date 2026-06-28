@@ -1,10 +1,11 @@
 /**
  * SiteSwipeView.tsx — horizontal swipe-to-navigate wrapper for bottom-menu sites.
  *
- * Wraps a site screen's content so a clear horizontal swipe moves to the
- * neighbouring site in the bottom menu order (swipe right/E → site to the right,
- * swipe left/W → site to the left). Vertical swipes are left alone — native
- * ScrollView up/down scrolling (N/S) already works without any extra code.
+ * Wraps a site screen's content so a horizontal swipe moves to the
+ * neighbouring site in the bottom menu order. Gesture matches carousel pattern:
+ * swipe left (drag finger left) → go to next site (higher index),
+ * swipe right (drag finger right) → go to previous site (lower index).
+ * Vertical swipes are left alone — native ScrollView up/down scrolling (N/S) already works without any extra code.
  *
  * Connections:
  *   Imports → react-native-gesture-handler, react-native-reanimated, lib/siteNav, lib/haptics, lib/useAppTheme
@@ -68,9 +69,9 @@ export default function SiteSwipeView({ children }: Props) {
       if (!reducedMotion) translateX.value = withTiming(0, { duration: 150 });
       const commit = width * SWIPE_COMMIT_RATIO;
       if (e.translationX > commit || e.velocityX > SWIPE_VELOCITY_THRESHOLD) {
-        runOnJS(navigate)(1);
-      } else if (e.translationX < -commit || e.velocityX < -SWIPE_VELOCITY_THRESHOLD) {
         runOnJS(navigate)(-1);
+      } else if (e.translationX < -commit || e.velocityX < -SWIPE_VELOCITY_THRESHOLD) {
+        runOnJS(navigate)(1);
       }
     });
 
