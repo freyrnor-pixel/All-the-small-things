@@ -8,12 +8,16 @@
  *
  * Connections:
  *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/ScreenBackground, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
- *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx)
+ *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx); pushed
+ *             from app/index.tsx (plain new-task "+"), app/plans.tsx (task rows), and
+ *             app/notes.tsx (a note's "plans" quick-action, via the `title` param below)
  *   Data    → useTaskStore (tasks table) via add/update/remove; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); date defaults to todayStr() (YYYY-MM-DD).
  *   - Edit vs. add is keyed off the `id` param resolved against the store; save()/del() then router.back().
+ *   - Optional `title` route param prefills a new (non-edit) task's title — ignored once
+ *     `id` resolves to an existing task, so editing never silently overwrites a saved title.
  *   - recurringDays is only persisted when recurring === 'weekly' (cleared to [] otherwise).
  *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Importance → Priority → Repeat).
  *   - On save a ConfirmationBanner is shown, then navigation is briefly delayed (~900ms) so it's visible.
@@ -66,7 +70,7 @@ const TYPE_ACCENT: Record<TaskType, string> = {
 
 export default function TaskFormScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, title: titleParam } = useLocalSearchParams<{ id?: string; title?: string }>();
   const tasks = useTaskStore((s) => s.tasks);
   const addTask = useTaskStore((s) => s.add);
   const updateTask = useTaskStore((s) => s.update);
@@ -77,7 +81,7 @@ export default function TaskFormScreen() {
 
   const existing = id ? tasks.find((task) => task.id === id) : undefined;
 
-  const [title, setTitle] = useState(existing?.title ?? '');
+  const [title, setTitle] = useState(existing?.title ?? titleParam ?? '');
   const [date, setDate] = useState(existing?.date ?? todayStr());
   const [timeEnabled, setTimeEnabled] = useState(existing ? !!existing.time : true);
   const [time, setTime] = useState(existing?.time ?? nextHourStr());

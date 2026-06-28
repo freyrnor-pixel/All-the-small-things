@@ -15,8 +15,8 @@
  *             components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView,
  *             constants/theme, lib/date, lib/i18n, lib/taskOrder, lib/useAppTheme,
  *             store/useEnergyStore, store/useTaskDraftStore, store/useTaskStore
- *   Used by → Expo Router route "/plans", reached via a push/swipe from app/index.tsx's Plans
- *             widget title (no longer a BottomNav tab — see lib/siteNav.ts)
+ *   Used by → Expo Router route "/plans" (BottomNav tab — see lib/siteNav.ts), also reached
+ *             via app/index.tsx's Plans widget "See everything" link (same as shopping's preview link)
  *   Data    → reads/writes useTaskStore (tasks) directly on save/delete/done-toggle; reads/
  *             writes useTaskDraftStore (task_drafts) for any task with unsaved field edits
  *

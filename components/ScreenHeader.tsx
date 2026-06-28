@@ -13,8 +13,9 @@
  *
  * Edit notes:
  *   - Render as a direct child of SafeAreaView, after <ScreenBackground />.
- *   - Defaults `onBack` to router.back via the caller — pass onBack to override
- *     (e.g. meals' "drill back out of a category").
+ *   - `onBack` is optional — pass it to show the back link (e.g. meals'
+ *     "drill back out of a category"); omit it on screens with no back nav
+ *     (Shopping, Health, Scan).
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
@@ -24,7 +25,7 @@ import { useAppTheme } from '@/lib/useAppTheme';
 
 type Props = {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
   /** Right-hand element (header actions). */
   right?: React.ReactNode;
   /** Override the back link label (defaults to the localised "back"). */
@@ -46,9 +47,11 @@ export default function ScreenHeader({ title, onBack, right, backLabel, bordered
       ]}
     >
       <View style={styles.leftGroup}>
-        <Pressable onPress={onBack}>
-          <Text style={[styles.back, { color: theme.orange }]}>{backLabel ?? t.back}</Text>
-        </Pressable>
+        {onBack && (
+          <Pressable onPress={onBack}>
+            <Text style={[styles.back, { color: theme.orange }]}>{backLabel ?? t.back}</Text>
+          </Pressable>
+        )}
         <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
       </View>
       {right}
