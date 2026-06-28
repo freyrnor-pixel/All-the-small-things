@@ -12,8 +12,7 @@
  *   Imports → components/AddFAB, components/BottomNav, components/HintCard, components/NoteRow,
  *             components/ScreenBackground, components/ScreenHeader, components/ShoppingQuickAddSheet,
  *             components/SiteSwipeView, constants/theme, lib/i18n, lib/useAppTheme, store/useNotesStore
- *   Used by → Expo Router route "/notes", reached via a header icon on app/index.tsx (no
- *             BottomNav tab — see lib/siteNav.ts)
+ *   Used by → Expo Router route "/notes" (BottomNav tab — see lib/siteNav.ts)
  *   Data    → reads/writes useNotesStore (notes table) directly — no draft buffer, since a
  *             note has no "locked, read-only" resting state to fall back to (unlike plans.tsx)
  *

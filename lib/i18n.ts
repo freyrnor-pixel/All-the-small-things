@@ -493,7 +493,7 @@ const en = {
     newTask: 'New task', plans: 'Plans', shop: 'Shopping', habits: 'Habits',
     meals: 'Food', health: 'Health', scan: 'Scan', settings: 'Settings',
     capture: 'Quick note', home: 'Home', budget: 'Budget', automations: 'Automations',
-    shared: 'Shared', settingsLabel: 'Settings',
+    shared: 'Shared', settingsLabel: 'Settings', notes: 'Notes',
   },
   home: {
     todaysPlans: "Today's Plans",
@@ -1453,7 +1453,7 @@ const no: typeof en = {
     newTask: 'Ny oppgave', plans: 'Planer', shop: 'Handleliste', habits: 'Vaner',
     meals: 'Mat', health: 'Helse', scan: 'Skann', settings: 'Innst.',
     capture: 'Notér', home: 'Hjem', budget: 'Budsjett', automations: 'Automatisering',
-    shared: 'Delt', settingsLabel: 'Innstillinger',
+    shared: 'Delt', settingsLabel: 'Innstillinger', notes: 'Notater',
   },
   home: {
     todaysPlans: 'Dagens planer',

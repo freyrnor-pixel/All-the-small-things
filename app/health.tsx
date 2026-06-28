@@ -7,7 +7,8 @@
  *
  * Connections:
  *   Imports → components/AddFAB, components/BottomNav, components/ConfirmationBanner, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
- *   Used by → Expo Router route "/health"
+ *   Used by → Expo Router route "/health", reached via a header icon on app/index.tsx (no
+ *             BottomNav tab — see lib/siteNav.ts)
  *   Data    → useHealthStore (health_logs table); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
  *
  * Edit notes:

@@ -12,8 +12,9 @@
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
- *   - Added ⚙ gear icon (header right) → /settings, and a document icon next to it → /notes
- *     (Notes has no BottomNav tab — this header icon is its only entry point; see lib/siteNav.ts).
+ *   - Added ⚙ gear icon (header right) → /settings, and a heart icon next to it → /health
+ *     (Health has no BottomNav tab — this header icon is its only entry point; habits is
+ *     reached from there too, via health's inline summary → /habits; see lib/siteNav.ts).
  *   - The Plans section header is a plain title + a right-aligned "See everything"
  *     link (t.seeEverythingLink) → /plans, matching the Shopping preview section's
  *     title+link layout — replaces the old pressable-title/chevron + bottom link.
@@ -338,11 +339,11 @@ export default function HomeScreen() {
               </Pressable>
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
-                onPress={() => goToSite(router, pathname, '/notes')}
-                accessibilityLabel={t.notes.navLabel}
+                onPress={() => goToSite(router, pathname, '/health')}
+                accessibilityLabel={t.nav.health}
                 hitSlop={12}
               >
-                <Ionicons name="document-text-outline" size={22} color={theme.textLight} />
+                <Ionicons name="heart-outline" size={22} color={theme.textLight} />
               </Pressable>
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}

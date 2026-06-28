@@ -1,8 +1,8 @@
 /**
- * BottomNav.tsx — horizontal bottom navigation bar with 4 buttons.
+ * BottomNav.tsx — horizontal bottom navigation bar with 5 buttons.
  *
- * Implements the design system's BottomNav pattern: left item (Shopping),
- * centre home/menu button, right items (Health, Scan). The centre button is
+ * Implements the design system's BottomNav pattern: left items (Shopping, Plans),
+ * centre home/menu button, right items (Notes, Scan). The centre button is
  * stylized as a gradient FAB. Active tab is highlighted with primary colour.
  * Taps navigate via goToSite() to keep the stack shallow.
  *
@@ -12,12 +12,12 @@
  *   Data    → none (presentational; navigation only)
  *
  * Edit notes:
- *   - SITE_ITEMS (lib/siteNav.ts) defines the 4 items and their order (left to right).
- *     Plans was removed from this list (reachable via Home's "See everything" link
- *     instead) — if SITE_ITEMS' length or item order changes again, update the
- *     slice indices below to match.
- *   - Centre item (index 1, home) is rendered with gradient + shadow (design system style).
- *   - Left item (index 0) and right items (indices 2–3) are simple icon buttons.
+ *   - SITE_ITEMS (lib/siteNav.ts) defines the 5 items and their order (left to right):
+ *     Shopping, Plans, Home, Notes, Scan. Health was removed from this list (reachable
+ *     via a Home header icon instead) — if SITE_ITEMS' length or item order changes
+ *     again, update the slice indices below to match.
+ *   - Centre item (index 2, home) is rendered with gradient + shadow (design system style).
+ *   - Left items (indices 0–1) and right items (indices 3–4) are simple icon buttons.
  *   - BOTTOM_NAV_HEIGHT is exported for screens needing to offset overlays.
  */
 import React from 'react';
@@ -39,9 +39,9 @@ export default function BottomNav() {
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
 
-  const leftItems = SITE_ITEMS.slice(0, 1);
-  const centreItem = SITE_ITEMS[1];
-  const rightItems = SITE_ITEMS.slice(2, 4);
+  const leftItems = SITE_ITEMS.slice(0, 2);
+  const centreItem = SITE_ITEMS[2];
+  const rightItems = SITE_ITEMS.slice(3, 5);
 
   const renderItem = (item: typeof SITE_ITEMS[0], isCentre = false) => {
     const active = pathname === item.route;
