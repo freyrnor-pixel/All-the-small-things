@@ -7,14 +7,20 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/HomeHeroBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/HomeHeroBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useNotesStore (notes, preview only); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
- *   - Added ⚙ gear icon (header right) → /settings, and a heart icon next to it → /health
- *     (Health has no BottomNav tab — this header icon is its only entry point; habits is
- *     reached from there too, via health's inline summary → /habits; see lib/siteNav.ts).
+ *   - ⚙ gear icon (header right) → /settings is the only header icon — Health is a
+ *     BottomNav tab again (see lib/siteNav.ts), so it no longer needs one here; habits is
+ *     still reached via health's inline summary → /habits, not from this screen directly.
+ *   - Notes preview section sits between Backlog and the Shopping preview: up to
+ *     NOTES_PREVIEW_LIMIT (3) active notes with a tap-to-toggle checkbox (same interaction
+ *     as the Shopping preview rows right below it). Only active notes are shown — checked-off
+ *     notes drop out — and the whole section is hidden when there are none (mirrors Backlog's
+ *     hide-when-empty pattern). Title + "See all" link (t.seeAll) → /notes matches the
+ *     Shopping preview's title+link layout; Notes has no BottomNav tab (see lib/siteNav.ts).
  *   - The Plans section header is a plain title + a right-aligned "See everything"
  *     link (t.seeEverythingLink) → /plans, matching the Shopping preview section's
  *     title+link layout — replaces the old pressable-title/chevron + bottom link.
@@ -75,6 +81,7 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
+import { useNotesStore } from '@/store/useNotesStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
@@ -138,6 +145,8 @@ export default function HomeScreen() {
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
+  const notes = useNotesStore((s) => s.notes);
+  const toggleNoteChecked = useNotesStore((s) => s.toggleChecked);
   const updateReady = useUpdateStore((s) => s.updateReady);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
@@ -220,6 +229,13 @@ export default function HomeScreen() {
     [weeklyUnchecked, weeklyChecked]
   );
   const weeklyTotal = weeklyUnchecked.length + weeklyChecked.length;
+
+  // Notes preview: only active (unchecked) notes — same tap-to-toggle interaction
+  // as the Shopping preview below it, and hidden entirely when there's nothing
+  // active to show (mirrors the Backlog section's hide-when-empty pattern).
+  const NOTES_PREVIEW_LIMIT = 3;
+  const activeNotes = useMemo(() => notes.filter((n) => !n.checked), [notes]);
+  const notesPreview = useMemo(() => activeNotes.slice(0, NOTES_PREVIEW_LIMIT), [activeNotes]);
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]} />;
@@ -336,14 +352,6 @@ export default function HomeScreen() {
                 <Text style={[styles.focusBtnLabel, { color: settings.essentialsModeEnabled ? theme.orange : theme.textLight }]}>
                   {t.focusLabel}
                 </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
-                onPress={() => goToSite(router, pathname, '/health')}
-                accessibilityLabel={t.nav.health}
-                hitSlop={12}
-              >
-                <Ionicons name="heart-outline" size={22} color={theme.textLight} />
               </Pressable>
               <Pressable
                 style={[styles.iconBtn, { backgroundColor: theme.grayLight }]}
@@ -516,6 +524,37 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Notes preview */}
+        {activeNotes.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.notes.title}</Text>
+              <Pressable onPress={() => goToSite(router, pathname, '/notes')}>
+                <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
+              </Pressable>
+            </View>
+            <Surface style={styles.card}>
+              {notesPreview.map((note) => (
+                <Pressable
+                  key={note.id}
+                  style={styles.notePreviewRow}
+                  onPress={() => toggleNoteChecked(note.id)}
+                >
+                  <View style={[styles.noteCheck, { borderColor: theme.orange }]} />
+                  <Text style={[styles.notePreviewName, { color: theme.text }]} numberOfLines={1}>
+                    {note.header.trim() || t.notes.headerPlaceholder}
+                  </Text>
+                </Pressable>
+              ))}
+              {activeNotes.length > NOTES_PREVIEW_LIMIT && (
+                <Text style={[styles.moreText, { color: theme.textLight }]}>
+                  {t.moreItems(activeNotes.length - NOTES_PREVIEW_LIMIT)}
+                </Text>
+              )}
+            </Surface>
+          </View>
+        )}
+
         {/* Shopping preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -658,6 +697,9 @@ const baseStyles = StyleSheet.create({
   shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm, minHeight: 44 },
   shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   shoppingPreviewName: { fontSize: FontSize.md, flex: 1, fontFamily: Fonts.regular },
+  notePreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm, minHeight: 44 },
+  noteCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2 },
+  notePreviewName: { fontSize: FontSize.md, flex: 1, fontFamily: Fonts.regular },
   moreText: { fontSize: FontSize.sm, marginTop: Spacing.md, textAlign: 'right', fontFamily: Fonts.regular },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.md, textAlign: 'center', fontStyle: 'italic', fontFamily: Fonts.regular },
   backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

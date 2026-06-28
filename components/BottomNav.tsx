@@ -2,7 +2,7 @@
  * BottomNav.tsx — horizontal bottom navigation bar with 5 buttons.
  *
  * Implements the design system's BottomNav pattern: left items (Shopping, Plans),
- * centre home/menu button, right items (Notes, Scan). The centre button is
+ * centre home/menu button, right items (Health, Scan). The centre button is
  * stylized as a gradient FAB. Active tab is highlighted with primary colour.
  * Taps navigate via goToSite() to keep the stack shallow.
  *
