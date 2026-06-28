@@ -269,7 +269,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <HomeHeroBackground />
       <View style={styles.watermarkWrap} pointerEvents="none">
-        <TreeWatermark size={Math.min(width, height) * 0.7} opacity={0.08} absolute={false} />
+        <TreeWatermark size={Math.min(width, height) * 0.7} opacity={0.18} absolute={false} />
       </View>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {updateReady && (

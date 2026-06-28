@@ -34,6 +34,31 @@ import { useIsDark } from '@/lib/useAppTheme';
 
 type Percent = `${number}%`;
 
+const SKY_BAND_COUNT = 14;
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex([r, g, b]: [number, number, number]): string {
+  return '#' + [r, g, b].map((c) => Math.round(c).toString(16).padStart(2, '0')).join('');
+}
+
+function lerpColor(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = hexToRgb(a);
+  const [br, bg, bb] = hexToRgb(b);
+  return rgbToHex([ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t]);
+}
+
+/** Interpolates through 3 color stops to produce N closely-stepped band colors — fakes a smooth gradient from flat-color Views. */
+function gradientBands(stops: [string, string, string], count: number): string[] {
+  return Array.from({ length: count }, (_, i) => {
+    const t = i / (count - 1);
+    return t <= 0.5 ? lerpColor(stops[0], stops[1], t / 0.5) : lerpColor(stops[1], stops[2], (t - 0.5) / 0.5);
+  });
+}
+
 type DotSpec = { size: number; left: Percent; bottom: Percent; duration: number; delay: number };
 
 const DOTS: DotSpec[] = [
@@ -127,7 +152,7 @@ function OrbHalo({ size, color }: { size: number; color: string }) {
             height: size * scale,
             borderRadius: (size * scale) / 2,
             backgroundColor: color,
-            opacity: 0.05,
+            opacity: 0.14,
           }}
         />
       ))}
@@ -147,7 +172,7 @@ export default function HomeHeroBackground() {
         ground: ['rgba(11,22,46,0)', 'rgba(11,22,46,0.55)', 'rgba(11,22,46,0.85)'],
       }
     : {
-        sky: ['#e4f0fb', '#eef6ff', '#f6faff'],
+        sky: ['#6fa8e8', '#a8cdf0', '#eaf4fc'],
         orb: '#a9cdf5',
         ring: 'rgba(160,210,255,0.16)',
         dot: '#3B72D6',
@@ -156,9 +181,9 @@ export default function HomeHeroBackground() {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={[styles.skyBand, { backgroundColor: palette.sky[0] }]} />
-      <View style={[styles.skyBand, { backgroundColor: palette.sky[1] }]} />
-      <View style={[styles.skyBand, { backgroundColor: palette.sky[2] }]} />
+      {gradientBands(palette.sky as [string, string, string], SKY_BAND_COUNT).map((color, i) => (
+        <View key={i} style={[styles.skyBand, { backgroundColor: color }]} />
+      ))}
 
       <OrbHalo size={280} color={palette.orb} />
       {isDark && (
