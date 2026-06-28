@@ -2,14 +2,15 @@
  * index.tsx — Home screen
  *
  * The app's daily landing screen: greeting, a unified Plans widget + backlog, a
- * weekly shopping preview (tickable inline, both not-yet-in-cart and in-cart items),
+ * Shopping widget scoped to the current week's list (tickable inline, both
+ * not-yet-in-cart and in-cart items), an expandable Notes preview,
  * gentle completed-count points, and the BottomNav / QuickAddSheet entry points.
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/HomeHeroBackground, components/SharedRequestsSection, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/ExpandableCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/HomeHeroBackground, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/shoppingGroups (computeListGroups), lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useHabitStore (habits, logs) + useNotesStore (notes, preview only); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useShoppingListStore (lists, for currentList(today)) + useHabitStore (habits, logs) + useNotesStore (notes, preview only); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
  * Edit notes:
  *   - ⚙ gear icon (header right) → /settings is the only header icon — Health is a
@@ -58,9 +59,15 @@
  *     function refs, which are stable and never change identity) — without it, toggling a task wouldn't
  *     re-render this screen at all, since none of the other selected slices change. Keep it even though
  *     it looks unused; it's a re-render trigger + a useMemo dep.
- *   - Shopping preview shows weekly items unchecked-first then checked/in-cart, capped at
- *     PREVIEW_LIMIT total. Tapping a row calls toggleCheck directly — it flips `checked`
- *     immediately (no staging/Save step), same as app/shopping.tsx.
+ *   - Shopping widget is scoped to useShoppingListStore.currentList(today) (in-range else
+ *     most-recent fallback) — collapsed shows just that list's name; expanded renders its
+ *     dish groups (ExpandableCard, via lib/shoppingGroups.computeListGroups), then
+ *     ungrouped-unchecked (reorderable via reorder()), then checked/in-cart (with
+ *     onCollect → toggleCollected), each row a ShoppingRow with the same
+ *     toggle/remove(fromCatalog→putBackToInventory else removeWithSource) wiring
+ *     app/shopping.tsx uses for WeekListCard. No current list → t.shoppingEmpty.
+ *   - Notes preview's "•••"/t.notesCollapse strip below the card toggles notesExpanded
+ *     the same way the Plans "•••"/t.plansCollapse strip toggles plansExpanded.
  *   - Tasks also auto-save on toggle (useTaskStore.toggle()) — no Save button for tasks.
  *     The Plans-preview header's "+" is an inline AddFAB (size="sm") → /task-form, the
  *     only "add new" control on this screen.
@@ -80,7 +87,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, usePathname } from 'expo-router';
 import { useTaskStore } from '@/store/useTaskStore';
-import { useShoppingStore } from '@/store/useShoppingStore';
+import { useShoppingStore, ShoppingItem } from '@/store/useShoppingStore';
+import { useShoppingListStore } from '@/store/useShoppingListStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import { useNotesStore } from '@/store/useNotesStore';
@@ -88,7 +96,10 @@ import { useUpdateStore } from '@/store/useUpdateStore';
 import * as Updates from 'expo-updates';
 import { useT } from '@/lib/i18n';
 import { rankTodayTasks } from '@/lib/taskOrder';
+import { computeListGroups } from '@/lib/shoppingGroups';
 import TaskItem from '@/components/TaskItem';
+import ShoppingRow from '@/components/ShoppingRow';
+import ExpandableCard from '@/components/ExpandableCard';
 import DayTimeline from '@/components/DayTimeline';
 // TODO: re-enable bubble menu once redesigned
 // import BubbleMenu from '@/components/BubbleMenu';
@@ -145,6 +156,12 @@ export default function HomeScreen() {
   const toggleTask = useTaskStore((s) => s.toggle);
   const shoppingItems = useShoppingStore((s) => s.items);
   const toggleShoppingItem = useShoppingStore((s) => s.toggleCheck);
+  const toggleShoppingCollected = useShoppingStore((s) => s.toggleCollected);
+  const putShoppingItemBackToInventory = useShoppingStore((s) => s.putBackToInventory);
+  const removeShoppingItemWithSource = useShoppingStore((s) => s.removeWithSource);
+  const reorderShoppingItem = useShoppingStore((s) => s.reorder);
+  const shoppingLists = useShoppingListStore((s) => s.lists);
+  const currentShoppingListFn = useShoppingListStore((s) => s.currentList);
   const habits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
   const notes = useNotesStore((s) => s.notes);
@@ -214,30 +231,30 @@ export default function HomeScreen() {
   const completedToday = allTodayTasks.filter((t) => t.done).length;
   const progressRatio = totalToday > 0 ? completedToday / totalToday : 0;
 
-  // Shopping preview: unchecked (not-yet-in-cart) items first, then checked
-  // (in-cart) ones below, capped to PREVIEW_LIMIT total — lets a full shopping
-  // run happen from this widget alone (moving items to cart and back).
-  const PREVIEW_LIMIT = 5;
-  const weeklyUnchecked = useMemo(
-    () => shoppingItems.filter((i) => i.listType === 'weekly' && !i.checked),
-    [shoppingItems]
+  // Shopping widget: scoped to the current week's list only (not a global merge
+  // across every list) — collapsed shows just that list's name, expanded shows its
+  // dish groups / ungrouped unchecked / checked sections with the same row
+  // interactivity as app/shopping.tsx's Week lists tab.
+  const [shoppingExpanded, setShoppingExpanded] = useState(false);
+  const currentShoppingList = useMemo(
+    () => currentShoppingListFn(today),
+    [currentShoppingListFn, shoppingLists, today]
   );
-  const weeklyChecked = useMemo(
-    () => shoppingItems.filter((i) => i.listType === 'weekly' && i.checked),
-    [shoppingItems]
+  const { dishGroups: shoppingDishGroups, ungroupedUnchecked: shoppingUngroupedUnchecked, checked: shoppingChecked } = useMemo(
+    () => (currentShoppingList ? computeListGroups(shoppingItems, currentShoppingList.id) : { dishGroups: [], ungroupedUnchecked: [], checked: [] }),
+    [shoppingItems, currentShoppingList]
   );
-  const weeklyPreview = useMemo(
-    () => [...weeklyUnchecked, ...weeklyChecked].slice(0, PREVIEW_LIMIT),
-    [weeklyUnchecked, weeklyChecked]
-  );
-  const weeklyTotal = weeklyUnchecked.length + weeklyChecked.length;
 
   // Notes preview: only active (unchecked) notes — same tap-to-toggle interaction
   // as the Shopping preview below it, and hidden entirely when there's nothing
   // active to show (mirrors the Backlog section's hide-when-empty pattern).
   const NOTES_PREVIEW_LIMIT = 3;
   const activeNotes = useMemo(() => notes.filter((n) => !n.checked), [notes]);
-  const notesPreview = useMemo(() => activeNotes.slice(0, NOTES_PREVIEW_LIMIT), [activeNotes]);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const notesPreview = useMemo(
+    () => (notesExpanded ? activeNotes : activeNotes.slice(0, NOTES_PREVIEW_LIMIT)),
+    [activeNotes, notesExpanded]
+  );
 
   if (!settings.loaded || !settings.setupComplete) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: theme.cream }]} />;
@@ -285,6 +302,16 @@ export default function HomeScreen() {
       { text: t.cancel, style: 'cancel' },
       { text: t.switchModeConfirm, onPress: () => settings.setWorkModeSessionOverride(true) },
     ]);
+  }
+
+  // Mirrors app/shopping.tsx's handleRemoveWeeklyItem: rows sourced from the Monthly
+  // catalog go back to inventory instead of being deleted outright.
+  function handleRemoveShoppingItem(item: ShoppingItem) {
+    if (item.fromCatalog) {
+      putShoppingItemBackToInventory(item.id);
+    } else {
+      removeShoppingItemWithSource(item.id);
+    }
   }
 
   return (
@@ -552,16 +579,18 @@ export default function HomeScreen() {
                   </Text>
                 </Pressable>
               ))}
-              {activeNotes.length > NOTES_PREVIEW_LIMIT && (
-                <Text style={[styles.moreText, { color: theme.textLight }]}>
-                  {t.moreItems(activeNotes.length - NOTES_PREVIEW_LIMIT)}
-                </Text>
-              )}
             </Surface>
+          )}
+          {activeNotes.length > NOTES_PREVIEW_LIMIT && (
+            <Pressable onPress={() => setNotesExpanded((v) => !v)} style={styles.expandStrip}>
+              <Text style={[styles.expandStripText, { color: theme.textLight }]}>
+                {notesExpanded ? t.notesCollapse : '•••'}
+              </Text>
+            </Pressable>
           )}
         </View>
 
-        {/* Shopping preview */}
+        {/* Shopping widget — scoped to the current week's list */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.shoppingPreview}</Text>
@@ -569,42 +598,99 @@ export default function HomeScreen() {
               <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
             </Pressable>
           </View>
-          {weeklyPreview.length === 0 ? (
+          {!currentShoppingList ? (
             <Surface tint={theme.offWhite} style={styles.emptyCard}>
               <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
             </Surface>
           ) : (
             <Surface style={styles.card}>
-              {weeklyPreview.map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={[styles.shoppingPreviewRow, item.checked && { opacity: 0.5 }]}
-                  onPress={() => toggleShoppingItem(item.id)}
-                >
-                  <View
-                    style={[
-                      styles.shoppingCheck,
-                      { borderColor: theme.green },
-                      item.checked && { backgroundColor: theme.green },
-                    ]}
-                  >
-                    {item.checked && <Ionicons name="checkmark" size={12} color={theme.white} />}
-                  </View>
-                  <Text
-                    style={[
-                      styles.shoppingPreviewName,
-                      { color: theme.text },
-                      item.checked && { color: theme.gray, textDecorationLine: 'line-through' },
-                    ]}
-                  >
-                    {item.amount}{item.unit ? ` ${item.unit}` : ''} {item.name}
-                  </Text>
-                </Pressable>
-              ))}
-              {weeklyTotal > weeklyPreview.length && (
-                <Text style={[styles.moreText, { color: theme.textLight }]}>
-                  {t.moreItems(weeklyTotal - weeklyPreview.length)}
+              <Pressable style={styles.shoppingWidgetHeader} onPress={() => setShoppingExpanded((v) => !v)}>
+                <Text style={[styles.shoppingWidgetListName, { color: theme.text }]} numberOfLines={1}>
+                  {currentShoppingList.name}
                 </Text>
+                <Ionicons name={shoppingExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textLight} />
+              </Pressable>
+
+              {shoppingExpanded && (
+                <View style={styles.shoppingWidgetBody}>
+                  {shoppingDishGroups.length > 0 && (
+                    <View style={styles.dishGroupsWrap}>
+                      {shoppingDishGroups.map(([dishName, groupItems]) => (
+                        <ExpandableCard
+                          key={dishName}
+                          title={dishName}
+                          subtitle={t.ingredientsCount(groupItems.length)}
+                          accentColor={theme.green}
+                          defaultOpen={false}
+                        >
+                          {groupItems.map((item, idx) => (
+                            <View key={item.id}>
+                              <ShoppingRow
+                                item={item}
+                                theme={theme}
+                                variant="planned"
+                                onToggle={() => toggleShoppingItem(item.id)}
+                                onRemove={() => handleRemoveShoppingItem(item)}
+                                inStockLabel={t.inStockLabel}
+                              />
+                              {idx < groupItems.length - 1 && (
+                                <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                              )}
+                            </View>
+                          ))}
+                        </ExpandableCard>
+                      ))}
+                    </View>
+                  )}
+
+                  {shoppingUngroupedUnchecked.length > 0 && (
+                    <View style={styles.shoppingSection}>
+                      <Text style={[styles.sectionLabel, { color: theme.green }]}>{t.inWeeklyListSection}</Text>
+                      {shoppingUngroupedUnchecked.map((item, idx) => (
+                        <View key={item.id}>
+                          <ShoppingRow
+                            item={item}
+                            theme={theme}
+                            variant="planned"
+                            onToggle={() => toggleShoppingItem(item.id)}
+                            onRemove={() => handleRemoveShoppingItem(item)}
+                            onMoveUp={idx > 0 ? () => reorderShoppingItem(item.id, 'up') : undefined}
+                            onMoveDown={idx < shoppingUngroupedUnchecked.length - 1 ? () => reorderShoppingItem(item.id, 'down') : undefined}
+                            inStockLabel={t.inStockLabel}
+                          />
+                          {idx < shoppingUngroupedUnchecked.length - 1 && (
+                            <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {shoppingChecked.length > 0 && (
+                    <View style={styles.shoppingSection}>
+                      <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.inKurvenSection(shoppingChecked.length)}</Text>
+                      {shoppingChecked.map((item, idx) => (
+                        <View key={item.id}>
+                          <ShoppingRow
+                            item={item}
+                            theme={theme}
+                            variant="cart"
+                            onToggle={() => toggleShoppingItem(item.id)}
+                            onCollect={() => toggleShoppingCollected(item.id)}
+                            onRemove={() => handleRemoveShoppingItem(item)}
+                          />
+                          {idx < shoppingChecked.length - 1 && (
+                            <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {shoppingDishGroups.length === 0 && shoppingUngroupedUnchecked.length === 0 && shoppingChecked.length === 0 && (
+                    <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.shoppingEmpty}</Text>
+                  )}
+                </View>
               )}
             </Surface>
           )}
@@ -700,13 +786,15 @@ const baseStyles = StyleSheet.create({
   // toggles plansExpanded in place rather than navigating anywhere.
   expandStrip: { paddingVertical: Spacing.md, alignItems: 'center' },
   expandStripText: { fontSize: FontSize.md, fontFamily: Fonts.semibold, letterSpacing: 1 },
-  shoppingPreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm, minHeight: 44 },
-  shoppingCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  shoppingPreviewName: { fontSize: FontSize.md, flex: 1, fontFamily: Fonts.regular },
+  shoppingWidgetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
+  shoppingWidgetListName: { fontSize: FontSize.md, fontFamily: Fonts.semibold, flex: 1 },
+  shoppingWidgetBody: { gap: Spacing.md, marginTop: Spacing.sm },
+  shoppingSection: { gap: Spacing.xs },
+  dishGroupsWrap: { gap: Spacing.xs },
+  rowDivider: { height: 1 },
   notePreviewRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm, minHeight: 44 },
   noteCheck: { width: 18, height: 18, borderRadius: Radius.full, borderWidth: 2 },
   notePreviewName: { fontSize: FontSize.md, flex: 1, fontFamily: Fonts.regular },
-  moreText: { fontSize: FontSize.sm, marginTop: Spacing.md, textAlign: 'right', fontFamily: Fonts.regular },
   backlogHint: { fontSize: FontSize.xs, marginTop: Spacing.md, textAlign: 'center', fontStyle: 'italic', fontFamily: Fonts.regular },
   backlogLabelRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   backlogBadge: {

@@ -13,11 +13,15 @@
  * wraps-shared-primitive divide as components/WeekListCard.tsx wrapping Container.
  *
  * Connections:
- *   Imports → components/ExpandableCard, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, store/useTaskStore (types only)
+ *   Imports → components/AppModal, components/ExpandableCard, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, store/useTaskStore (types only)
  *   Used by → app/plans.tsx
  *   Data    → none directly — every field/callback is owned by the parent (app/plans.tsx)
  *
  * Edit notes:
+ *   - Collapsed header is title-only (no time subtitle) — every card now gets a leading
+ *     AddDivider in app/plans.tsx instead, so the closed row stays minimal.
+ *   - Delete is confirm-gated via confirmDelete()/showAppModal (mirrors app/habit-form.tsx's
+ *     confirmDelete()) — the `onDelete` prop only fires from the modal's destructive button.
  *   - `calExpanded` is local UI state (which date-picker is showing its full calendar) —
  *     it isn't part of the task's edit fields, so it doesn't need to live in the screen's
  *     lifted state, unlike `fields`/`dirty`.
@@ -33,12 +37,13 @@ import { Ionicons } from '@expo/vector-icons';
 import ExpandableCard from '@/components/ExpandableCard';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import TimePickerWheel from '@/components/TimePickerWheel';
+import { showAppModal } from '@/components/AppModal';
 import { Task, TaskType, Importance, Priority, Recurring } from '@/store/useTaskStore';
 import { AppColors, Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { dateStr, dayOfWeekMon0 } from '@/lib/date';
-import { tap } from '@/lib/haptics';
+import { tap, warning } from '@/lib/haptics';
 
 export type TaskFormFields = {
   title: string;
@@ -143,10 +148,17 @@ export default function PlanTaskCard({
     onFieldChange('recurringDays', next);
   }
 
+  function confirmDelete() {
+    warning();
+    showAppModal(t.deleteConfirmTitle(task.title || t.taskTitlePlaceholder), t.deleteConfirmBody, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.deleteConfirmBtn, style: 'destructive', onPress: onDelete },
+    ]);
+  }
+
   return (
     <ExpandableCard
       title={task.title}
-      subtitle={task.time || undefined}
       open={open}
       onToggle={onToggleOpen}
       accentColor={theme.orange}
@@ -419,7 +431,7 @@ export default function PlanTaskCard({
           )}
         </View>
 
-        <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={onDelete}>
+        <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={confirmDelete}>
           <Text style={[styles.deleteBtnText, { color: theme.danger }]}>{t.deleteTask}</Text>
         </Pressable>
       </View>

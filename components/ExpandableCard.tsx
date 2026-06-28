@@ -7,11 +7,16 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme
- *   Used by → app/meals.tsx (uncontrolled), components/PlanTaskCard.tsx (controlled)
+ *   Used by → app/meals.tsx (uncontrolled), components/PlanTaskCard.tsx (controlled),
+ *             app/health.tsx (controlled, per-log), components/WeekListCard.tsx (uncontrolled,
+ *             "From meals" dish groups), app/shopping.tsx (uncontrolled, Monthly dish groups)
  *   Data    → driven by props; reads reducedMotion + scaled fontSize via useAccessibility()/useScaledStyles()
  *
  * Edit notes:
  *   - LayoutAnimation is enabled on Android via UIManager at module load — keep that guard if refactoring imports.
+ *   - `leadingAction` renders before the title/subtitle stack inside headerLeft (same
+ *     stopPropagation-wrapped Pressable pattern as `rightAction`) — e.g. Health's severity
+ *     badge needs to sit leading rather than trailing, where Plans' checkbox already lives.
  *   - Surface uses getMaterialStyle() (same finish system as BubbleMenu) so the card gets a
  *     beveled border + sheen + heavier shadow instead of a flat fill — `material` defaults to
  *     the user's chosen bubbleMaterial setting (pass it explicitly to override). The outer view
@@ -50,6 +55,7 @@ type Props = {
   subtitle?: string;
   badge?: string;
   children: React.ReactNode;
+  leadingAction?: React.ReactNode;
   rightAction?: React.ReactNode;
   defaultOpen?: boolean;
   open?: boolean;
@@ -63,6 +69,7 @@ export default function ExpandableCard({
   subtitle,
   badge,
   children,
+  leadingAction,
   rightAction,
   defaultOpen = false,
   open: controlledOpen,
@@ -142,8 +149,13 @@ export default function ExpandableCard({
         <View style={styles.cardContent}>
           <Pressable style={styles.header} onPress={toggle}>
             <View style={styles.headerLeft}>
-              <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-              {subtitle ? <Text style={[styles.subtitle, { color: theme.textLight }]}>{subtitle}</Text> : null}
+              {leadingAction ? (
+                <Pressable onPress={(e) => e.stopPropagation()}>{leadingAction}</Pressable>
+              ) : null}
+              <View style={styles.headerLeftText}>
+                <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+                {subtitle ? <Text style={[styles.subtitle, { color: theme.textLight }]}>{subtitle}</Text> : null}
+              </View>
             </View>
             <View style={styles.headerRight}>
               {badge ? (
@@ -200,7 +212,8 @@ const baseStyles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.md,
   },
-  headerLeft: { flex: 1 },
+  headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  headerLeftText: { flex: 1 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',

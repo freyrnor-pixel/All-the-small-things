@@ -13,7 +13,7 @@
  * presentational component, same divide as ShoppingRow/MonthlyTableRow.
  *
  * Connections:
- *   Imports → components/Container, components/ShoppingRow, components/AddFAB, components/Surface, components/PressableScale, constants/theme, lib/i18n, lib/useAppTheme, store/useShoppingListStore (ShoppingList type), store/useShoppingStore (ShoppingItem type), store/useMealStore (Dish type)
+ *   Imports → components/Container, components/ShoppingRow, components/AddDivider, components/ExpandableCard, components/Surface, components/PressableScale, constants/theme, lib/i18n, lib/useAppTheme, store/useShoppingListStore (ShoppingList type), store/useShoppingStore (ShoppingItem type), store/useMealStore (Dish type)
  *   Used by → app/shopping.tsx
  *   Data    → none directly — every item/group/callback is owned by the parent
  *
@@ -22,18 +22,21 @@
  *     no-op, identical semantics to the old ListSwitcherHeader.
  *   - `list.locked` only gates add/remove/edit: every ShoppingRow gets locked={list.locked}
  *     (dims remove/move buttons; checkmark/collect/undo stay interactive regardless), and
- *     the inline "+" below the Shopping list section dims+disables via pointerEvents — but
- *     the "Shopping done!" button is NEVER lock-gated (finishing a trip isn't an edit).
- *   - The "Shopping list" section always renders, even with zero items, so the inline "+"
+ *     the AddDivider below the Shopping list section is disabled via its own `disabled` prop —
+ *     but the "Shopping done!" button is NEVER lock-gated (finishing a trip isn't an edit).
+ *   - The "Shopping list" section always renders, even with zero items, so the AddDivider
  *     always has a stable anchor — there's no per-list illustrated empty state here; that
  *     only exists at the screen level for the zero-lists case.
+ *   - "From meals" dish groups are each an uncontrolled ExpandableCard (defaultOpen={false}) —
+ *     gives every dish its own independent collapse state with no parent-tracked key needed.
  */
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Container from '@/components/Container';
 import ShoppingRow from '@/components/ShoppingRow';
-import AddFAB from '@/components/AddFAB';
+import AddDivider from '@/components/AddDivider';
+import ExpandableCard from '@/components/ExpandableCard';
 import Surface from '@/components/Surface';
 import PressableScale from '@/components/PressableScale';
 import { ShoppingList } from '@/store/useShoppingListStore';
@@ -143,15 +146,9 @@ export default function WeekListCard({
             </View>
             {dishGroups.map(([dishName, groupItems]) => {
               const dish = dishes.find((d) => d.name === dishName);
+              const subtitle = `${t.ingredientsCount(groupItems.length)}${dish && dish.estimatedPriceNok > 0 ? ` · ${t.dishPriceLabel(String(dish.estimatedPriceNok))}` : ''}`;
               return (
-                <View key={dishName} style={[styles.card, styles.cardAccent, { backgroundColor: theme.white, borderLeftColor: theme.green }]}>
-                  <View style={styles.dishGroupHeader}>
-                    <Text style={[styles.dishGroupName, { color: theme.text }]} numberOfLines={1}>{dishName}</Text>
-                    <Text style={[styles.dishGroupMeta, { color: theme.textLight }]}>
-                      {t.ingredientsCount(groupItems.length)}
-                      {dish && dish.estimatedPriceNok > 0 ? ` · ${t.dishPriceLabel(String(dish.estimatedPriceNok))}` : ''}
-                    </Text>
-                  </View>
+                <ExpandableCard key={dishName} title={dishName} subtitle={subtitle} accentColor={theme.green} defaultOpen={false}>
                   {groupItems.map((item, idx) => (
                     <View key={item.id}>
                       <ShoppingRow
@@ -168,7 +165,7 @@ export default function WeekListCard({
                       )}
                     </View>
                   ))}
-                </View>
+                </ExpandableCard>
               );
             })}
           </View>
@@ -201,9 +198,7 @@ export default function WeekListCard({
               ))}
             </View>
           )}
-          <View style={[styles.addRow, list.locked && styles.gated]} pointerEvents={list.locked ? 'none' : 'auto'}>
-            <AddFAB size="sm" onPress={onAddPress} />
-          </View>
+          <AddDivider onPress={onAddPress} disabled={list.locked} />
         </View>
 
         {checked.length > 0 && (
@@ -268,11 +263,6 @@ const baseStyles = StyleSheet.create({
   card: { borderRadius: Radius.md, paddingHorizontal: Spacing.md },
   cardAccent: { borderLeftWidth: 3 },
   rowDivider: { height: 1 },
-  dishGroupHeader: { paddingTop: Spacing.sm, paddingBottom: 2 },
-  dishGroupName: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
-  dishGroupMeta: { fontSize: FontSize.xs, marginTop: 1 },
-  addRow: { alignItems: 'flex-start' },
-  gated: { opacity: 0.45 },
   doneShoppingBtn: { borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center', minHeight: 44 },
   doneShoppingText: { color: '#fff', fontFamily: Fonts.bold, fontSize: FontSize.md },
 });

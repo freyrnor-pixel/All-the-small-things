@@ -13,7 +13,7 @@
  * all three commit the trip via doneShopping(...), Scan/Upload then route to /scan.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/EmptyState, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
+ *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/EmptyState, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -46,11 +46,21 @@
  *     options/bookmark icon was tapped, so ListSettingsSheet/SavedListsModal open scoped
  *     to that list rather than one screen-wide "current" list — there's no single
  *     selected list any more, every Container is independent.
- *   - computeListGroups(items, listId) (module-level, not memoized — same cost as the
- *     old per-screen filters, just re-run once per list) buckets one list's
- *     inWeeklyList items into dish groups / ungrouped unchecked (orderIndex-sorted, for
- *     the move buttons) / checked, mirroring the old single-list dishGroups/
- *     ungroupedWeeklyUnchecked/weeklyChecked logic.
+ *   - computeListGroups(items, listId) (imported from lib/shoppingGroups.ts, not
+ *     memoized — same cost as the old per-screen filters, just re-run once per list)
+ *     buckets one list's inWeeklyList items into dish groups / ungrouped unchecked
+ *     (orderIndex-sorted, for the move buttons) / checked. groupByDish (same module) is
+ *     reused here for the Monthly tab's catalog: restItems is split into
+ *     catalogDishGroups (each rendered as its own collapsed-by-default ExpandableCard,
+ *     mirroring WeekListCard's "From meals" groups) and ungroupedRestItems (the flat
+ *     MonthlyTableRow list, unchanged from before the split).
+ *   - The Monthly tab's old single inline "+" (AddFAB) is now two AddDividers: the first
+ *     opens AddItemSheet (origin:'catalog', unchanged single-item add), the second opens
+ *     AddDishSheet (addDishSheetOpen) — a multi-ingredient "add a whole dish to the
+ *     catalog" flow. handleSaveDish loops the sheet's ingredients through add() with
+ *     status:'catalog' + dishName set, relying on add()'s existing
+ *     status+name+dishName dedup; no new store action needed. Both dividers share
+ *     catalogLocked via `disabled`.
  *   - unlockedListCount feeds the "Unsaved" banner atop the Week lists tab — Shopping
  *     has no draft buffer to abandon (every mutation commits to SQLite immediately via
  *     useShoppingStore/useShoppingListStore), so this is just a lightweight "you left N
@@ -116,7 +126,9 @@ import Surface from '@/components/Surface';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
-import AddFAB from '@/components/AddFAB';
+import AddDivider from '@/components/AddDivider';
+import ExpandableCard from '@/components/ExpandableCard';
+import AddDishSheet from '@/components/AddDishSheet';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import Container from '@/components/Container';
@@ -128,35 +140,12 @@ import { useT } from '@/lib/i18n';
 import { todayStr, dateStr } from '@/lib/date';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { groupByDish, computeListGroups } from '@/lib/shoppingGroups';
 
 type Tab = 'weekly' | 'catalog';
 
 /** What a tapped inline "+" should add to: a specific Week list, or the Monthly catalog. */
 type AddItemTarget = { origin: 'weekly'; listId: string } | { origin: 'catalog' };
-
-/** Buckets one list's inWeeklyList items into dish groups / ungrouped (orderIndex-sorted) / checked. */
-function computeListGroups(items: ShoppingItem[], listId: string) {
-  const unchecked = items.filter((i) => i.status === 'inWeeklyList' && !i.checked && i.listId === listId);
-  const checked = items
-    .filter((i) => i.status === 'inWeeklyList' && i.checked && i.listId === listId)
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const dishMap = new Map<string, ShoppingItem[]>();
-  const ungroupedUnchecked: ShoppingItem[] = [];
-  for (const item of unchecked) {
-    if (item.dishName) {
-      const group = dishMap.get(item.dishName);
-      if (group) group.push(item);
-      else dishMap.set(item.dishName, [item]);
-    } else {
-      ungroupedUnchecked.push(item);
-    }
-  }
-  const dishGroups = Array.from(dishMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  ungroupedUnchecked.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-
-  return { dishGroups, ungroupedUnchecked, checked };
-}
 
 export default function ShoppingScreen() {
   const router = useRouter();
@@ -172,6 +161,7 @@ export default function ShoppingScreen() {
   const [savedListsListId, setSavedListsListId] = useState<string | null>(null);
   const [catalogLocked, setCatalogLocked] = useState(true);
   const [updateItem, setUpdateItem] = useState<ShoppingItem | null>(null);
+  const [addDishSheetOpen, setAddDishSheetOpen] = useState(false);
 
   const items = useShoppingStore((s) => s.items);
   const trips = useShoppingStore((s) => s.trips);
@@ -260,6 +250,10 @@ export default function ShoppingScreen() {
   );
   const stagedItems = useMemo(() => catalogItems.filter((i) => i.pendingRestock), [catalogItems]);
   const restItems = useMemo(() => catalogItems.filter((i) => !i.pendingRestock), [catalogItems]);
+  const { dishGroups: catalogDishGroups, ungrouped: ungroupedRestItems } = useMemo(
+    () => groupByDish(restItems),
+    [restItems]
+  );
 
   const purchasedByTrip = useMemo(() => {
     const purchased = items.filter((i) => i.status === 'purchased' && i.shoppingTripId);
@@ -391,6 +385,25 @@ export default function ShoppingScreen() {
     heavy();
   }
 
+  function handleSaveDish(input: { dishName: string; ingredients: { name: string; amount: string; unit: string; price: number }[] }) {
+    for (const ing of input.ingredients) {
+      add({
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        listType: 'monthly',
+        store: '',
+        price: ing.price,
+        inventoryQty: 0,
+        status: 'catalog',
+        dishName: input.dishName,
+      });
+    }
+    setAddDishSheetOpen(false);
+    success();
+    setConfirm(t.itemAddedToInventory(input.dishName));
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
@@ -484,8 +497,36 @@ export default function ShoppingScreen() {
                       <Text style={[styles.sectionLabel, { color: theme.orange }]}>{t.catalogHeader(catalogItems.length)}</Text>
                       <View style={[styles.sectionRule, { backgroundColor: theme.orange }]} />
                     </View>
+                    {catalogDishGroups.length > 0 && (
+                      <View style={styles.dishGroupsWrap}>
+                        {catalogDishGroups.map(([dishName, groupItems]) => (
+                          <ExpandableCard
+                            key={dishName}
+                            title={dishName}
+                            subtitle={t.ingredientsCount(groupItems.length)}
+                            accentColor={theme.orange}
+                            defaultOpen={false}
+                          >
+                            {groupItems.map((item, idx) => (
+                              <View key={item.id}>
+                                <MonthlyTableRow
+                                  item={item}
+                                  theme={theme}
+                                  onTogglePending={() => setPendingRestock(item.id, !item.pendingRestock)}
+                                  onPress={!catalogLocked ? () => setUpdateItem(item) : undefined}
+                                  temporaryLabel={t.temporaryBadge}
+                                />
+                                {idx < groupItems.length - 1 && (
+                                  <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
+                                )}
+                              </View>
+                            ))}
+                          </ExpandableCard>
+                        ))}
+                      </View>
+                    )}
                     <View style={[styles.card, { backgroundColor: theme.white }]}>
-                      {restItems.map((item, idx) => (
+                      {ungroupedRestItems.map((item, idx) => (
                         <View key={item.id}>
                           <MonthlyTableRow
                             item={item}
@@ -494,15 +535,14 @@ export default function ShoppingScreen() {
                             onPress={!catalogLocked ? () => setUpdateItem(item) : undefined}
                             temporaryLabel={t.temporaryBadge}
                           />
-                          {idx < restItems.length - 1 && (
+                          {idx < ungroupedRestItems.length - 1 && (
                             <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
                           )}
                         </View>
                       ))}
                     </View>
-                    <View style={[styles.addRow, catalogLocked && styles.gated]} pointerEvents={catalogLocked ? 'none' : 'auto'}>
-                      <AddFAB size="sm" onPress={() => setAddItemTarget({ origin: 'catalog' })} />
-                    </View>
+                    <AddDivider onPress={() => setAddItemTarget({ origin: 'catalog' })} disabled={catalogLocked} />
+                    <AddDivider onPress={() => setAddDishSheetOpen(true)} disabled={catalogLocked} />
                   </View>
                 )}
 
@@ -646,6 +686,13 @@ export default function ShoppingScreen() {
         onClose={() => setResetSummary(null)}
       />
 
+      <AddDishSheet
+        visible={addDishSheetOpen}
+        theme={theme}
+        onClose={() => setAddDishSheetOpen(false)}
+        onSave={handleSaveDish}
+      />
+
       <ListSettingsSheet
         visible={settingsSheetListId !== null}
         theme={theme}
@@ -707,8 +754,7 @@ const baseStyles = StyleSheet.create({
   content: { padding: Spacing.md, gap: Spacing.md },
 
   bodyGap: { gap: Spacing.md },
-  addRow: { alignItems: 'flex-start' },
-  gated: { opacity: 0.45 },
+  dishGroupsWrap: { gap: Spacing.xs },
 
   unsavedBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, borderRadius: Radius.md, padding: Spacing.sm },
   unsavedBannerText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.semibold },

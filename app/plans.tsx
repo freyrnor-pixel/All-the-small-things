@@ -11,7 +11,7 @@
  * and done stacks creates a new task and opens its Container immediately.
  *
  * Connections:
- *   Imports → components/AddFAB, components/BottomNav, components/PlanTaskCard,
+ *   Imports → components/AddDivider, components/BottomNav, components/PlanTaskCard,
  *             components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView,
  *             constants/theme, lib/date, lib/i18n, lib/taskOrder, lib/useAppTheme,
  *             store/useEnergyStore, store/useTaskDraftStore, store/useTaskStore
@@ -21,6 +21,9 @@
  *             writes useTaskDraftStore (task_drafts) for any task with unsaved field edits
  *
  * Edit notes:
+ *   - No back button or screen-level add FAB in the header/body — every task list spot uses an
+ *     AddDivider instead (one leading each card, plus a lone one when both stacks are empty),
+ *     all wired to the same handleAddTask.
  *   - `edits` (taskId -> { fields, dirty }) is this screen's lifted edit state, mirroring
  *     app/shopping.tsx's per-list state but keyed by task instead of gated by a lock. A task's
  *     Container always renders from `edits[id]` once touched; `fieldsFromTask(task)` is only
@@ -53,7 +56,7 @@ import { useTaskDraftStore, TaskDraftFields } from '@/store/useTaskDraftStore';
 import PlanTaskCard, { TaskFormFields, fieldsFromTask, fieldsToTaskPayload } from '@/components/PlanTaskCard';
 import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
-import AddFAB from '@/components/AddFAB';
+import AddDivider from '@/components/AddDivider';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { useT } from '@/lib/i18n';
@@ -255,7 +258,6 @@ export default function PlansScreen() {
       <ScreenBackground />
       <ScreenHeader
         title={t.plansTitle}
-        onBack={() => router.back()}
         right={
           <View style={styles.headerActions}>
             <Pressable
@@ -303,40 +305,42 @@ export default function PlansScreen() {
             </View>
           )}
 
+          {undoneTasks.length === 0 && doneTasks.length === 0 && <AddDivider onPress={handleAddTask} />}
+
           {undoneTasks.map((task) => (
-            <PlanTaskCard
-              key={task.id}
-              task={task}
-              theme={theme}
-              open={!!openIds[task.id]}
-              onToggleOpen={() => toggleOpen(task.id)}
-              fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
-              dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
-              onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
-              onToggleDone={() => toggleTask(task.id)}
-              onSave={() => handleSave(task.id)}
-              onDelete={() => handleDelete(task.id)}
-            />
+            <React.Fragment key={task.id}>
+              <AddDivider onPress={handleAddTask} />
+              <PlanTaskCard
+                task={task}
+                theme={theme}
+                open={!!openIds[task.id]}
+                onToggleOpen={() => toggleOpen(task.id)}
+                fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
+                dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
+                onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
+                onToggleDone={() => toggleTask(task.id)}
+                onSave={() => handleSave(task.id)}
+                onDelete={() => handleDelete(task.id)}
+              />
+            </React.Fragment>
           ))}
 
-          <View style={styles.addRow}>
-            <AddFAB size="sm" onPress={handleAddTask} />
-          </View>
-
           {doneTasks.map((task) => (
-            <PlanTaskCard
-              key={task.id}
-              task={task}
-              theme={theme}
-              open={!!openIds[task.id]}
-              onToggleOpen={() => toggleOpen(task.id)}
-              fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
-              dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
-              onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
-              onToggleDone={() => toggleTask(task.id)}
-              onSave={() => handleSave(task.id)}
-              onDelete={() => handleDelete(task.id)}
-            />
+            <React.Fragment key={task.id}>
+              <AddDivider onPress={handleAddTask} />
+              <PlanTaskCard
+                task={task}
+                theme={theme}
+                open={!!openIds[task.id]}
+                onToggleOpen={() => toggleOpen(task.id)}
+                fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
+                dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
+                onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
+                onToggleDone={() => toggleTask(task.id)}
+                onSave={() => handleSave(task.id)}
+                onDelete={() => handleDelete(task.id)}
+              />
+            </React.Fragment>
           ))}
 
           <View style={{ height: 100 }} />
@@ -368,5 +372,4 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.sm,
   },
   unsavedRowTitle: { flex: 1, fontSize: FontSize.sm, fontWeight: '600' },
-  addRow: { alignItems: 'flex-start' },
 });
