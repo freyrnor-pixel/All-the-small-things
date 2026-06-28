@@ -2,12 +2,12 @@
  * HomeHeroBackground.tsx — ambient hero backdrop for the home screen, behind TreeWatermark.
  *
  * Theme-adaptive: "Serene Mist" (light) is a soft blue-sky gradient with a
- * glowing orb halo and faint brush-flow sweeps radiating from the tree's
- * trunk; "Deep Focus" (dark) is the same structure on a navy sky with
- * pulsing rings added around the orb. Both have a sparse field of ink dots
- * that rise and fade, and a ground fade at the bottom so list content stays
- * legible. Built entirely from Views/Animated (no react-native-svg or
- * expo-linear-gradient) to avoid requiring a new native build.
+ * glowing orb halo centered behind the tree; "Deep Focus" (dark) is the same
+ * structure on a navy sky with pulsing rings added around the orb. Both have
+ * a sparse field of ink dots that rise and fade, and a ground fade at the
+ * bottom so list content stays legible. Built entirely from Views/Animated
+ * (no react-native-svg or expo-linear-gradient) to avoid requiring a new
+ * native build.
  *
  * Connections:
  *   Imports → lib/useAppTheme (useIsDark)
@@ -18,6 +18,15 @@
  *     ScreenBackground: absolutely positioned, pointerEvents="none".
  *   - Gradient bands are 3 stacked flat-color Views (not a real blend) —
  *     intentional, keeps this dependency-free.
+ *   - The orb is centered at 50%/50%, same anchor as TreeWatermark's
+ *     centered wrap in app/index.tsx, so the halo sits behind the tree
+ *     rather than floating independently. Faked blur via concentric
+ *     same-opacity circles (see ScreenBackground.tsx's Blob for the same
+ *     trick), not a single hard-edged circle.
+ *   - No brush-flow strokes here (an earlier version drew thick rotated
+ *     bars to mimic the design mockup's blurred SVG strokes) — flat Views
+ *     have no blur, so they rendered as a hard, ugly crossed-bar X instead
+ *     of soft sweeps. Dropped rather than faked badly.
  */
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
@@ -81,7 +90,7 @@ function RisingDot({ spec, color }: { spec: DotSpec; color: string }) {
   );
 }
 
-function PulseRing({ delay }: { delay: number }) {
+function PulseRing({ delay, color }: { delay: number; color: string }) {
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -99,27 +108,30 @@ function PulseRing({ delay }: { delay: number }) {
   const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1.15] });
   const opacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
 
-  return <Animated.View style={[styles.ring, { transform: [{ scale }], opacity }]} />;
+  return <Animated.View style={[styles.ring, { borderColor: color, transform: [{ scale }], opacity }]} />;
 }
 
-function FlowSweep({ rotate, width, strokeWidth, color, opacity, top }: {
-  rotate: string; width: number; strokeWidth: number; color: string; opacity: number; top: Percent;
-}) {
+/** Concentric same-color circles at decreasing opacity, fading out toward the edge — fakes a soft radial glow without a blur filter. */
+function OrbHalo({ size, color }: { size: number; color: string }) {
+  const layers = [1, 0.72, 0.46, 0.24];
   return (
-    <View
-      style={{
-        position: 'absolute',
-        top,
-        left: '50%',
-        width,
-        height: strokeWidth,
-        marginLeft: -width / 2,
-        borderRadius: strokeWidth / 2,
-        backgroundColor: color,
-        opacity,
-        transform: [{ rotate }],
-      }}
-    />
+    <View pointerEvents="none" style={[styles.orbWrap, { width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }]}>
+      {layers.map((scale, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            top: (size * (1 - scale)) / 2,
+            left: (size * (1 - scale)) / 2,
+            width: size * scale,
+            height: size * scale,
+            borderRadius: (size * scale) / 2,
+            backgroundColor: color,
+            opacity: 0.05,
+          }}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -129,23 +141,17 @@ export default function HomeHeroBackground() {
   const palette = isDark
     ? {
         sky: ['#0d1f3e', '#112449', '#162e56'],
-        orb: 'rgba(70,130,240,0.13)',
-        orbBorder: 'rgba(100,160,255,0.12)',
-        flowMain: '#6AAAF8',
-        flowSoft: '#90C0FF',
-        flowWide: '#4878D0',
+        orb: '#4682f0',
+        ring: 'rgba(110,165,255,0.14)',
         dot: '#7ab0ff',
-        ground: 'rgba(11,22,46,0.85)',
+        ground: ['rgba(11,22,46,0)', 'rgba(11,22,46,0.55)', 'rgba(11,22,46,0.85)'],
       }
     : {
         sky: ['#e4f0fb', '#eef6ff', '#f6faff'],
-        orb: 'rgba(215,236,255,0.55)',
-        orbBorder: 'rgba(160,210,255,0.18)',
-        flowMain: '#4080D0',
-        flowSoft: '#6AA0E0',
-        flowWide: '#90C0F0',
+        orb: '#a9cdf5',
+        ring: 'rgba(160,210,255,0.16)',
         dot: '#3B72D6',
-        ground: 'rgba(238,246,255,0.85)',
+        ground: ['rgba(246,250,255,0)', 'rgba(246,250,255,0.55)', 'rgba(246,250,255,0.85)'],
       };
 
   return (
@@ -154,46 +160,38 @@ export default function HomeHeroBackground() {
       <View style={[styles.skyBand, { backgroundColor: palette.sky[1] }]} />
       <View style={[styles.skyBand, { backgroundColor: palette.sky[2] }]} />
 
-      <View style={[styles.orb, { backgroundColor: palette.orb, borderColor: palette.orbBorder }]} />
+      <OrbHalo size={280} color={palette.orb} />
       {isDark && (
         <>
-          <PulseRing delay={0} />
-          <PulseRing delay={1660} />
-          <PulseRing delay={3330} />
+          <PulseRing delay={0} color={palette.ring} />
+          <PulseRing delay={1660} color={palette.ring} />
+          <PulseRing delay={3330} color={palette.ring} />
         </>
       )}
-
-      <FlowSweep rotate="-12deg" width={180} strokeWidth={22} color={palette.flowMain} opacity={0.28} top="62%" />
-      <FlowSweep rotate="14deg" width={170} strokeWidth={22} color={palette.flowMain} opacity={0.28} top="60%" />
-      <FlowSweep rotate="-6deg" width={150} strokeWidth={14} color={palette.flowSoft} opacity={0.2} top="65%" />
-      <FlowSweep rotate="8deg" width={150} strokeWidth={14} color={palette.flowSoft} opacity={0.2} top="64%" />
-      <FlowSweep rotate="0deg" width={260} strokeWidth={32} color={palette.flowWide} opacity={0.18} top="70%" />
 
       {DOTS.map((spec, i) => (
         <RisingDot key={i} spec={spec} color={palette.dot} />
       ))}
 
-      <View style={[styles.groundFade, { backgroundColor: palette.ground }]} />
+      <View style={styles.groundFade}>
+        <View style={[styles.groundBand, { backgroundColor: palette.ground[0] }]} />
+        <View style={[styles.groundBand, { backgroundColor: palette.ground[1] }]} />
+        <View style={[styles.groundBand, { backgroundColor: palette.ground[2] }]} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   skyBand: { flex: 1 },
-  orb: {
+  orbWrap: {
     position: 'absolute',
-    top: '40%',
+    top: '50%',
     left: '50%',
-    width: 280,
-    height: 280,
-    marginLeft: -140,
-    marginTop: -140,
-    borderRadius: 140,
-    borderWidth: 1,
   },
   ring: {
     position: 'absolute',
-    top: '40%',
+    top: '50%',
     left: '50%',
     width: 220,
     height: 220,
@@ -201,7 +199,6 @@ const styles = StyleSheet.create({
     marginTop: -110,
     borderRadius: 110,
     borderWidth: 1,
-    borderColor: 'rgba(110,165,255,0.14)',
   },
   dot: {
     position: 'absolute',
@@ -212,6 +209,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 140,
+    height: 150,
   },
+  groundBand: { flex: 1 },
 });
