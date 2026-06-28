@@ -19,8 +19,9 @@
  *   - SITE_ITEMS order is the bottom menu's visual order (left to right).
  *   - Nav bar has 4 items: Shopping, Home (centre), Health, Scan.
  *   - Removed from nav (routes/screens kept): plans, meals, budget, shared, automations,
- *     settings, habits. Access points: plans via Home's "See everything" link (and
- *     goToSite(..., '/plans') callers), settings in home screen header, habits in health.
+ *     settings, habits, notes. Access points: plans via Home's "See everything" link (and
+ *     goToSite(..., '/plans') callers), settings in home screen header, habits in health,
+ *     notes via a Home header icon (app/index.tsx).
  *   - goToSite() invariant: Home ('/') is always the stack root. Going from Home to
  *     any site pushes (so back() returns to Home). Going from one non-Home site to
  *     another replaces (so the stack never grows past depth 2). Going to Home
@@ -41,6 +42,7 @@ export type SiteRoute =
   | '/plans'
   | '/meals'
   | '/habits'
+  | '/notes'
   | '/scan'
   | '/budget'
   | '/shared'

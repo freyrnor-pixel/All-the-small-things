@@ -4,7 +4,7 @@
  * Mounts on launch: loads the rounded Nunito font (gating render until ready and
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, shopping lists, meals,
- * health, shared, habits, energy, inbox, catalog, receipts, automations, feedback). After requesting
+ * health, shared, habits, energy, inbox, catalog, receipts, automations, feedback, notes). After requesting
  * notification permission it re-syncs all reminders/notifications to the loaded data
  * and language, registers the interactive "Done"/"Remind me later" notification
  * action buttons (syncNotificationCategories) and listens for taps on them
@@ -17,7 +17,7 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useNotesStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
  *
@@ -94,6 +94,7 @@ import { useReceiptStore } from '@/store/useReceiptStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import { useFeedbackStore } from '@/store/useFeedbackStore';
+import { useNotesStore } from '@/store/useNotesStore';
 import { Fonts } from '@/constants/theme';
 import DebugOverlay from '@/components/DebugOverlay';
 import AppModalHost from '@/components/AppModal';
@@ -170,6 +171,7 @@ export default function RootLayout() {
   const loadReceipts = useReceiptStore((s) => s.load);
   const loadAutomations = useAutomationStore((s) => s.load);
   const loadFeedback = useFeedbackStore((s) => s.load);
+  const loadNotes = useNotesStore((s) => s.load);
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
   const debugModeEnabled = useSettingsStore((s) => s.debugModeEnabled);
   const language = useSettingsStore((s) => s.language);
@@ -195,6 +197,7 @@ export default function RootLayout() {
     loadReceipts();
     loadAutomations();
     loadFeedback();
+    loadNotes();
 
     // Notifications: ask once, then bring all scheduled reminders in line with
     // the loaded settings, tasks and habits (and the user's chosen language).
@@ -324,6 +327,7 @@ export default function RootLayout() {
         <Stack.Screen name="shared" />
         <Stack.Screen name="habits" />
         <Stack.Screen name="automations" />
+        <Stack.Screen name="notes" />
         <Stack.Screen
           name="habit-form"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}

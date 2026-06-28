@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/notes.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/ShoppingQuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -19,7 +19,7 @@
  *     getTranslations(lang) — useT cannot run outside React.
  *   - Added keys: nav.settingsLabel, home.todaysPlans, home.seeAllPlans,
  *     health.habits, health.seeAllHabits, health.noHabits, health.addHabit,
- *     shopping.scan, shopping.budget.
+ *     shopping.scan, shopping.budget, notes.*, hints.notes.
  */
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -781,6 +781,21 @@ const en = {
     receiptsTitle: 'Receipts this month',
     noReceipts: 'No receipts yet this month.',
   },
+  // Notater — free-form notes with shopping/plans quick-action buttons (app/notes.tsx)
+  notes: {
+    title: 'Notes',
+    navLabel: 'Notes',
+    addNote: 'Add note',
+    emptyState: 'No notes yet — tap + to add one.',
+    headerPlaceholder: 'Note title',
+    bodyPlaceholder: 'Add more detail…',
+    addToShoppingLabel: 'Add to shopping list',
+    addToPlansLabel: 'Create task',
+    deleteNote: 'Delete note',
+    shoppingQuickAddTitle: 'Add to shopping list',
+    activeLabel: 'Active',
+    checkedLabel: 'Checked off',
+  },
   hints: {
     home: {
       text: 'Your daily overview — tap ⭐ to focus on essentials only.',
@@ -824,6 +839,10 @@ const en = {
     },
     automations: {
       text: 'Simple rules: when X happens, do Y automatically.',
+      example: '',
+    },
+    notes: {
+      text: 'Jot a quick note, then send it to shopping or plans when ready.',
       example: '',
     },
   },
@@ -1573,6 +1592,21 @@ const no: typeof en = {
     receiptsTitle: 'Kvitteringer denne måneden',
     noReceipts: 'Ingen kvitteringer denne måneden ennå.',
   },
+  // Notater — frittstående notater med hurtigknapper for handleliste/planer (app/notes.tsx)
+  notes: {
+    title: 'Notater',
+    navLabel: 'Notater',
+    addNote: 'Legg til notat',
+    emptyState: 'Ingen notater ennå — trykk + for å legge til.',
+    headerPlaceholder: 'Notattittel',
+    bodyPlaceholder: 'Legg til mer detaljer…',
+    addToShoppingLabel: 'Legg til i handleliste',
+    addToPlansLabel: 'Lag oppgave',
+    deleteNote: 'Slett notat',
+    shoppingQuickAddTitle: 'Legg til i handleliste',
+    activeLabel: 'Aktive',
+    checkedLabel: 'Avkrysset',
+  },
   hints: {
     home: {
       text: 'Din daglige oversikt — trykk ⭐ for kun det viktigste.',
@@ -1616,6 +1650,10 @@ const no: typeof en = {
     },
     automations: {
       text: 'Enkle regler: når X skjer, gjør Y automatisk.',
+      example: '',
+    },
+    notes: {
+      text: 'Skriv et raskt notat, og send det til handleliste eller planer når du er klar.',
       example: '',
     },
   },

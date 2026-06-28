@@ -8,15 +8,16 @@
  *
  * Connections:
  *   Imports → lib/date
- *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useInboxStore.ts, store/useMealStore.ts, store/useReceiptStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts, store/useTaskDraftStore.ts
- *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, shopping_lists, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts, task_drafts
+ *   Used by → app/_layout.tsx, store/useAutomationStore.ts, store/useCatalogStore.ts, store/useEnergyStore.ts, store/useFeedbackStore.ts, store/useHabitStore.ts, store/useHealthStore.ts, store/useInboxStore.ts, store/useMealStore.ts, store/useNotesStore.ts, store/useReceiptStore.ts, store/useSettingsStore.ts, store/useSharedStore.ts, store/useShoppingStore.ts, store/useTaskStore.ts, store/useTaskDraftStore.ts
+ *   Data    → owns ALL SQLite tables: settings, tasks, shopping_items, shopping_trips, shopping_lists, dishes, ingredients, health_logs, store_items, purchase_log, shared_tasks, shared_shopping_items, habits, habit_logs, ifttt_rules, feedback_notes, energy_logs, inbox_items, receipts, task_drafts, notes
  *
  * Edit notes:
  *   - Add columns via the `migrations` array ONLY — never edit a CREATE TABLE to
  *     change an existing table; migrations run on every launch and swallow
  *     "column already exists" errors.
  *   - pruneOldData() deliberately spares config-like tables (recurring tasks,
- *     dishes, habits, catalog, settings); only dated/append-only rows are pruned.
+ *     dishes, habits, catalog, settings) and user-authored persistent content
+ *     (notes); only dated/append-only rows are pruned.
  */
 import * as SQLite from 'expo-sqlite';
 import { dateStr } from '@/lib/date';
@@ -391,6 +392,16 @@ export function initDb() {
       dirty_fields TEXT DEFAULT '[]',
       updated_at TEXT
     )`,
+    // Notater — free-form notes with a checkmark + shopping/plans quick-action buttons (see store/useNotesStore.ts)
+    `CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      header TEXT DEFAULT '',
+      body TEXT DEFAULT '',
+      checked INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_notes_checked ON notes(checked, sort_order)",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an
