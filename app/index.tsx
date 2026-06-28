@@ -18,9 +18,11 @@
  *   - Notes preview section sits between Backlog and the Shopping preview: up to
  *     NOTES_PREVIEW_LIMIT (3) active notes with a tap-to-toggle checkbox (same interaction
  *     as the Shopping preview rows right below it). Only active notes are shown — checked-off
- *     notes drop out — and the whole section is hidden when there are none (mirrors Backlog's
- *     hide-when-empty pattern). Title + "See all" link (t.seeAll) → /notes matches the
- *     Shopping preview's title+link layout; Notes has no BottomNav tab (see lib/siteNav.ts).
+ *     notes drop out. The section itself ALWAYS renders (title + "See all" link → /notes,
+ *     matching the Shopping preview's title+link layout); only the inner body switches
+ *     between an empty-state card (t.notes.emptyState) and the note rows — same
+ *     always-render-header pattern as Plans/Shopping, not Backlog's hide-when-empty one.
+ *     Notes has no BottomNav tab (see lib/siteNav.ts).
  *   - The Plans section header is a plain title + a right-aligned "See everything"
  *     link (t.seeEverythingLink) → /plans, matching the Shopping preview section's
  *     title+link layout — replaces the old pressable-title/chevron + bottom link.
@@ -525,14 +527,18 @@ export default function HomeScreen() {
         )}
 
         {/* Notes preview */}
-        {activeNotes.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.notes.title}</Text>
-              <Pressable onPress={() => goToSite(router, pathname, '/notes')}>
-                <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
-              </Pressable>
-            </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.notes.title}</Text>
+            <Pressable onPress={() => goToSite(router, pathname, '/notes')}>
+              <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
+            </Pressable>
+          </View>
+          {activeNotes.length === 0 ? (
+            <Surface tint={theme.offWhite} style={styles.emptyCard}>
+              <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.notes.emptyState}</Text>
+            </Surface>
+          ) : (
             <Surface style={styles.card}>
               {notesPreview.map((note) => (
                 <Pressable
@@ -552,8 +558,8 @@ export default function HomeScreen() {
                 </Text>
               )}
             </Surface>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Shopping preview */}
         <View style={styles.section}>
