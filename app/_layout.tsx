@@ -300,12 +300,9 @@ export default function RootLayout() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.cream },
-          // Bottom-menu sites are switched far more often than they're "drilled into" —
-          // a quick fade reads as a tab switch, not a push (see ANIMATION_GUIDELINES.md §1's
-          // "Tab switch: 150–200ms" row vs. the default stack-push transition). Modal screens
-          // below override this with their own slide_from_bottom.
-          animation: 'fade',
-          animationDuration: 150,
+          // Disabled fade animation to eliminate the flash when switching sites.
+          // Modal screens below override this with their own slide_from_bottom.
+          animation: 'none',
         }}
       >
         <Stack.Screen name="index" />
