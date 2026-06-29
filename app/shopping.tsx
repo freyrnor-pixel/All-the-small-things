@@ -10,7 +10,7 @@
  * via doneShopping(...), Scan/Upload then route to /scan.
  *
  * Connections:
- *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date (getWeekRangeContaining), lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
+ *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date (getWeekRangeContaining), lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset/weeklyResetDay) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -40,10 +40,10 @@
  *     sets it directly (no chooser, same as the old inventory-edit.tsx); a Week list's
  *     inline "+" goes through AddSourceChooser first (addSourceChooserListId), whose
  *     "search or type" option seeds addItemTarget from that same id.
- *   - settingsSheetListId/savedListsListId track which Week list Container's
- *     options/bookmark icon was tapped, so ListSettingsSheet/SavedListsModal open scoped
- *     to that list rather than one screen-wide "current" list — there's no single
- *     selected list any more, every Container is independent.
+ *   - savedListsListId tracks which Week list's bookmark icon was tapped, so SavedListsModal
+ *     opens scoped to that list rather than one screen-wide "current" list — there's no single
+ *     selected list any more, every Container is independent. Each list also has a Delete button
+ *     (trash icon) that calls handleDeleteList with a confirmation modal.
  *   - computeListGroups(items, listId) (imported from lib/shoppingGroups.ts, not
  *     memoized — same cost as the old per-screen filters, just re-run once per list)
  *     buckets one list's inWeeklyList items into dish groups / ungrouped unchecked
@@ -129,7 +129,6 @@ import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import Container from '@/components/Container';
 import WeekListCard from '@/components/WeekListCard';
-import ListSettingsSheet from '@/components/ListSettingsSheet';
 import SavedListsModal from '@/components/SavedListsModal';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
@@ -153,7 +152,6 @@ export default function ShoppingScreen() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [purchasedExpanded, setPurchasedExpanded] = useState<string | null>(null);
   const [resetSummary, setResetSummary] = useState<MonthlyResetSummary | null>(null);
-  const [settingsSheetListId, setSettingsSheetListId] = useState<string | null>(null);
   const [savedListsListId, setSavedListsListId] = useState<string | null>(null);
   const [catalogLocked, setCatalogLocked] = useState(true);
   const [updateItem, setUpdateItem] = useState<ShoppingItem | null>(null);
@@ -606,16 +604,6 @@ export default function ShoppingScreen() {
                 )}
               </View>
             </Container>
-
-            {/* Static monthly items container */}
-            <Container
-              title={t.staticMonthlyContainerTitle}
-              locked={true}
-              onToggleLock={() => {}}
-              accentColor={theme.orange}
-            >
-              <AddDivider onPress={() => {}} disabled={true} />
-            </Container>
             </>
           )}
 
@@ -645,8 +633,8 @@ export default function ShoppingScreen() {
                       checked={checked}
                       onToggleLock={() => toggleListLocked(list.id)}
                       onRename={(name) => renameList(list.id, name)}
-                      onOpenSettings={() => setSettingsSheetListId(list.id)}
                       onOpenSavedLists={() => setSavedListsListId(list.id)}
+                      onDelete={() => handleDeleteList(list.id)}
                       onToggleItem={(item) => toggle(item.id)}
                       onCollectItem={(item) => toggleCollected(item.id)}
                       onRemoveItem={handleRemoveWeeklyItem}
@@ -658,14 +646,23 @@ export default function ShoppingScreen() {
                 })
               )}
 
-              {/* Empty weekly list container with add button */}
+              {/* Empty weekly list container with add buttons */}
               <Container
                 title={t.newWeeklyListTitle}
                 locked={false}
                 onToggleLock={() => {}}
                 accentColor={theme.green}
               >
-                <AddDivider onPress={handleCreateNewWeeklyList} />
+                <View style={styles.addListSection}>
+                  <View style={styles.addListRow}>
+                    <Text style={[styles.addListLabel, { color: theme.textLight }]}>Empty</Text>
+                    <AddDivider onPress={handleCreateNewWeeklyList} />
+                  </View>
+                  <View style={styles.addListRow}>
+                    <Text style={[styles.addListLabel, { color: theme.textLight }]}>Saved lists</Text>
+                    <AddDivider onPress={() => setSavedListsListId('__new__')} />
+                  </View>
+                </View>
               </Container>
             </>
           )}
@@ -732,16 +729,6 @@ export default function ShoppingScreen() {
         theme={theme}
         onClose={() => setAddDishSheetOpen(false)}
         onSave={handleSaveDish}
-      />
-
-      <ListSettingsSheet
-        visible={settingsSheetListId !== null}
-        theme={theme}
-        list={nonTemplateLists.find((l) => l.id === settingsSheetListId)}
-        onClose={() => setSettingsSheetListId(null)}
-        onSetRecurring={(isRecurring, intervalWeeks) =>
-          settingsSheetListId && setListRecurring(settingsSheetListId, isRecurring, intervalWeeks)
-        }
       />
 
       <SavedListsModal
@@ -816,4 +803,8 @@ const baseStyles = StyleSheet.create({
 
   disclosureChevron: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
   weekLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  addListSection: { gap: Spacing.md },
+  addListRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md },
+  addListLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold, flex: 1 },
 });

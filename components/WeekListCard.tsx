@@ -20,6 +20,8 @@
  * Edit notes:
  *   - Rename commits on submit/blur via onRename(trimmed); empty/unchanged input is a
  *     no-op, identical semantics to the old ListSwitcherHeader.
+ *   - Right action buttons: Saved lists (bookmark icon) and Delete (trash icon). Delete calls
+ *     onDelete, which should show a confirmation modal before actually removing the list.
  *   - `list.locked` only gates add/remove/edit: every ShoppingRow gets locked={list.locked}
  *     (dims remove/move buttons; checkmark/collect/undo stay interactive regardless), and
  *     the AddDivider below the Shopping list section is disabled via its own `disabled` prop —
@@ -55,8 +57,8 @@ type Props = {
   checked: ShoppingItem[];
   onToggleLock: () => void;
   onRename: (name: string) => void;
-  onOpenSettings: () => void;
   onOpenSavedLists: () => void;
+  onDelete: () => void;
   onToggleItem: (item: ShoppingItem) => void;
   onCollectItem: (item: ShoppingItem) => void;
   onRemoveItem: (item: ShoppingItem) => void;
@@ -74,8 +76,8 @@ export default function WeekListCard({
   checked,
   onToggleLock,
   onRename,
-  onOpenSettings,
   onOpenSavedLists,
+  onDelete,
   onToggleItem,
   onCollectItem,
   onRemoveItem,
@@ -128,11 +130,11 @@ export default function WeekListCard({
       accentColor={theme.green}
       rightAction={
         <View style={styles.iconRow}>
-          <Pressable onPress={onOpenSettings} hitSlop={8}>
-            <Ionicons name="options-outline" size={20} color={theme.textLight} />
-          </Pressable>
           <Pressable onPress={onOpenSavedLists} hitSlop={8}>
             <Ionicons name="bookmark-outline" size={20} color={theme.textLight} />
+          </Pressable>
+          <Pressable onPress={onDelete} hitSlop={8}>
+            <Ionicons name="trash-outline" size={20} color={theme.textLight} />
           </Pressable>
         </View>
       }
