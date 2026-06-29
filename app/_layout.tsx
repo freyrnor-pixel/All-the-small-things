@@ -17,11 +17,14 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useNotesStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
- *   Used by → router layout — defines the Stack and per-screen options
- *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
+ *   Imports → components/AppModal, components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useNotesStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
+ *   Used by → router layout — defines the Stack and per-screen options; provides root ImageBackground for all screens
+ *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap; renders bg-light.png or bg-dark.png based on theme
  *
  * Edit notes:
+ *   - root ImageBackground renders bg-light.png or bg-dark.png based on isDark, covering all screens (Stack + modals).
+ *     Each screen's ScreenBackground or HomeHeroBackground blobs layer on top. Rendering order:
+ *     ImageBackground (image) → ScreenBackground blobs → content.
  *   - task-form, habit-form, share-modal and capture are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - screenOptions sets a 150ms fade as the default transition (tab-switch feel for the
  *     bottom-menu sites — see lib/siteNav.ts + components/BottomNav.tsx); modal screens
@@ -53,7 +56,7 @@ import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ImageBackground, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Updates from 'expo-updates';
 import {
   useFonts,
@@ -297,57 +300,63 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-    <GestureHandlerRootView style={[styles.root, { backgroundColor: theme.cream }]}>
-      {/* backgroundColor is an Android-only runtime prop not in expo-status-bar types */}
-      {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-      {/* @ts-expect-error */}
-      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.cream },
-          // Bottom-menu sites are switched far more often than they're "drilled into" —
-          // a quick fade reads as a tab switch, not a push (see ANIMATION_GUIDELINES.md §1's
-          // "Tab switch: 150–200ms" row vs. the default stack-push transition). Modal screens
-          // below override this with their own slide_from_bottom.
-          animation: 'fade',
-          animationDuration: 150,
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="plans" />
-        <Stack.Screen name="shopping" />
-        <Stack.Screen name="inventory-edit" />
-        <Stack.Screen name="meals" />
-        <Stack.Screen name="health" />
-        <Stack.Screen name="scan" />
-        <Stack.Screen name="budget" />
-        <Stack.Screen name="settings" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="shared" />
-        <Stack.Screen name="habits" />
-        <Stack.Screen name="automations" />
-        <Stack.Screen name="notes" />
-        <Stack.Screen
-          name="habit-form"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="share-modal"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="task-form"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-        <Stack.Screen
-          name="capture"
-          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-        />
-      </Stack>
-      {loaded && debugModeEnabled && <DebugOverlay />}
-      <AppModalHost />
-    </GestureHandlerRootView>
+      <GestureHandlerRootView style={[styles.root, { backgroundColor: theme.cream }]}>
+        <ImageBackground
+          source={isDark ? require('@/assets/bg-dark.png') : require('@/assets/bg-light.png')}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        >
+          {/* backgroundColor is an Android-only runtime prop not in expo-status-bar types */}
+          {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+          {/* @ts-expect-error */}
+          <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.cream} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.cream },
+              // Bottom-menu sites are switched far more often than they're "drilled into" —
+              // a quick fade reads as a tab switch, not a push (see ANIMATION_GUIDELINES.md §1's
+              // "Tab switch: 150–200ms" row vs. the default stack-push transition). Modal screens
+              // below override this with their own slide_from_bottom.
+              animation: 'fade',
+              animationDuration: 150,
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="plans" />
+            <Stack.Screen name="shopping" />
+            <Stack.Screen name="inventory-edit" />
+            <Stack.Screen name="meals" />
+            <Stack.Screen name="health" />
+            <Stack.Screen name="scan" />
+            <Stack.Screen name="budget" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="shared" />
+            <Stack.Screen name="habits" />
+            <Stack.Screen name="automations" />
+            <Stack.Screen name="notes" />
+            <Stack.Screen
+              name="habit-form"
+              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
+              name="share-modal"
+              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
+              name="task-form"
+              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen
+              name="capture"
+              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+          </Stack>
+          {loaded && debugModeEnabled && <DebugOverlay />}
+          <AppModalHost />
+        </ImageBackground>
+      </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }
