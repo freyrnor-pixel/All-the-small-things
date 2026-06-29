@@ -8,7 +8,7 @@
  * delete action).
  *
  * Connections:
- *   Imports → components/AppModal, components/ConfirmationBanner, components/DatePickerCalendar, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/AppModal, components/ConfirmationBanner, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, react-native-safe-area-context, store/useTaskStore
  *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx); pushed
  *             from app/index.tsx (plain new-task "+"), app/plans.tsx (task rows), and
  *             app/notes.tsx (a note's "plans" quick-action, via the `title` param below)
@@ -37,6 +37,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -46,7 +47,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTaskStore, TaskType, Importance } from '@/store/useTaskStore';
@@ -57,6 +58,7 @@ import { tap, warning } from '@/lib/haptics';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import IconButton from '@/components/IconButton';
+import TimePickerWheel from '@/components/TimePickerWheel';
 import { showAppModal } from '@/components/AppModal';
 import { Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 
@@ -105,6 +107,8 @@ export default function TaskFormScreen() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [calExpanded, setCalExpanded] = useState(false);
   const [newStepTitle, setNewStepTitle] = useState('');
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const { bottom: bottomInset } = useSafeAreaInsets();
 
   const { dayLabels, months } = t;
   const sortedSteps = [...(existing?.steps ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
@@ -306,14 +310,39 @@ export default function TaskFormScreen() {
                 ))}
               </View>
               {timeEnabled ? (
-                <TextInput
-                  style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
-                  placeholder="HH:MM"
-                  placeholderTextColor={theme.gray}
-                  value={time}
-                  onChangeText={setTime}
-                  keyboardType="numbers-and-punctuation"
-                />
+                <>
+                  <Pressable
+                    style={[styles.timeRow, { backgroundColor: theme.offWhite }]}
+                    onPress={() => { tap(); setTimePickerOpen(true); }}
+                  >
+                    <Ionicons name="time-outline" size={16} color={theme.textLight} />
+                    <Text style={[styles.timeRowText, { color: theme.text }]}>{time}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={theme.gray} />
+                  </Pressable>
+
+                  <Modal
+                    visible={timePickerOpen}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setTimePickerOpen(false)}
+                  >
+                    <Pressable
+                      style={styles.timeSheetBackdrop}
+                      onPress={() => setTimePickerOpen(false)}
+                    />
+                    <View style={[styles.timeSheet, { backgroundColor: theme.white, paddingBottom: Math.max(Spacing.xl, bottomInset + Spacing.md) }]}>
+                      <View style={[styles.timeSheetHandle, { backgroundColor: theme.grayLight }]} />
+                      <Text style={[styles.timeSheetTitle, { color: theme.text }]}>{t.timeLabel}</Text>
+                      <TimePickerWheel value={time} onChange={setTime} theme={theme} />
+                      <Pressable
+                        style={[styles.timeSheetDone, { backgroundColor: theme.orange }]}
+                        onPress={() => setTimePickerOpen(false)}
+                      >
+                        <Text style={[styles.timeSheetDoneText, { color: theme.white }]}>{t.save}</Text>
+                      </Pressable>
+                    </View>
+                  </Modal>
+                </>
               ) : (
                 <Text style={[styles.wheneverHint, { color: theme.textLight }]}>{t.wheneverHint}</Text>
               )}
@@ -574,15 +603,54 @@ const baseStyles = StyleSheet.create({
   weekChipDay: { fontSize: FontSize.xs, fontWeight: '600' },
   weekChipNum: { fontSize: FontSize.sm },
   calToggleBtn: { alignSelf: 'flex-start' },
-  timeInput: {
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
     borderRadius: Radius.sm,
-    padding: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  timeRowText: {
     fontSize: FontSize.md,
+    fontFamily: Fonts.semibold,
+    minWidth: 48,
+  },
+  timeSheetBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  timeSheet: {
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: Spacing.md,
+    ...Shadow.fab,
+  },
+  timeSheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: Radius.full,
+  },
+  timeSheetTitle: {
+    fontSize: FontSize.md,
+    fontFamily: Fonts.semibold,
     textAlign: 'center',
-    width: 90,
+  },
+  timeSheetDone: {
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  timeSheetDoneText: {
+    fontSize: FontSize.md,
+    fontFamily: Fonts.bold,
   },
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
-  dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  dayChip: { width: 44, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   deleteBtn: {
     borderRadius: Radius.md,
@@ -607,5 +675,5 @@ const baseStyles = StyleSheet.create({
   stepActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   addStepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
   addStepInput: { flex: 1, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
-  addStepBtn: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  addStepBtn: { width: 44, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
 });
