@@ -339,6 +339,26 @@ export default function PlansScreen() {
     });
   }
 
+  function handleDiscardDraft(taskId: string) {
+    clearDraft(taskId);
+    // If the task itself has no title and was never saved to the store with real content,
+    // also delete it so it doesn't linger as a phantom task.
+    const task = tasks.find((tk) => tk.id === taskId);
+    if (task && !task.title.trim()) {
+      removeTask(taskId);
+    }
+    setEdits((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+    setOpenIds((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+  }
+
   function handleAddTask() {
     const task = addTask({
       title: '',
@@ -407,16 +427,24 @@ export default function PlansScreen() {
                 </Text>
               </View>
               {draftEntries.map(([taskId, draft]) => (
-                <Pressable
+                <View
                   key={taskId}
                   style={[styles.unsavedRow, { backgroundColor: theme.white }]}
-                  onPress={() => openTask(taskId)}
                 >
-                  <Text style={[styles.unsavedRowTitle, { color: theme.text }]} numberOfLines={1}>
-                    {draft.fields.title || t.taskTitlePlaceholder}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textLight} />
-                </Pressable>
+                  <Pressable style={styles.unsavedRowMain} onPress={() => openTask(taskId)}>
+                    <Text style={[styles.unsavedRowTitle, { color: theme.text }]} numberOfLines={1}>
+                      {draft.fields.title || t.taskTitlePlaceholder}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.textLight} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleDiscardDraft(taskId)}
+                    hitSlop={8}
+                    accessibilityLabel="Discard draft"
+                  >
+                    <Ionicons name="close-circle-outline" size={20} color={theme.textLight} />
+                  </Pressable>
+                </View>
               ))}
             </View>
           )}
@@ -559,6 +587,13 @@ const baseStyles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: Radius.md,
     padding: Spacing.sm,
+  },
+  unsavedRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.xs,
   },
   unsavedRowTitle: { flex: 1, fontSize: FontSize.sm, fontWeight: '600' },
 });
