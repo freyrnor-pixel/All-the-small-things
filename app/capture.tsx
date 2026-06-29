@@ -13,7 +13,7 @@
  *
  * Edit notes:
  *   - All visible strings go through useT() (t.inbox.*).
- *   - Deliberately no task-form-style fields here (date/time/priority) — those
+ *   - Deliberately no task-form-style fields here (date/time/importance) — those
  *     decisions happen later when promoting an item via components/InboxSection.tsx.
  *   - Dual-purpose: with no params it's add-mode (stays open after each capture);
  *     with ?id=<inbox id> it's edit-mode (pre-fills the row, saves via update(),

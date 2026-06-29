@@ -412,6 +412,8 @@ export function initDb() {
       FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
     )`,
     "CREATE INDEX IF NOT EXISTS idx_task_steps_task ON task_steps(task_id)",
+    // Manual drag-sort position within a task's Important/General section (app/plans.tsx)
+    "ALTER TABLE tasks ADD COLUMN sort_order INTEGER DEFAULT 0",
   ];
   // Track applied migrations with PRAGMA user_version so we don't re-run the whole
   // (ever-growing) list on every launch. IMPORTANT: the migrations array is an

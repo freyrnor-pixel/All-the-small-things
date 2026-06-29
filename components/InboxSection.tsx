@@ -14,8 +14,8 @@
  *
  * Edit notes:
  *   - Promotion defaults: today's date, start-at type, no recurrence, regular
- *     importance, medium priority — deliberately skips task-form so capture stays
- *     frictionless; the user can still open the resulting task to fine-tune it later.
+ *     importance — deliberately skips task-form so capture stays frictionless;
+ *     the user can still open the resulting task to fine-tune it later.
  *   - success() fires on promote (haptic={false} on that button so it doesn't also
  *     fire PressableScale's default tap()); discard keeps PressableScale's default
  *     tap() — dismissing a quick note isn't a destructive confirmation flow.
@@ -53,7 +53,7 @@ export default function InboxSection() {
       recurring: 'none',
       recurringDays: [],
       importance: 'regular',
-      priority: 'medium',
+      sortOrder: 0,
     });
   }
 

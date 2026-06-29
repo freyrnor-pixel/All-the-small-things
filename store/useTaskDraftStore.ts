@@ -10,7 +10,7 @@
  * live draft; deleted the moment that task is saved.
  *
  * Connections:
- *   Imports → lib/db, lib/dataAccess, store/useTaskStore (type-only: TaskType/Recurring/Importance/Priority)
+ *   Imports → lib/db, lib/dataAccess, store/useTaskStore (type-only: TaskType/Recurring/Importance)
  *   Used by → app/_layout.tsx (load), app/plans.tsx
  *   Data    → defines a Zustand store; owns SQLite table task_drafts (lib/db.ts migration)
  *
@@ -27,7 +27,7 @@
 import { create } from 'zustand';
 import db from '@/lib/db';
 import { Row, FieldMap, loadAll, rowValues, readStr, readInt, readBool, readJson } from '@/lib/dataAccess';
-import { TaskType, Recurring, Importance, Priority } from '@/store/useTaskStore';
+import { TaskType, Recurring, Importance } from '@/store/useTaskStore';
 
 export type TaskDraftFields = {
   title: string;
@@ -39,7 +39,6 @@ export type TaskDraftFields = {
   recurring: Recurring;
   recurringDays: number[];
   importance: Importance;
-  priority: Priority;
 };
 
 export type TaskDraft = {
@@ -65,7 +64,6 @@ const DRAFT_COLUMNS: FieldMap<TaskDraftFields> = {
   recurring: { col: 'recurring' },
   recurringDays: { col: 'recurring_days', to: (v) => JSON.stringify(v ?? []) },
   importance: { col: 'importance' },
-  priority: { col: 'priority' },
 };
 
 function rowToDraft(row: Row): { taskId: string; draft: TaskDraft } {
@@ -82,7 +80,6 @@ function rowToDraft(row: Row): { taskId: string; draft: TaskDraft } {
         recurring: readStr(row, 'recurring', 'none') as Recurring,
         recurringDays: readJson<number[]>(row, 'recurring_days', []),
         importance: readStr(row, 'importance', 'regular') as Importance,
-        priority: readStr(row, 'priority', 'medium') as Priority,
       },
       dirtyFields: readJson<string[]>(row, 'dirty_fields', []),
       updatedAt: readStr(row, 'updated_at'),

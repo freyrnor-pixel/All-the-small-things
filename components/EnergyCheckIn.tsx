@@ -3,7 +3,7 @@
  *
  * A gentle 3-tile picker (low/medium/high) shown above the Plans section.
  * Selecting a level writes to useEnergyStore (one row per day); on a 'low' day
- * app/index.tsx narrows the visible today-task list to priority === 'high'
+ * app/plans.tsx narrows the visible today-task list to importance === 'essential'
  * tasks only, layered on top of any existing essentials/work-mode filter —
  * never replacing it.
  *

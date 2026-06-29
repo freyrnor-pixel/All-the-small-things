@@ -71,7 +71,7 @@ export default function SharedRequestsSection({ kind }: Props) {
       recurring: 'none',
       recurringDays: [],
       importance: 'regular',
-      priority: 'medium',
+      sortOrder: 0,
     });
     toggleTask(id);
   }

@@ -12,7 +12,7 @@ function task(partial: Partial<Task>): Task {
     recurring: 'none',
     recurringDays: [],
     importance: 'regular',
-    priority: 'medium',
+    sortOrder: 0,
     steps: [],
     ...partial,
   };

@@ -2,9 +2,9 @@
  * useEnergyStore.ts — daily energy check-in (one level per day)
  *
  * Zustand store for the once-a-day energy level the user self-reports
- * (components/EnergyCheckIn.tsx). On a 'low' day, app/index.tsx narrows the
- * visible today-task list to priority === 'high' tasks only, on top of any
- * existing essentials/work-mode filtering — never as a replacement for it.
+ * (components/EnergyCheckIn.tsx). On a 'low' day, app/plans.tsx narrows the
+ * visible today-task list to importance === 'essential' tasks only, on top of
+ * any existing essentials/work-mode filtering — never as a replacement for it.
  *
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/date

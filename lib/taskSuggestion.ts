@@ -4,8 +4,8 @@
  * Pure function picking the single best next task to surface on the home
  * screen (components/NextTaskCard.tsx). Deliberately separate from
  * lib/taskOrder.ts's rankTodayTasks() (orders the *whole* day for display)
- * and useTaskStore's focusTask() (importance/time only, no priority/energy
- * awareness) — this folds in the AP-03 priority field and energy check-in.
+ * and useTaskStore's focusTask() (importance/time only, no energy awareness)
+ * — this folds in the energy check-in on top of the same importance field.
  *
  * Connections:
  *   Imports → store/useEnergyStore (EnergyLevel type only), store/useTaskStore (Task type only)
@@ -18,12 +18,12 @@
  *     handed a broader list); weekly-recurring tasks bypass the check since
  *     their stored `date` is their creation date, not the occurrence date.
  *   - Sort/tie-break mirrors focusTask()'s style: time ascending (nulls last),
- *     then id — with a priority rank (high → medium → low) ahead of it.
+ *     then id — low energy narrows candidates to importance==='essential' instead
+ *     of ranking by a separate priority field (removed; importance is now the
+ *     only "what matters" signal, set by drag in app/plans.tsx).
  */
 import { Task } from '@/store/useTaskStore';
 import { EnergyLevel } from '@/store/useEnergyStore';
-
-const PRIORITY_RANK: Record<Task['priority'], number> = { high: 0, medium: 1, low: 2 };
 
 export function suggestNextTask(
   tasks: Task[],
@@ -37,11 +37,9 @@ export function suggestNextTask(
     return true;
   });
   if (workModeActive) candidates = candidates.filter((task) => task.importance === 'essential');
-  if (energy === 'low') candidates = candidates.filter((task) => task.priority === 'high');
+  if (energy === 'low') candidates = candidates.filter((task) => task.importance === 'essential');
 
   const sorted = [...candidates].sort((a, b) => {
-    const pr = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
-    if (pr !== 0) return pr;
     if (a.time && b.time) return a.time.localeCompare(b.time);
     if (a.time) return -1;
     if (b.time) return 1;
