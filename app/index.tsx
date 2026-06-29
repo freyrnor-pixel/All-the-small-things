@@ -551,6 +551,47 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Habits preview */}
+        {habits.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.nav.habits}</Text>
+              <Pressable onPress={() => goToSite(router, pathname, '/habits')}>
+                <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
+              </Pressable>
+            </View>
+            <Surface style={styles.card}>
+              {habits.slice(0, 3).map((habit) => {
+                const log = habitLogs.find((l) => l.habitId === habit.id && l.logDate === today);
+                const count = log?.count ?? 0;
+                const isDone = count >= habit.dailyGoal;
+                const accent = habit.kind === 'break' ? '#4A8EC2' : theme.green;
+                return (
+                  <Pressable
+                    key={habit.id}
+                    style={styles.habitPreviewRow}
+                    onPress={() => router.push('/habits')}
+                  >
+                    <View style={styles.habitPreviewLeft}>
+                      <Text style={[styles.habitPreviewName, { color: theme.text }]} numberOfLines={1}>
+                        {habit.title}
+                      </Text>
+                      <Text style={[styles.habitPreviewProgress, { color: isDone ? accent : theme.textLight }]}>
+                        {count}/{habit.dailyGoal}
+                      </Text>
+                    </View>
+                    {isDone && (
+                      <View style={[styles.habitDoneBadge, { backgroundColor: accent }]}>
+                        <Text style={styles.habitDoneBadgeText}>✓</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </Surface>
+          </View>
+        )}
+
         {/* Notes preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -819,6 +860,35 @@ const baseStyles = StyleSheet.create({
   timelineContainer: { marginVertical: Spacing.md },
   doneHeaderToggle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.md },
   doneTasksList: { marginTop: Spacing.sm },
+  habitPreviewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  habitPreviewLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  habitPreviewName: {
+    fontSize: FontSize.sm,
+    fontFamily: Fonts.semibold,
+  },
+  habitPreviewProgress: {
+    fontSize: FontSize.xs,
+  },
+  habitDoneBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  habitDoneBadgeText: {
+    color: '#ffffff',
+    fontSize: FontSize.sm,
+    fontFamily: Fonts.bold,
+  },
   pointsCard: { borderRadius: Radius.md, padding: Spacing.lg, alignItems: 'center', marginBottom: Spacing.lg },
   pointsText: { fontSize: FontSize.sm, fontFamily: Fonts.medium, textAlign: 'center' },
 });

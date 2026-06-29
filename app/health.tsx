@@ -241,9 +241,6 @@ export default function HealthScreen() {
           </Surface>
         )}
 
-        {/* W-D: low-weight, affirming self-care note below the overview. */}
-        <Text style={[styles.selfCareNote, { color: theme.textLight }]}>{t.healthSelfCareNote}</Text>
-
         {/* Log list */}
         <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
         {logs.length === 0 && (
@@ -372,36 +369,70 @@ export default function HealthScreen() {
               const count = log?.count ?? 0;
               const accent = habit.kind === 'break' ? HABIT_BREAK_BLUE : theme.green;
               return (
-                <View key={habit.id} style={styles.habitRow}>
-                  <HabitIcon icon={habit.icon} size={20} color={accent} />
-                  <Text style={[styles.habitName, { color: theme.text }]} numberOfLines={1}>{habit.title}</Text>
-                  <Text style={[styles.habitCount, { color: theme.textLight }]}>{count}/{habit.dailyGoal}</Text>
-                  <Pressable
-                    style={[styles.adjBtn, { backgroundColor: theme.grayLight }]}
-                    onPress={() => decrementHabit(habit.id, today)}
-                    hitSlop={8}
-                  >
-                    <Text style={[styles.adjBtnText, { color: theme.textLight }]}>−</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.adjBtn, { backgroundColor: accent }]}
-                    onPress={() => incrementHabit(habit.id, today)}
-                    hitSlop={8}
-                  >
-                    <Text style={[styles.adjBtnPlusText, { color: theme.white }]}>+</Text>
-                  </Pressable>
-                </View>
+                <ExpandableCard
+                  key={habit.id}
+                  title={habit.title}
+                  leadingAction={<HabitIcon icon={habit.icon} size={20} color={accent} />}
+                  onToggle={() => {}}
+                  open={false}
+                >
+                  <View style={styles.habitCardContent}>
+                    <View style={styles.habitDetailRow}>
+                      <Text style={[styles.habitLabel, { color: theme.textLight }]}>{t.habitCue}</Text>
+                      <Text style={[styles.habitValue, { color: theme.text }]}>
+                        {habit.cue || t.notSet}
+                      </Text>
+                    </View>
+
+                    {habit.notificationTimes && habit.notificationTimes.length > 0 && (
+                      <View style={styles.habitDetailRow}>
+                        <Text style={[styles.habitLabel, { color: theme.textLight }]}>{t.reminders}</Text>
+                        <Text style={[styles.habitValue, { color: theme.text }]}>
+                          {habit.notificationTimes.join(', ')}
+                        </Text>
+                      </View>
+                    )}
+
+                    {habit.recurrence && (
+                      <View style={styles.habitDetailRow}>
+                        <Text style={[styles.habitLabel, { color: theme.textLight }]}>{t.frequency}</Text>
+                        <Text style={[styles.habitValue, { color: theme.text }]}>
+                          {habit.recurrence}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={[styles.habitCountRow, { borderTopColor: theme.grayLight }]}>
+                      <Text style={[styles.habitCount, { color: theme.textLight }]}>Today: {count}/{habit.dailyGoal}</Text>
+                      <View style={styles.habitAdjustments}>
+                        <Pressable
+                          style={[styles.adjBtn, { backgroundColor: theme.grayLight }]}
+                          onPress={() => decrementHabit(habit.id, today)}
+                          hitSlop={8}
+                        >
+                          <Text style={[styles.adjBtnText, { color: theme.textLight }]}>−</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.adjBtn, { backgroundColor: accent }]}
+                          onPress={() => incrementHabit(habit.id, today)}
+                          hitSlop={8}
+                        >
+                          <Text style={[styles.adjBtnPlusText, { color: theme.white }]}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                </ExpandableCard>
               );
             })
           )}
 
           <Pressable
             onPress={() => router.push('/habit-form')}
-            style={styles.addButton}
+            style={styles.addButtonIcon}
             accessibilityLabel={t.healthAddHabit}
           >
-            <Ionicons name="add-circle-outline" size={20} color={theme.orange} />
-            <Text style={[styles.addButtonText, { color: theme.orange }]}>{t.healthAddHabit}</Text>
+            <Ionicons name="add-circle-outline" size={24} color={theme.orange} />
           </Pressable>
         </View>
 
@@ -517,17 +548,34 @@ const baseStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  habitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 6,
+  habitCardContent: {
+    gap: Spacing.md,
   },
-  habitName: {
-    flex: 1,
+  habitDetailRow: {
+    gap: Spacing.xs,
+  },
+  habitLabel: {
+    fontSize: FontSize.xs,
+    fontFamily: Fonts.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  habitValue: {
     fontSize: FontSize.sm,
   },
-  habitCount: { fontSize: FontSize.xs },
+  habitCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    marginTop: Spacing.sm,
+  },
+  habitCount: { fontSize: FontSize.sm },
+  habitAdjustments: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
   adjBtn: {
     width: 26, height: 26,
     borderRadius: Radius.full,
@@ -536,12 +584,9 @@ const baseStyles = StyleSheet.create({
   },
   adjBtnText: { fontSize: FontSize.md, lineHeight: 26 },
   adjBtnPlusText: { fontSize: FontSize.md, fontFamily: Fonts.bold, lineHeight: 26 },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  addButtonIcon: {
     paddingVertical: Spacing.sm,
     minHeight: 44,
+    justifyContent: 'center',
   },
-  addButtonText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
 });
