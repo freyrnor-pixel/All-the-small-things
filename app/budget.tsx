@@ -9,7 +9,7 @@
  * returns there.
  *
  * Connections:
- *   Imports → components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
+ *   Imports → components/BottomNav, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useReceiptStore, store/useSettingsStore
  *   Used by → Expo Router route "/budget"; reached via app/shopping.tsx (quick action) or app/scan.tsx (header link)
  *   Data    → reads useReceiptStore (receipts table, months/receiptsForMonth/totalForMonth/receiptsByStore) and useSettingsStore.monthlyBudgetNok; writes via useSettingsStore.update (monthlyBudgetNok)
  *
@@ -32,7 +32,6 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { currentMonthStr } from '@/lib/date';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
@@ -74,7 +73,6 @@ export default function BudgetScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScreenHeader title={t.budget.title} onBack={() => router.back()} bordered />
 
       <SiteSwipeView>

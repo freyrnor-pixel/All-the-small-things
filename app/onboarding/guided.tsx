@@ -26,7 +26,6 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import ScreenBackground from '@/components/ScreenBackground';
 import Button from '@/components/Button';
 import Surface from '@/components/Surface';
 
@@ -50,7 +49,6 @@ export default function GuidedScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"

@@ -6,7 +6,7 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/AddDivider, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
+ *   Imports → components/AddDivider, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HabitIcon, components/PressableScale, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
  *   Used by → Expo Router route "/health" (BottomNav tab — see lib/siteNav.ts)
  *   Data    → useHealthStore (health_logs table, incl. update()); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
  *
@@ -48,7 +48,6 @@ import HabitIcon from '@/components/HabitIcon';
 import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
@@ -185,7 +184,6 @@ export default function HealthScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       <ScreenHeader title={t.healthTitle} />
 

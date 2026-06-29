@@ -7,7 +7,7 @@
  * Presence of an `id` route param switches it into edit mode (with a delete action).
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/ScreenBackground, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx); pushed
  *             from app/index.tsx (plain new-task "+"), app/plans.tsx (task rows), and
  *             app/notes.tsx (a note's "plans" quick-action, via the `title` param below)
@@ -49,7 +49,6 @@ import { tap } from '@/lib/haptics';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
 import TimePickerWheel from '@/components/TimePickerWheel';
-import ScreenBackground from '@/components/ScreenBackground';
 import { Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 
 function nextHourStr(): string {
@@ -157,7 +156,6 @@ export default function TaskFormScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.cancel, { color: theme.textLight }]}>{t.cancel}</Text>

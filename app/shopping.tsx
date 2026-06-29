@@ -13,7 +13,7 @@
  * all three commit the trip via doneShopping(...), Scan/Upload then route to /scan.
  *
  * Connections:
- *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/EmptyState, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenBackground, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
+ *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/EmptyState, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -123,7 +123,6 @@ import ConfirmationBanner from '@/components/ConfirmationBanner';
 import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
 import AddDivider from '@/components/AddDivider';
@@ -406,7 +405,6 @@ export default function ShoppingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
       {/* Header */}
       <ScreenHeader

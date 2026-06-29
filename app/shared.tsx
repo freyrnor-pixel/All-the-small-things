@@ -6,7 +6,7 @@
  * linked source task/shopping item when one exists (sourceTaskId / sourceItemId).
  *
  * Connections:
- *   Imports → components/BottomNav, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
+ *   Imports → components/BottomNav, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/i18n, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, store/useTaskStore
  *   Used by → Expo Router route "/shared"
  *   Data    → useSharedStore (shared_tasks + shared_shopping_items tables); mirrors actions to useTaskStore (tasks) / useShoppingStore (shopping_items) via the source ids; scaled fontSize via useScaledStyles()
  *
@@ -30,7 +30,6 @@ import { useShoppingStore } from '@/store/useShoppingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
@@ -88,7 +87,6 @@ export default function SharedScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScreenHeader title={t.sharedTitle} onBack={() => router.back()} />
 
       <View style={[styles.tabs, { backgroundColor: theme.grayLight }]}>

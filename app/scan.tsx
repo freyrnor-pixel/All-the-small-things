@@ -8,7 +8,7 @@
  * payloads into the shared store.
  *
  * Connections:
- *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, lib/siteNav, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, @expo/vector-icons (Ionicons)
+ *   Imports → components/AppModal, components/BottomNav, components/HintCard, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/receipt, lib/share, lib/siteNav, store/useCatalogStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingStore, @expo/vector-icons (Ionicons)
  *   Used by → Expo Router route "/scan"
  *   Data    → confirmed items write to FOUR stores: useShoppingStore (shopping_items) + useReceiptStore.addReceipt (receipts) + useCatalogStore.recordPurchases (purchase_log, linked via receipt_id, + store_items); QR import writes useSharedStore (shared_shopping_items / shared_tasks); scaled fontSize via useScaledStyles()
  *
@@ -59,7 +59,6 @@ import { useT } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import HintCard from '@/components/HintCard';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
@@ -394,7 +393,6 @@ export default function ScanScreen() {
   if (mode === 'idle') {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenBackground />
         <ScreenHeader
           title={t.scanReceipt}
           bordered
@@ -528,7 +526,6 @@ export default function ScanScreen() {
   if (mode === 'scanning') {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenBackground />
         <View style={styles.scanningContainer}>
           <Animated.View style={[styles.pulseCircle, { backgroundColor: theme.orangeLight, transform: [{ scale: pulseAnim }] }]}>
             <Ionicons name="camera-outline" size={42} color={theme.orange} />
@@ -544,7 +541,6 @@ export default function ScanScreen() {
   if (mode === 'result' && parsedItems.length > 0) {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenBackground />
         <ScreenHeader
           title={t.foundOnReceipt}
           bordered
@@ -639,7 +635,6 @@ export default function ScanScreen() {
   if (mode === 'manual') {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenBackground />
         <ScreenHeader
           title={t.manualEntryTitle}
           bordered

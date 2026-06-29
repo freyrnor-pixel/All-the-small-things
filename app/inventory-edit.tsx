@@ -11,7 +11,7 @@
  * functionality. Reachable only via a direct `/inventory-edit` URL until then.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AddItemSheet, components/EmptyState, components/MonthlyTableRow, components/ScreenBackground, components/ScreenHeader, components/UpdateSheet, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useShoppingStore
+ *   Imports → components/AddFAB, components/AddItemSheet, components/EmptyState, components/MonthlyTableRow, components/ScreenHeader, components/UpdateSheet, constants/theme, lib/haptics, lib/i18n, lib/useAppTheme, store/useShoppingStore
  *   Used by → Expo Router route "/inventory-edit" (no remaining in-app entry point)
  *   Data    → useShoppingStore (shopping_items, status === 'catalog' rows only)
  *
@@ -28,7 +28,6 @@ import { useShoppingStore, ShoppingItem } from '@/store/useShoppingStore';
 import MonthlyTableRow from '@/components/MonthlyTableRow';
 import UpdateSheet from '@/components/UpdateSheet';
 import AddItemSheet from '@/components/AddItemSheet';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import EmptyState from '@/components/EmptyState';
 import AddFAB from '@/components/AddFAB';
@@ -90,7 +89,6 @@ export default function InventoryEditScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScreenHeader title={t.inventoryEditTitle} onBack={() => router.back()} bordered />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>

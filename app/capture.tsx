@@ -7,7 +7,7 @@
  * several thoughts can be jotted down in one sitting; closes only via Back.
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/PressableScale, components/ScreenBackground, constants/theme, lib/i18n, lib/useAppTheme, store/useInboxStore
+ *   Imports → components/ConfirmationBanner, components/PressableScale, constants/theme, lib/i18n, lib/useAppTheme, store/useInboxStore
  *   Used by → Expo Router route "/capture" (presented as a modal — see app/_layout.tsx), components/BubbleMenu.tsx (capture bubble), components/InboxSection.tsx (edit affordance, passes ?id=)
  *   Data    → useInboxStore.add() inserts into inbox_items; useInboxStore.update() edits an existing row
  *
@@ -27,7 +27,6 @@ import { useT } from '@/lib/i18n';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import PressableScale from '@/components/PressableScale';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
-import ScreenBackground from '@/components/ScreenBackground';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useInboxStore } from '@/store/useInboxStore';
 
@@ -62,7 +61,6 @@ export default function CaptureScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <View style={[styles.header, { backgroundColor: theme.white, borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.back, { color: theme.orange }]}>{t.back}</Text>

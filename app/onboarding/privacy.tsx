@@ -21,7 +21,6 @@ import { useRouter } from 'expo-router';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import ScreenBackground from '@/components/ScreenBackground';
 import Button from '@/components/Button';
 
 export default function PrivacyScreen() {
@@ -32,7 +31,6 @@ export default function PrivacyScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"

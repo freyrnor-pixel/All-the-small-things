@@ -31,7 +31,6 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import ScreenBackground from '@/components/ScreenBackground';
 import Button from '@/components/Button';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -51,7 +50,6 @@ export default function OnboardingWelcome() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.flex}

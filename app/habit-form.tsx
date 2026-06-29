@@ -7,7 +7,7 @@
  * delete); a `kind` param pre-seeds build vs. break for new habits.
  *
  * Connections:
- *   Imports → components/AppModal, components/HabitIcon, components/ScreenBackground, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/AppModal, components/HabitIcon, components/Surface, constants/theme, lib/haptics, lib/i18n, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habit-form" (presented as a modal — see app/_layout.tsx)
  *   Data    → useHabitStore (habits table) via add/update/remove; toggling the notification schedules a habit reminder; scaled fontSize via useScaledStyles()
  *
@@ -47,7 +47,6 @@ import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import HabitIcon, { HABIT_ICON_NAMES } from '@/components/HabitIcon';
 import Surface from '@/components/Surface';
-import ScreenBackground from '@/components/ScreenBackground';
 import { showAppModal } from '@/components/AppModal';
 
 const HABIT_ICONS = HABIT_ICON_NAMES;
@@ -232,7 +231,6 @@ export default function HabitForm() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <View style={[styles.header, { borderBottomColor: theme.grayLight }]}>
         <Pressable onPress={() => router.back()}>
           <Text style={[styles.cancel, { color: theme.orange }]}>{t.cancel}</Text>

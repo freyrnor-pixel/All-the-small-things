@@ -52,7 +52,6 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useT } from '@/lib/i18n';
 import { FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import ScreenBackground from '@/components/ScreenBackground';
 import Button from '@/components/Button';
 import Pet from '@/components/Pet';
 
@@ -87,7 +86,6 @@ export default function OnboardingStep6() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.content}

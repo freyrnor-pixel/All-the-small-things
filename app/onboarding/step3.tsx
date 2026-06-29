@@ -24,7 +24,6 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useT } from '@/lib/i18n';
 import { FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
-import ScreenBackground from '@/components/ScreenBackground';
 import Button from '@/components/Button';
 
 export default function OnboardingStep3() {
@@ -43,7 +42,6 @@ export default function OnboardingStep3() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>

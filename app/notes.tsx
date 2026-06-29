@@ -10,7 +10,7 @@
  *
  * Connections:
  *   Imports → components/AddFAB, components/BottomNav, components/HintCard, components/NoteRow,
- *             components/ScreenBackground, components/ScreenHeader, components/ShoppingQuickAddSheet,
+ *             components/ScreenHeader, components/ShoppingQuickAddSheet,
  *             components/SiteSwipeView, constants/theme, lib/i18n, lib/useAppTheme, store/useNotesStore
  *   Used by → Expo Router route "/notes", reached via a preview card on app/index.tsx
  *             (positioned between the Plans and Shopping preview cards; no BottomNav tab —
@@ -32,7 +32,6 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useNotesStore } from '@/store/useNotesStore';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import HintCard from '@/components/HintCard';
 import NoteRow from '@/components/NoteRow';
@@ -83,7 +82,6 @@ export default function NotesScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScreenHeader title={t.notes.title} onBack={() => router.back()} />
 
       <SiteSwipeView>

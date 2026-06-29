@@ -12,7 +12,7 @@
  *
  * Connections:
  *   Imports → components/AddDivider, components/BottomNav, components/PlanTaskCard,
- *             components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView,
+ *             components/ScreenHeader, components/SiteSwipeView,
  *             constants/theme, lib/date, lib/i18n, lib/taskOrder, lib/useAppTheme,
  *             store/useEnergyStore, store/useTaskDraftStore, store/useTaskStore
  *   Used by → Expo Router route "/plans" (BottomNav tab — see lib/siteNav.ts), also reached
@@ -57,7 +57,6 @@ import { useTaskStore } from '@/store/useTaskStore';
 import { useEnergyStore } from '@/store/useEnergyStore';
 import { useTaskDraftStore, TaskDraftFields } from '@/store/useTaskDraftStore';
 import PlanTaskCard, { TaskFormFields, fieldsFromTask, fieldsToTaskPayload } from '@/components/PlanTaskCard';
-import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import AddDivider from '@/components/AddDivider';
 import BottomNav from '@/components/BottomNav';
@@ -262,7 +261,6 @@ export default function PlansScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenBackground />
       <ScreenHeader
         title={t.plansTitle}
         right={
