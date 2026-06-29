@@ -403,14 +403,10 @@ export default function PlansScreen() {
             >
               <Text style={[styles.shareBtnText, { color: theme.text }]}>{t.shareBtnLabel}</Text>
             </Pressable>
-            {anyDirty ? (
+            {anyDirty && (
               <Pressable style={[styles.savePill, { backgroundColor: theme.orange }]} onPress={handleSaveAll}>
                 <Text style={[styles.savePillText, { color: theme.white }]}>{t.save}</Text>
               </Pressable>
-            ) : (
-              <View style={[styles.savePill, { backgroundColor: theme.orange, opacity: 0.5 }]}>
-                <Text style={[styles.savePillText, { color: theme.white }]}>{t.save}</Text>
-              </View>
             )}
           </View>
         }
