@@ -1,21 +1,18 @@
 /**
- * shopping.tsx — Monthly list (permanent inventory) & Week lists (weekly working lists)
+ * shopping.tsx — Monthly list (permanent inventory) & Week lists (weekly working lists) with empty containers
  *
  * Tabbed shopping screen, rebuilt around the padlock-gated Container pattern
- * (components/Container.tsx). The "Monthly list" tab is a single Container: locked
- * (the default) shows today's read-mostly view — a checkbox per row stages items into
- * the pinned staging tray, rows aren't tappable; unlocked folds in /inventory-edit's
- * add/edit/remove logic in-place (rows become tappable → UpdateSheet, plus an inline
- * "+" → AddItemSheet). The "Week lists" tab renders one Container per non-template
- * shopping_lists row (components/WeekListCard.tsx) instead of stepping through a single
- * "selected" list — every list is visible and independently lockable at once. Each
- * list's "Shopping done!" button opens a 3-choice receipt pop-up (Scan / Upload / Skip);
- * all three commit the trip via doneShopping(...), Scan/Upload then route to /scan.
+ * (components/Container.tsx). The "Monthly list" tab has two Containers: the main catalog
+ * (locked by default) and a static empty monthly-items container. The "Week lists" tab
+ * renders one Container per non-template shopping_lists row (components/WeekListCard.tsx),
+ * plus an empty container with a "+" button to create new lists. Each list's "Shopping done!"
+ * button opens a 3-choice receipt pop-up (Scan / Upload / Skip); all three commit the trip
+ * via doneShopping(...), Scan/Upload then route to /scan.
  *
  * Connections:
- *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
+ *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date (getWeekRangeContaining), lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
- *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
+ *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset/weeklyResetDay) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - Empty states (tree picture + text) removed from both Monthly and Weekly list tabs.
@@ -136,7 +133,7 @@ import ListSettingsSheet from '@/components/ListSettingsSheet';
 import SavedListsModal from '@/components/SavedListsModal';
 import { success, heavy } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
-import { todayStr, dateStr } from '@/lib/date';
+import { todayStr, dateStr, getWeekRangeContaining } from '@/lib/date';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { Fonts, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { groupByDish, computeListGroups } from '@/lib/shoppingGroups';
@@ -161,6 +158,7 @@ export default function ShoppingScreen() {
   const [catalogLocked, setCatalogLocked] = useState(true);
   const [updateItem, setUpdateItem] = useState<ShoppingItem | null>(null);
   const [addDishSheetOpen, setAddDishSheetOpen] = useState(false);
+  const [deleteListId, setDeleteListId] = useState<string | null>(null);
 
   const items = useShoppingStore((s) => s.items);
   const trips = useShoppingStore((s) => s.trips);
@@ -190,6 +188,8 @@ export default function ShoppingScreen() {
   const saveListAsTemplate = useShoppingListStore((s) => s.saveAsTemplate);
   const instantiateTemplate = useShoppingListStore((s) => s.instantiateTemplate);
   const reorderItem = useShoppingStore((s) => s.reorder);
+  const addList = useShoppingListStore((s) => s.add);
+  const removeList = useShoppingListStore((s) => s.remove);
 
   const nonTemplateLists = useMemo(() => lists.filter((l) => !l.isTemplate), [lists]);
   const templateLists = useMemo(() => lists.filter((l) => l.isTemplate), [lists]);
@@ -403,6 +403,36 @@ export default function ShoppingScreen() {
     setConfirm(t.itemAddedToInventory(input.dishName));
   }
 
+  function handleCreateNewWeeklyList() {
+    const today = todayStr();
+    const weeklyResetDay = useSettingsStore.getState().weeklyResetDay;
+    const { startDate, endDate } = getWeekRangeContaining(today, weeklyResetDay);
+    addList({ startDate, endDate });
+    success();
+  }
+
+  function handleDeleteList(listId: string) {
+    showAppModal(t.deleteWeeklyListConfirmTitle, t.deleteWeeklyListConfirmBody, [
+      {
+        text: t.deleteConfirmBtn,
+        style: 'destructive',
+        onPress: () => {
+          removeList(listId);
+          heavy();
+          setConfirm(t.doneShoppingSuccessText);
+        },
+      },
+      {
+        text: t.cancel,
+        style: 'cancel',
+        onPress: () => {
+          setDeleteListId(null);
+        },
+      },
+    ]);
+    setDeleteListId(null);
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
@@ -458,15 +488,16 @@ export default function ShoppingScreen() {
 
           {/* ----- MONTHLY LIST TAB ----- */}
           {tab === 'catalog' && (
-            <Container
-              title={t.monthlyTabLabel}
-              locked={catalogLocked}
-              onToggleLock={() => setCatalogLocked((v) => !v)}
-              accentColor={theme.orange}
-            >
-              <View style={styles.bodyGap}>
-                {stagedItems.length > 0 && (
-                  <View style={[styles.trayCard, { backgroundColor: theme.white, borderColor: theme.orange }]}>
+            <>
+              <Container
+                title={t.monthlyTabLabel}
+                locked={catalogLocked}
+                onToggleLock={() => setCatalogLocked((v) => !v)}
+                accentColor={theme.orange}
+              >
+                <View style={styles.bodyGap}>
+                  {stagedItems.length > 0 && (
+                    <View style={[styles.trayCard, { backgroundColor: theme.white, borderColor: theme.orange }]}>
                     <Text style={[styles.trayHeader, { color: theme.orange }]}>
                       {t.stagingTrayHeader(stagedItems.length)}
                     </Text>
@@ -575,6 +606,17 @@ export default function ShoppingScreen() {
                 )}
               </View>
             </Container>
+
+            {/* Static monthly items container */}
+            <Container
+              title={t.staticMonthlyContainerTitle}
+              locked={true}
+              onToggleLock={() => {}}
+              accentColor={theme.orange}
+            >
+              <AddDivider onPress={() => {}} disabled={true} />
+            </Container>
+            </>
           )}
 
           {/* ----- WEEK LISTS TAB ----- */}
@@ -615,6 +657,16 @@ export default function ShoppingScreen() {
                   );
                 })
               )}
+
+              {/* Empty weekly list container with add button */}
+              <Container
+                title={t.newWeeklyListTitle}
+                locked={false}
+                onToggleLock={() => {}}
+                accentColor={theme.green}
+              >
+                <AddDivider onPress={handleCreateNewWeeklyList} />
+              </Container>
             </>
           )}
 
