@@ -328,6 +328,9 @@ const en = {
   // Empty containers in shopping screen
   newWeeklyListTitle: 'Create a new list',
   staticMonthlyContainerTitle: 'Monthly items',
+  deleteList: 'Delete list',
+  deleteListConfirmTitle: 'Delete this list?',
+  deleteListConfirmBody: 'This will permanently remove the list and all its items.',
   deleteWeeklyListConfirmTitle: 'Delete this list?',
   deleteWeeklyListConfirmBody: 'Are you sure? This cannot be undone.',
   // Inventory edit screen
@@ -1178,6 +1181,9 @@ const no: typeof en = {
   // Tomme beholdere i handlelisten
   newWeeklyListTitle: 'Lag en ny liste',
   staticMonthlyContainerTitle: 'Månedlige varer',
+  deleteList: 'Slett liste',
+  deleteListConfirmTitle: 'Slette denne listen?',
+  deleteListConfirmBody: 'Dette sletter listen og alle varene permanent.',
   deleteWeeklyListConfirmTitle: 'Slette denne listen?',
   deleteWeeklyListConfirmBody: 'Er du sikker? Dette kan ikke angres.',
   // Rediger-inventar-skjerm

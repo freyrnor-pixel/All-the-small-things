@@ -10,7 +10,7 @@
  * via doneShopping(...), Scan/Upload then route to /scan.
  *
  * Connections:
- *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date (getWeekRangeContaining), lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
+ *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date (getWeekRangeContaining), lib/haptics (success, heavy, warning), lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset/weeklyResetDay) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
@@ -130,7 +130,7 @@ import SiteSwipeView from '@/components/SiteSwipeView';
 import Container from '@/components/Container';
 import WeekListCard from '@/components/WeekListCard';
 import SavedListsModal from '@/components/SavedListsModal';
-import { success, heavy } from '@/lib/haptics';
+import { success, heavy, warning } from '@/lib/haptics';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr, getWeekRangeContaining } from '@/lib/date';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
@@ -410,25 +410,17 @@ export default function ShoppingScreen() {
   }
 
   function handleDeleteList(listId: string) {
-    showAppModal(t.deleteWeeklyListConfirmTitle, t.deleteWeeklyListConfirmBody, [
+    warning();
+    showAppModal(t.deleteListConfirmTitle, t.deleteListConfirmBody, [
+      { text: t.cancel, style: 'cancel' },
       {
-        text: t.deleteConfirmBtn,
+        text: t.deleteList,
         style: 'destructive',
         onPress: () => {
           removeList(listId);
-          heavy();
-          setConfirm(t.doneShoppingSuccessText);
-        },
-      },
-      {
-        text: t.cancel,
-        style: 'cancel',
-        onPress: () => {
-          setDeleteListId(null);
         },
       },
     ]);
-    setDeleteListId(null);
   }
 
   return (
