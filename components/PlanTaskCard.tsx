@@ -97,6 +97,7 @@ export function fieldsToTaskPayload(fields: TaskFormFields): Omit<Task, 'id' | '
     recurringDays: fields.recurring === 'weekly' ? fields.recurringDays : [],
     importance: fields.importance,
     priority: fields.priority,
+    steps: [],
   };
 }
 

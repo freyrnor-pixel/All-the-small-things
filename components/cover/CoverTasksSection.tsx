@@ -6,7 +6,7 @@
  * Galaxy Z Flip cover display — fixed layout, no scroll.
  *
  * Connections:
- *   Imports → react-native, constants/theme, lib/i18n, store/useTaskStore (Task type only)
+ *   Imports → react-native, constants/theme, lib/i18n, store/useTaskStore (Task type only), components/Surface
  *   Used by → components/cover/CoverScreen
  *   Data    → receives tasks + callbacks as props (totalPendingCount is a live "undone tasks
  *             today" badge count, unrelated to any toggle-staging mechanism); scaled fontSize
@@ -18,6 +18,7 @@ import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
 import { Task } from '@/store/useTaskStore';
 import { useScaledStyles } from '@/lib/useAppTheme';
+import Surface from '@/components/Surface';
 
 type Props = {
   tasks: Task[];
@@ -41,7 +42,7 @@ export default function CoverTasksSection({
   const overflow = totalPendingCount - visible.length;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.white, borderColor: theme.grayLight }]}>
+    <Surface style={[styles.container, { marginHorizontal: Spacing.sm }]}>
       <View style={styles.header}>
         <Text style={[styles.label, { color: theme.text }]}>{t.cover.tasksToday}</Text>
         <View style={[styles.badge, { backgroundColor: theme.orange }]}>
@@ -67,7 +68,7 @@ export default function CoverTasksSection({
       >
         <Text style={[styles.addBtnText, { color: theme.green }]}>{t.cover.quickAdd}</Text>
       </Pressable>
-    </View>
+    </Surface>
   );
 }
 
@@ -101,8 +102,6 @@ function CoverTaskRow({ task, onToggle, theme }: { task: Task; onToggle: (id: st
 const baseStyles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    marginHorizontal: Spacing.sm,
     padding: Spacing.sm,
   },
   header: {

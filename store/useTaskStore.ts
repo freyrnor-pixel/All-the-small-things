@@ -110,6 +110,7 @@ function rowToTask(row: Row): Task {
     recurringDays: readJson<number[]>(row, 'recurring_days', []),
     importance: readStr(row, 'importance', 'regular') as Importance,
     priority: readStr(row, 'priority', 'medium') as Priority,
+    steps: [],
   };
 }
 

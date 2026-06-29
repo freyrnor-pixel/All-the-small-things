@@ -6,7 +6,7 @@
  * display — fixed layout, no scroll.
  *
  * Connections:
- *   Imports → react-native, constants/theme, lib/i18n, store/useHabitStore
+ *   Imports → react-native, constants/theme, lib/i18n, store/useHabitStore, components/Surface
  *   Used by → components/cover/CoverScreen
  *   Data    → receives habit summaries as props; scaled fontSize via useScaledStyles()
  */
@@ -15,6 +15,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppColors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { Translations } from '@/lib/i18n';
 import { useScaledStyles } from '@/lib/useAppTheme';
+import Surface from '@/components/Surface';
 
 export type HabitSummary = {
   id: string;
@@ -36,7 +37,7 @@ export default function CoverHabitsSection({ habits, theme, t }: Props) {
   const done = visible.filter((h) => h.goalMet).length;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.offWhite, borderColor: theme.grayLight }]}>
+    <Surface tint={theme.offWhite} style={[styles.container, { marginHorizontal: Spacing.sm }]}>
       <View style={styles.header}>
         <Text style={[styles.label, { color: theme.text }]}>{t.cover.habitsToday}</Text>
         <Text style={[styles.summary, { color: theme.textLight }]}>
@@ -56,15 +57,13 @@ export default function CoverHabitsSection({ habits, theme, t }: Props) {
           </View>
         ))}
       </View>
-    </View>
+    </Surface>
   );
 }
 
 const baseStyles = StyleSheet.create({
   container: {
     borderRadius: Radius.md,
-    borderWidth: 1,
-    marginHorizontal: Spacing.sm,
     padding: Spacing.sm,
   },
   header: {

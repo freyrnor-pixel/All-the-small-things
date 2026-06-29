@@ -7,7 +7,7 @@
  * week strip. Long-press (or the per-habit edit) opens the habit form.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/CompletionGlow, components/HabitIcon, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHabitStore, store/useSettingsStore
  *   Used by → Expo Router route "/habits"
  *   Data    → useHabitStore (habits + habit_logs tables) via increment/decrement; colour theme + language from useSettingsStore
  *
@@ -59,6 +59,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { success, warning, heavy, selection } from '@/lib/haptics';
 import { todayStr, dateStr, getWeekDates, getMonthDates } from '@/lib/date';
 import { AppColors, FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
+import Surface from '@/components/Surface';
 import { useSoftTheme, useAccessibility, useScaledStyles } from '@/lib/useAppTheme';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -718,11 +719,11 @@ export default function HabitsScreen() {
         {tab === 'today' && (
           <>
             {visibleHabits.length > 0 && (
-              <View style={[styles.summaryChip, { backgroundColor: theme.white }]}>
+              <Surface style={styles.summaryChip}>
                 <Text style={[styles.summaryChipText, { color: metCount === visibleHabits.length ? theme.green : theme.textLight }]}>
                   {metCount} / {visibleHabits.length} {t.habitSummaryLabel}
                 </Text>
-              </View>
+              </Surface>
             )}
 
             {/* Building section */}
@@ -821,7 +822,6 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     alignSelf: 'center',
-    ...Shadow.card,
   },
   summaryChipText: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
   dashedAdd: {
