@@ -33,28 +33,28 @@ export function seedTestData(): void {
   const habits = useHabitStore.getState();
 
   // ── One-time tasks ────────────────────────────────────────────────────────
-  tasks.add({ title: 'Legebesøk', date: addDays(today, 1), time: '10:00', taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'essential', priority: 'medium' });
-  tasks.add({ title: 'Betale regninger', date: addDays(today, 4), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'essential', priority: 'medium' });
-  tasks.add({ title: 'Rydde kjøkken', date: today, taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', priority: 'medium' });
-  tasks.add({ title: 'Ringe tannlegen', date: addDays(today, 3), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', priority: 'medium' });
-  tasks.add({ title: 'Handle mat', date: today, time: '14:00', taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', priority: 'medium' });
-  tasks.add({ title: 'Ta ut søppel', date: today, taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'essential', priority: 'medium' });
-  tasks.add({ title: 'Sende e-post til forsikring', date: addDays(today, 2), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', priority: 'medium' });
-  tasks.add({ title: 'Timesboks: rapport', date: addDays(today, 1), time: '09:00', taskType: 'time-box', durationMinutes: 60, done: false, recurring: 'none', recurringDays: [], importance: 'essential', priority: 'medium' });
-  tasks.add({ title: 'Kjøpe bursdag-gave', date: addDays(today, 6), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', priority: 'medium' });
-  tasks.add({ title: 'Vaske bilen', date: addDays(today, 5), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', priority: 'medium' });
+  tasks.add({ title: 'Legebesøk', date: addDays(today, 1), time: '10:00', taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'essential', sortOrder: 0 });
+  tasks.add({ title: 'Betale regninger', date: addDays(today, 4), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'essential', sortOrder: 0 });
+  tasks.add({ title: 'Rydde kjøkken', date: today, taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', sortOrder: 0 });
+  tasks.add({ title: 'Ringe tannlegen', date: addDays(today, 3), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', sortOrder: 0 });
+  tasks.add({ title: 'Handle mat', date: today, time: '14:00', taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', sortOrder: 0 });
+  tasks.add({ title: 'Ta ut søppel', date: today, taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'essential', sortOrder: 0 });
+  tasks.add({ title: 'Sende e-post til forsikring', date: addDays(today, 2), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', sortOrder: 0 });
+  tasks.add({ title: 'Timesboks: rapport', date: addDays(today, 1), time: '09:00', taskType: 'time-box', durationMinutes: 60, done: false, recurring: 'none', recurringDays: [], importance: 'essential', sortOrder: 0 });
+  tasks.add({ title: 'Kjøpe bursdag-gave', date: addDays(today, 6), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', sortOrder: 0 });
+  tasks.add({ title: 'Vaske bilen', date: addDays(today, 5), taskType: 'start-at', done: false, recurring: 'none', recurringDays: [], importance: 'regular', sortOrder: 0 });
 
   // ── Recurring weekly tasks ────────────────────────────────────────────────
   // Mon–Fri morning routine time-box (days 0–4 = Mon–Fri)
-  tasks.add({ title: 'Morgenrutine', date: today, time: '07:30', taskType: 'time-box', durationMinutes: 30, done: false, recurring: 'weekly', recurringDays: [0, 1, 2, 3, 4], importance: 'essential', priority: 'medium' });
+  tasks.add({ title: 'Morgenrutine', date: today, time: '07:30', taskType: 'time-box', durationMinutes: 30, done: false, recurring: 'weekly', recurringDays: [0, 1, 2, 3, 4], importance: 'essential', sortOrder: 0 });
   // Tue/Thu gym
-  tasks.add({ title: 'Treningssenter', date: today, time: '18:00', taskType: 'start-at', done: false, recurring: 'weekly', recurringDays: [1, 3], importance: 'regular', priority: 'medium' });
+  tasks.add({ title: 'Treningssenter', date: today, time: '18:00', taskType: 'start-at', done: false, recurring: 'weekly', recurringDays: [1, 3], importance: 'regular', sortOrder: 0 });
   // Monday planning session
-  tasks.add({ title: 'Planlegge uka', date: today, time: '20:00', taskType: 'start-at', done: false, recurring: 'weekly', recurringDays: [0], importance: 'essential', priority: 'medium' });
+  tasks.add({ title: 'Planlegge uka', date: today, time: '20:00', taskType: 'start-at', done: false, recurring: 'weekly', recurringDays: [0], importance: 'essential', sortOrder: 0 });
   // Wednesday focus block time-box
-  tasks.add({ title: 'Fokusøkt: dyp jobb', date: today, time: '10:00', taskType: 'time-box', durationMinutes: 90, done: false, recurring: 'weekly', recurringDays: [2], importance: 'regular', priority: 'medium' });
+  tasks.add({ title: 'Fokusøkt: dyp jobb', date: today, time: '10:00', taskType: 'time-box', durationMinutes: 90, done: false, recurring: 'weekly', recurringDays: [2], importance: 'regular', sortOrder: 0 });
   // Sunday meal prep
-  tasks.add({ title: 'Matplanlegging', date: today, time: '11:00', taskType: 'start-at', done: false, recurring: 'weekly', recurringDays: [6], importance: 'regular', priority: 'medium' });
+  tasks.add({ title: 'Matplanlegging', date: today, time: '11:00', taskType: 'start-at', done: false, recurring: 'weekly', recurringDays: [6], importance: 'regular', sortOrder: 0 });
 
   // ── Monthly shopping (staples) ────────────────────────────────────────────
   shopping.add({ name: 'Toalettpapir', amount: '4', unit: 'pk', listType: 'monthly', store: '', price: 89.90, category: 'personal', inventoryQty: 0 });

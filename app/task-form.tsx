@@ -3,28 +3,36 @@
  *
  * Modal form for creating or editing a single task: title, date, time (defaults to
  * a specific time, with a "Whenever" segment to mean "sometime that day" instead),
- * type (start-at / time-box with duration), importance, priority, and weekly recurrence.
- * Presence of an `id` route param switches it into edit mode (with a delete action).
+ * type (start-at / time-box with duration), importance, steps, and weekly recurrence.
+ * Presence of an `id` route param switches it into edit mode (with a confirm-gated
+ * delete action).
  *
  * Connections:
- *   Imports → components/ConfirmationBanner, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
+ *   Imports → components/AppModal, components/ConfirmationBanner, components/DatePickerCalendar, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useTaskStore
  *   Used by → Expo Router route "/task-form" (presented as a modal — see app/_layout.tsx); pushed
  *             from app/index.tsx (plain new-task "+"), app/plans.tsx (task rows), and
  *             app/notes.tsx (a note's "plans" quick-action, via the `title` param below)
- *   Data    → useTaskStore (tasks table) via add/update/remove; scaled fontSize via useScaledStyles()
+ *   Data    → useTaskStore (tasks table) via add/update/remove; task_steps via addStep/toggleStep/
+ *             removeStep/reorderStep (gated on an existing task, immediate-persist like
+ *             components/PlanTaskCard.tsx's steps); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); date defaults to todayStr() (YYYY-MM-DD).
- *   - Edit vs. add is keyed off the `id` param resolved against the store; save()/del() then router.back().
+ *   - Edit vs. add is keyed off the `id` param resolved against the store; save()/performDelete()
+ *     then router.back().
  *   - Optional `title` route param prefills a new (non-edit) task's title — ignored once
  *     `id` resolves to an existing task, so editing never silently overwrites a saved title.
  *   - recurringDays is only persisted when recurring === 'weekly' (cleared to [] otherwise).
- *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Importance → Priority → Repeat).
+ *   - Field order is essentials-first (Title → Date → Time → Type → Duration → Importance → Repeat → Steps).
+ *     Importance/General section membership and ordering are otherwise set by drag on app/plans.tsx —
+ *     this form only offers the regular/essential toggle, no manual sort position.
  *   - On save a ConfirmationBanner is shown, then navigation is briefly delayed (~900ms) so it's visible.
  *     start-at vs time-box is colour/icon-coded via FeatureColors (consistent with TaskItem).
  *   - Date field is a Mon–Sun chip row (current calendar week) for one-tap picking; the full
- *     DatePickerCalendar is collapsed behind a toggle for dates outside the current week.
+ *     DatePickerCalendar is collapsed behind an icon toggle for dates outside the current week.
  *     Picking a chip sets the date and collapses the calendar if it was open.
+ *   - Delete is confirm-gated via confirmDelete()/showAppModal (mirrors components/PlanTaskCard.tsx's
+ *     confirmDelete()) — performDelete() only fires from the modal's destructive button.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -41,14 +49,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTaskStore, TaskType, Importance, Priority } from '@/store/useTaskStore';
+import { useTaskStore, TaskType, Importance } from '@/store/useTaskStore';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import { todayStr, dateStr, dayOfWeekMon0 } from '@/lib/date';
-import { tap } from '@/lib/haptics';
+import { tap, warning } from '@/lib/haptics';
 import ConfirmationBanner from '@/components/ConfirmationBanner';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
-import TimePickerWheel from '@/components/TimePickerWheel';
+import IconButton from '@/components/IconButton';
+import { showAppModal } from '@/components/AppModal';
 import { Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 
 function nextHourStr(): string {
@@ -74,6 +83,10 @@ export default function TaskFormScreen() {
   const addTask = useTaskStore((s) => s.add);
   const updateTask = useTaskStore((s) => s.update);
   const removeTask = useTaskStore((s) => s.remove);
+  const addStep = useTaskStore((s) => s.addStep);
+  const toggleStep = useTaskStore((s) => s.toggleStep);
+  const removeStep = useTaskStore((s) => s.removeStep);
+  const reorderStep = useTaskStore((s) => s.reorderStep);
   const t = useT();
   const theme = useAppTheme();
   const styles = useScaledStyles(baseStyles);
@@ -89,11 +102,12 @@ export default function TaskFormScreen() {
   const [recurring, setRecurring] = useState(existing?.recurring ?? 'none');
   const [recurringDays, setRecurringDays] = useState<number[]>(existing?.recurringDays ?? []);
   const [importance, setImportance] = useState<Importance>(existing?.importance ?? 'regular');
-  const [priority, setPriority] = useState<Priority>(existing?.priority ?? 'medium');
   const [confirm, setConfirm] = useState<string | null>(null);
   const [calExpanded, setCalExpanded] = useState(false);
+  const [newStepTitle, setNewStepTitle] = useState('');
 
   const { dayLabels, months } = t;
+  const sortedSteps = [...(existing?.steps ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
 
   // Mon–Sun of the current calendar week, for one-tap date selection.
   const weekDays = useMemo(() => {
@@ -137,7 +151,7 @@ export default function TaskFormScreen() {
       recurring: recurring as 'none' | 'weekly',
       recurringDays: recurring === 'weekly' ? recurringDays : [],
       importance,
-      priority,
+      sortOrder: existing?.sortOrder ?? 0,
     };
     if (existing) {
       updateTask(existing.id, payload);
@@ -149,9 +163,24 @@ export default function TaskFormScreen() {
     setTimeout(() => router.back(), 900);
   }
 
-  function del() {
+  function performDelete() {
     if (existing) removeTask(existing.id);
     router.back();
+  }
+
+  function confirmDelete() {
+    warning();
+    showAppModal(t.deleteConfirmTitle(title || t.taskTitlePlaceholder), t.deleteConfirmBody, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.deleteConfirmBtn, style: 'destructive', onPress: performDelete },
+    ]);
+  }
+
+  function handleAddStep() {
+    const stepTitle = newStepTitle.trim();
+    if (!stepTitle || !existing) return;
+    addStep(existing.id, stepTitle);
+    setNewStepTitle('');
   }
 
   return (
@@ -223,17 +252,16 @@ export default function TaskFormScreen() {
                 );
               })}
             </View>
-            <Pressable
+            <IconButton
+              icon="calendar-outline"
+              label={calExpanded ? t.hideCalendar : t.pickOtherDate(date)}
+              active={calExpanded}
               style={styles.calToggleBtn}
               onPress={() => {
                 tap();
                 setCalExpanded((v) => !v);
               }}
-            >
-              <Text style={[styles.calToggleText, { color: theme.orange }]}>
-                {calExpanded ? t.hideCalendar : t.pickOtherDate(date)}
-              </Text>
-            </Pressable>
+            />
             {calExpanded && (
               <DatePickerCalendar
                 value={date}
@@ -276,10 +304,13 @@ export default function TaskFormScreen() {
               ))}
             </View>
             {timeEnabled ? (
-              <TimePickerWheel
+              <TextInput
+                style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+                placeholder="HH:MM"
+                placeholderTextColor={theme.gray}
                 value={time}
-                onChange={setTime}
-                theme={theme}
+                onChangeText={setTime}
+                keyboardType="numbers-and-punctuation"
               />
             ) : (
               <Text style={[styles.wheneverHint, { color: theme.textLight }]}>{t.wheneverHint}</Text>
@@ -353,42 +384,6 @@ export default function TaskFormScreen() {
             </View>
           )}
 
-          {/* Importance */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.importanceLabel}</Text>
-            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-              {(['regular', 'essential'] as Importance[]).map((imp) => (
-                <Pressable
-                  key={imp}
-                  style={[styles.seg, importance === imp && [styles.segActive, { backgroundColor: theme.white }]]}
-                  onPress={() => setImportance(imp)}
-                >
-                  <Text style={[styles.segText, { color: theme.textLight }, importance === imp && { color: theme.text, fontWeight: '600' }]}>
-                    {imp === 'regular' ? t.importanceRegular : t.importanceEssential}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Priority — "must-do on a low-energy day" maps to high */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.priorityLabel}</Text>
-            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-              {(['high', 'medium', 'low'] as Priority[]).map((p) => (
-                <Pressable
-                  key={p}
-                  style={[styles.seg, priority === p && [styles.segActive, { backgroundColor: theme.white }]]}
-                  onPress={() => setPriority(p)}
-                >
-                  <Text style={[styles.segText, { color: theme.textLight }, priority === p && { color: theme.text, fontWeight: '600' }]}>
-                    {p === 'high' ? t.priorityHigh : p === 'medium' ? t.priorityMedium : t.priorityLow}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
           {/* Recurring */}
           <View style={styles.field}>
             <View style={styles.switchRow}>
@@ -417,8 +412,80 @@ export default function TaskFormScreen() {
             )}
           </View>
 
+          {/* Steps — immediate-persist checklist, mirrors components/PlanTaskCard.tsx's */}
           {existing && (
-            <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={del}>
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.stepsLabel}</Text>
+              {sortedSteps.map((step, i) => (
+                <View
+                  key={step.id}
+                  style={[
+                    styles.stepRow,
+                    i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.grayLight },
+                  ]}
+                >
+                  <Pressable
+                    style={[
+                      styles.stepCheck,
+                      { borderColor: theme.orange },
+                      step.done && { backgroundColor: theme.orange, borderColor: theme.orange },
+                    ]}
+                    onPress={() => toggleStep(step.id)}
+                    hitSlop={8}
+                  >
+                    {step.done && <Ionicons name="checkmark" size={10} color="#FFFFFF" />}
+                  </Pressable>
+                  <Text
+                    style={[
+                      styles.stepText,
+                      { color: theme.text },
+                      step.done && [styles.stepTextDone, { color: theme.textLight }],
+                    ]}
+                  >
+                    {step.title}
+                  </Text>
+                  <View style={styles.stepActions}>
+                    <Pressable
+                      onPress={() => reorderStep(step.id, 'up')}
+                      disabled={i === 0}
+                      hitSlop={8}
+                      style={i === 0 && { opacity: 0.3 }}
+                    >
+                      <Ionicons name="chevron-up" size={16} color={theme.gray} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => reorderStep(step.id, 'down')}
+                      disabled={i === sortedSteps.length - 1}
+                      hitSlop={8}
+                      style={i === sortedSteps.length - 1 && { opacity: 0.3 }}
+                    >
+                      <Ionicons name="chevron-down" size={16} color={theme.gray} />
+                    </Pressable>
+                    <Pressable onPress={() => removeStep(step.id)} hitSlop={8}>
+                      <Text style={{ fontSize: FontSize.lg, color: theme.gray }}>−</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+              <View style={styles.addStepRow}>
+                <TextInput
+                  style={[styles.addStepInput, { backgroundColor: theme.white, color: theme.text }]}
+                  value={newStepTitle}
+                  onChangeText={setNewStepTitle}
+                  placeholder={t.stepPlaceholder}
+                  placeholderTextColor={theme.gray}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAddStep}
+                />
+                <Pressable style={[styles.addStepBtn, { backgroundColor: theme.orange }]} onPress={handleAddStep}>
+                  <Text style={{ color: theme.white, fontSize: FontSize.lg, fontFamily: Fonts.bold }}>+</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {existing && (
+            <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={confirmDelete}>
               <Text style={[styles.deleteBtnText, { color: theme.danger }]}>{t.deleteTask}</Text>
             </Pressable>
           )}
@@ -498,11 +565,32 @@ const baseStyles = StyleSheet.create({
   },
   weekChipDay: { fontSize: FontSize.xs, fontWeight: '600' },
   weekChipNum: { fontSize: FontSize.sm },
-  calToggleBtn: { alignSelf: 'flex-start', paddingVertical: Spacing.xs },
-  calToggleText: { fontSize: FontSize.sm, fontWeight: '600' },
+  calToggleBtn: { alignSelf: 'flex-start' },
+  timeInput: {
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    fontSize: FontSize.md,
+    textAlign: 'center',
+    width: 90,
+  },
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
   dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
   deleteBtnText: { fontWeight: '700', fontSize: FontSize.md },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.xs },
+  stepCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.medium },
+  stepTextDone: { textDecorationLine: 'line-through' },
+  stepActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  addStepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
+  addStepInput: { flex: 1, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
+  addStepBtn: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
 });

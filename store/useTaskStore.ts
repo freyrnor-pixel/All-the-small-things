@@ -2,7 +2,8 @@
  * useTaskStore.ts — tasks (one-off + weekly recurring) and their reminders
  *
  * Zustand store for to-do tasks: one-off and weekly-recurring, start-at and
- * time-box types, with importance, priority, and a backlog view. Owns per-task
+ * time-box types, with importance (Important/General, set by drag in app/plans.tsx),
+ * a manual sortOrder within that section, and a backlog view. Owns per-task
  * notification scheduling (start, and end reminders for time-box tasks).
  *
  * Connections:
@@ -16,7 +17,9 @@
  *   - Quiet hours (AP-05) only defer the *reminder*, never the task's own date/time/duration — deferPastQuietHours/deferOccurrencePastQuietHours wrap lib/notifications.ts's pushPastQuietHours right before scheduling.
  *   - completedCount() counts done tasks in the currently loaded list (load() fetches all tasks), not a separate cumulative counter.
  *   - focusTask(today, workModeActive) returns the first pending task for focus view — sorted by time ASC NULLS LAST, then id.
- *   - New columns (e.g. importance) go through the migrations array in lib/db.ts; never recreate tables.
+ *   - New columns (e.g. importance, sort_order) go through the migrations array in lib/db.ts; never recreate tables.
+ *   - reorderTasks(orderedIds) writes sort_order = array index for the given ids in one pass — used by
+ *     app/plans.tsx's drag-and-drop to persist position within a task's Important/General section.
  *   - toggle() auto-saves immediately (writes through update()) and fires the 'task_completed'
  *     automation trigger on the rising edge (not-done → done) — there is no separate save/confirm step.
  *   - completeDirect() writes done=true straight to SQLite — used by the notification "Done" action.
@@ -49,7 +52,6 @@ import { syncTaskNotification as scheduleTaskReminder } from '@/lib/taskNotifica
 export type TaskType = 'start-at' | 'time-box';
 export type Recurring = 'none' | 'weekly';
 export type Importance = 'regular' | 'essential';
-export type Priority = 'high' | 'medium' | 'low';
 
 export type TaskStep = { id: string; taskId: string; title: string; done: boolean; orderIndex: number };
 
@@ -64,7 +66,8 @@ export type Task = {
   recurring: Recurring;
   recurringDays: number[]; // 0=Mon … 6=Sun
   importance: Importance;
-  priority: Priority;
+  /** Manual drag-sort position within the task's Important/General section (app/plans.tsx). */
+  sortOrder: number;
   steps: TaskStep[];
 };
 
@@ -85,6 +88,8 @@ type TaskStore = {
   focusTask: (date: string, workModeActive: boolean) => Task | null;
   /** Re-schedule every task's reminder (after a settings/language change). */
   syncAllTaskNotifications: () => void;
+  /** Write a new sort_order (by array position) for every id in orderedIds — drag-and-drop in app/plans.tsx. */
+  reorderTasks: (orderedIds: string[]) => void;
   /** Steps persist straight to SQLite on every change — no draft/save gate. */
   addStep: (taskId: string, title: string) => TaskStep;
   removeStep: (id: string) => void;
@@ -109,7 +114,7 @@ function rowToTask(row: Row): Task {
     recurring: readStr(row, 'recurring', 'none') as Recurring,
     recurringDays: readJson<number[]>(row, 'recurring_days', []),
     importance: readStr(row, 'importance', 'regular') as Importance,
-    priority: readStr(row, 'priority', 'medium') as Priority,
+    sortOrder: readInt(row, 'sort_order'),
     steps: [],
   };
 }
@@ -126,7 +131,7 @@ const TASK_COLUMNS: FieldMap<Task> = {
   recurring: { col: 'recurring' },
   recurringDays: { col: 'recurring_days', to: (v) => JSON.stringify(v ?? []) },
   importance: { col: 'importance', to: (v) => v ?? 'regular' },
-  priority: { col: 'priority', to: (v) => v ?? 'medium' },
+  sortOrder: { col: 'sort_order', to: (v) => v ?? 0 },
 };
 
 function rowToTaskStep(row: Row): TaskStep {
@@ -204,6 +209,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     db.runSync('DELETE FROM tasks WHERE id = ?', [id]);
     void cancelTaskNotification(id);
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+  },
+
+  reorderTasks(orderedIds) {
+    const order = new Map(orderedIds.map((id, i) => [id, i]));
+    orderedIds.forEach((id, i) => updateRow('tasks', { sort_order: i }, 'id = ?', [id]));
+    set((s) => ({
+      tasks: s.tasks.map((t) => (order.has(t.id) ? { ...t, sortOrder: order.get(t.id)! } : t)),
+    }));
   },
 
   addStep(taskId, title) {

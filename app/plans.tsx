@@ -1,23 +1,27 @@
 /**
- * plans.tsx — Plans screen: one padlock-free Container per task, plus an "Unsaved" section.
+ * plans.tsx — Plans screen: two drag-sortable Important/General sections, plus Done and "Unsaved".
  *
- * Renders the day's ranked tasks (rankTodayTasks, same energy-level high-priority filter as
- * app/index.tsx) as a stack of components/PlanTaskCard.tsx accordions instead of the old
- * single DayTimeline agenda. Closed: title/time/checkbox. Open: the full task-form field set,
- * edited via screen-lifted state (not SQLite) until a save pill is tapped — same
- * lifted-state-over-padlock pattern as app/shopping.tsx's Week list Containers, but with a
- * durable draft buffer (store/useTaskDraftStore.ts) instead of a lock, since a task Container
- * has no "locked, read-only" resting state to fall back to. An inline "+" between the undone
- * and done stacks creates a new task and opens its Container immediately.
+ * Renders today's undone tasks as two manually-ordered stacks — Important (importance ===
+ * 'essential') and General (importance === 'regular') — each a column of components/
+ * PlanTaskCard.tsx accordions wrapped in components/DraggableTaskRow.tsx, which lets a collapsed
+ * card be long-pressed and dragged to reorder within its section or move to the other section.
+ * Done tasks stay in one combined list below (unchanged, ranked via lib/taskOrder.ts) since
+ * dragging only applies to the still-actionable stacks. Closed: title/time/checkbox. Open: the
+ * full task-form field set, edited via screen-lifted state (not SQLite) until a save pill is
+ * tapped — same lifted-state-over-padlock pattern as app/shopping.tsx's Week list Containers,
+ * but with a durable draft buffer (store/useTaskDraftStore.ts) instead of a lock, since a task
+ * Container has no "locked, read-only" resting state to fall back to. An inline "+" before every
+ * card creates a new task and opens its Container immediately.
  *
  * Connections:
- *   Imports → components/AddDivider, components/BottomNav, components/PlanTaskCard,
- *             components/ScreenHeader, components/SiteSwipeView,
- *             constants/theme, lib/date, lib/i18n, lib/taskOrder, lib/useAppTheme,
+ *   Imports → components/AddDivider, components/BottomNav, components/DraggableTaskRow,
+ *             components/PlanTaskCard, components/ScreenHeader, components/SiteSwipeView,
+ *             constants/theme, lib/date, lib/haptics, lib/i18n, lib/taskOrder, lib/useAppTheme,
  *             store/useEnergyStore, store/useTaskDraftStore, store/useTaskStore
  *   Used by → Expo Router route "/plans" (BottomNav tab — see lib/siteNav.ts), also reached
  *             via app/index.tsx's Plans widget "See everything" link (same as shopping's preview link)
- *   Data    → reads/writes useTaskStore (tasks) directly on save/delete/done-toggle; reads/
+ *   Data    → reads/writes useTaskStore (tasks) directly on save/delete/done-toggle/drag-drop
+ *             (update() for an importance/section change, reorderTasks() for sort_order); reads/
  *             writes useTaskDraftStore (task_drafts) for any task with unsaved field edits
  *
  * Edit notes:
@@ -34,29 +38,45 @@
  *     This is the durability net described in useTaskDraftStore.ts's header: an abandoned edit
  *     survives navigating away or an app restart, resurfacing in the "Unsaved" section below.
  *   - The mount/tasks-change effect clears any task_drafts row whose task no longer exists —
- *     app/task-form.tsx (Home's task entry point) is intentionally left unmodified and has no
- *     way to clear a draft row when it deletes a task, so this is the self-heal for that gap.
+ *     app/task-form.tsx (Home's task entry point) has no way to clear a draft row when it
+ *     deletes a task, so this is the self-heal for that gap (still true even though task-form.tsx
+ *     is no longer left unmodified in general — this particular gap was never closed there).
  *   - handleAddTask seeds `edits`/`openIds` directly from useTaskStore.add()'s return value
  *     instead of going through ensureEdit/the `tasks` selector, which is still stale in the same
- *     render pass right after calling add().
+ *     render pass right after calling add(). A fresh task defaults into General (importance:
+ *     'regular', sortOrder: 0) at the top of that section.
  *   - nextHourStr() is duplicated from app/task-form.tsx (same duplication PlanTaskCard.tsx's
- *     header already notes) — task-form.tsx stays unmodified, so there's no shared home for it.
- *   - No dedicated empty state: the inline "+" is always visible as a stable anchor, same
- *     simplification app/shopping.tsx made for an empty-but-unlocked Week list. t.noPlansToday
- *     stays defined for app/index.tsx's widget.
+ *     header already notes) — both files need it locally; neither is a natural shared home for
+ *     such a small helper.
+ *   - No dedicated empty state for the whole screen: the inline "+" is always visible as a stable
+ *     anchor, same simplification app/shopping.tsx made for an empty-but-unlocked Week list.
+ *     t.noPlansToday stays defined for app/index.tsx's widget. Each of the two drag sections
+ *     shows t.emptySectionHint instead when it has zero tasks, so there's always a visible drop
+ *     target to drag a task onto.
  *   - PlanTaskCard's Steps section (steps/onAddStep/onToggleStep/onRemoveStep/onReorderStep) is
  *     wired straight to useTaskStore's step actions, not through `edits`/the draft system —
  *     steps persist immediately on every tap, with no save pill involved.
+ *   - Drag-and-drop: `rowLayoutsRef` collects every row's (and each section header anchor's)
+ *     onLayout y/height, keyed by task id (anchors use a `__anchor_<section>__` key) — these only
+ *     stay comparable because rows and headers are flat siblings in the ScrollView's content view
+ *     with no per-section wrapping View (onLayout's `.y` is relative to the immediate parent).
+ *     `livePreview` is a transient reordering of baseImportant/baseGeneral while a drag is active
+ *     (mutated via splice + LayoutAnimation, same idiom ExpandableCard.tsx uses for its own
+ *     expand/collapse reflow); it's null when no drag is in progress, in which case render falls
+ *     back to the persisted sortOrder. handleDragEnd commits the final preview via reorderTasks
+ *     (plus update() on a cross-section move), then clears the preview. Haptics: selection() on
+ *     each hit-test change while dragging, heavy() once on drop only if the task actually moved.
  */
-import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useTaskStore } from '@/store/useTaskStore';
+import { useTaskStore, type Task } from '@/store/useTaskStore';
 import { useEnergyStore } from '@/store/useEnergyStore';
 import { useTaskDraftStore, TaskDraftFields } from '@/store/useTaskDraftStore';
 import PlanTaskCard, { TaskFormFields, fieldsFromTask, fieldsToTaskPayload } from '@/components/PlanTaskCard';
+import DraggableTaskRow, { Section } from '@/components/DraggableTaskRow';
 import ScreenHeader from '@/components/ScreenHeader';
 import AddDivider from '@/components/AddDivider';
 import BottomNav from '@/components/BottomNav';
@@ -64,6 +84,7 @@ import SiteSwipeView from '@/components/SiteSwipeView';
 import { useT } from '@/lib/i18n';
 import { todayStr } from '@/lib/date';
 import { rankTodayTasks } from '@/lib/taskOrder';
+import { selection, heavy } from '@/lib/haptics';
 import { FontSize, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme, useScaledStyles } from '@/lib/useAppTheme';
 
@@ -72,6 +93,11 @@ type EditState = { fields: TaskFormFields; dirty: Record<string, boolean> };
 function nextHourStr(): string {
   const h = (new Date().getHours() + 1) % 24;
   return `${String(h).padStart(2, '0')}:00`;
+}
+
+function bySortOrder(a: Task, b: Task): number {
+  if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+  return a.id.localeCompare(b.id);
 }
 
 function draftFieldsToFormFields(d: TaskDraftFields): TaskFormFields {
@@ -85,7 +111,6 @@ function draftFieldsToFormFields(d: TaskDraftFields): TaskFormFields {
     recurring: d.recurring,
     recurringDays: d.recurringDays,
     importance: d.importance,
-    priority: d.priority,
   };
 }
 
@@ -100,7 +125,6 @@ function fieldsToDraftFields(f: TaskFormFields): TaskDraftFields {
     recurring: f.recurring,
     recurringDays: f.recurringDays,
     importance: f.importance,
-    priority: f.priority,
   };
 }
 
@@ -121,6 +145,7 @@ export default function PlansScreen() {
   const removeStep = useTaskStore((s) => s.removeStep);
   const toggleStep = useTaskStore((s) => s.toggleStep);
   const reorderStep = useTaskStore((s) => s.reorderStep);
+  const reorderTasks = useTaskStore((s) => s.reorderTasks);
   const energyLevels = useEnergyStore((s) => s.levels);
   const todayEnergyLevel = energyLevels[today] ?? null;
 
@@ -144,18 +169,104 @@ export default function PlansScreen() {
   });
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
 
-  // Self-heal: a task deleted via app/task-form.tsx (unmodified) leaves its task_drafts
-  // row behind — clear any draft whose task no longer exists so "Unsaved" never points at nothing.
+  const [livePreview, setLivePreview] = useState<{ important: Task[]; general: Task[] } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ taskId: string; fromSection: Section; fromIndex: number; overSection: Section; overIndex: number } | null>(null);
+  const rowLayoutsRef = useRef<Record<string, { y: number; height: number }>>({});
+
+  // Self-heal: a task deleted via app/task-form.tsx leaves its task_drafts row behind (that
+  // screen has no draft-clearing logic) — clear any draft whose task no longer exists so
+  // "Unsaved" never points at nothing.
   useEffect(() => {
     for (const taskId of Object.keys(useTaskDraftStore.getState().drafts)) {
       if (!tasks.some((tk) => tk.id === taskId)) clearDraft(taskId);
     }
   }, [tasks, clearDraft]);
 
-  const rankedTasks = rankTodayTasks(tasksForDate(today));
-  const visibleTasks = todayEnergyLevel === 'low' ? rankedTasks.filter((tk) => tk.priority === 'high') : rankedTasks;
-  const undoneTasks = visibleTasks.filter((tk) => !tk.done);
-  const doneTasks = visibleTasks.filter((tk) => tk.done);
+  const energyFilteredTasks =
+    todayEnergyLevel === 'low' ? tasksForDate(today).filter((tk) => tk.importance === 'essential') : tasksForDate(today);
+  const doneTasks = rankTodayTasks(energyFilteredTasks.filter((tk) => tk.done));
+  const undone = energyFilteredTasks.filter((tk) => !tk.done);
+  const baseImportant = undone.filter((tk) => tk.importance === 'essential').sort(bySortOrder);
+  const baseGeneral = undone.filter((tk) => tk.importance === 'regular').sort(bySortOrder);
+  const importantTasks = livePreview ? livePreview.important : baseImportant;
+  const generalTasks = livePreview ? livePreview.general : baseGeneral;
+
+  function registerLayout(key: string, layout: { y: number; height: number }) {
+    rowLayoutsRef.current[key] = layout;
+  }
+
+  function applyPreview(
+    prev: { important: Task[]; general: Task[] },
+    taskId: string,
+    targetSection: Section,
+    targetIndex: number
+  ): { important: Task[]; general: Task[] } {
+    const dragged = prev.important.find((tk) => tk.id === taskId) ?? prev.general.find((tk) => tk.id === taskId);
+    if (!dragged) return prev;
+    const important = prev.important.filter((tk) => tk.id !== taskId);
+    const general = prev.general.filter((tk) => tk.id !== taskId);
+    if (targetSection === 'important') important.splice(targetIndex, 0, dragged);
+    else general.splice(targetIndex, 0, dragged);
+    return { important, general };
+  }
+
+  function hitTest(preview: { important: Task[]; general: Task[] }, taskId: string, centerY: number): { section: Section; index: number } {
+    const entries: { section: Section; index: number; center: number }[] = [];
+    (['important', 'general'] as Section[]).forEach((section) => {
+      const anchor = rowLayoutsRef.current[`__anchor_${section}__`];
+      if (anchor) entries.push({ section, index: 0, center: anchor.y + anchor.height / 2 });
+      const rows = (section === 'important' ? preview.important : preview.general).filter((tk) => tk.id !== taskId);
+      rows.forEach((tk, i) => {
+        const l = rowLayoutsRef.current[tk.id];
+        if (l) entries.push({ section, index: i, center: l.y + l.height / 2 });
+      });
+    });
+    for (const entry of entries) {
+      if (centerY < entry.center) return { section: entry.section, index: entry.index };
+    }
+    const last = entries[entries.length - 1];
+    if (!last) return { section: 'important', index: 0 };
+    const count = (last.section === 'important' ? preview.important : preview.general).filter((tk) => tk.id !== taskId).length;
+    return { section: last.section, index: count };
+  }
+
+  function handleDragStart(taskId: string, fromSection: Section) {
+    const fromIndex = (fromSection === 'important' ? baseImportant : baseGeneral).findIndex((tk) => tk.id === taskId);
+    dragRef.current = { taskId, fromSection, fromIndex, overSection: fromSection, overIndex: fromIndex };
+    setLivePreview({ important: baseImportant, general: baseGeneral });
+    setIsDragging(true);
+  }
+
+  function handleDragMove(taskId: string, centerY: number) {
+    setLivePreview((prev) => {
+      if (!prev || !dragRef.current) return prev;
+      const target = hitTest(prev, taskId, centerY);
+      if (dragRef.current.overSection === target.section && dragRef.current.overIndex === target.index) return prev;
+      dragRef.current.overSection = target.section;
+      dragRef.current.overIndex = target.index;
+      selection();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      return applyPreview(prev, taskId, target.section, target.index);
+    });
+  }
+
+  function handleDragEnd() {
+    const d = dragRef.current;
+    const preview = livePreview;
+    dragRef.current = null;
+    setIsDragging(false);
+    setLivePreview(null);
+    if (!d || !preview) return;
+    if (d.overSection !== d.fromSection) {
+      updateTask(d.taskId, { importance: d.overSection === 'important' ? 'essential' : 'regular' });
+    }
+    reorderTasks(preview.important.map((tk) => tk.id));
+    reorderTasks(preview.general.map((tk) => tk.id));
+    if (d.overSection !== d.fromSection || d.overIndex !== d.fromIndex) {
+      heavy();
+    }
+  }
 
   function ensureEdit(taskId: string) {
     if (edits[taskId]) return;
@@ -239,7 +350,7 @@ export default function PlansScreen() {
       recurring: 'none',
       recurringDays: [],
       importance: 'regular',
-      priority: 'medium',
+      sortOrder: 0,
     });
     setEdits((prev) => ({ ...prev, [task.id]: { fields: fieldsFromTask(task), dirty: {} } }));
     setOpenIds((prev) => ({ ...prev, [task.id]: true }));
@@ -285,7 +396,7 @@ export default function PlansScreen() {
         }
       />
       <SiteSwipeView>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} scrollEnabled={!isDragging}>
           {draftEntries.length > 0 && (
             <View style={styles.unsavedSection}>
               <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.unsavedTasksSection}</Text>
@@ -310,27 +421,86 @@ export default function PlansScreen() {
             </View>
           )}
 
-          {undoneTasks.length === 0 && doneTasks.length === 0 && <AddDivider onPress={handleAddTask} />}
+          {importantTasks.length === 0 && generalTasks.length === 0 && doneTasks.length === 0 && (
+            <AddDivider onPress={handleAddTask} />
+          )}
 
-          {undoneTasks.map((task) => (
+          <Text
+            style={[styles.sectionLabel, { color: theme.textLight }]}
+            onLayout={(e) => registerLayout('__anchor_important__', e.nativeEvent.layout)}
+          >
+            {t.importantSectionLabel}
+          </Text>
+          {importantTasks.length === 0 && (
+            <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
+          )}
+          {importantTasks.map((task) => (
             <React.Fragment key={task.id}>
               <AddDivider onPress={handleAddTask} />
-              <PlanTaskCard
+              <DraggableTaskRow
                 task={task}
-                theme={theme}
-                open={!!openIds[task.id]}
-                onToggleOpen={() => toggleOpen(task.id)}
-                fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
-                dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
-                onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
-                onToggleDone={() => toggleTask(task.id)}
-                onSave={() => handleSave(task.id)}
-                onDelete={() => handleDelete(task.id)}
-                steps={task.steps}
-                onAddStep={(title) => addStep(task.id, title)}
-                onToggleStep={toggleStep}
-                onRemoveStep={removeStep}
-                onReorderStep={reorderStep}
+                section="important"
+                isOpen={!!openIds[task.id]}
+                onRowLayout={(layout) => registerLayout(task.id, layout)}
+                onDragStart={() => handleDragStart(task.id, 'important')}
+                onDragMove={(centerY) => handleDragMove(task.id, centerY)}
+                onDragEnd={handleDragEnd}
+                cardProps={{
+                  theme,
+                  open: !!openIds[task.id],
+                  onToggleOpen: () => toggleOpen(task.id),
+                  fields: edits[task.id]?.fields ?? fieldsFromTask(task),
+                  dirty: Object.values(edits[task.id]?.dirty ?? {}).some(Boolean),
+                  onFieldChange: (field, value) => handleFieldChange(task.id, field, value),
+                  onToggleDone: () => toggleTask(task.id),
+                  onSave: () => handleSave(task.id),
+                  onDelete: () => handleDelete(task.id),
+                  steps: task.steps,
+                  onAddStep: (title) => addStep(task.id, title),
+                  onToggleStep: toggleStep,
+                  onRemoveStep: removeStep,
+                  onReorderStep: reorderStep,
+                }}
+              />
+            </React.Fragment>
+          ))}
+
+          <Text
+            style={[styles.sectionLabel, { color: theme.textLight }]}
+            onLayout={(e) => registerLayout('__anchor_general__', e.nativeEvent.layout)}
+          >
+            {t.generalSectionLabel}
+          </Text>
+          {generalTasks.length === 0 && (
+            <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
+          )}
+          {generalTasks.map((task) => (
+            <React.Fragment key={task.id}>
+              <AddDivider onPress={handleAddTask} />
+              <DraggableTaskRow
+                task={task}
+                section="general"
+                isOpen={!!openIds[task.id]}
+                onRowLayout={(layout) => registerLayout(task.id, layout)}
+                onDragStart={() => handleDragStart(task.id, 'general')}
+                onDragMove={(centerY) => handleDragMove(task.id, centerY)}
+                onDragEnd={handleDragEnd}
+                cardProps={{
+                  theme,
+                  open: !!openIds[task.id],
+                  onToggleOpen: () => toggleOpen(task.id),
+                  fields: edits[task.id]?.fields ?? fieldsFromTask(task),
+                  dirty: Object.values(edits[task.id]?.dirty ?? {}).some(Boolean),
+                  onFieldChange: (field, value) => handleFieldChange(task.id, field, value),
+                  onToggleDone: () => toggleTask(task.id),
+                  onSave: () => handleSave(task.id),
+                  onDelete: () => handleDelete(task.id),
+                  steps: task.steps,
+                  onAddStep: (title) => addStep(task.id, title),
+                  onToggleStep: toggleStep,
+                  onRemoveStep: removeStep,
+                  onReorderStep: reorderStep,
+                }}
               />
             </React.Fragment>
           ))}
@@ -377,6 +547,7 @@ const baseStyles = StyleSheet.create({
   content: { padding: Spacing.md, gap: Spacing.sm },
   unsavedSection: { gap: Spacing.xs, marginBottom: Spacing.sm },
   sectionLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  emptySectionHint: { fontSize: FontSize.sm, fontStyle: 'italic' },
   unsavedBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, borderRadius: Radius.md, padding: Spacing.sm },
   unsavedBannerText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   unsavedRow: {

@@ -5,18 +5,19 @@
  * DayTimeline's single agenda list. Wraps ExpandableCard in its new controlled mode
  * (open/onToggle owned by the screen, not internal state) so the screen can aggregate
  * dirty state across every simultaneously-open task. Closed: title = task name,
- * subtitle = time, rightAction = checkbox-circle. Open: the full app/task-form.tsx
- * field set (title/date/time/type/duration/importance/priority/recurring/delete),
- * ported inline with every `setX(...)` replaced by `onFieldChange('field', value)` —
- * field values and dirty-tracking live in the screen's lifted `edits` map, not here,
- * so a screen-level "save all" can act on every open task at once. Same dumb-component-
- * wraps-shared-primitive divide as components/WeekListCard.tsx wrapping Container. Also
- * renders a Steps checklist (checkbox + reorder + remove + inline add) between the
- * Recurring field and Delete — unlike the rest of the card, steps persist immediately
- * (see Edit notes).
+ * subtitle = time, rightAction = checkbox-circle. Open: the app/task-form.tsx-equivalent
+ * field set (title/date/time/type/duration/importance/recurring/delete), ported inline
+ * with every `setX(...)` replaced by `onFieldChange('field', value)` — field values and
+ * dirty-tracking live in the screen's lifted `edits` map, not here, so a screen-level
+ * "save all" can act on every open task at once. Same dumb-component-wraps-shared-primitive
+ * divide as components/WeekListCard.tsx wrapping Container. Also renders a Steps checklist
+ * (checkbox + reorder + remove + inline add) between the Recurring field and Delete —
+ * unlike the rest of the card, steps persist immediately (see Edit notes). Section
+ * membership (Important/General) and position within a section are NOT edited here —
+ * those are set by dragging the card on app/plans.tsx itself (components/DraggableTaskRow.tsx).
  *
  * Connections:
- *   Imports → components/AppModal, components/ExpandableCard, components/DatePickerCalendar, components/TimePickerWheel, constants/theme, lib/date, lib/haptics, lib/i18n, store/useTaskStore (types only)
+ *   Imports → components/AppModal, components/ExpandableCard, components/DatePickerCalendar, components/IconButton, constants/theme, lib/date, lib/haptics, lib/i18n, store/useTaskStore (types only)
  *   Used by → app/plans.tsx
  *   Data    → none directly — every field/callback is owned by the parent (app/plans.tsx)
  *
@@ -29,8 +30,8 @@
  *     it isn't part of the task's edit fields, so it doesn't need to live in the screen's
  *     lifted state, unlike `fields`/`dirty`.
  *   - TYPE_ICON/TYPE_ACCENT/nextHourStr() are duplicated from app/task-form.tsx rather than
- *     shared, since task-form.tsx is intentionally left unmodified (it still serves Home's
- *     task-entry points) and these are small, self-contained lookups.
+ *     shared — both files now carry the same small, self-contained lookups in step with
+ *     each other (kept in sync by hand on edit, not extracted, since each is only a few lines).
  *   - `fieldsFromTask`/`fieldsToTaskPayload` are the only place the Task <-> form-field shape
  *     conversion happens — app/plans.tsx uses them to seed `edits` and to build the save payload.
  *   - `steps`/`onAddStep`/`onToggleStep`/`onRemoveStep`/`onReorderStep` are NOT part of the
@@ -44,9 +45,9 @@ import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import ExpandableCard from '@/components/ExpandableCard';
 import DatePickerCalendar from '@/components/DatePickerCalendar';
-import TimePickerWheel from '@/components/TimePickerWheel';
+import IconButton from '@/components/IconButton';
 import { showAppModal } from '@/components/AppModal';
-import { Task, TaskType, Importance, Priority, Recurring, TaskStep } from '@/store/useTaskStore';
+import { Task, TaskType, Importance, Recurring, TaskStep } from '@/store/useTaskStore';
 import { AppColors, Colors, FeatureColors, FontSize, Fonts, Radius, Shadow, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
@@ -63,7 +64,6 @@ export type TaskFormFields = {
   recurring: Recurring;
   recurringDays: number[];
   importance: Importance;
-  priority: Priority;
 };
 
 function nextHourStr(): string {
@@ -82,11 +82,10 @@ export function fieldsFromTask(task: Task): TaskFormFields {
     recurring: task.recurring,
     recurringDays: task.recurringDays,
     importance: task.importance,
-    priority: task.priority,
   };
 }
 
-export function fieldsToTaskPayload(fields: TaskFormFields): Omit<Task, 'id' | 'done'> {
+export function fieldsToTaskPayload(fields: TaskFormFields): Omit<Task, 'id' | 'done' | 'sortOrder'> {
   return {
     title: fields.title.trim(),
     date: fields.date,
@@ -96,7 +95,6 @@ export function fieldsToTaskPayload(fields: TaskFormFields): Omit<Task, 'id' | '
     recurring: fields.recurring,
     recurringDays: fields.recurring === 'weekly' ? fields.recurringDays : [],
     importance: fields.importance,
-    priority: fields.priority,
     steps: [],
   };
 }
@@ -266,17 +264,16 @@ export default function PlanTaskCard({
               );
             })}
           </View>
-          <Pressable
+          <IconButton
+            icon="calendar-outline"
+            label={calExpanded ? t.hideCalendar : t.pickOtherDate(fields.date)}
+            active={calExpanded}
             style={styles.calToggleBtn}
             onPress={() => {
               tap();
               setCalExpanded((v) => !v);
             }}
-          >
-            <Text style={[styles.calToggleText, { color: theme.orange }]}>
-              {calExpanded ? t.hideCalendar : t.pickOtherDate(fields.date)}
-            </Text>
-          </Pressable>
+          />
           {calExpanded && (
             <DatePickerCalendar
               value={fields.date}
@@ -319,7 +316,14 @@ export default function PlanTaskCard({
             ))}
           </View>
           {fields.timeEnabled ? (
-            <TimePickerWheel value={fields.time} onChange={(v) => onFieldChange('time', v)} theme={theme} />
+            <TextInput
+              style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+              placeholder="HH:MM"
+              placeholderTextColor={theme.gray}
+              value={fields.time}
+              onChangeText={(v) => onFieldChange('time', v)}
+              keyboardType="numbers-and-punctuation"
+            />
           ) : (
             <Text style={[styles.wheneverHint, { color: theme.textLight }]}>{t.wheneverHint}</Text>
           )}
@@ -394,42 +398,6 @@ export default function PlanTaskCard({
             </View>
           </View>
         )}
-
-        {/* Importance */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.textLight }]}>{t.importanceLabel}</Text>
-          <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-            {(['regular', 'essential'] as Importance[]).map((imp) => (
-              <Pressable
-                key={imp}
-                style={[styles.seg, fields.importance === imp && [styles.segActive, { backgroundColor: theme.white }]]}
-                onPress={() => onFieldChange('importance', imp)}
-              >
-                <Text style={[styles.segText, { color: theme.textLight }, fields.importance === imp && { color: theme.text, fontWeight: '600' }]}>
-                  {imp === 'regular' ? t.importanceRegular : t.importanceEssential}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Priority — "must-do on a low-energy day" maps to high */}
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.textLight }]}>{t.priorityLabel}</Text>
-          <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-            {(['high', 'medium', 'low'] as Priority[]).map((p) => (
-              <Pressable
-                key={p}
-                style={[styles.seg, fields.priority === p && [styles.segActive, { backgroundColor: theme.white }]]}
-                onPress={() => onFieldChange('priority', p)}
-              >
-                <Text style={[styles.segText, { color: theme.textLight }, fields.priority === p && { color: theme.text, fontWeight: '600' }]}>
-                  {p === 'high' ? t.priorityHigh : p === 'medium' ? t.priorityMedium : t.priorityLow}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
 
         {/* Recurring */}
         <View style={styles.field}>
@@ -588,8 +556,14 @@ const baseStyles = StyleSheet.create({
   weekChip: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.md, alignItems: 'center', gap: 2 },
   weekChipDay: { fontSize: FontSize.xs, fontWeight: '600' },
   weekChipNum: { fontSize: FontSize.sm },
-  calToggleBtn: { alignSelf: 'flex-start', paddingVertical: Spacing.xs },
-  calToggleText: { fontSize: FontSize.sm, fontWeight: '600' },
+  calToggleBtn: { alignSelf: 'flex-start' },
+  timeInput: {
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    fontSize: FontSize.md,
+    textAlign: 'center',
+    width: 90,
+  },
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
   dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
