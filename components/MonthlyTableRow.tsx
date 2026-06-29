@@ -6,8 +6,9 @@
  * the weekly staging tray, independent of `status`), the name (with a "Midlertidig"
  * pill badge when isTemporary), the target quantity, the per-unit price, and the
  * computed total (price × quantity). Tapping the row body opens the Update Sheet
- * when `onPress` is given — the main read-mostly Katalog view omits it so rows are
- * inert there; the inventory-edit screen passes it.
+ * when `onPress` is given — `onPress` is undefined while the Monthly Container
+ * (app/shopping.tsx) is locked, so rows are inert in that state; unlocking it (or
+ * the standalone inventory-edit screen) wires `onPress` and rows become tappable.
  *
  * Connections:
  *   Imports → constants/theme, store/useShoppingStore
@@ -20,7 +21,7 @@
  *   - Swipe-to-delete was removed (it offered no other way to delete, and conflicted
  *     with the read-mostly main Katalog view). Deletion now only happens via the
  *     Update Sheet's existing inline 2-step confirm, reached by tapping a row where
- *     `onPress` is wired (app/inventory-edit.tsx).
+ *     `onPress` is wired (Monthly Container unlocked, or app/inventory-edit.tsx).
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';

@@ -8,7 +8,7 @@
  *
  * Connections:
  *   Imports → store/useSettingsStore
- *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/health.tsx, app/index.tsx, app/meals.tsx, app/notes.tsx, app/onboarding/guided.tsx, app/onboarding/index.tsx, app/onboarding/language.tsx, app/onboarding/privacy.tsx, app/onboarding/step2.tsx, app/onboarding/step3.tsx, app/onboarding/step4.tsx, app/onboarding/step5.tsx, app/onboarding/step6.tsx, app/plans.tsx, app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, app/shopping.tsx, app/task-form.tsx, components/BubbleMenu.tsx, components/DayTimeline.tsx, components/DebugOverlay.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, components/ShoppingQuickAddSheet.tsx, components/TaskItem.tsx, components/cover/*, lib/reminders.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → reads `language` from the settings Zustand store
  *
  * Edit notes:
@@ -19,7 +19,7 @@
  *     getTranslations(lang) — useT cannot run outside React.
  *   - Added keys: nav.settingsLabel, home.todaysPlans, home.seeAllPlans,
  *     health.habits, health.seeAllHabits, health.noHabits, health.addHabit,
- *     shopping.scan, shopping.budget.
+ *     shopping.scan, shopping.budget, notes.*, hints.notes.
  */
 import { useSettingsStore } from '@/store/useSettingsStore';
 
@@ -55,9 +55,10 @@ const en = {
   noEssentialPlansToday: 'No essential plans today — great!',
   plansExpand: 'Show full day',
   plansCollapse: 'Show less',
+  notesCollapse: 'Show less',
   nextTaskLabel: 'Next up',
   currentPlansLabel: "Today's plans",
-  seeAllWeekPlans: 'See all plans for the week →',
+  seeEverythingLink: 'See everything →',
   doneTasksLabel: 'Done today',
   plansEssentialsHidden: (n: number) => `+ ${n} regular plan${n !== 1 ? 's' : ''} hidden →`,
   timelineEmpty: 'Nothing planned — enjoy your day 🌿',
@@ -115,6 +116,8 @@ const en = {
   priorityMedium: 'Medium',
   priorityLow: 'Low',
   repeatWeekly: 'Repeat weekly',
+  stepsLabel: 'Steps',
+  stepPlaceholder: 'Add a step',
   deleteTask: 'Delete plan',
   // Task form — save confirmation (W-B). `day` is a localized reference (Today / Tomorrow / Monday…).
   taskSavedSimple: 'Saved ✓',
@@ -204,6 +207,9 @@ const en = {
   resetConfirmTitle: (label: string) => `Reset ${label}?`,
   resetConfirmBody: 'This cannot be undone.',
   resetConfirmBtn: 'Reset',
+  deleteConfirmTitle: (label: string) => `Delete ${label}?`,
+  deleteConfirmBody: 'This cannot be undone.',
+  deleteConfirmBtn: 'Delete',
   // Onboarding
   welcomeHeading: 'UnFocus',
   welcomeSub: 'A simple everyday app for people who don\'t want to spend energy keeping track of things. Set it up once — and let the app do the rest.',
@@ -279,12 +285,12 @@ const en = {
   weeklyItemsSection: 'Weekly list',
   fromMealsSection: 'From your meals',
   addOneToWeekly: '+ Add',
-  weeklyTabLabel: 'Weekly',
-  monthlyTabLabel: 'Catalog',
+  weeklyTabLabel: 'Week lists',
+  monthlyTabLabel: 'Monthly list',
   // --- Katalog/Ukeliste redesign ---
   stagingTrayHeader: (n: number) => `${n} marked for weekly list`,
   confirmStagingBtn: (n: number) => `Add to weekly list (${n})`,
-  inWeeklyListSection: 'In weekly list',
+  inWeeklyListSection: 'Shopping list',
   purchasedThisMonthSection: 'Purchased this month',
   tripLabel: (date: string) => `Shopped ${date}`,
   catalogHeader: (n: number) => `Catalog — ${n} items`,
@@ -301,14 +307,18 @@ const en = {
   deleteConfirmText: 'Are you sure?',
   inKurvenSection: (n: number) => `In cart (${n})`,
   doneShoppingBtn: 'Shopping complete 🛍️',
-  doneShoppingDialogTitle: 'Did you get everything?',
-  doneShoppingDialogBody: 'When you confirm, all items are marked as purchased and the list is cleared.',
-  doneShoppingConfirmBtn: 'Shopping complete',
+  doneShoppingReceiptTitle: 'Got a receipt?',
+  doneShoppingReceiptBody: 'Scan or upload it to log your spending, or skip and just finish up.',
+  scanReceiptBtn: 'Scan receipt',
+  uploadPhotoBtn: 'Upload photo',
+  skipBtn: 'Skip',
   doneShoppingSuccessText: 'Nice work!',
   weeklyEmptyTitle: 'Nothing on the list yet',
   weeklyEmptySubtitle: 'Mark items in the catalog to add them here',
-  goToCatalogBtn: 'Go to catalog →',
   addAlsoToCatalogToggle: 'Also add to catalog',
+  unsavedShoppingBanner: (n: number) => `Unsaved: ${n} list${n === 1 ? '' : 's'} still unlocked`,
+  unsavedTasksSection: 'Unsaved',
+  unsavedTasksBanner: (n: number) => `${n} task${n === 1 ? '' : 's'} with unsaved changes`,
   // Weekly "+" source chooser (Katalog/Ukeliste redesign)
   addSourceChooserTitle: 'Add item',
   addFromInventoryOption: 'From inventory',
@@ -539,6 +549,13 @@ const en = {
   ingredientsCount: (n: number) => n === 1 ? '1 item' : `${n} items`,
   ingredientPlaceholder: 'Ingredient',
   addIngredientTrigger: '+ Ingredient',
+  addDishSheetTitle: 'Add dish to monthly list',
+  newDishToggle: 'New dish',
+  fromMealsToggle: 'From Meals',
+  pickDishSearchPlaceholder: 'Search dishes…',
+  noDishesAvailable: 'No saved dishes yet — add one on the Meals screen first.',
+  ingredientPricePlaceholder: 'Price (NOK)',
+  addDishBtn: 'Add dish',
   deleteDish: 'Delete dish',
   noDishesTitle: 'No dishes',
   noDishesBody: (type: string) => `Add some ${type} first!`,
@@ -569,6 +586,7 @@ const en = {
   // --- W-D additions (health) ---
   healthSelfCareNote: 'Noting how you feel is an act of self-care.',
   noLogsGentle: 'No entries yet — log how you’re feeling when you’re ready.',
+  deleteLogBtn: 'Delete entry',
   healthSeeAllHabits: 'See all habits',
   healthAddHabit: 'Add habit',
   // --- end W-D additions ---
@@ -777,6 +795,21 @@ const en = {
     receiptsTitle: 'Receipts this month',
     noReceipts: 'No receipts yet this month.',
   },
+  // Notater — free-form notes with shopping/plans quick-action buttons (app/notes.tsx)
+  notes: {
+    title: 'Notes',
+    navLabel: 'Notes',
+    addNote: 'Add note',
+    emptyState: 'No notes yet — tap + to add one.',
+    headerPlaceholder: 'Note title',
+    bodyPlaceholder: 'Add more detail…',
+    addToShoppingLabel: 'Add to shopping list',
+    addToPlansLabel: 'Create task',
+    deleteNote: 'Delete note',
+    shoppingQuickAddTitle: 'Add to shopping list',
+    activeLabel: 'Active',
+    checkedLabel: 'Checked off',
+  },
   hints: {
     home: {
       text: 'Your daily overview — tap ⭐ to focus on essentials only.',
@@ -820,6 +853,10 @@ const en = {
     },
     automations: {
       text: 'Simple rules: when X happens, do Y automatically.',
+      example: '',
+    },
+    notes: {
+      text: 'Jot a quick note, then send it to shopping or plans when ready.',
       example: '',
     },
   },
@@ -866,9 +903,10 @@ const no: typeof en = {
   noEssentialPlansToday: 'Ingen viktige planer i dag — bra!',
   plansExpand: 'Vis hele dagen',
   plansCollapse: 'Vis mindre',
+  notesCollapse: 'Vis mindre',
   nextTaskLabel: 'Neste på tur',
   currentPlansLabel: 'Dagens planer',
-  seeAllWeekPlans: 'Se alle planer for uken →',
+  seeEverythingLink: 'Se alt →',
   doneTasksLabel: 'Ferdig i dag',
   plansEssentialsHidden: (n: number) => `+ ${n} vanlige planer skjult →`,
   timelineEmpty: 'Ingenting planlagt — nyt dagen 🌿',
@@ -925,6 +963,8 @@ const no: typeof en = {
   priorityMedium: 'Middels',
   priorityLow: 'Lav',
   repeatWeekly: 'Gjentas ukentlig',
+  stepsLabel: 'Steg',
+  stepPlaceholder: 'Legg til et steg',
   deleteTask: 'Slett plan',
   // Task form — lagringsbekreftelse (W-B). `day` er en lokalisert referanse (I dag / Imorgen / Mandag…).
   taskSavedSimple: 'Lagret ✓',
@@ -1012,6 +1052,9 @@ const no: typeof en = {
   resetConfirmTitle: (label: string) => `Nullstill ${label}?`,
   resetConfirmBody: 'Dette kan ikke angres.',
   resetConfirmBtn: 'Nullstill',
+  deleteConfirmTitle: (label: string) => `Slette ${label}?`,
+  deleteConfirmBody: 'Dette kan ikke angres.',
+  deleteConfirmBtn: 'Slett',
   welcomeHeading: 'UnFocus',
   welcomeSub: 'En enkel hverdagsapp laget for deg som ikke ønsker å bruke energi på å holde styr på ting. Sett den opp én gang — og la appen gjøre resten.',
   features: [
@@ -1085,12 +1128,12 @@ const no: typeof en = {
   weeklyItemsSection: 'Ukeliste',
   fromMealsSection: 'Fra middagene dine',
   addOneToWeekly: '+ Legg til',
-  weeklyTabLabel: 'Ukeliste',
-  monthlyTabLabel: 'Katalog',
+  weeklyTabLabel: 'Ukelister',
+  monthlyTabLabel: 'Månedsliste',
   // --- Katalog/Ukeliste redesign ---
   stagingTrayHeader: (n: number) => `${n} markert for ukeliste`,
   confirmStagingBtn: (n: number) => `Legg til i ukeliste (${n})`,
-  inWeeklyListSection: 'I ukeliste',
+  inWeeklyListSection: 'Handleliste',
   purchasedThisMonthSection: 'Kjøpt denne måneden',
   tripLabel: (date: string) => `Handlet ${date}`,
   catalogHeader: (n: number) => `Katalog — ${n} varer`,
@@ -1107,14 +1150,18 @@ const no: typeof en = {
   deleteConfirmText: 'Er du sikker?',
   inKurvenSection: (n: number) => `I kurven (${n})`,
   doneShoppingBtn: 'Handlingen fullført 🛍️',
-  doneShoppingDialogTitle: 'Husket du alt?',
-  doneShoppingDialogBody: 'Når du bekrefter, merkes alle varer som kjøpt og listen nullstilles.',
-  doneShoppingConfirmBtn: 'Handlingen fullført',
+  doneShoppingReceiptTitle: 'Har du en kvittering?',
+  doneShoppingReceiptBody: 'Skann eller last opp for å loggføre kjøpet, eller hopp over og bare fullfør.',
+  scanReceiptBtn: 'Skann kvittering',
+  uploadPhotoBtn: 'Last opp bilde',
+  skipBtn: 'Hopp over',
   doneShoppingSuccessText: 'Bra jobbet!',
   weeklyEmptyTitle: 'Ingenting på listen ennå',
   weeklyEmptySubtitle: 'Merk varer i katalogen for å legge dem til',
-  goToCatalogBtn: 'Gå til katalog →',
   addAlsoToCatalogToggle: 'Legg også til i katalog',
+  unsavedShoppingBanner: (n: number) => `Ulagret: ${n} liste${n === 1 ? '' : 'r'} fortsatt ulåst`,
+  unsavedTasksSection: 'Ulagret',
+  unsavedTasksBanner: (n: number) => `${n} oppgave${n === 1 ? '' : 'r'} med ulagrede endringer`,
   // Ukeliste "+"-kilde-velger (Katalog/Ukeliste-redesign)
   addSourceChooserTitle: 'Legg til vare',
   addFromInventoryOption: 'Fra inventar',
@@ -1475,6 +1522,13 @@ const no: typeof en = {
   ingredientsCount: (n: number) => `${n} stk`,
   ingredientPlaceholder: 'Ingrediens',
   addIngredientTrigger: '+ Ingrediens',
+  addDishSheetTitle: 'Legg rett til i månedslisten',
+  newDishToggle: 'Ny rett',
+  fromMealsToggle: 'Fra Måltider',
+  pickDishSearchPlaceholder: 'Søk retter…',
+  noDishesAvailable: 'Ingen lagrede retter ennå — legg til en på Måltider-siden først.',
+  ingredientPricePlaceholder: 'Pris (NOK)',
+  addDishBtn: 'Legg til rett',
   deleteDish: 'Slett rett',
   noDishesTitle: 'Ingen retter',
   noDishesBody: (type: string) => `Legg til noen ${type} først!`,
@@ -1504,6 +1558,7 @@ const no: typeof en = {
   // --- W-D additions (health) ---
   healthSelfCareNote: 'Å legge merke til hvordan du har det er omsorg for deg selv.',
   noLogsGentle: 'Ingen oppføringer enda — logg hvordan du føler deg når du er klar.',
+  deleteLogBtn: 'Slett oppføring',
   healthSeeAllHabits: 'Se alle vaner',
   healthAddHabit: 'Legg til vane',
   // --- end W-D additions ---
@@ -1565,6 +1620,21 @@ const no: typeof en = {
     receiptsTitle: 'Kvitteringer denne måneden',
     noReceipts: 'Ingen kvitteringer denne måneden ennå.',
   },
+  // Notater — frittstående notater med hurtigknapper for handleliste/planer (app/notes.tsx)
+  notes: {
+    title: 'Notater',
+    navLabel: 'Notater',
+    addNote: 'Legg til notat',
+    emptyState: 'Ingen notater ennå — trykk + for å legge til.',
+    headerPlaceholder: 'Notattittel',
+    bodyPlaceholder: 'Legg til mer detaljer…',
+    addToShoppingLabel: 'Legg til i handleliste',
+    addToPlansLabel: 'Lag oppgave',
+    deleteNote: 'Slett notat',
+    shoppingQuickAddTitle: 'Legg til i handleliste',
+    activeLabel: 'Aktive',
+    checkedLabel: 'Avkrysset',
+  },
   hints: {
     home: {
       text: 'Din daglige oversikt — trykk ⭐ for kun det viktigste.',
@@ -1608,6 +1678,10 @@ const no: typeof en = {
     },
     automations: {
       text: 'Enkle regler: når X skjer, gjør Y automatisk.',
+      example: '',
+    },
+    notes: {
+      text: 'Skriv et raskt notat, og send det til handleliste eller planer når du er klar.',
       example: '',
     },
   },

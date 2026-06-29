@@ -4,7 +4,7 @@
  * Mounts on launch: loads the rounded Nunito font (gating render until ready and
  * setting it as the global Text/TextInput default), runs initDb() + pruneOldData(),
  * then loads every Zustand store (settings, tasks, shopping, shopping lists, meals,
- * health, shared, habits, energy, inbox, catalog, receipts, automations, feedback). After requesting
+ * health, shared, habits, energy, inbox, catalog, receipts, automations, feedback, notes). After requesting
  * notification permission it re-syncs all reminders/notifications to the loaded data
  * and language, registers the interactive "Done"/"Remind me later" notification
  * action buttons (syncNotificationCategories) and listens for taps on them
@@ -17,7 +17,7 @@
  * wraps the tree in an ErrorBoundary.
  *
  * Connections:
- *   Imports → components/AppModal, components/DebugOverlay, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AppModal, components/DebugOverlay, components/motion/PageTransition, constants/theme, lib/date, lib/db, lib/i18n, lib/notifications, lib/reminders, lib/taskOrder, lib/taskVisual, lib/useAppTheme, store/useAutomationStore, store/useCatalogStore, store/useEnergyStore, store/useFeedbackStore, store/useHabitStore, store/useHealthStore, store/useInboxStore, store/useMealStore, store/useNotesStore, store/useReceiptStore, store/useSettingsStore, store/useSharedStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskDraftStore, store/useTaskStore, store/useUpdateStore
  *   Used by → router layout — defines the Stack and per-screen options
  *   Data    → loads all stores (every SQLite table); schedules notifications via syncReminders + syncAllTaskNotifications + syncAllHabitReminders + the persistent-overview effect; toggles tasks via useTaskStore on a "Done" notification action tap
  *
@@ -25,7 +25,9 @@
  *   - task-form, habit-form, share-modal and capture are registered here as modals (presentation: 'modal', slide_from_bottom); other screens are plain Stack pushes.
  *   - screenOptions sets a 150ms fade as the default transition (tab-switch feel for the
  *     bottom-menu sites — see lib/siteNav.ts + components/BottomNav.tsx); modal screens
- *     override it per-screen with slide_from_bottom.
+ *     override it per-screen with slide_from_bottom. A PageTransition component is available
+ *     in components/motion/PageTransition.tsx (340ms spring easing, directional slides) for
+ *     custom screen transitions if needed.
  *   - The startup effect runs once ([]); store loads are sync, notification sync is deferred behind requestPermissions().finally().
  *   - The notification-action effect (AP-05) is separate from the startup effect and mounted once too — onNotificationAction's handler always reads fresh store state via .getState() rather than closing over stale props, so it doesn't need deps.
  *   - DebugOverlay is gated on `loaded && debugModeEnabled` so it never flashes before settings load and is fully absent for users who haven't enabled it in Settings.
@@ -78,6 +80,7 @@ import { describeTask, taskAccentColor } from '@/lib/taskVisual';
 import { useAppTheme, useIsDark } from '@/lib/useAppTheme';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useTaskStore } from '@/store/useTaskStore';
+import { useTaskDraftStore } from '@/store/useTaskDraftStore';
 import { useShoppingStore } from '@/store/useShoppingStore';
 import { useShoppingListStore } from '@/store/useShoppingListStore';
 import { useMealStore } from '@/store/useMealStore';
@@ -91,6 +94,7 @@ import { useReceiptStore } from '@/store/useReceiptStore';
 import { useAutomationStore } from '@/store/useAutomationStore';
 import { useUpdateStore } from '@/store/useUpdateStore';
 import { useFeedbackStore } from '@/store/useFeedbackStore';
+import { useNotesStore } from '@/store/useNotesStore';
 import { Fonts } from '@/constants/theme';
 import DebugOverlay from '@/components/DebugOverlay';
 import AppModalHost from '@/components/AppModal';
@@ -154,6 +158,7 @@ export default function RootLayout() {
   const setupComplete = useSettingsStore((s) => s.setupComplete);
   const loaded = useSettingsStore((s) => s.loaded);
   const loadTasks = useTaskStore((s) => s.load);
+  const loadTaskDrafts = useTaskDraftStore((s) => s.load);
   const loadShopping = useShoppingStore((s) => s.load);
   const loadShoppingLists = useShoppingListStore((s) => s.load);
   const loadMeals = useMealStore((s) => s.load);
@@ -166,6 +171,7 @@ export default function RootLayout() {
   const loadReceipts = useReceiptStore((s) => s.load);
   const loadAutomations = useAutomationStore((s) => s.load);
   const loadFeedback = useFeedbackStore((s) => s.load);
+  const loadNotes = useNotesStore((s) => s.load);
   const persistentNotifEnabled = useSettingsStore((s) => s.persistentNotifEnabled);
   const debugModeEnabled = useSettingsStore((s) => s.debugModeEnabled);
   const language = useSettingsStore((s) => s.language);
@@ -178,6 +184,7 @@ export default function RootLayout() {
     try { pruneOldData(); } catch { /* keep going if cleanup fails */ }
     loadSettings();
     loadTasks();
+    loadTaskDrafts();
     loadShopping();
     loadShoppingLists();
     loadMeals();
@@ -190,6 +197,7 @@ export default function RootLayout() {
     loadReceipts();
     loadAutomations();
     loadFeedback();
+    loadNotes();
 
     // Notifications: ask once, then bring all scheduled reminders in line with
     // the loaded settings, tasks and habits (and the user's chosen language).
@@ -319,6 +327,7 @@ export default function RootLayout() {
         <Stack.Screen name="shared" />
         <Stack.Screen name="habits" />
         <Stack.Screen name="automations" />
+        <Stack.Screen name="notes" />
         <Stack.Screen
           name="habit-form"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}

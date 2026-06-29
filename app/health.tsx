@@ -6,14 +6,13 @@
  * strip) above the chronological log list.
  *
  * Connections:
- *   Imports → components/AddFAB, components/BottomNav, components/ConfirmationBanner, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
- *   Used by → Expo Router route "/health"
- *   Data    → useHealthStore (health_logs table); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
+ *   Imports → components/AddDivider, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/ExpandableCard, components/HabitIcon, components/PressableScale, components/ScreenBackground, components/ScreenHeader, components/SiteSwipeView, components/Surface, constants/theme, lib/date, lib/haptics, lib/i18n, lib/useAppTheme, store/useHealthStore, store/useHabitStore
+ *   Used by → Expo Router route "/health" (BottomNav tab — see lib/siteNav.ts)
+ *   Data    → useHealthStore (health_logs table, incl. update()); useHabitStore (habits + habit_logs, read-only inline summary); scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - All visible strings go through useT(); dates are YYYY-MM-DD via todayStr()/dateStr().
  *   - The date field is a free-text TextInput (no picker) — it trusts the YYYY-MM-DD string entered.
- *   - save() shows a ConfirmationBanner so there's always positive proof the entry was logged.
  *   - W-D: this is an emotional screen — uses useSoftTheme() for a gentler palette and
  *     PressableScale severity targets. SEVERITY_COLORS is a soft purple→blue family
  *     (NOT red/green — avoids alarm connotations); labels come from t.severityLabels.
@@ -22,12 +21,12 @@
  *     count/dailyGoal). The chevron header links to the full /habits screen; the add row pushes
  *     the shared /habit-form modal. Full streak/expand/rest-day UI stays on /habits — keep this
  *     inline view light.
- *   - Design system pass: removed static Colors.* fallbacks from baseStyles (theme.* was
- *     already applied inline everywhere except saveBtnText/adjBtnPlusText, now fixed);
- *     fontWeight string literals replaced with Fonts.* tokens; dropped unused back/title
- *     styles (superseded by ScreenHeader).
- *   - "Log symptom" trigger is a floating AddFAB → setAdding(true), hidden while the add
- *     form is open. The form's own Cancel/Save footer stays put (right under its fields).
+ *   - Log list is per-log lifted edit state (`edits`/`openIds`), mirroring app/plans.tsx's
+ *     pattern but with no durable draft buffer — a half-edited log just commits straight to
+ *     useHealthStore.update() on Save, since it isn't worth a SQLite draft table. Each log
+ *     renders as a controlled ExpandableCard; collapsed shows the severity badge (leadingAction)
+ *     + ailment title + chevron, expanded shows the editable fields and a confirm-gated Delete.
+ *   - Every log gets a leading AddDivider (handleAddLog); no floating AddFAB on this screen.
  */
 import React, { useMemo, useState } from 'react';
 import {
@@ -43,7 +42,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useHealthStore } from '@/store/useHealthStore';
+import { useHealthStore, HealthLog } from '@/store/useHealthStore';
 import { useHabitStore } from '@/store/useHabitStore';
 import HabitIcon from '@/components/HabitIcon';
 import PressableScale from '@/components/PressableScale';
@@ -53,11 +52,14 @@ import ScreenBackground from '@/components/ScreenBackground';
 import ScreenHeader from '@/components/ScreenHeader';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
-import AddFAB from '@/components/AddFAB';
+import ExpandableCard from '@/components/ExpandableCard';
+import AddDivider from '@/components/AddDivider';
+import { showAppModal } from '@/components/AppModal';
 import { useT } from '@/lib/i18n';
 import { todayStr, getWeekDates } from '@/lib/date';
 import { FontSize, Radius, Shadow, Spacing, Fonts } from '@/constants/theme';
 import { useSoftTheme, useScaledStyles } from '@/lib/useAppTheme';
+import { warning } from '@/lib/haptics';
 
 // W-D: soft purple→blue severity family. Lighter (mild) → deeper (severe) without
 // any red/green alarm connotations. Static — these are intentionally fixed regardless
@@ -71,10 +73,18 @@ function severities() {
   return SEVERITY_COLORS.map((color, i) => ({ value: i + 1, color }));
 }
 
+type HealthEditFields = { date: string; ailment: string; severity: number; notes: string };
+type HealthEditState = { fields: HealthEditFields; dirty: boolean };
+
+function fieldsFromLog(log: HealthLog): HealthEditFields {
+  return { date: log.date, ailment: log.ailment, severity: log.severity, notes: log.notes };
+}
+
 export default function HealthScreen() {
   const router = useRouter();
   const logs = useHealthStore((s) => s.logs);
   const add = useHealthStore((s) => s.add);
+  const update = useHealthStore((s) => s.update);
   const remove = useHealthStore((s) => s.remove);
   const allHabits = useHabitStore((s) => s.habits);
   const habitLogs = useHabitStore((s) => s.logs);
@@ -82,11 +92,8 @@ export default function HealthScreen() {
   const decrementHabit = useHabitStore((s) => s.decrement);
   const habits = allHabits.filter((h) => h.childName === '');
 
-  const [adding, setAdding] = useState(false);
-  const [ailment, setAilment] = useState('');
-  const [notes, setNotes] = useState('');
-  const [severity, setSeverity] = useState(2);
-  const [date, setDate] = useState(todayStr());
+  const [edits, setEdits] = useState<Record<string, HealthEditState>>({});
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
   const [confirm, setConfirm] = useState<string | null>(null);
   const t = useT();
   const theme = useSoftTheme();
@@ -97,15 +104,61 @@ export default function HealthScreen() {
   const today = todayStr();
   const weekDates = getWeekDates(today);
 
-  function save() {
-    if (!ailment.trim()) return;
-    add({ date, ailment: ailment.trim(), severity, notes: notes.trim() });
-    setAilment('');
-    setNotes('');
-    setSeverity(2);
-    setDate(todayStr());
-    setAdding(false);
+  function ensureEdit(logId: string) {
+    if (edits[logId]) return;
+    const log = logs.find((l) => l.id === logId);
+    if (!log) return;
+    setEdits((prev) => ({ ...prev, [logId]: { fields: fieldsFromLog(log), dirty: false } }));
+  }
+
+  function toggleOpen(logId: string) {
+    const wasOpen = !!openIds[logId];
+    if (!wasOpen) ensureEdit(logId);
+    setOpenIds((prev) => ({ ...prev, [logId]: !wasOpen }));
+  }
+
+  function handleFieldChange<K extends keyof HealthEditFields>(logId: string, field: K, value: HealthEditFields[K]) {
+    setEdits((prev) => {
+      const edit = prev[logId];
+      if (!edit) return prev;
+      return { ...prev, [logId]: { fields: { ...edit.fields, [field]: value }, dirty: true } };
+    });
+  }
+
+  function handleSave(logId: string) {
+    const edit = edits[logId];
+    if (!edit) return;
+    update(logId, edit.fields);
+    setEdits((prev) => ({ ...prev, [logId]: { fields: edit.fields, dirty: false } }));
     setConfirm(t.taskSavedSimple);
+  }
+
+  function handleDelete(logId: string) {
+    remove(logId);
+    setEdits((prev) => {
+      const next = { ...prev };
+      delete next[logId];
+      return next;
+    });
+    setOpenIds((prev) => {
+      const next = { ...prev };
+      delete next[logId];
+      return next;
+    });
+  }
+
+  function confirmDelete(logId: string, ailment: string) {
+    warning();
+    showAppModal(t.deleteConfirmTitle(ailment || t.ailmentPlaceholder), t.deleteConfirmBody, [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.deleteConfirmBtn, style: 'destructive', onPress: () => handleDelete(logId) },
+    ]);
+  }
+
+  function handleAddLog() {
+    const log = add({ date: todayStr(), ailment: '', severity: 2, notes: '' });
+    setEdits((prev) => ({ ...prev, [log.id]: { fields: fieldsFromLog(log), dirty: false } }));
+    setOpenIds((prev) => ({ ...prev, [log.id]: true }));
   }
 
   // Top ailments over the last 30 days + a per-(ailment,date) max-severity index,
@@ -134,7 +187,7 @@ export default function HealthScreen() {
     <SafeAreaView style={styles.safe}>
       <ScreenBackground />
       <ConfirmationBanner message={confirm} onDismiss={() => setConfirm(null)} />
-      <ScreenHeader title={t.healthTitle} onBack={() => router.back()} />
+      <ScreenHeader title={t.healthTitle} />
 
       <SiteSwipeView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -190,100 +243,114 @@ export default function HealthScreen() {
           </Surface>
         )}
 
-        {/* Add form */}
-        {adding && (
-          <Surface style={styles.addCard}>
-            <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.dateLabel}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
-              value={date}
-              onChangeText={setDate}
-              keyboardType="numbers-and-punctuation"
-            />
-            <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.ailmentLabel}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
-              value={ailment}
-              onChangeText={setAilment}
-              placeholder={t.ailmentPlaceholder}
-              placeholderTextColor={theme.gray}
-              autoFocus
-            />
-            <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.severityLabel}</Text>
-            {/* W-D: 5 large, clearly-labelled tap targets (not a slider). Stored value is 1–5. */}
-            <View style={styles.severityRow}>
-              {SEVERITIES.map((s) => {
-                const active = severity === s.value;
-                // Lighter severities (1–2) read better with dark text; deeper ones with white.
-                const fg = s.value >= 3 ? theme.white : theme.text;
-                return (
-                  <PressableScale
-                    key={s.value}
-                    style={[
-                      styles.severityTarget,
-                      { backgroundColor: s.color },
-                      active && [styles.severityActive, { borderColor: theme.text }],
-                    ]}
-                    onPress={() => setSeverity(s.value)}
-                  >
-                    <Text style={[styles.severityNum, { color: fg }]}>{s.value}</Text>
-                    <Text style={[styles.severityTargetLabel, { color: fg }]} numberOfLines={1}>
-                      {severityLabel(s.value)}
-                    </Text>
-                  </PressableScale>
-                );
-              })}
-            </View>
-            <Text style={[styles.formLabel, { color: theme.textLight, marginTop: Spacing.sm }]}>{t.notesLabel}</Text>
-            <TextInput
-              style={[styles.input, styles.notesInput, { backgroundColor: theme.offWhite, color: theme.text }]}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder={t.notesPlaceholder}
-              placeholderTextColor={theme.gray}
-              multiline
-            />
-            <View style={styles.addActions}>
-              <Pressable onPress={() => setAdding(false)}>
-                <Text style={[styles.cancelText, { color: theme.textLight }]}>{t.cancel}</Text>
-              </Pressable>
-              <Pressable style={[styles.saveBtn, { backgroundColor: theme.orange }]} onPress={save}>
-                <Text style={[styles.saveBtnText, { color: theme.white }]}>{t.save}</Text>
-              </Pressable>
-            </View>
-          </Surface>
-        )}
-
-        {/* W-D: low-weight, affirming self-care note below the log form. */}
+        {/* W-D: low-weight, affirming self-care note below the overview. */}
         <Text style={[styles.selfCareNote, { color: theme.textLight }]}>{t.healthSelfCareNote}</Text>
 
         {/* Log list */}
         <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
         {logs.length === 0 && (
-          <Surface tint={theme.offWhite} style={styles.emptyCard}>
-            <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noLogsGentle}</Text>
-          </Surface>
+          <>
+            <Surface tint={theme.offWhite} style={styles.emptyCard}>
+              <Text style={[styles.emptyText, { color: theme.textLight }]}>{t.noLogsGentle}</Text>
+            </Surface>
+            <AddDivider onPress={handleAddLog} />
+          </>
         )}
         {logs.map((log) => {
           const sev = SEVERITIES.find((s) => s.value === log.severity);
+          const fields = edits[log.id]?.fields ?? fieldsFromLog(log);
           return (
-            <View key={log.id} style={[styles.logCard, { backgroundColor: theme.white, borderLeftColor: sev?.color ?? theme.grayLight }]}>
-              <View style={styles.logTop}>
-                <View>
-                  <Text style={[styles.logAilment, { color: theme.text }]}>{log.ailment}</Text>
-                  <Text style={[styles.logDate, { color: theme.textLight }]}>{log.date}</Text>
-                </View>
-                <View style={styles.logRight}>
+            <React.Fragment key={log.id}>
+              <AddDivider onPress={handleAddLog} />
+              <ExpandableCard
+                title={log.ailment || t.ailmentPlaceholder}
+                open={!!openIds[log.id]}
+                onToggle={() => toggleOpen(log.id)}
+                leadingAction={
                   <View style={[styles.severityBadge, { backgroundColor: sev?.color }]}>
-                    <Text style={[styles.severityBadgeText, { color: log.severity >= 3 ? theme.white : theme.text }]}>{severityLabel(log.severity)}</Text>
+                    <Text style={[styles.severityBadgeText, { color: log.severity >= 3 ? theme.white : theme.text }]}>
+                      {severityLabel(log.severity)}
+                    </Text>
                   </View>
-                  <Pressable onPress={() => remove(log.id)} hitSlop={8}>
-                    <Text style={[styles.removeText, { color: theme.gray }]}>×</Text>
+                }
+              >
+                <View style={styles.fieldsWrap}>
+                  <View style={styles.field}>
+                    <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.dateLabel}</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+                      value={fields.date}
+                      onChangeText={(v) => handleFieldChange(log.id, 'date', v)}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+
+                  <View style={styles.field}>
+                    <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.ailmentLabel}</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.offWhite, color: theme.text }]}
+                      value={fields.ailment}
+                      onChangeText={(v) => handleFieldChange(log.id, 'ailment', v)}
+                      placeholder={t.ailmentPlaceholder}
+                      placeholderTextColor={theme.gray}
+                    />
+                  </View>
+
+                  <View style={styles.field}>
+                    <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.severityLabel}</Text>
+                    {/* W-D: 5 large, clearly-labelled tap targets (not a slider). Stored value is 1–5. */}
+                    <View style={styles.severityRow}>
+                      {SEVERITIES.map((s) => {
+                        const active = fields.severity === s.value;
+                        // Lighter severities (1–2) read better with dark text; deeper ones with white.
+                        const fg = s.value >= 3 ? theme.white : theme.text;
+                        return (
+                          <PressableScale
+                            key={s.value}
+                            style={[
+                              styles.severityTarget,
+                              { backgroundColor: s.color },
+                              active && [styles.severityActive, { borderColor: theme.text }],
+                            ]}
+                            onPress={() => handleFieldChange(log.id, 'severity', s.value)}
+                          >
+                            <Text style={[styles.severityNum, { color: fg }]}>{s.value}</Text>
+                            <Text style={[styles.severityTargetLabel, { color: fg }]} numberOfLines={1}>
+                              {severityLabel(s.value)}
+                            </Text>
+                          </PressableScale>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.field}>
+                    <Text style={[styles.formLabel, { color: theme.textLight }]}>{t.notesLabel}</Text>
+                    <TextInput
+                      style={[styles.input, styles.notesInput, { backgroundColor: theme.offWhite, color: theme.text }]}
+                      value={fields.notes}
+                      onChangeText={(v) => handleFieldChange(log.id, 'notes', v)}
+                      placeholder={t.notesPlaceholder}
+                      placeholderTextColor={theme.gray}
+                      multiline
+                    />
+                  </View>
+
+                  {edits[log.id]?.dirty ? (
+                    <Pressable style={[styles.saveBtn, { backgroundColor: theme.orange }]} onPress={() => handleSave(log.id)}>
+                      <Text style={[styles.saveBtnText, { color: theme.white }]}>{t.save}</Text>
+                    </Pressable>
+                  ) : null}
+
+                  <Pressable
+                    style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]}
+                    onPress={() => confirmDelete(log.id, fields.ailment)}
+                  >
+                    <Text style={[styles.deleteBtnText, { color: theme.danger }]}>{t.deleteLogBtn}</Text>
                   </Pressable>
                 </View>
-              </View>
-              {log.notes ? <Text style={[styles.logNotes, { color: theme.textLight }]}>{log.notes}</Text> : null}
-            </View>
+              </ExpandableCard>
+            </React.Fragment>
           );
         })}
 
@@ -345,7 +412,6 @@ export default function HealthScreen() {
       </KeyboardAvoidingView>
       </SiteSwipeView>
 
-      {!adding && <AddFAB onPress={() => setAdding(true)} />}
       <BottomNav />
     </SafeAreaView>
   );
@@ -387,11 +453,8 @@ const baseStyles = StyleSheet.create({
   },
   overviewFill: { height: 8, borderRadius: Radius.full },
   overviewCount: { fontSize: FontSize.xs, width: 28, textAlign: 'right' },
-  addCard: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.card,
-  },
+  fieldsWrap: { gap: Spacing.md },
+  field: { gap: Spacing.xs },
   formLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   input: {
     borderRadius: Radius.sm,
@@ -428,14 +491,6 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     marginTop: -Spacing.xs,
   },
-  addActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: Spacing.md,
-    marginTop: Spacing.md,
-  },
-  cancelText: { fontSize: FontSize.md },
   saveBtn: {
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.lg,
@@ -444,30 +499,20 @@ const baseStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveBtnText: { fontFamily: Fonts.bold, fontSize: FontSize.md },
+  deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
+  deleteBtnText: { fontWeight: '700', fontSize: FontSize.md },
   emptyCard: {
     borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
   },
   emptyText: { fontSize: FontSize.sm },
-  logCard: {
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    borderLeftWidth: 4,
-    ...Shadow.card,
-  },
-  logTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  logAilment: { fontSize: FontSize.md, fontFamily: Fonts.semibold },
-  logDate: { fontSize: FontSize.xs, marginTop: 2 },
-  logRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   severityBadge: {
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
   severityBadgeText: { fontSize: FontSize.xs, fontFamily: Fonts.semibold },
-  removeText: { fontSize: 20 },
-  logNotes: { fontSize: FontSize.sm, marginTop: Spacing.sm },
   section: { gap: Spacing.sm },
   sectionHeader: {
     flexDirection: 'row',

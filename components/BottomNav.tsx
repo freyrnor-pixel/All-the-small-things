@@ -12,7 +12,10 @@
  *   Data    → none (presentational; navigation only)
  *
  * Edit notes:
- *   - SITE_ITEMS (lib/siteNav.ts) defines the 5 items and their order (left to right).
+ *   - SITE_ITEMS (lib/siteNav.ts) defines the 5 items and their order (left to right):
+ *     Shopping, Plans, Home, Notes, Scan. Health was removed from this list (reachable
+ *     via a Home header icon instead) — if SITE_ITEMS' length or item order changes
+ *     again, update the slice indices below to match.
  *   - Centre item (index 2, home) is rendered with gradient + shadow (design system style).
  *   - Left items (indices 0–1) and right items (indices 3–4) are simple icon buttons.
  *   - BOTTOM_NAV_HEIGHT is exported for screens needing to offset overlays.

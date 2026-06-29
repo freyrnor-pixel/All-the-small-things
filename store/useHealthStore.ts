@@ -2,7 +2,7 @@
  * useHealthStore.ts — symptom / ailment health log
  *
  * Zustand store for dated health entries (ailment, 1-5 severity, notes). Simple
- * append/remove log surfaced on the health screen, ordered newest-first.
+ * append/remove/update log surfaced on the health screen, ordered newest-first.
  *
  * Connections:
  *   Imports → lib/db, lib/dataAccess, lib/id
@@ -10,13 +10,15 @@
  *   Data    → defines a Zustand store; owns SQLite table health_logs
  *
  * Edit notes:
- *   - DB column is log_date but the in-memory field is `date`; map both directions in load()/add().
+ *   - DB column is log_date but the in-memory field is `date`; map both directions in load()/add()/update().
  *   - health_logs is dated history and is pruned past RETENTION_DAYS in lib/db.ts.
  *   - New columns go through the migrations array in lib/db.ts; never recreate tables.
+ *   - add() returns the created log (not void) so app/health.tsx can seed its lifted edit
+ *     state directly from the result, matching useTaskStore.add()'s pattern.
  */
 import { create } from 'zustand';
 import db from '@/lib/db';
-import { Row, loadAll, insertRow, readStr, readInt } from '@/lib/dataAccess';
+import { Row, FieldMap, loadAll, insertRow, updateRow, rowValues, readStr, readInt } from '@/lib/dataAccess';
 import { generateId } from '@/lib/id';
 
 export type HealthLog = {
@@ -30,7 +32,8 @@ export type HealthLog = {
 type HealthStore = {
   logs: HealthLog[];
   load: () => void;
-  add: (entry: Omit<HealthLog, 'id'>) => void;
+  add: (entry: Omit<HealthLog, 'id'>) => HealthLog;
+  update: (id: string, patch: Partial<Omit<HealthLog, 'id'>>) => void;
   remove: (id: string) => void;
 };
 
@@ -43,6 +46,13 @@ function rowToHealthLog(row: Row): HealthLog {
     notes: readStr(row, 'notes'),
   };
 }
+
+const HEALTH_LOG_FIELDS: FieldMap<HealthLog> = {
+  date: { col: 'log_date' },
+  ailment: { col: 'ailment' },
+  severity: { col: 'severity' },
+  notes: { col: 'notes' },
+};
 
 export const useHealthStore = create<HealthStore>((set) => ({
   logs: [],
@@ -60,7 +70,14 @@ export const useHealthStore = create<HealthStore>((set) => ({
       severity: entry.severity,
       notes: entry.notes,
     });
-    set((s) => ({ logs: [{ ...entry, id }, ...s.logs] }));
+    const log = { ...entry, id };
+    set((s) => ({ logs: [log, ...s.logs] }));
+    return log;
+  },
+
+  update(id, patch) {
+    updateRow('health_logs', rowValues(patch, HEALTH_LOG_FIELDS), 'id = ?', [id]);
+    set((s) => ({ logs: s.logs.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
   },
 
   remove(id) {

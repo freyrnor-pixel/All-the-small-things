@@ -13,7 +13,8 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme, store/useSettingsStore
- *   Used by → app screens, rendered as the first child inside the SafeAreaView
+ *   Used by → most app screens, rendered as the first child inside the SafeAreaView
+ *             (app/index.tsx uses components/HomeHeroBackground instead)
  *   Data    → reads bubbleMaterial from useSettingsStore
  *
  * Edit notes:

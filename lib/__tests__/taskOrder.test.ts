@@ -13,6 +13,7 @@ function task(partial: Partial<Task>): Task {
     recurringDays: [],
     importance: 'regular',
     priority: 'medium',
+    steps: [],
     ...partial,
   };
 }

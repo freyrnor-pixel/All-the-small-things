@@ -18,8 +18,12 @@
  * Edit notes:
  *   - SITE_ITEMS order is the bottom menu's visual order (left to right).
  *   - Nav bar has 5 items: Shopping, Plans, Home (centre), Health, Scan.
- *   - Removed from nav (routes/screens kept): meals, budget, shared, automations,
- *     settings, habits. Access points: settings in home screen header, habits in health.
+ *   - Removed from nav (routes/screens kept): notes, meals, budget, shared, automations,
+ *     settings, habits. Access points: notes via a Home preview card (app/index.tsx),
+ *     positioned between the Plans and Shopping preview cards, same "see everything" link
+ *     pattern as those two; habits is reached via health's inline summary → /habits;
+ *     settings in home screen header (and goToSite(..., '/settings') callers); plans also
+ *     keeps its Home "See everything" link alongside its nav tab, same as shopping's preview link.
  *   - goToSite() invariant: Home ('/') is always the stack root. Going from Home to
  *     any site pushes (so back() returns to Home). Going from one non-Home site to
  *     another replaces (so the stack never grows past depth 2). Going to Home
@@ -40,6 +44,7 @@ export type SiteRoute =
   | '/plans'
   | '/meals'
   | '/habits'
+  | '/notes'
   | '/scan'
   | '/budget'
   | '/shared'
@@ -54,11 +59,11 @@ export type SiteItem = {
 };
 
 export const SITE_ITEMS: SiteItem[] = [
-  { key: 'shop',   icon: 'cart-outline', activeIcon: 'cart',     route: '/shopping' },
-  { key: 'plans',  icon: 'clipboard-outline', activeIcon: 'clipboard', route: '/plans'    },
-  { key: 'home',   icon: 'home-outline', activeIcon: 'home',     route: '/'         },
-  { key: 'health', icon: 'heart-outline', activeIcon: 'heart',   route: '/health'   },
-  { key: 'scan',   icon: 'camera-outline', activeIcon: 'camera', route: '/scan'     },
+  { key: 'shop',   icon: 'cart-outline',     activeIcon: 'cart',     route: '/shopping' },
+  { key: 'plans',  icon: 'calendar-outline', activeIcon: 'calendar', route: '/plans'    },
+  { key: 'home',   icon: 'home-outline',     activeIcon: 'home',     route: '/'         },
+  { key: 'health', icon: 'heart-outline',    activeIcon: 'heart',    route: '/health'   },
+  { key: 'scan',   icon: 'camera-outline',   activeIcon: 'camera',   route: '/scan'     },
 ];
 
 /** Navigate between sites while keeping the stack shallow (Home stays the root). */

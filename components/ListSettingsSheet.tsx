@@ -1,7 +1,7 @@
 /**
  * ListSettingsSheet.tsx — per-list recurring toggle + interval picker.
  *
- * Opened from ListSwitcherHeader's settings icon (Ukeliste tab). Lets the user
+ * Opened from WeekListCard's settings icon (Ukeliste tab). Lets the user
  * turn "repeat this list" on/off and, when on, pick the cadence (1-4 weeks) —
  * mirrors app/settings.tsx's weeklyResetDay chip-row look. Changes apply
  * immediately via onSetRecurring (useShoppingListStore.setRecurring), no

@@ -9,7 +9,7 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/i18n, lib/useAppTheme
- *   Used by → app/shopping.tsx
+ *   Used by → app/shopping.tsx, app/inventory-edit.tsx
  *   Data    → none directly — all mutations flow out via onSave/onDelete callbacks; the parent calls useShoppingStore.update()/removeWithSource()
  *
  * Edit notes:
