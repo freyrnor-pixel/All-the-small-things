@@ -13,11 +13,12 @@
  * all three commit the trip via doneShopping(...), Scan/Upload then route to /scan.
  *
  * Connections:
- *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/EmptyState, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
+ *   Imports → components/AddDishSheet, components/AddDivider, components/AddItemSheet, components/AddSourceChooser, components/AppModal, components/BottomNav, components/ConfirmationBanner, components/Container, components/ExpandableCard, components/ListSettingsSheet, components/MonthlyResetSummaryModal, components/MonthlyTableRow, components/PressableScale, components/SavedListsModal, components/ScreenHeader, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/UpdateSheet, components/WeekListCard, constants/theme, lib/date, lib/haptics, lib/i18n, lib/shoppingGroups (groupByDish, computeListGroups), lib/useAppTheme, store/useAutomationStore, store/useMealStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore
  *   Used by → Expo Router route "/shopping"
  *   Data    → useShoppingStore (shopping_items + shopping_trips tables) + useShoppingListStore (shopping_lists table, incl. each list's `locked` padlock state) + useSettingsStore (monthlyResetDate/lastMonthlyReset) + useMealStore (dishes, read-only, for per-dish price lookup); fires the 'shopping_opened' automation trigger on mount; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
+ *   - Empty states (tree picture + text) removed from both Monthly and Weekly list tabs.
  *   - All visible strings go through useT().
  *   - Header keeps only the Share pill (→ /share-modal) — the old pencil icon
  *     (→ /inventory-edit) and link icon (→ /shared via goToSite) are both removed: the
@@ -124,7 +125,6 @@ import { showAppModal } from '@/components/AppModal';
 import PressableScale from '@/components/PressableScale';
 import Surface from '@/components/Surface';
 import ScreenHeader from '@/components/ScreenHeader';
-import EmptyState from '@/components/EmptyState';
 import AddDivider from '@/components/AddDivider';
 import ExpandableCard from '@/components/ExpandableCard';
 import AddDishSheet from '@/components/AddDishSheet';
@@ -487,9 +487,7 @@ export default function ShoppingScreen() {
                   </View>
                 )}
 
-                {catalogItems.length === 0 ? (
-                  <EmptyState text={t.emptyMonthlyList} />
-                ) : (
+                {catalogItems.length === 0 ? null : (
                   <View style={styles.section}>
                     <View style={styles.sectionHeaderRow}>
                       <Text style={[styles.sectionLabel, { color: theme.orange }]}>{t.catalogHeader(catalogItems.length)}</Text>
@@ -591,14 +589,7 @@ export default function ShoppingScreen() {
                 </View>
               )}
 
-              {nonTemplateLists.length === 0 ? (
-                <>
-                  <EmptyState text={t.weeklyEmptyTitle} />
-                  <View style={styles.weeklyEmptyExtra}>
-                    <Text style={[styles.weeklyEmptySubtitle, { color: theme.textLight }]}>{t.weeklyEmptySubtitle}</Text>
-                  </View>
-                </>
-              ) : (
+              {nonTemplateLists.length === 0 ? null : (
                 nonTemplateLists.map((list) => {
                   const { dishGroups, ungroupedUnchecked, checked } = computeListGroups(items, list.id);
                   return (
@@ -773,7 +764,4 @@ const baseStyles = StyleSheet.create({
 
   disclosureChevron: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
   weekLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
-
-  weeklyEmptyExtra: { alignItems: 'center', gap: Spacing.sm, marginTop: -Spacing.lg },
-  weeklyEmptySubtitle: { fontSize: FontSize.sm, textAlign: 'center' },
 });
