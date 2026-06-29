@@ -25,9 +25,9 @@
  *             writes useTaskDraftStore (task_drafts) for any task with unsaved field edits
  *
  * Edit notes:
- *   - No back button or screen-level add FAB in the header/body — every task list spot uses an
- *     AddDivider instead (one leading each card, plus a lone one when both stacks are empty),
- *     all wired to the same handleAddTask.
+ *   - No back button or screen-level add FAB in the header/body — each section (Important,
+ *     General) is anchored by dividers at the top and bottom; done tasks have no add affordance.
+ *     When both undone stacks are empty, one divider appears as a stable anchor.
  *   - `edits` (taskId -> { fields, dirty }) is this screen's lifted edit state, mirroring
  *     app/shopping.tsx's per-list state but keyed by task instead of gated by a lock. A task's
  *     Container always renders from `edits[id]` once touched; `fieldsFromTask(task)` is only
@@ -436,36 +436,36 @@ export default function PlansScreen() {
           {importantTasks.length === 0 && (
             <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
           )}
+          <AddDivider onPress={handleAddTask} />
           {importantTasks.map((task) => (
-            <React.Fragment key={task.id}>
-              <AddDivider onPress={handleAddTask} />
-              <DraggableTaskRow
-                task={task}
-                section="important"
-                isOpen={!!openIds[task.id]}
-                onRowLayout={(layout) => registerLayout(task.id, layout)}
-                onDragStart={() => handleDragStart(task.id, 'important')}
-                onDragMove={(centerY) => handleDragMove(task.id, centerY)}
-                onDragEnd={handleDragEnd}
-                cardProps={{
-                  theme,
-                  open: !!openIds[task.id],
-                  onToggleOpen: () => toggleOpen(task.id),
-                  fields: edits[task.id]?.fields ?? fieldsFromTask(task),
-                  dirty: Object.values(edits[task.id]?.dirty ?? {}).some(Boolean),
-                  onFieldChange: (field, value) => handleFieldChange(task.id, field, value),
-                  onToggleDone: () => toggleTask(task.id),
-                  onSave: () => handleSave(task.id),
-                  onDelete: () => handleDelete(task.id),
-                  steps: task.steps,
-                  onAddStep: (title) => addStep(task.id, title),
-                  onToggleStep: toggleStep,
-                  onRemoveStep: removeStep,
-                  onReorderStep: reorderStep,
-                }}
-              />
-            </React.Fragment>
+            <DraggableTaskRow
+              key={task.id}
+              task={task}
+              section="important"
+              isOpen={!!openIds[task.id]}
+              onRowLayout={(layout) => registerLayout(task.id, layout)}
+              onDragStart={() => handleDragStart(task.id, 'important')}
+              onDragMove={(centerY) => handleDragMove(task.id, centerY)}
+              onDragEnd={handleDragEnd}
+              cardProps={{
+                theme,
+                open: !!openIds[task.id],
+                onToggleOpen: () => toggleOpen(task.id),
+                fields: edits[task.id]?.fields ?? fieldsFromTask(task),
+                dirty: Object.values(edits[task.id]?.dirty ?? {}).some(Boolean),
+                onFieldChange: (field, value) => handleFieldChange(task.id, field, value),
+                onToggleDone: () => toggleTask(task.id),
+                onSave: () => handleSave(task.id),
+                onDelete: () => handleDelete(task.id),
+                steps: task.steps,
+                onAddStep: (title) => addStep(task.id, title),
+                onToggleStep: toggleStep,
+                onRemoveStep: removeStep,
+                onReorderStep: reorderStep,
+              }}
+            />
           ))}
+          <AddDivider onPress={handleAddTask} />
 
           <View
             style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}
@@ -478,58 +478,56 @@ export default function PlansScreen() {
           {generalTasks.length === 0 && (
             <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
           )}
+          <AddDivider onPress={handleAddTask} />
           {generalTasks.map((task) => (
-            <React.Fragment key={task.id}>
-              <AddDivider onPress={handleAddTask} />
-              <DraggableTaskRow
-                task={task}
-                section="general"
-                isOpen={!!openIds[task.id]}
-                onRowLayout={(layout) => registerLayout(task.id, layout)}
-                onDragStart={() => handleDragStart(task.id, 'general')}
-                onDragMove={(centerY) => handleDragMove(task.id, centerY)}
-                onDragEnd={handleDragEnd}
-                cardProps={{
-                  theme,
-                  open: !!openIds[task.id],
-                  onToggleOpen: () => toggleOpen(task.id),
-                  fields: edits[task.id]?.fields ?? fieldsFromTask(task),
-                  dirty: Object.values(edits[task.id]?.dirty ?? {}).some(Boolean),
-                  onFieldChange: (field, value) => handleFieldChange(task.id, field, value),
-                  onToggleDone: () => toggleTask(task.id),
-                  onSave: () => handleSave(task.id),
-                  onDelete: () => handleDelete(task.id),
-                  steps: task.steps,
-                  onAddStep: (title) => addStep(task.id, title),
-                  onToggleStep: toggleStep,
-                  onRemoveStep: removeStep,
-                  onReorderStep: reorderStep,
-                }}
-              />
-            </React.Fragment>
+            <DraggableTaskRow
+              key={task.id}
+              task={task}
+              section="general"
+              isOpen={!!openIds[task.id]}
+              onRowLayout={(layout) => registerLayout(task.id, layout)}
+              onDragStart={() => handleDragStart(task.id, 'general')}
+              onDragMove={(centerY) => handleDragMove(task.id, centerY)}
+              onDragEnd={handleDragEnd}
+              cardProps={{
+                theme,
+                open: !!openIds[task.id],
+                onToggleOpen: () => toggleOpen(task.id),
+                fields: edits[task.id]?.fields ?? fieldsFromTask(task),
+                dirty: Object.values(edits[task.id]?.dirty ?? {}).some(Boolean),
+                onFieldChange: (field, value) => handleFieldChange(task.id, field, value),
+                onToggleDone: () => toggleTask(task.id),
+                onSave: () => handleSave(task.id),
+                onDelete: () => handleDelete(task.id),
+                steps: task.steps,
+                onAddStep: (title) => addStep(task.id, title),
+                onToggleStep: toggleStep,
+                onRemoveStep: removeStep,
+                onReorderStep: reorderStep,
+              }}
+            />
           ))}
+          <AddDivider onPress={handleAddTask} />
 
           {doneTasks.map((task) => (
-            <React.Fragment key={task.id}>
-              <AddDivider onPress={handleAddTask} />
-              <PlanTaskCard
-                task={task}
-                theme={theme}
-                open={!!openIds[task.id]}
-                onToggleOpen={() => toggleOpen(task.id)}
-                fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
-                dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
-                onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
-                onToggleDone={() => toggleTask(task.id)}
-                onSave={() => handleSave(task.id)}
-                onDelete={() => handleDelete(task.id)}
-                steps={task.steps}
-                onAddStep={(title) => addStep(task.id, title)}
-                onToggleStep={toggleStep}
-                onRemoveStep={removeStep}
-                onReorderStep={reorderStep}
-              />
-            </React.Fragment>
+            <PlanTaskCard
+              key={task.id}
+              task={task}
+              theme={theme}
+              open={!!openIds[task.id]}
+              onToggleOpen={() => toggleOpen(task.id)}
+              fields={edits[task.id]?.fields ?? fieldsFromTask(task)}
+              dirty={Object.values(edits[task.id]?.dirty ?? {}).some(Boolean)}
+              onFieldChange={(field, value) => handleFieldChange(task.id, field, value)}
+              onToggleDone={() => toggleTask(task.id)}
+              onSave={() => handleSave(task.id)}
+              onDelete={() => handleDelete(task.id)}
+              steps={task.steps}
+              onAddStep={(title) => addStep(task.id, title)}
+              onToggleStep={toggleStep}
+              onRemoveStep={removeStep}
+              onReorderStep={reorderStep}
+            />
           ))}
 
           <View style={{ height: 100 }} />
@@ -548,11 +546,11 @@ const baseStyles = StyleSheet.create({
   savePill: { borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
   savePillText: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   scroll: { flex: 1 },
-  content: { padding: Spacing.md, gap: Spacing.sm },
+  content: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md, paddingBottom: Spacing.lg, gap: Spacing.xs },
   unsavedSection: { gap: Spacing.xs, marginBottom: Spacing.sm },
-  sectionLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  sectionLabelBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, alignSelf: 'flex-start' },
-  emptySectionHint: { fontSize: FontSize.sm, fontStyle: 'italic' },
+  sectionLabel: { fontSize: FontSize.sm, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionLabelBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.sm, marginTop: Spacing.md, marginBottom: Spacing.xs },
+  emptySectionHint: { fontSize: FontSize.md, fontFamily: Fonts.medium, paddingHorizontal: Spacing.sm },
   unsavedBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, borderRadius: Radius.md, padding: Spacing.sm },
   unsavedBannerText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   unsavedRow: {

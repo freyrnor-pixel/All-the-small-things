@@ -277,82 +277,85 @@ export default function TaskFormScreen() {
             )}
           </View>
 
-          {/* Time — set time (default) vs. whenever on the day */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
-            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-              {[true, false].map((isSet) => (
-                <Pressable
-                  key={String(isSet)}
-                  style={[styles.seg, timeEnabled === isSet && [styles.segActive, { backgroundColor: theme.white }]]}
-                  onPress={() => {
-                    tap();
-                    setTimeEnabled(isSet);
-                    if (!isSet) setTime(nextHourStr());
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.segText,
-                      { color: theme.textLight },
-                      timeEnabled === isSet && { color: theme.text, fontWeight: '600' },
-                    ]}
-                  >
-                    {isSet ? t.timeModeSet : t.timeModeWhenever}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            {timeEnabled ? (
-              <TextInput
-                style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
-                placeholder="HH:MM"
-                placeholderTextColor={theme.gray}
-                value={time}
-                onChangeText={setTime}
-                keyboardType="numbers-and-punctuation"
-              />
-            ) : (
-              <Text style={[styles.wheneverHint, { color: theme.textLight }]}>{t.wheneverHint}</Text>
-            )}
-          </View>
-
-          {/* Type — icon + colour accent so start-at vs time-box is scannable */}
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: theme.textLight }]}>{t.typeLabel}</Text>
-            <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
-              {(['start-at', 'time-box'] as TaskType[]).map((type) => {
-                const active = taskType === type;
-                const accent = TYPE_ACCENT[type];
-                return (
+          {/* Time + Type — grouped in one card */}
+          <View style={[styles.timeTypeGroup, { backgroundColor: theme.white, ...Shadow.card }]}>
+            {/* Time field */}
+            <View>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.timeLabel}</Text>
+              <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+                {[true, false].map((isSet) => (
                   <Pressable
-                    key={type}
-                    style={[
-                      styles.segType,
-                      active && [styles.segActive, { backgroundColor: theme.white }],
-                    ]}
+                    key={String(isSet)}
+                    style={[styles.seg, timeEnabled === isSet && [styles.segActive, { backgroundColor: theme.white }]]}
                     onPress={() => {
                       tap();
-                      setTaskType(type);
+                      setTimeEnabled(isSet);
+                      if (!isSet) setTime(nextHourStr());
                     }}
                   >
-                    <Ionicons
-                      name={TYPE_ICON[type]}
-                      size={16}
-                      color={active ? accent : theme.gray}
-                    />
                     <Text
                       style={[
                         styles.segText,
                         { color: theme.textLight },
-                        active && { color: theme.text, fontFamily: Fonts.semibold },
+                        timeEnabled === isSet && { color: theme.text, fontWeight: '600' },
                       ]}
                     >
-                      {type === 'start-at' ? t.typeStartAt : t.typeTimeBox}
+                      {isSet ? t.timeModeSet : t.timeModeWhenever}
                     </Text>
                   </Pressable>
-                );
-              })}
+                ))}
+              </View>
+              {timeEnabled ? (
+                <TextInput
+                  style={[styles.timeInput, { color: theme.text, backgroundColor: theme.offWhite }]}
+                  placeholder="HH:MM"
+                  placeholderTextColor={theme.gray}
+                  value={time}
+                  onChangeText={setTime}
+                  keyboardType="numbers-and-punctuation"
+                />
+              ) : (
+                <Text style={[styles.wheneverHint, { color: theme.textLight }]}>{t.wheneverHint}</Text>
+              )}
+            </View>
+
+            {/* Type field */}
+            <View>
+              <Text style={[styles.label, { color: theme.textLight }]}>{t.typeLabel}</Text>
+              <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
+                {(['start-at', 'time-box'] as TaskType[]).map((type) => {
+                  const active = taskType === type;
+                  const accent = TYPE_ACCENT[type];
+                  return (
+                    <Pressable
+                      key={type}
+                      style={[
+                        styles.segType,
+                        active && [styles.segActive, { backgroundColor: theme.white }],
+                      ]}
+                      onPress={() => {
+                        tap();
+                        setTaskType(type);
+                      }}
+                    >
+                      <Ionicons
+                        name={TYPE_ICON[type]}
+                        size={16}
+                        color={active ? accent : theme.gray}
+                      />
+                      <Text
+                        style={[
+                          styles.segText,
+                          { color: theme.textLight },
+                          active && { color: theme.text, fontFamily: Fonts.semibold },
+                        ]}
+                      >
+                        {type === 'start-at' ? t.typeStartAt : t.typeTimeBox}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           </View>
 
@@ -387,7 +390,7 @@ export default function TaskFormScreen() {
           {/* Recurring */}
           <View style={styles.field}>
             <View style={styles.switchRow}>
-              <Text style={[styles.label, { color: theme.textLight }]}>{t.repeatWeekly}</Text>
+              <Text style={[styles.switchLabel, { color: theme.textLight }]}>{t.repeatWeekly}</Text>
               <Switch
                 value={recurring === 'weekly'}
                 onValueChange={(v) => setRecurring(v ? 'weekly' : 'none')}
@@ -462,12 +465,15 @@ export default function TaskFormScreen() {
                       <Ionicons name="chevron-down" size={16} color={theme.gray} />
                     </Pressable>
                     <Pressable onPress={() => removeStep(step.id)} hitSlop={8}>
-                      <Text style={{ fontSize: FontSize.lg, color: theme.gray }}>−</Text>
+                      <Ionicons name="trash-outline" size={16} color={theme.danger} />
                     </Pressable>
                   </View>
                 </View>
               ))}
-              <View style={styles.addStepRow}>
+              <View style={[
+                styles.addStepRow,
+                sortedSteps.length > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.grayLight },
+              ]}>
                 <TextInput
                   style={[styles.addStepInput, { backgroundColor: theme.white, color: theme.text }]}
                   value={newStepTitle}
@@ -485,7 +491,7 @@ export default function TaskFormScreen() {
           )}
 
           {existing && (
-            <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight }]} onPress={confirmDelete}>
+            <Pressable style={[styles.deleteBtn, { backgroundColor: theme.dangerLight, borderColor: theme.danger }]} onPress={confirmDelete}>
               <Text style={[styles.deleteBtnText, { color: theme.danger }]}>{t.deleteTask}</Text>
             </Pressable>
           )}
@@ -510,12 +516,13 @@ const baseStyles = StyleSheet.create({
     padding: Spacing.md,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: FontSize.lg, fontWeight: '600' },
+  headerTitle: { fontSize: FontSize.xl, fontFamily: Fonts.bold },
   cancel: { fontSize: FontSize.md },
   save: { fontSize: FontSize.md, fontWeight: '700' },
   scroll: { flex: 1 },
-  content: { padding: Spacing.md, gap: Spacing.md },
-  field: { gap: Spacing.xs },
+  content: { padding: Spacing.md, gap: Spacing.lg },
+  field: { gap: Spacing.xs, paddingVertical: Spacing.sm },
+  timeTypeGroup: { borderRadius: Radius.md, padding: Spacing.md, gap: Spacing.md },
   label: { fontSize: FontSize.sm, fontWeight: '600' },
   input: {
     borderRadius: Radius.md,
@@ -543,6 +550,7 @@ const baseStyles = StyleSheet.create({
   segActive: { ...Shadow.card },
   segText: { fontSize: FontSize.sm, textAlign: 'center' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  switchLabel: { flex: 1, fontSize: FontSize.sm, fontWeight: '600' },
   wheneverHint: { fontSize: FontSize.sm, marginTop: Spacing.xs },
   durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, alignItems: 'center' },
   durationChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.full },
@@ -576,7 +584,14 @@ const baseStyles = StyleSheet.create({
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
   dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
-  deleteBtn: { borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
+  deleteBtn: {
+    borderRadius: Radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    borderWidth: 1.5,
+  },
   deleteBtnText: { fontWeight: '700', fontSize: FontSize.md },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.xs },
   stepCheck: {
