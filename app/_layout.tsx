@@ -313,7 +313,7 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.cream },
+              contentStyle: { backgroundColor: 'transparent' },
               // Bottom-menu sites are switched far more often than they're "drilled into" —
               // a quick fade reads as a tab switch, not a push (see ANIMATION_GUIDELINES.md §1's
               // "Tab switch: 150–200ms" row vs. the default stack-push transition). Modal screens
