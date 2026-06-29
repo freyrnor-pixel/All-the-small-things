@@ -650,7 +650,7 @@ const baseStyles = StyleSheet.create({
     fontFamily: Fonts.bold,
   },
   daysRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, flexWrap: 'wrap' },
-  dayChip: { width: 40, height: 40, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  dayChip: { width: 44, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: FontSize.xs, fontWeight: '600' },
   deleteBtn: {
     borderRadius: Radius.md,
@@ -675,5 +675,5 @@ const baseStyles = StyleSheet.create({
   stepActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   addStepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.xs },
   addStepInput: { flex: 1, borderRadius: Radius.sm, padding: Spacing.sm, fontSize: FontSize.sm },
-  addStepBtn: { width: 36, height: 36, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  addStepBtn: { width: 44, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
 });
