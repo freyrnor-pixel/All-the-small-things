@@ -8,7 +8,7 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/ExpandableCard, components/InboxSection, components/NextTaskCard, components/Pet, components/QuickAddSheet, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/shoppingGroups (computeListGroups), lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/ExpandableCard, components/InboxSection, components/NextTaskCard, components/ParticleBackground, components/Pet, components/QuickAddSheet, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/shoppingGroups (computeListGroups), lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
  *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useShoppingListStore (lists, for currentList(today)) + useHabitStore (habits, logs) + useNotesStore (notes, preview only); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
  *
@@ -104,6 +104,7 @@ import ExpandableCard from '@/components/ExpandableCard';
 import DayTimeline from '@/components/DayTimeline';
 // TODO: re-enable bubble menu once redesigned
 // import BubbleMenu from '@/components/BubbleMenu';
+import ParticleBackground from '@/components/ParticleBackground';
 import BottomNav, { BOTTOM_NAV_HEIGHT } from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { goToSite } from '@/lib/siteNav';
@@ -316,6 +317,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <ParticleBackground />
       <View style={styles.watermarkWrap} pointerEvents="none">
         <TreeWatermark size={Math.min(width, height) * 0.7} opacity={0.18} absolute={false} />
       </View>
