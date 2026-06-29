@@ -354,6 +354,8 @@ export function initDb() {
     "UPDATE shopping_items SET from_catalog = 1 WHERE from_catalog = 0 AND status IN ('inWeeklyList', 'purchased') AND name IN (SELECT name FROM shopping_items WHERE status = 'catalog')",
     // Habit notifications toggle — master switch for all habit reminders
     "ALTER TABLE settings ADD COLUMN habit_notifications_enabled INTEGER DEFAULT 1",
+    // Particle effects toggle — animated particles on home screen background
+    "ALTER TABLE settings ADD COLUMN particles_enabled INTEGER DEFAULT 1",
     // Multiple, named, recurring shopping lists — see store/useShoppingListStore.ts.
     // The Katalog (status='catalog') stays one global standing inventory: list_id is
     // only meaningful for status='inWeeklyList' rows and is NULL for everything else.

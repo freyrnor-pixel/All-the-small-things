@@ -12,7 +12,7 @@
  *
  * Connections:
  *   Imports → lib/dataAccess
- *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/DebugOverlay.tsx, components/HintCard.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
+ *   Used by → app/_layout.tsx, app/budget.tsx, app/habit-form.tsx, app/habits.tsx, app/index.tsx, app/onboarding/* , app/scan.tsx, app/settings.tsx, app/share-modal.tsx, app/shared.tsx, components/BubbleMenu.tsx, components/DebugOverlay.tsx, components/HintCard.tsx, components/ParticleBackground.tsx, components/QuickAddSheet.tsx, components/SharedRequestsSection.tsx, lib/i18n.ts, lib/reminders.ts, lib/useAppTheme.ts, store/useAutomationStore.ts, store/useHabitStore.ts, store/useTaskStore.ts
  *   Data    → defines a Zustand store; owns the single-row SQLite table settings (id = 1)
  *
  * Edit notes:
@@ -66,6 +66,7 @@ export type Settings = {
   childProfiles: string[];
   // Accessibility (Proposal 4)
   reducedMotion: boolean;
+  particlesEnabled: boolean;
   fontSize: FontSizePref;
   // Companion pet (Proposal 6)
   petEnabled: boolean;
@@ -150,6 +151,7 @@ function rowToSettings(row: Row): Settings {
     darkMode: readStr(row, 'dark_mode', 'off') as DarkMode,
     childProfiles: readJson<string[]>(row, 'child_profiles', []),
     reducedMotion: readBool(row, 'reduced_motion'),
+    particlesEnabled: readInt(row, 'particles_enabled', 1) !== 0,
     fontSize: readStr(row, 'font_size', 'default') as FontSizePref,
     petEnabled: readBool(row, 'pet_enabled'),
     petName: readStr(row, 'pet_name'),
@@ -203,6 +205,7 @@ const SETTINGS_COLUMNS: FieldMap<Settings> = {
   darkMode: { col: 'dark_mode' },
   childProfiles: { col: 'child_profiles', to: (v) => JSON.stringify(v) },
   reducedMotion: { col: 'reduced_motion', to: bool },
+  particlesEnabled: { col: 'particles_enabled', to: bool },
   fontSize: { col: 'font_size' },
   petEnabled: { col: 'pet_enabled', to: bool },
   petName: { col: 'pet_name' },
@@ -253,6 +256,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   darkMode: 'system' as DarkMode,
   childProfiles: [],
   reducedMotion: false,
+  particlesEnabled: true,
   fontSize: 'default' as FontSizePref,
   petEnabled: false,
   petName: '',

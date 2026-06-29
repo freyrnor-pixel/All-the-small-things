@@ -452,6 +452,19 @@ export default function SettingsScreen() {
                   />
                 </View>
                 <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
+                <View style={styles.switchRow}>
+                  <View style={{ flex: 1, marginRight: Spacing.md }}>
+                    <Text style={[styles.switchLabel, { color: theme.text }]}>{t.settings.accessibility.particles}</Text>
+                    <Text style={[styles.switchHint, { color: theme.textLight }]}>{t.settings.accessibility.particlesHint}</Text>
+                  </View>
+                  <Switch
+                    value={settings.particlesEnabled}
+                    onValueChange={(v) => settings.update({ particlesEnabled: v })}
+                    trackColor={{ false: theme.grayLight, true: theme.orangeLight }}
+                    thumbColor={settings.particlesEnabled ? theme.orange : theme.gray}
+                  />
+                </View>
+                <View style={[styles.divider, { backgroundColor: theme.grayLight }]} />
                 <Text style={[styles.fieldLabel, { color: theme.textLight }]}>{t.settings.accessibility.fontSize}</Text>
                 <View style={[styles.segmented, { backgroundColor: theme.grayLight }]}>
                   {(['small', 'default', 'large'] as FontSizePref[]).map((size) => (
