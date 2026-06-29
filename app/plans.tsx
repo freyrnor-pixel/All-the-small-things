@@ -446,7 +446,7 @@ export default function PlansScreen() {
           )}
 
           {importantTasks.length === 0 && generalTasks.length === 0 && doneTasks.length === 0 && (
-            <AddDivider onPress={handleAddTask} />
+            <AddDivider onPress={handleAddTask} label={t.newTask} />
           )}
 
           <View
