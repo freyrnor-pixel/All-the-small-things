@@ -28,7 +28,8 @@
  *     link (t.seeEverythingLink) → /plans, matching the Shopping preview section's
  *     title+link layout — replaces the old pressable-title/chevron + bottom link.
  *   - BubbleMenu mount remains commented out — do not remove.
- *   - "Daily overview" is a plain section header (t.dailyOverview).
+ *   - "Daily overview" section header now has a "Se alt" link → /plans (same
+ *     pattern as Notes and Shopping preview sections).
  *   - The update-ready banner mirrors the work-mode banner's look (theme.green
  *     pill) and calls Updates.reloadAsync() directly on tap — app/_layout.tsx
  *     only sets the updateReady flag, never auto-reloads or pops an Alert.
@@ -399,7 +400,12 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <Text style={[styles.dailyOverviewHeader, { color: theme.text }]}>{t.dailyOverview}</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.dailyOverview}</Text>
+          <Pressable onPress={() => goToSite(router, pathname, '/plans')}>
+            <Text style={[styles.seeAll, { color: theme.orange }]}>{t.seeAll}</Text>
+          </Pressable>
+        </View>
 
         <InboxSection />
 
@@ -814,7 +820,6 @@ const baseStyles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   sectionTitle: { fontSize: FontSize.lg, fontFamily: Fonts.semibold },
-  dailyOverviewHeader: { fontSize: FontSize.md, fontFamily: Fonts.semibold, marginBottom: Spacing.md },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
   seeAll: { fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   card: { borderRadius: Radius.md, padding: Layout.cardPadding, borderWidth: 1, ...Shadow.card },

@@ -325,6 +325,11 @@ const en = {
   addSourceChooserInventoryEmpty: 'No matching items in your catalog.',
   inventoryPickerTitle: 'Pick from inventory',
   inventoryPickerSearchPlaceholder: 'Search catalog…',
+  // Empty containers in shopping screen
+  newWeeklyListTitle: 'Create a new list',
+  staticMonthlyContainerTitle: 'Monthly items',
+  deleteWeeklyListConfirmTitle: 'Delete this list?',
+  deleteWeeklyListConfirmBody: 'Are you sure? This cannot be undone.',
   // Inventory edit screen
   editInventoryBtn: 'Edit inventory',
   inventoryEditTitle: 'Edit inventory',
@@ -1170,6 +1175,11 @@ const no: typeof en = {
   addSourceChooserInventoryEmpty: 'Ingen treff i katalogen din.',
   inventoryPickerTitle: 'Velg fra inventar',
   inventoryPickerSearchPlaceholder: 'Søk i katalog…',
+  // Tomme beholdere i handlelisten
+  newWeeklyListTitle: 'Lag en ny liste',
+  staticMonthlyContainerTitle: 'Månedlige varer',
+  deleteWeeklyListConfirmTitle: 'Slette denne listen?',
+  deleteWeeklyListConfirmBody: 'Er du sikker? Dette kan ikke angres.',
   // Rediger-inventar-skjerm
   editInventoryBtn: 'Rediger inventar',
   inventoryEditTitle: 'Rediger inventar',

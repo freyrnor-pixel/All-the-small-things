@@ -425,12 +425,14 @@ export default function PlansScreen() {
             <AddDivider onPress={handleAddTask} />
           )}
 
-          <Text
-            style={[styles.sectionLabel, { color: theme.textLight }]}
+          <View
+            style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}
             onLayout={(e) => registerLayout('__anchor_important__', e.nativeEvent.layout)}
           >
-            {t.importantSectionLabel}
-          </Text>
+            <Text style={[styles.sectionLabel, { color: theme.textLight }]}>
+              {t.importantSectionLabel}
+            </Text>
+          </View>
           {importantTasks.length === 0 && (
             <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
           )}
@@ -465,12 +467,14 @@ export default function PlansScreen() {
             </React.Fragment>
           ))}
 
-          <Text
-            style={[styles.sectionLabel, { color: theme.textLight }]}
+          <View
+            style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}
             onLayout={(e) => registerLayout('__anchor_general__', e.nativeEvent.layout)}
           >
-            {t.generalSectionLabel}
-          </Text>
+            <Text style={[styles.sectionLabel, { color: theme.textLight }]}>
+              {t.generalSectionLabel}
+            </Text>
+          </View>
           {generalTasks.length === 0 && (
             <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
           )}
@@ -547,6 +551,7 @@ const baseStyles = StyleSheet.create({
   content: { padding: Spacing.md, gap: Spacing.sm },
   unsavedSection: { gap: Spacing.xs, marginBottom: Spacing.sm },
   sectionLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionLabelBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, alignSelf: 'flex-start' },
   emptySectionHint: { fontSize: FontSize.sm, fontStyle: 'italic' },
   unsavedBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, borderRadius: Radius.md, padding: Spacing.sm },
   unsavedBannerText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.semibold },

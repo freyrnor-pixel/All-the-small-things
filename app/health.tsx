@@ -197,7 +197,9 @@ export default function HealthScreen() {
         {/* Overview */}
         {topAilments.length > 0 && (
           <Surface style={styles.overviewCard}>
-            <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.last30Days}</Text>
+            <View style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}>
+              <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.last30Days}</Text>
+            </View>
             {topAilments.map(([name, count]) => {
               const weekSeverities = weekDates.map((d) => severityAt(name, d));
               return (
@@ -242,7 +244,9 @@ export default function HealthScreen() {
         )}
 
         {/* Log list */}
-        <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
+        <View style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}>
+          <Text style={[styles.sectionLabel, { color: theme.textLight }]}>{t.logSection}</Text>
+        </View>
         {logs.length === 0 && (
           <>
             <Surface tint={theme.offWhite} style={styles.emptyCard}>
@@ -357,7 +361,9 @@ export default function HealthScreen() {
             accessibilityLabel={t.healthSeeAllHabits}
             style={styles.sectionHeader}
           >
-            <Text style={[styles.sectionLabel, { color: theme.textLight, marginBottom: 0 }]}>{t.nav.habits}</Text>
+            <View style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}>
+              <Text style={[styles.sectionLabel, { color: theme.textLight, marginBottom: 0 }]}>{t.nav.habits}</Text>
+            </View>
             <Ionicons name="chevron-forward" size={16} color={theme.textLight} />
           </Pressable>
 
@@ -462,6 +468,7 @@ const baseStyles = StyleSheet.create({
     ...Shadow.card,
   },
   sectionLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold, marginBottom: Spacing.xs },
+  sectionLabelBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs, alignSelf: 'flex-start' },
   overviewAilment: { marginTop: Spacing.sm },
   overviewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   ailmentWeekStrip: {
