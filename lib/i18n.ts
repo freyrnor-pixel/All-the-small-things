@@ -327,6 +327,7 @@ const en = {
   inventoryPickerSearchPlaceholder: 'Search catalog…',
   // Empty containers in shopping screen
   newWeeklyListTitle: 'Create a new list',
+  startEmptyList: 'Start empty',
   staticMonthlyContainerTitle: 'Monthly items',
   deleteList: 'Delete list',
   deleteListConfirmTitle: 'Delete this list?',
@@ -1184,6 +1185,7 @@ const no: typeof en = {
   inventoryPickerSearchPlaceholder: 'Søk i katalog…',
   // Tomme beholdere i handlelisten
   newWeeklyListTitle: 'Lag en ny liste',
+  startEmptyList: 'Start tom',
   staticMonthlyContainerTitle: 'Månedlige varer',
   deleteList: 'Slett liste',
   deleteListConfirmTitle: 'Slette denne listen?',

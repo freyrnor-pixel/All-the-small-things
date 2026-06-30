@@ -42,8 +42,10 @@
  *     "search or type" option seeds addItemTarget from that same id.
  *   - savedListsListId tracks which Week list's bookmark icon was tapped, so SavedListsModal
  *     opens scoped to that list rather than one screen-wide "current" list — there's no single
- *     selected list any more, every Container is independent. Each list also has a Delete button
- *     (trash icon) that calls handleDeleteList with a confirmation modal.
+ *     selected list any more, every Container is independent. '__new__' is the sentinel used by
+ *     the "new list" Container's "+" action sheet to open SavedListsModal for creating from a
+ *     template without a pre-existing list. Each list also has a Delete button (trash icon)
+ *     that calls handleDeleteList with a confirmation modal.
  *   - computeListGroups(items, listId) (imported from lib/shoppingGroups.ts, not
  *     memoized — same cost as the old per-screen filters, just re-run once per list)
  *     buckets one list's inWeeklyList items into dish groups / ungrouped unchecked
@@ -641,24 +643,27 @@ export default function ShoppingScreen() {
                 })
               )}
 
-              {/* Empty weekly list container with add buttons */}
+              {/* Empty weekly list container with single "+" in the header */}
               <Container
                 title={t.newWeeklyListTitle}
                 locked={false}
                 onToggleLock={() => {}}
                 accentColor={theme.green}
-              >
-                <View style={styles.addListSection}>
-                  <View style={styles.addListRow}>
-                    <Text style={[styles.addListLabel, { color: theme.textLight }]}>Empty</Text>
-                    <AddDivider onPress={handleCreateNewWeeklyList} />
-                  </View>
-                  <View style={styles.addListRow}>
-                    <Text style={[styles.addListLabel, { color: theme.textLight }]}>Saved lists</Text>
-                    <AddDivider onPress={() => setSavedListsListId('__new__')} />
-                  </View>
-                </View>
-              </Container>
+                rightAction={
+                  <Pressable
+                    onPress={() =>
+                      showAppModal(t.newWeeklyListTitle, '', [
+                        { text: t.startEmptyList, onPress: handleCreateNewWeeklyList },
+                        { text: t.savedListsTitle, onPress: () => setSavedListsListId('__new__') },
+                        { text: t.cancel, style: 'cancel' },
+                      ])
+                    }
+                    hitSlop={8}
+                  >
+                    <Ionicons name="add" size={20} color={theme.green} />
+                  </Pressable>
+                }
+              >{null}</Container>
             </>
           )}
 
@@ -799,7 +804,4 @@ const baseStyles = StyleSheet.create({
   disclosureChevron: { fontSize: FontSize.sm, fontFamily: Fonts.bold },
   weekLabel: { fontSize: FontSize.xs, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  addListSection: { gap: Spacing.md },
-  addListRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md },
-  addListLabel: { fontSize: FontSize.sm, fontFamily: Fonts.semibold, flex: 1 },
 });
