@@ -119,7 +119,11 @@ export default function AppModalHost() {
               return (
                 <PressableScale
                   key={i}
-                  style={[styles.button, { backgroundColor: fill }]}
+                  style={[
+                    styles.button,
+                    request.buttons.length !== 2 && styles.buttonColumnItem,
+                    { backgroundColor: fill },
+                  ]}
                   scaleTo={scaleTo}
                   onPress={() => dismiss(btn.onPress)}
                 >
@@ -175,6 +179,10 @@ const baseStyles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: Radius.md,
     alignItems: 'center',
+  },
+  buttonColumnItem: {
+    flex: 0,
+    width: '100%',
   },
   buttonText: {
     fontSize: FontSize.md,
