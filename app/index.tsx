@@ -8,9 +8,9 @@
  * Honours work mode and essentials (focus) mode, both driven by settings.
  *
  * Connections:
- *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/ExpandableCard, components/InboxSection, components/NextTaskCard, components/ParticleBackground, components/Pet, components/QuickAddSheet, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/shoppingGroups (computeListGroups), lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore, store/useTaskStore, store/useUpdateStore
+ *   Imports → components/AddFAB, components/AppModal, components/BottomNav, components/DayTimeline, components/ExpandableCard, components/InboxSection, components/NextTaskCard, components/ParticleBackground, components/Pet, components/QuickAddSheet, components/SharedRequestsSection, components/ShoppingRow, components/SiteSwipeView, components/Surface, components/TaskItem, components/cover/CoverScreen, constants/theme, lib/date, lib/holidays, lib/i18n, lib/shoppingGroups (computeListGroups), lib/siteNav, lib/taskOrder, lib/taskSuggestion, lib/useCoverScreen, store/useHabitStore, store/useNotesStore, store/useSettingsStore, store/useShoppingListStore, store/useShoppingStore (toggle, toggleCollected, reorder, adjustAmount), store/useTaskStore, store/useUpdateStore
  *   Used by → Expo Router route "/"
- *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useShoppingListStore (lists, for currentList(today)) + useHabitStore (habits, logs) + useNotesStore (notes, preview only); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner
+ *   Data    → reads useTaskStore (tasks) + useShoppingStore (shopping_items) + useShoppingListStore (lists, for currentList(today)) + useHabitStore (habits, logs) + useNotesStore (notes, preview only); settings via useSettingsStore; useUpdateStore (updateReady) for the restart banner; mutates useShoppingStore via toggle/toggleCollected/reorder/adjustAmount
  *
  * Edit notes:
  *   - ⚙ gear icon (header right) → /settings is the only header icon — Health is a
@@ -161,6 +161,7 @@ export default function HomeScreen() {
   const putShoppingItemBackToInventory = useShoppingStore((s) => s.putBackToInventory);
   const removeShoppingItemWithSource = useShoppingStore((s) => s.removeWithSource);
   const reorderShoppingItem = useShoppingStore((s) => s.reorder);
+  const adjustShoppingAmount = useShoppingStore((s) => s.adjustAmount);
   const shoppingLists = useShoppingListStore((s) => s.lists);
   const currentShoppingListFn = useShoppingListStore((s) => s.currentList);
   const habits = useHabitStore((s) => s.habits);
@@ -678,6 +679,8 @@ export default function HomeScreen() {
                                 variant="planned"
                                 onToggle={() => toggleShoppingItem(item.id)}
                                 onRemove={() => handleRemoveShoppingItem(item)}
+                                onIncrement={() => adjustShoppingAmount(item.id, 1)}
+                                onDecrement={() => adjustShoppingAmount(item.id, -1)}
                                 inStockLabel={t.inStockLabel}
                               />
                               {idx < groupItems.length - 1 && (
@@ -703,6 +706,8 @@ export default function HomeScreen() {
                             onRemove={() => handleRemoveShoppingItem(item)}
                             onMoveUp={idx > 0 ? () => reorderShoppingItem(item.id, 'up') : undefined}
                             onMoveDown={idx < shoppingUngroupedUnchecked.length - 1 ? () => reorderShoppingItem(item.id, 'down') : undefined}
+                            onIncrement={() => adjustShoppingAmount(item.id, 1)}
+                            onDecrement={() => adjustShoppingAmount(item.id, -1)}
                             inStockLabel={t.inStockLabel}
                           />
                           {idx < shoppingUngroupedUnchecked.length - 1 && (
@@ -725,6 +730,8 @@ export default function HomeScreen() {
                             onToggle={() => toggleShoppingItem(item.id)}
                             onCollect={() => toggleShoppingCollected(item.id)}
                             onRemove={() => handleRemoveShoppingItem(item)}
+                            onIncrement={() => adjustShoppingAmount(item.id, 1)}
+                            onDecrement={() => adjustShoppingAmount(item.id, -1)}
                           />
                           {idx < shoppingChecked.length - 1 && (
                             <View style={[styles.rowDivider, { backgroundColor: theme.grayLight }]} />
