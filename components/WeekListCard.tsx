@@ -26,6 +26,10 @@
  *     (dims remove/move buttons; checkmark/collect/undo stay interactive regardless), and
  *     the AddDivider below the Shopping list section is disabled via its own `disabled` prop —
  *     but the "Shopping done!" button is NEVER lock-gated (finishing a trip isn't an edit).
+ *   - onIncrementItem/onDecrementItem feed every ShoppingRow's qty stepper (both 'planned' and
+ *     'cart' rows, including "From meals" dish-group rows) — the parent wires these to
+ *     useShoppingStore.adjustAmount(id, ±1). locked already disables the stepper inside
+ *     ShoppingRow itself, so no extra gating is needed here.
  *   - The "Shopping list" section always renders, even with zero items, so the AddDivider
  *     always has a stable anchor — there's no per-list illustrated empty state here; that
  *     only exists at the screen level for the zero-lists case.
@@ -63,6 +67,8 @@ type Props = {
   onCollectItem: (item: ShoppingItem) => void;
   onRemoveItem: (item: ShoppingItem) => void;
   onMoveItem: (item: ShoppingItem, direction: 'up' | 'down') => void;
+  onIncrementItem: (item: ShoppingItem) => void;
+  onDecrementItem: (item: ShoppingItem) => void;
   onAddPress: () => void;
   onDoneShopping: () => void;
 };
@@ -82,6 +88,8 @@ export default function WeekListCard({
   onCollectItem,
   onRemoveItem,
   onMoveItem,
+  onIncrementItem,
+  onDecrementItem,
   onAddPress,
   onDoneShopping,
 }: Props) {
@@ -159,6 +167,8 @@ export default function WeekListCard({
                         variant="planned"
                         onToggle={() => onToggleItem(item)}
                         onRemove={() => onRemoveItem(item)}
+                        onIncrement={() => onIncrementItem(item)}
+                        onDecrement={() => onDecrementItem(item)}
                         inStockLabel={t.inStockLabel}
                         locked={list.locked}
                       />
@@ -190,6 +200,8 @@ export default function WeekListCard({
                     onRemove={() => onRemoveItem(item)}
                     onMoveUp={idx > 0 ? () => onMoveItem(item, 'up') : undefined}
                     onMoveDown={idx < ungroupedUnchecked.length - 1 ? () => onMoveItem(item, 'down') : undefined}
+                    onIncrement={() => onIncrementItem(item)}
+                    onDecrement={() => onDecrementItem(item)}
                     inStockLabel={t.inStockLabel}
                     locked={list.locked}
                   />
@@ -216,6 +228,8 @@ export default function WeekListCard({
                     onToggle={() => onToggleItem(item)}
                     onCollect={() => onCollectItem(item)}
                     onRemove={() => onRemoveItem(item)}
+                    onIncrement={() => onIncrementItem(item)}
+                    onDecrement={() => onDecrementItem(item)}
                     locked={list.locked}
                   />
                   {idx < checked.length - 1 && (
