@@ -1,13 +1,14 @@
 /**
- * ShoppingRow.tsx — single row in the shopping list with a move/collect button and remove.
+ * ShoppingRow.tsx — single row in the shopping list with a move/collect/qty-stepper button and remove.
  *
  * Presentational row for a ShoppingItem: a planned/cart/purchased leading button, name + meta
- * (unit / store / price), and a remove button. All actions are bubbled up via callbacks.
+ * (unit / store / price), an inline qty stepper, and a remove button. All actions are bubbled
+ * up via callbacks.
  *
  * Connections:
- *   Imports → constants/theme, lib/i18n, store/useShoppingStore
- *   Used by → app/shopping.tsx
- *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onCollect/onRemove/onMoveUp/onMoveDown; scaled fontSize via useScaledStyles()
+ *   Imports → constants/theme, lib/i18n, store/useShoppingStore, components/Badge
+ *   Used by → app/shopping.tsx, components/WeekListCard.tsx
+ *   Data    → consumes the ShoppingItem type from useShoppingStore; mutations happen in the parent via onToggle/onCollect/onRemove/onMoveUp/onMoveDown/onIncrement/onDecrement; scaled fontSize via useScaledStyles()
  *
  * Edit notes:
  *   - onMoveUp/onMoveDown are optional and only rendered (as a small chevron-pair)
@@ -35,11 +36,15 @@
  *     NOT to every cart row, since "moved to cart" alone should stay fully opaque. This is the
  *     same opacity constant used by the "Shopping done" disabled state in app/shopping.tsx —
  *     reuse CHECKED_OPACITY from here rather than a new literal if another file needs it.
- *   - There is no inline qty stepper any more (amount is edited via AddItemSheet/UpdateSheet) —
- *     amount+unit always appear in the meta sub-row. The old onAdjust/fromMonthlyLabel/
- *     monthlyTotal/monthlyLeftLabel props (and the monthly-source tag they fed) were removed as
- *     dead code — no caller in app/shopping.tsx ever passed them.
- *   - Price and unit always live in the meta sub-row (below the name), keeping the main row to just move-button + name + remove.
+ *   - The inline qty stepper (−/badge/+) renders on 'planned' and 'cart' rows whenever the
+ *     parent passes onIncrement/onDecrement (omit both to hide it, e.g. read-only contexts).
+ *     It calls useShoppingStore.adjustAmount(id, ±1) via the parent. Bounds are 1–99:
+ *     the − button disables (outline-only, no fill) at qty 1, the + button disables the
+ *     same way at qty 99 — adjustAmount itself also clamps at 0 by deleting the row via
+ *     removeWithSource, but the stepper's own min is 1 so "delete by stepper" never happens
+ *     here; removal stays the dedicated "×" button's job. Hidden entirely on 'purchased' rows.
+ *   - Price and unit still live in the meta sub-row beneath the name — the stepper does not
+ *     replace that text, it's an additional inline control to the right of it.
  *   - Theme arrives via the `theme` prop; the "kr" price suffix and labels are passed in pre-formatted/localized.
  *   - `locked` (from the parent Container's padlock, components/Container.tsx) dims and
  *     disables remove/move-up/move-down at opacity 0.45 — the checkmark/collect button
@@ -54,8 +59,14 @@ import { AppColors, Fonts, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useScaledStyles } from '@/lib/useAppTheme';
 import { useT } from '@/lib/i18n';
 import InventoryIcon from '@/components/InventoryIcon';
+import { Badge } from '@/components/Badge';
 
 type Variant = 'planned' | 'cart' | 'purchased';
+
+/** Stepper bounds — mirrors useShoppingStore.adjustAmount's own floor (it clamps at 0 and
+ * deletes), but the stepper UI's own minimum is 1 so decrementing never silently removes a row. */
+const MIN_QTY = 1;
+const MAX_QTY = 99;
 
 /** Shared "marked as done" dim amount — reuse this anywhere an item/button needs the same reduced-opacity treatment (e.g. the disabled "Shopping done" button in app/shopping.tsx). */
 export const CHECKED_OPACITY = 0.55;
@@ -69,16 +80,22 @@ type Props = {
   onRemove: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onIncrement?: () => void;
+  onDecrement?: () => void;
   inStockLabel?: string;
   locked?: boolean;
 };
 
-export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, onMoveUp, onMoveDown, inStockLabel, locked }: Props) {
+export default function ShoppingRow({ item, theme, variant = 'planned', onToggle, onCollect, onRemove, onMoveUp, onMoveDown, onIncrement, onDecrement, inStockLabel, locked }: Props) {
   const styles = useScaledStyles(baseStyles);
   const t = useT();
   const qty = parseInt(item.amount, 10);
   const isNumeric = !isNaN(qty) && qty > 0;
+  const safeQty = isNumeric ? qty : MIN_QTY;
   const dimmed = variant === 'purchased' || (variant === 'cart' && item.collected) || (variant === 'planned' && item.checked);
+  const showStepper = variant !== 'purchased' && !locked && !!(onIncrement || onDecrement);
+  const canDecrement = !!onDecrement && safeQty > MIN_QTY;
+  const canIncrement = !!onIncrement && safeQty < MAX_QTY;
 
   const priceTotal = item.price > 0 && isNumeric ? item.price * qty : null;
 
@@ -127,6 +144,40 @@ export default function ShoppingRow({ item, theme, variant = 'planned', onToggle
           </View>
         )}
       </View>
+
+      {showStepper && (
+        <View style={styles.stepper}>
+          <Pressable
+            style={[
+              styles.stepBtn,
+              canDecrement
+                ? { backgroundColor: theme.brown, borderColor: theme.brown }
+                : { backgroundColor: 'transparent', borderColor: theme.grayLight },
+            ]}
+            onPress={onDecrement}
+            disabled={!canDecrement}
+            hitSlop={4}
+            accessibilityLabel={t.decreaseQty}
+          >
+            <Ionicons name="remove" size={14} color={canDecrement ? theme.white : theme.grayLight} />
+          </Pressable>
+          <Badge label={String(safeQty)} style={styles.stepBadge} />
+          <Pressable
+            style={[
+              styles.stepBtn,
+              canIncrement
+                ? { backgroundColor: theme.brown, borderColor: theme.brown }
+                : { backgroundColor: 'transparent', borderColor: theme.grayLight },
+            ]}
+            onPress={onIncrement}
+            disabled={!canIncrement}
+            hitSlop={4}
+            accessibilityLabel={t.increaseQty}
+          >
+            <Ionicons name="add" size={14} color={canIncrement ? theme.white : theme.grayLight} />
+          </Pressable>
+        </View>
+      )}
 
       {(onMoveUp || onMoveDown) && (
         <View style={[styles.moveCol, locked && styles.gated]}>
@@ -191,6 +242,16 @@ const baseStyles = StyleSheet.create({
   meta: { fontSize: FontSize.xs },
   moveCol: { justifyContent: 'center', gap: 2 },
   moveBtn: { width: 22, height: 18, alignItems: 'center', justifyContent: 'center' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stepBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBadge: { minWidth: 24, alignItems: 'center' },
   undo: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   remove: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   removeText: { fontSize: 20, lineHeight: 22 },
