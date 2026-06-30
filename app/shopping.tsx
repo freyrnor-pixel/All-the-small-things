@@ -167,6 +167,7 @@ export default function ShoppingScreen() {
   const addToWeeklyFromCatalog = useShoppingStore((s) => s.addToWeeklyFromCatalog);
   const putBackToInventory = useShoppingStore((s) => s.putBackToInventory);
   const removeWithSource = useShoppingStore((s) => s.removeWithSource);
+  const adjustAmount = useShoppingStore((s) => s.adjustAmount);
   const setPendingRestock = useShoppingStore((s) => s.setPendingRestock);
   const confirmStagingTray = useShoppingStore((s) => s.confirmStagingTray);
   const doneShopping = useShoppingStore((s) => s.doneShopping);
@@ -631,6 +632,8 @@ export default function ShoppingScreen() {
                       onCollectItem={(item) => toggleCollected(item.id)}
                       onRemoveItem={handleRemoveWeeklyItem}
                       onMoveItem={(item, direction) => reorderItem(item.id, direction)}
+                      onIncrementItem={(item) => adjustAmount(item.id, 1)}
+                      onDecrementItem={(item) => adjustAmount(item.id, -1)}
                       onAddPress={() => setAddSourceChooserListId(list.id)}
                       onDoneShopping={() => handleDoneShopping(list, checked.length)}
                     />
