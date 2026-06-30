@@ -359,6 +359,8 @@ const en = {
   listSavedAsTemplateToast: 'List saved as template',
   moveItemUp: 'Move item up',
   moveItemDown: 'Move item down',
+  decreaseQty: 'Decrease quantity',
+  increaseQty: 'Increase quantity',
   category: 'Category',
   shoppingCategories: {
     produce: 'Fruit & veg',
@@ -1213,6 +1215,8 @@ const no: typeof en = {
   listSavedAsTemplateToast: 'Listen ble lagret som mal',
   moveItemUp: 'Flytt vare opp',
   moveItemDown: 'Flytt vare ned',
+  decreaseQty: 'Reduser antall',
+  increaseQty: 'Øk antall',
   category: 'Kategori',
   shoppingCategories: {
     produce: 'Frukt og grønt',
