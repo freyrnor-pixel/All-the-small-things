@@ -14,7 +14,7 @@
  * card creates a new task and opens its Container immediately.
  *
  * Connections:
- *   Imports → components/AddDivider, components/BottomNav, components/DraggableTaskRow,
+ *   Imports → components/BottomNav, components/DraggableTaskRow,
  *             components/PlanTaskCard, components/ScreenHeader, components/SiteSwipeView,
  *             constants/theme, lib/date, lib/haptics, lib/i18n, lib/taskOrder, lib/useAppTheme,
  *             store/useEnergyStore, store/useTaskDraftStore, store/useTaskStore
@@ -78,7 +78,6 @@ import { useTaskDraftStore, TaskDraftFields } from '@/store/useTaskDraftStore';
 import PlanTaskCard, { TaskFormFields, fieldsFromTask, fieldsToTaskPayload } from '@/components/PlanTaskCard';
 import DraggableTaskRow, { Section } from '@/components/DraggableTaskRow';
 import ScreenHeader from '@/components/ScreenHeader';
-import AddDivider from '@/components/AddDivider';
 import BottomNav from '@/components/BottomNav';
 import SiteSwipeView from '@/components/SiteSwipeView';
 import { useT } from '@/lib/i18n';
@@ -408,6 +407,9 @@ export default function PlansScreen() {
                 <Text style={[styles.savePillText, { color: theme.white }]}>{t.save}</Text>
               </Pressable>
             )}
+            <Pressable onPress={handleAddTask} hitSlop={8} accessibilityLabel={t.newTask}>
+              <Ionicons name="add" size={24} color={theme.text} />
+            </Pressable>
           </View>
         }
       />
@@ -446,7 +448,7 @@ export default function PlansScreen() {
           )}
 
           {importantTasks.length === 0 && generalTasks.length === 0 && doneTasks.length === 0 && (
-            <AddDivider onPress={handleAddTask} label={t.newTask} />
+            <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.newTask}</Text>
           )}
 
           <View
@@ -460,7 +462,6 @@ export default function PlansScreen() {
           {importantTasks.length === 0 && (
             <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
           )}
-          <AddDivider onPress={handleAddTask} />
           {importantTasks.map((task) => (
             <DraggableTaskRow
               key={task.id}
@@ -489,8 +490,6 @@ export default function PlansScreen() {
               }}
             />
           ))}
-          <AddDivider onPress={handleAddTask} />
-
           <View
             style={[styles.sectionLabelBox, { backgroundColor: theme.grayLight }]}
             onLayout={(e) => registerLayout('__anchor_general__', e.nativeEvent.layout)}
@@ -502,7 +501,6 @@ export default function PlansScreen() {
           {generalTasks.length === 0 && (
             <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
           )}
-          <AddDivider onPress={handleAddTask} />
           {generalTasks.map((task) => (
             <DraggableTaskRow
               key={task.id}
@@ -531,8 +529,6 @@ export default function PlansScreen() {
               }}
             />
           ))}
-          <AddDivider onPress={handleAddTask} />
-
           {doneTasks.map((task) => (
             <PlanTaskCard
               key={task.id}

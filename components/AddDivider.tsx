@@ -12,7 +12,7 @@
  *
  * Connections:
  *   Imports → constants/theme, lib/useAppTheme
- *   Used by → app/plans.tsx, app/health.tsx, components/WeekListCard.tsx, app/shopping.tsx
+ *   Used by → app/health.tsx, components/WeekListCard.tsx, app/shopping.tsx (catalog tab only)
  *   Data    → none — purely presentational, fires onPress
  */
 import React from 'react';
