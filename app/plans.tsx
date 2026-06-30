@@ -460,7 +460,9 @@ export default function PlansScreen() {
             </Text>
           </View>
           {importantTasks.length === 0 && (
-            <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
+            <View style={[styles.emptySectionDropZone, { backgroundColor: theme.grayLight, borderColor: theme.gray }]}>
+              <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
+            </View>
           )}
           {importantTasks.map((task) => (
             <DraggableTaskRow
@@ -499,7 +501,9 @@ export default function PlansScreen() {
             </Text>
           </View>
           {generalTasks.length === 0 && (
-            <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
+            <View style={[styles.emptySectionDropZone, { backgroundColor: theme.grayLight, borderColor: theme.gray }]}>
+              <Text style={[styles.emptySectionHint, { color: theme.textLight }]}>{t.emptySectionHint}</Text>
+            </View>
           )}
           {generalTasks.map((task) => (
             <DraggableTaskRow
@@ -570,7 +574,16 @@ const baseStyles = StyleSheet.create({
   unsavedSection: { gap: Spacing.xs, marginBottom: Spacing.sm },
   sectionLabel: { fontSize: FontSize.sm, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 0.5 },
   sectionLabelBox: { borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.sm, marginTop: Spacing.md, marginBottom: Spacing.xs },
-  emptySectionHint: { fontSize: FontSize.md, fontFamily: Fonts.medium, paddingHorizontal: Spacing.sm },
+  emptySectionDropZone: {
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptySectionHint: { fontSize: FontSize.md, fontFamily: Fonts.medium },
   unsavedBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, borderRadius: Radius.md, padding: Spacing.sm },
   unsavedBannerText: { flex: 1, fontSize: FontSize.sm, fontFamily: Fonts.semibold },
   unsavedRow: {
