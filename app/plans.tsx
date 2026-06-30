@@ -25,9 +25,9 @@
  *             writes useTaskDraftStore (task_drafts) for any task with unsaved field edits
  *
  * Edit notes:
- *   - No back button or screen-level add FAB in the header/body — each section (Important,
- *     General) is anchored by dividers at the top and bottom; done tasks have no add affordance.
- *     When both undone stacks are empty, one divider appears as a stable anchor.
+ *   - No back button — a single "+" in the ScreenHeader's right area (next to the share pill)
+ *     is the sole add-task entry point; done tasks have no add affordance.
+ *     When both undone stacks are empty, a hint text appears in place of the old divider.
  *   - `edits` (taskId -> { fields, dirty }) is this screen's lifted edit state, mirroring
  *     app/shopping.tsx's per-list state but keyed by task instead of gated by a lock. A task's
  *     Container always renders from `edits[id]` once touched; `fieldsFromTask(task)` is only

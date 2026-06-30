@@ -54,13 +54,15 @@
  *     catalogDishGroups (each rendered as its own collapsed-by-default ExpandableCard,
  *     mirroring WeekListCard's "From meals" groups) and ungroupedRestItems (the flat
  *     MonthlyTableRow list, unchanged from before the split).
- *   - The Monthly tab's old single inline "+" (AddFAB) is now two AddDividers: the first
- *     opens AddItemSheet (origin:'catalog', unchanged single-item add), the second opens
- *     AddDishSheet (addDishSheetOpen) — a multi-ingredient "add a whole dish to the
- *     catalog" flow. handleSaveDish loops the sheet's ingredients through add() with
- *     status:'catalog' + dishName set, relying on add()'s existing
- *     status+name+dishName dedup; no new store action needed. Both dividers share
- *     catalogLocked via `disabled`.
+ *   - The Monthly tab uses two AddDividers in the catalog section: the first opens
+ *     AddItemSheet (origin:'catalog', single-item add), the second opens AddDishSheet
+ *     (addDishSheetOpen) — a multi-ingredient "add a whole dish to the catalog" flow.
+ *     handleSaveDish loops the sheet's ingredients through add() with status:'catalog' +
+ *     dishName set, relying on add()'s existing status+name+dishName dedup; no new store
+ *     action needed. Both dividers share catalogLocked via `disabled`.
+ *   - The "Create a new list" container in the Week lists tab uses Container's `rightAction`
+ *     prop (a single "+" Ionicons button) that opens a two-choice showAppModal — "Start
+ *     empty" (handleCreateNewWeeklyList) or "Saved lists" (setSavedListsListId('__new__')).
  *   - unlockedListCount feeds the "Unsaved" banner atop the Week lists tab — Shopping
  *     has no draft buffer to abandon (every mutation commits to SQLite immediately via
  *     useShoppingStore/useShoppingListStore), so this is just a lightweight "you left N
