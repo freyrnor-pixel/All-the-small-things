@@ -663,7 +663,7 @@ export default function ShoppingScreen() {
                     <Ionicons name="add" size={20} color={theme.green} />
                   </Pressable>
                 }
-              />
+              >{null}</Container>
             </>
           )}
 
