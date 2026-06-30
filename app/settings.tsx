@@ -208,7 +208,6 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.safe}>
       <ScreenHeader
         title={t.settingsTitle}
-        onBack={() => router.back()}
         bordered
         right={
           isDirty ? (

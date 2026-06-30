@@ -253,7 +253,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   showHints: true,
   language: 'no' as Language,
   holidaysEnabled: true,
-  darkMode: 'system' as DarkMode,
+  darkMode: 'off' as DarkMode,
   childProfiles: [],
   reducedMotion: false,
   particlesEnabled: true,
